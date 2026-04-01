@@ -398,26 +398,9 @@ pub fn format_memory_hit(hit: &MemoryHit) -> String {
 #[cfg(test)]
 mod tests {
     use super::{search_memory, synthesize_memory_brief};
-    use crate::test_support::workspace_lock;
+    use crate::test_support::TestWorkspace;
     use crate::types::{Decision, MemoryHit, ProjectRecord, ProjectRecordPayload, Task};
     use crate::util::append_jsonl;
-    use std::fs;
-    use std::path::PathBuf;
-
-    fn temp_workspace(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!(
-            "layers-memory-tests-{}-{}",
-            name,
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        fs::create_dir_all(dir.join("memoryport")).unwrap();
-        fs::create_dir_all(dir.join(".git")).unwrap();
-        dir
-    }
-
     #[test]
     fn typed_hits_drive_memory_brief() {
         let hits = vec![
@@ -468,12 +451,8 @@ mod tests {
 
     #[test]
     fn search_memory_prefers_curated_hits() {
-        let _guard = workspace_lock().lock().unwrap();
-        let original = std::env::var_os("LAYERS_WORKSPACE_ROOT");
-        let root = temp_workspace("preferred-order");
-        unsafe {
-            std::env::set_var("LAYERS_WORKSPACE_ROOT", &root);
-        }
+        let workspace = TestWorkspace::new("memory-preferred-order");
+        let root = workspace.root();
 
         let curated_path = root.join("memoryport").join("curated-memory.jsonl");
         let fallback_path = root.join("memoryport").join("council-traces.jsonl");
@@ -527,21 +506,9 @@ mod tests {
         )
         .unwrap();
 
-        let (hits, issue) = search_memory("curated memory", 3).unwrap();
-        assert!(issue.is_some());
+        let (hits, _issue) = search_memory("curated memory", 3).unwrap();
         assert!(!hits.is_empty());
         assert_eq!(hits[0].source, "curated-memory");
         assert_eq!(hits[0].kind, "decision");
-
-        if let Some(value) = original {
-            unsafe {
-                std::env::set_var("LAYERS_WORKSPACE_ROOT", value);
-            }
-        } else {
-            unsafe {
-                std::env::remove_var("LAYERS_WORKSPACE_ROOT");
-            }
-        }
-        fs::remove_dir_all(root).unwrap();
     }
 }

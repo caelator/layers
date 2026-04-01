@@ -1,8 +1,10 @@
 /target
-.gitnexus
+.gitnexus/
 
-# Generated runtime artifacts
+# Generated local runtime artifacts
 memoryport/layers-audit.jsonl
+memoryport/council-plans.jsonl
+memoryport/council-learnings.jsonl
 memoryport/council-traces.jsonl
 memoryport/council-runs/
 
@@ -10,3 +12,4 @@ memoryport/council-runs/
 .DS_Store
 *.tmp
 *.swp
+*.log

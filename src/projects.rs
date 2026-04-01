@@ -538,26 +538,10 @@ pub fn validate_record_shapes() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::{curated_import_to_record, normalize_slug, search_curated_records};
-    use crate::test_support::workspace_lock;
+    use crate::test_support::TestWorkspace;
     use crate::types::CuratedImportRecord;
     use crate::types::{Decision, Project, ProjectRecord, ProjectRecordPayload, Task};
     use crate::util::append_jsonl;
-    use std::fs;
-    use std::path::PathBuf;
-
-    fn temp_workspace(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!(
-            "layers-tests-{}-{}",
-            name,
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        fs::create_dir_all(dir.join("memoryport")).unwrap();
-        fs::create_dir_all(dir.join(".git")).unwrap();
-        dir
-    }
 
     #[test]
     fn slug_normalization_is_stable() {
@@ -590,12 +574,8 @@ mod tests {
 
     #[test]
     fn curated_search_returns_only_curated_entities() {
-        let _guard = workspace_lock().lock().unwrap();
-        let original = std::env::var_os("LAYERS_WORKSPACE_ROOT");
-        let root = temp_workspace("curated-search");
-        unsafe {
-            std::env::set_var("LAYERS_WORKSPACE_ROOT", &root);
-        }
+        let workspace = TestWorkspace::new("projects-curated-search");
+        let root = workspace.root();
 
         let curated_path = root.join("memoryport").join("curated-memory.jsonl");
         let decision = ProjectRecord {
@@ -660,16 +640,5 @@ mod tests {
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].kind, "decision");
         assert_eq!(hits[0].source, "curated-memory");
-
-        if let Some(value) = original {
-            unsafe {
-                std::env::set_var("LAYERS_WORKSPACE_ROOT", value);
-            }
-        } else {
-            unsafe {
-                std::env::remove_var("LAYERS_WORKSPACE_ROOT");
-            }
-        }
-        fs::remove_dir_all(root).unwrap();
     }
 }

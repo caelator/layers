@@ -785,7 +785,7 @@ fn first_bullet_after_heading<'a>(text: &'a str, heading: &str) -> Option<&'a st
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::workspace_lock;
+    use crate::test_support::workspace_guard;
     use serde_json::json;
 
     fn temp_artifact_dir(name: &str) -> PathBuf {
@@ -797,7 +797,7 @@ mod tests {
 
     #[test]
     fn council_run_executes_fixed_stage_order_and_persists_artifacts() {
-        let _guard = workspace_lock().lock().unwrap();
+        let _guard = workspace_guard();
         let artifacts_dir = temp_artifact_dir("council-success");
         let request = CouncilRunRequest {
             task: "Ship the smallest reliable council flow".to_string(),
@@ -838,7 +838,7 @@ mod tests {
 
     #[test]
     fn council_run_retries_failed_stage_once() {
-        let _guard = workspace_lock().lock().unwrap();
+        let _guard = workspace_guard();
         let artifacts_dir = temp_artifact_dir("council-retry");
         let counter = artifacts_dir.join("counter.txt");
         let counter_text = counter.display().to_string();
@@ -871,7 +871,7 @@ mod tests {
 
     #[test]
     fn council_run_marks_short_output_as_stall_and_stops() {
-        let _guard = workspace_lock().lock().unwrap();
+        let _guard = workspace_guard();
         let artifacts_dir = temp_artifact_dir("council-stall");
         let request = CouncilRunRequest {
             task: "Detect stage stalls honestly".to_string(),
@@ -898,7 +898,7 @@ mod tests {
 
     #[test]
     fn council_run_records_timeout_reason() {
-        let _guard = workspace_lock().lock().unwrap();
+        let _guard = workspace_guard();
         let artifacts_dir = temp_artifact_dir("council-timeout");
         let request = CouncilRunRequest {
             task: "Timeouts must be explicit".to_string(),
@@ -928,7 +928,7 @@ mod tests {
 
     #[test]
     fn council_run_is_incomplete_when_codex_does_not_meet_contract() {
-        let _guard = workspace_lock().lock().unwrap();
+        let _guard = workspace_guard();
         let artifacts_dir = temp_artifact_dir("council-incomplete");
         let request = CouncilRunRequest {
             task: "Non converged output should stay honest".to_string(),

@@ -668,26 +668,12 @@ pub fn handle_task_list(
 #[cfg(test)]
 mod tests {
     use super::handle_council_promote;
-    use crate::test_support::workspace_lock;
+    use crate::test_support::TestWorkspace;
     use crate::types::{Project, ProjectRecord, ProjectRecordPayload};
     use crate::util::{append_jsonl, load_jsonl};
     use serde_json::json;
     use std::fs;
-    use std::path::{Path, PathBuf};
-
-    fn temp_workspace(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!(
-            "layers-commands-{}-{}",
-            name,
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        fs::create_dir_all(dir.join("memoryport")).unwrap();
-        fs::create_dir_all(dir.join(".git")).unwrap();
-        dir
-    }
+    use std::path::Path;
 
     fn seed_project(root: &Path, slug: &str) {
         let record = ProjectRecord {
@@ -771,12 +757,8 @@ mod tests {
 
     #[test]
     fn council_promote_appends_one_curated_decision_record() {
-        let _guard = workspace_lock().lock().unwrap();
-        let original = std::env::var_os("LAYERS_WORKSPACE_ROOT");
-        let root = temp_workspace("promote-success");
-        unsafe {
-            std::env::set_var("LAYERS_WORKSPACE_ROOT", &root);
-        }
+        let workspace = TestWorkspace::new("commands-promote-success");
+        let root = workspace.root();
         seed_project(&root, "layers");
         write_run_artifacts(
             &root,
@@ -812,18 +794,12 @@ mod tests {
                 .display()
                 .to_string()
         );
-
-        reset_workspace_root(original, &root);
     }
 
     #[test]
     fn council_promote_dry_run_does_not_write() {
-        let _guard = workspace_lock().lock().unwrap();
-        let original = std::env::var_os("LAYERS_WORKSPACE_ROOT");
-        let root = temp_workspace("promote-dry-run");
-        unsafe {
-            std::env::set_var("LAYERS_WORKSPACE_ROOT", &root);
-        }
+        let workspace = TestWorkspace::new("commands-promote-dry-run");
+        let root = workspace.root();
         seed_project(&root, "layers");
         write_run_artifacts(
             &root,
@@ -843,18 +819,12 @@ mod tests {
 
         let records = load_jsonl(&root.join("memoryport").join("curated-memory.jsonl")).unwrap();
         assert_eq!(records.len(), 1);
-
-        reset_workspace_root(original, &root);
     }
 
     #[test]
     fn council_promote_rejects_duplicate_promotion() {
-        let _guard = workspace_lock().lock().unwrap();
-        let original = std::env::var_os("LAYERS_WORKSPACE_ROOT");
-        let root = temp_workspace("promote-duplicate");
-        unsafe {
-            std::env::set_var("LAYERS_WORKSPACE_ROOT", &root);
-        }
+        let workspace = TestWorkspace::new("commands-promote-duplicate");
+        let root = workspace.root();
         seed_project(&root, "layers");
         write_run_artifacts(
             &root,
@@ -883,18 +853,12 @@ mod tests {
             err.to_string()
                 .contains("already promoted into canonical curated memory")
         );
-
-        reset_workspace_root(original, &root);
     }
 
     #[test]
     fn council_promote_rejects_non_promotable_runs() {
-        let _guard = workspace_lock().lock().unwrap();
-        let original = std::env::var_os("LAYERS_WORKSPACE_ROOT");
-        let root = temp_workspace("promote-reject");
-        unsafe {
-            std::env::set_var("LAYERS_WORKSPACE_ROOT", &root);
-        }
+        let workspace = TestWorkspace::new("commands-promote-reject");
+        let root = workspace.root();
         seed_project(&root, "layers");
         write_run_artifacts(
             &root,
@@ -944,20 +908,5 @@ mod tests {
         )
         .unwrap_err();
         assert!(not_converged.to_string().contains("not converged"));
-
-        reset_workspace_root(original, &root);
-    }
-
-    fn reset_workspace_root(original: Option<std::ffi::OsString>, root: &Path) {
-        if let Some(value) = original {
-            unsafe {
-                std::env::set_var("LAYERS_WORKSPACE_ROOT", value);
-            }
-        } else {
-            unsafe {
-                std::env::remove_var("LAYERS_WORKSPACE_ROOT");
-            }
-        }
-        fs::remove_dir_all(root).unwrap();
     }
 }

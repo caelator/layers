@@ -2,10 +2,15 @@
 name = "layers"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.85"
 
 authors = ["Caelator + OpenClaw"]
 description = "Local-first context router integrating Memoryport and GitNexus"
 license = "MIT"
+readme = "README.md"
+repository = "https://github.com/caelator/layers"
+keywords = ["cli", "memory", "code-intelligence", "gitnexus", "local-first"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 anyhow = "1"
