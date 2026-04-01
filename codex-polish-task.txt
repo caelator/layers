@@ -1,0 +1,22 @@
+Polish and clean up the Rust Layers project now that the refactor is largely complete.
+
+Goals:
+1. Keep the project green:
+   - `cargo test`
+   - `cargo run -- validate`
+2. Remove stale warnings, dead code, and leftover rough edges.
+3. Update any stale progress/status docs so they reflect the current live truth.
+4. Improve overall repo cleanliness and maintainability.
+5. Do not introduce speculative new features; focus on cleanup, correctness, and polish.
+
+Specific targets:
+- remove warnings and dead imports/functions
+- clean up any stale/refactor-progress mismatch
+- tighten validate/status output if there is low-risk cleanup to do so
+- ensure module boundaries are coherent
+- leave a concise summary in `codex-polish-summary.md`
+
+Before finishing:
+- run tests
+- run validate
+- write the summary file

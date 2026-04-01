@@ -1,0 +1,23 @@
+Write a practical execution plan to fully resolve the outstanding Layers core / Rust implementation track.
+
+Current scope:
+- finish curated memory as first-class canonical storage/retrieval
+- complete ingestion path and backfill
+- tighten Memoryport integration around curated records
+- continue making GitNexus more workflow-operational
+- improve council workflow support inside Layers
+- keep hardening the Rust implementation where needed
+
+Constraints:
+- Layers is narrowly scoped to councils, Memoryport continuity, and GitNexus code understanding
+- avoid PM/platform sprawl
+- optimize for actually finishing this track cleanly
+- define what can be considered done vs deferred
+
+What to produce:
+- a practical phased closure plan with priorities, risks, dependencies, and explicit finish criteria
+- focus on code and implementation reality, not architecture theater
+
+Write:
+- `codex-layers-core-closure-plan.md`
+- `codex-layers-core-closure-summary.md`

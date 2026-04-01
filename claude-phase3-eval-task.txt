@@ -1,0 +1,26 @@
+Evaluate the current state of Phase III (council workflow inside Layers), then develop a completion plan.
+
+Context:
+- Phase III has materially started and code landed
+- tests and validate are green
+- but Phase III is not yet considered fully complete
+- a Codex mid-phase plan may already exist, but you should produce your own evaluation and completion plan from the current repo state
+
+Your job:
+1. Evaluate the current implementation state of Phase III in the repo.
+2. Identify what is already solid.
+3. Identify what is still missing to honestly call Phase III complete.
+4. Produce a practical completion plan.
+
+Focus areas:
+- council workflow correctness
+- artifact correctness
+- liveness / retry / stall handling
+- grounding via curated memory and GitNexus artifacts
+- convergence logic
+- operator honesty / status reporting
+- what can be deferred without lying about completion
+
+Write:
+- `claude-phase3-evaluation.md`
+- `claude-phase3-completion-plan.md`

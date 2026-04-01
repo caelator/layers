@@ -1,0 +1,34 @@
+Design a thorough architecture plan for Layers v2 with a 5-year horizon.
+
+Immediate scope to define now:
+- stable artifact types
+- provider interfaces
+- 2-3 workflows
+- curated memory records
+- how current Rust modules should evolve to fit that model
+
+Requirements:
+- think 5 years ahead, but avoid architecture theater
+- optimize for durability, composability, maintainability, and practical usefulness
+- assume everything built now should either enable or at least not hinder future evolution
+- prefer a minimal but extensible core
+- do not propose a giant plugin cathedral or unnecessary dynamic machinery yet
+- keep the design local-first and Rust-first
+- treat Memoryport and GitNexus as first-class provider backends
+- allow future additional tools/services to fit cleanly into the architecture
+
+The plan should cover:
+1. architectural principles
+2. what should be stable for years vs what may evolve quickly
+3. artifact type system
+4. provider interfaces
+5. curated memory schema design
+6. workflow model (at least planning, handoff, postmortem; optionally review)
+7. module contracts
+8. migration plan from the current Layers codebase
+9. anti-goals / what not to build yet
+10. risks and mitigations
+11. how to keep the system modular like Legos without over-abstracting
+
+Write:
+- `claude-layers-v2-architecture.md`

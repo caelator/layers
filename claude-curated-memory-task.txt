@@ -1,0 +1,27 @@
+Write a concrete implementation plan for adding curated memory to Layers.
+
+Scope:
+- canonical curated memory records should be structured JSON/JSONL, not vectors-only
+- semantic retrieval can index derived retrieval text later
+- immediate record kinds:
+  - decision
+  - constraint
+  - status
+  - next_step
+  - postmortem
+- current Layers should evolve so curated records are retrieved first
+- current Layers Rust implementation should be the target for implementation
+
+Requirements:
+- practical and implementation-oriented
+- local-first
+- Rust-first
+- preserve durability and auditability
+- define schema shape and storage strategy
+- define CLI/API changes
+- define retrieval order and brief synthesis impact
+- define migration/backfill approach for the existing decisions we already have
+- define what not to do yet
+
+Write:
+- `claude-curated-memory-plan.md`

@@ -1,0 +1,31 @@
+Write a robust, elegant plan to fully resolve the outstanding Layers core / Rust implementation track.
+
+Current scope of the track:
+- finish curated memory as first-class canonical storage/retrieval
+- complete ingestion path and backfill
+- tighten Memoryport integration around curated records
+- continue making GitNexus more workflow-operational
+- improve council workflow support inside Layers
+- keep hardening the Rust implementation where needed
+
+Requirements:
+- local-first
+- Rust-first
+- keep Layers narrowly scoped to: councils, Memoryport continuity, GitNexus code understanding
+- avoid project/task/platform sprawl
+- optimize for completion and elegance, not endless open-ended evolution
+- define a closure path: how we know this track is actually done enough
+
+Plan should include:
+1. target end-state
+2. architectural principles
+3. phased execution plan
+4. dependencies/order of operations
+5. explicit deliverables/artifacts/code changes per phase
+6. testing/validation strategy
+7. what to defer
+8. a clear definition of done
+9. likely risks and how to mitigate them
+
+Write:
+- `claude-layers-core-closure-plan.md`

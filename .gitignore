@@ -1,0 +1,12 @@
+/target
+.gitnexus
+
+# Generated runtime artifacts
+memoryport/layers-audit.jsonl
+memoryport/council-traces.jsonl
+memoryport/council-runs/
+
+# Local caches / editor noise
+.DS_Store
+*.tmp
+*.swp

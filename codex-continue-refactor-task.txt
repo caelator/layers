@@ -1,0 +1,20 @@
+Continue the Rust refactor of the Layers repo.
+
+Current state:
+- Extracted already: `types.rs`, `config.rs`, `util.rs`, `routing.rs`
+- `cargo test` passes
+- `cargo run -- validate` passes
+- Remaining work: extract `memory`, `graph`, `synthesis`, and `commands`; shrink `main.rs`; remove dead code and warnings.
+
+Requirements:
+- Keep behavior stable.
+- Keep `cargo test` green after each meaningful step.
+- Keep `cargo run -- validate` green.
+- Do not regress replacement readiness.
+- Follow the approved module boundaries from the Claude/Codex plan/review.
+
+Output expectations:
+- Implement the next refactor slices directly.
+- Prefer multiple small safe edits over one giant risky rewrite.
+- Before finishing, run tests and validate.
+- Write a concise progress summary to `codex-refactor-progress.md`.

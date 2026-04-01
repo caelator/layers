@@ -1,0 +1,30 @@
+Execute Phase 1 of the Layers core closure plan: curated memory as canonical.
+
+Phase 1 goals:
+- add canonical curated-memory storage
+- add explicit ingestion/backfill path
+- make retrieval prefer curated records first
+- keep tests and validate green
+
+Context:
+- we already have `/Users/bri/Documents/GitHub/layers/distilled-memory-import.jsonl`
+- this should be ingested into the canonical curated-memory store
+- record kinds in scope:
+  - decision
+  - constraint
+  - status
+  - next_step
+  - postmortem
+
+Requirements:
+- local-first
+- Rust-first
+- smallest meaningful durable implementation
+- no giant migration engine
+- preserve narrowed Layers mission: councils, Memoryport continuity, GitNexus code understanding
+
+Before finishing:
+- ingest the distilled memory file
+- run tests
+- run validate
+- write a concise summary to `codex-phase1-summary.md`

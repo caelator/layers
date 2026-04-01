@@ -1,0 +1,27 @@
+Execute Phase II of the Layers core closure plan: GitNexus workflow artifacts.
+
+Use `claude-gitnexus-subtrack-plan.md` as the planning input.
+
+Phase II goals:
+- make GitNexus a stronger workflow participant, not just a query backend
+- introduce typed graph-oriented workflow artifacts
+- wire those artifacts into the highest-value narrowed-scope workflows first
+- keep scope tight: planning, review, handoff, and council grounding only if feasible within the current pass
+
+Priority artifacts to introduce if they fit the current architecture:
+- GraphContext
+- ImpactSummary
+- ImplementationContext
+- ReviewContext
+
+Execution rules:
+- keep Layers narrowly scoped to councils, Memoryport continuity, and GitNexus code understanding
+- do not drift into generic platform work
+- preserve provider boundaries: GitNexus remains the graph authority
+- prefer the smallest meaningful durable implementation
+
+Before finishing:
+- run tests
+- run validate
+- write a concise summary to `codex-phase2-summary.md`
+- state what landed vs what remains for later

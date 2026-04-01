@@ -1,0 +1,34 @@
+Write a focused plan for the GitNexus leverage inside Layers subtrack.
+
+Current reality:
+- GitNexus integration is useful now, but underexploited.
+- It works well as a graph/query backend.
+- The next step is to make it a stronger workflow participant without broadening Layers beyond its narrowed mission.
+
+Outstanding work to address:
+- turn GitNexus from a good query backend into a stronger workflow participant
+- define better graph artifacts for:
+  - planning
+  - review
+  - handoff
+  - maybe postmortem
+- link graph-aware reasoning more directly into council and implementation flows
+
+Constraints:
+- local-first
+- Rust-first
+- narrow Layers scope: councils, Memoryport continuity, GitNexus code understanding
+- avoid PM/platform/plugin sprawl
+- practical, implementation-oriented, not fluffy
+
+Write:
+- `claude-gitnexus-subtrack-plan.md`
+
+The plan should include:
+1. target end-state for this subtrack
+2. graph artifact types to introduce
+3. which workflows should consume those artifacts first
+4. integration points with council and implementation flows
+5. phased execution order
+6. what to defer
+7. definition of done for this subtrack

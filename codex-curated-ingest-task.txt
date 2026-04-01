@@ -1,0 +1,25 @@
+Implement curated memory ingestion in the Rust Layers project.
+
+Immediate goal:
+- add a real ingestion path so structured distilled records can be imported into the canonical curated-memory store
+- then ingest `distilled-memory-import.jsonl`
+
+Requirements:
+- keep scope tight
+- use structured canonical records, not vectors as truth
+- support the curated kinds already discussed:
+  - decision
+  - constraint
+  - status
+  - next_step
+  - postmortem
+- do not build a giant migration engine; implement the smallest durable ingestion path
+- keep the repo green (`cargo test`, `cargo run -- validate`)
+
+Deliverables:
+1. Implement curated-memory storage + ingestion path in Rust
+2. Import `/Users/bri/Documents/GitHub/layers/distilled-memory-import.jsonl`
+3. Update retrieval preference if needed so curated records are first-class
+4. Write a short summary to:
+   - `codex-curated-ingest-summary.md`
+

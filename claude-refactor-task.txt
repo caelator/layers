@@ -1,0 +1,24 @@
+Plan a Rust refactor for the Layers repo.
+
+Current state:
+- `src/main.rs` is still monolithic.
+- The behavior contract now mostly works and validate passes.
+- The next step is structural durability, not changing the product behavior.
+
+Your task:
+- Propose a concrete module split for the existing code.
+- Keep behavior stable.
+- Minimize needless churn.
+- Optimize for maintainability and testability.
+- Identify the order of refactor steps so the implementation can stay green after each step.
+- Call out any risky seams.
+
+Please write:
+- `claude-refactor-plan.md`
+
+The plan should include:
+1. proposed modules/files
+2. responsibility of each module
+3. migration order
+4. tests to keep passing during the refactor
+5. what should remain in `main.rs`

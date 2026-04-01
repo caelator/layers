@@ -1,0 +1,33 @@
+Execute the top 4 priority directions for Layers under the narrowed scope.
+
+Priority directions to execute:
+1. Claude curated memory plan
+2. Codex architecture summary discipline
+3. Gemini GitNexus leverage conclusions
+4. Claude v2 architecture constraints, but only where they fit the narrowed scope
+
+Current narrowed Layers scope:
+- councils with Gemini, Claude, Codex
+- Memoryport-based continuity to reduce context drift
+- GitNexus-based structural understanding to reduce codebase guessing/breakage
+
+What to do:
+- convert the plan conclusions into concrete implementation direction and, where feasible, actual code changes in the Rust repo
+- keep the scope tight; do not expand into generic PM/platform work
+- prefer practical progress over more planning artifacts
+- if implementation is too large for one pass, create a clear staged execution artifact and implement the smallest meaningful slice now
+
+Strong preferences:
+- curated memory should become first-class and preferred in retrieval
+- GitNexus should become more workflow-operational, not just query-operational
+- preserve/strengthen typed artifacts and stable provider boundaries
+- avoid plugin-platform or broad workflow-engine expansion
+
+Required outputs:
+- `codex-top4-execution-plan.md`
+- `codex-top4-progress.md`
+
+Before finishing:
+- run tests
+- run validate
+- summarize what was implemented vs staged next

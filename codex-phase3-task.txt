@@ -1,0 +1,21 @@
+Execute Phase III of the Layers core closure plan: council workflow inside Layers.
+
+Phase III goals:
+- build the smallest reliable Layers-native 3-model council workflow
+- orchestrate Gemini -> Claude -> Codex in the intended roles
+- ground council runs in curated memory and GitNexus workflow artifacts where appropriate
+- add real liveness/artifact tracking, convergence recording, and failure/retry discipline
+- keep scope tight; do not drift into a generic multi-agent platform
+
+Requirements:
+- local-first
+- Rust-first
+- preserve narrowed Layers mission: councils, Memoryport continuity, GitNexus code understanding
+- avoid plugin/platform sprawl
+- prefer the smallest durable implementation that materially advances the goal
+
+Before finishing:
+- run tests
+- run validate
+- write a concise summary to `codex-phase3-summary.md`
+- state what landed vs what remains for later

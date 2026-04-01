@@ -1,0 +1,44 @@
+Plan and begin building a Layers-native project/task subsystem in this Rust repo.
+
+High-level goal:
+Build a project/task coordination layer that plugs into Layers rather than cloning a generic PM app.
+
+Core direction:
+- local-first
+- Rust-first
+- structured canonical records, not vectors as truth
+- Memoryport semantic retrieval can index derived retrieval text later
+- integrate naturally with existing Layers memory/graph/workflow concepts
+
+What to plan and start implementing:
+1. Core schemas/entities for:
+   - Project
+   - Task
+   - Decision
+   - Constraint
+   - Status
+   - NextStep
+   - Postmortem
+2. Storage strategy for structured canonical records
+3. CLI surface for initial useful commands
+4. Retrieval preference model for curated records
+5. First workflow-oriented commands / packets
+6. How this fits into existing Layers architecture cleanly
+
+Constraints:
+- avoid building a giant PM clone
+- avoid UI-heavy or enterprise-heavy scope
+- keep it composable and Lego-like
+- optimize for usefulness to agent-driven development
+- preserve future ability to add workflows like planning, handoff, review, postmortem, and council integration
+
+Deliverables:
+1. Write a concrete architecture/implementation plan to:
+   - `codex-project-manager-plan.md`
+2. If the plan is solid, begin implementing the smallest useful slice in Rust.
+3. Run tests/build for any implemented code.
+4. Write a progress summary to:
+   - `codex-project-manager-progress.md`
+
+Bias:
+- do the smallest meaningful thing that moves us toward the long-term architecture without painting us into a corner.

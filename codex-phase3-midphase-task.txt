@@ -1,0 +1,30 @@
+Write the mid-phase completion plan for Phase III (council workflow inside Layers).
+
+Context:
+- Phase III has materially started and code landed
+- tests/validate are green
+- but the phase is not yet ready to be called fully complete
+- we need a focused completion plan, not a redesign
+
+Your job:
+Define the remaining work required to close Phase III honestly.
+
+The plan must cover:
+1. remaining implementation tasks
+2. acceptance scenarios
+3. artifact correctness requirements
+4. liveness / retry / stall validation
+5. grounding validation (curated memory + GitNexus artifacts)
+6. convergence validation
+7. operator honesty/status reporting requirements
+8. explicit pass/fail criteria for calling Phase III complete
+9. what can be deferred without lying about completion
+
+Constraints:
+- keep Layers narrowly scoped to councils, Memoryport continuity, GitNexus code understanding
+- avoid architecture re-expansion
+- practical, testable, execution-oriented
+
+Write:
+- `codex-phase3-midphase-plan.md`
+- `codex-phase3-midphase-summary.md`

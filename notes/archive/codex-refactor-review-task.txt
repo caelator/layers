@@ -1,0 +1,18 @@
+Review the refactor plan in `claude-refactor-plan.md` for the Rust Layers repo.
+
+Your job:
+- verify whether the proposed module split is sound
+- identify any structural mistakes or needless churn
+- check whether the migration order is safe
+- suggest adjustments if needed
+- keep behavior stability as the top priority
+
+Write:
+- `codex-refactor-review.md`
+- `codex-refactor-verdict.md`
+
+`codex-refactor-verdict.md` should be short and answer:
+- approved as-is
+- approved with changes
+- not approved
+and why.

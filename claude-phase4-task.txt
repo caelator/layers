@@ -1,0 +1,15 @@
+Write the plan for Phase IV of the Layers core closure plan.
+
+Assume Phase I and Phase II are complete and Phase III is underway.
+
+Your job:
+- define what Phase IV should be if the narrowed Layers mission remains:
+  - councils
+  - Memoryport continuity
+  - GitNexus code understanding
+- keep it practical and completion-oriented
+- avoid platform sprawl
+- define a clean definition of done for the phase
+
+Write:
+- `claude-phase4-plan.md`

@@ -1,0 +1,32 @@
+Plan how Layers should better leverage GitNexus.
+
+Context:
+- Layers already integrates GitNexus for graph-aware query/validate/refresh behavior.
+- The current integration is useful, but still relatively narrow.
+- We want GitNexus to become more operational inside Layers, especially as Layers evolves toward workflows and a project/task subsystem.
+
+Your task:
+Design a practical plan for how Layers should better leverage GitNexus.
+
+Focus areas:
+1. what GitNexus should provide to Layers beyond ad hoc graph queries
+2. what stable graph-oriented artifact types Layers should define
+3. how GitNexus should participate in workflows such as:
+   - planning
+   - review
+   - implementation handoff
+   - postmortem
+   - project/task management
+4. how task/project records should link to GitNexus entities (files, modules, processes, symbols, impact sets)
+5. what should be built now vs later
+6. anti-goals / what not to overcomplicate yet
+
+Requirements:
+- practical, not fluffy
+- local-first
+- Rust-first
+- fit cleanly into the current Layers architecture direction
+- optimize for leverage, not feature count
+
+Write:
+- `gemini-gitnexus-leverage-plan.md`

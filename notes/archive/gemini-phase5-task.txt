@@ -1,0 +1,18 @@
+Write the plan for Phase V of the Layers core closure plan.
+
+Assume:
+- Phase I and Phase II are complete
+- Phase III is underway
+- Phase IV will be the next practical closure-oriented phase
+
+Your job:
+- define a sensible Phase V that still fits the narrowed Layers mission:
+  - councils
+  - Memoryport continuity
+  - GitNexus code understanding
+- keep it practical and non-theatrical
+- avoid broad PM/platform/plugin sprawl
+- make the phase feel like the final meaningful hardening/closure step rather than new ambition creep
+
+Write:
+- `gemini-phase5-plan.md`

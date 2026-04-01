@@ -1,0 +1,19 @@
+Review the Rust implementation of Layers in this repo.
+
+Goals:
+1. Evaluate whether the Rust implementation actually matches the intended Layers contract.
+2. Identify contract gaps versus the current Python prototype behavior.
+3. Determine whether the Rust implementation is relying on external scripting in ways that violate the goal of a durable Rust system.
+4. Distinguish acceptable external tool integration (e.g. calling Memoryport `uc`, GitNexus CLI) from unacceptable dependence on Python/shell wrappers or prototype leftovers.
+5. Recommend the next implementation steps in priority order.
+
+Specific questions to answer:
+- Does the Rust binary implement the core Layers behavior directly in Rust?
+- Is it still depending on Python scripts or shell wrappers for routing / synthesis / formatting logic?
+- Are Memoryport and GitNexus integrations real, direct subprocess integrations from Rust?
+- What parts of the Python prototype are still missing or weaker in the Rust port?
+- What should be fixed next before the Rust version can replace the Python one?
+
+Output files:
+- codex-review.md
+- codex-next-steps.md

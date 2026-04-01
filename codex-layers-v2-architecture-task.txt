@@ -1,0 +1,25 @@
+Design a practical architecture plan for Layers v2 with a 5-year horizon.
+
+Immediate scope to define now:
+- stable artifact types
+- provider interfaces
+- 2-3 workflows
+- curated memory records
+- how the current Rust modules should evolve into that model
+
+Requirements:
+- think long-term, but stay practical and implementable
+- prefer minimal stable contracts over speculative abstractions
+- avoid giant plugin-platform theater
+- assume Rust-first, local-first
+- Memoryport and GitNexus should be first-class providers
+- future tools/services should be able to fit into the architecture without destabilizing the core
+
+Your output should be implementation-conscious and should explicitly distinguish:
+- what must be stable now
+- what can remain internal or provisional
+- what should not be built yet
+
+Please write:
+- `codex-layers-v2-architecture.md`
+- `codex-layers-v2-architecture-summary.md`

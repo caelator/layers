@@ -1,0 +1,28 @@
+Implement the Phase III completion plan.
+
+Primary input:
+- `claude-phase3-completion-plan.md`
+
+Also use if helpful:
+- `claude-phase3-evaluation.md`
+- `codex-phase3-midphase-plan.md`
+- `codex-phase3-midphase-summary.md`
+
+Your job:
+- close the remaining gaps in Phase III (council workflow inside Layers)
+- keep the repo green
+- do not redesign the architecture; finish the phase honestly
+
+Focus areas:
+- artifact completeness checks
+- liveness / stall / retry semantics
+- convergence / termination clarity
+- degraded-path behavior
+- end-to-end completion proof
+
+Before finishing:
+- run tests
+- run validate
+- write:
+  - `codex-phase3-close-summary.md`
+- state clearly whether Phase III is now fully complete or what precise gap remains
