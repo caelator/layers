@@ -886,34 +886,47 @@ pub fn handle_refresh(embeddings: bool) -> Result<()> {
         }));
     }
 
-    // 2. Verify MemoryPort
+    // 2. Refresh MemoryPort: flush pending chunks, then check status
     let has_uc = which("uc").is_some() && uc_config_path().exists();
     if has_uc {
         let uc_cfg = uc_config_path();
-        let args = ["uc", "-c", &uc_cfg.to_string_lossy(), "status"];
-        match run_command(&args, &root) {
+        let uc_cfg_str = uc_cfg.to_string_lossy().to_string();
+
+        // Flush buffered chunks (triggers embedding for any pending data)
+        let flush_args = ["uc", "-c", &uc_cfg_str, "flush"];
+        eprintln!("Running: {}", flush_args.join(" "));
+        let flush_result = match run_command(&flush_args, &root) {
             Ok((true, stdout, _)) => {
-                results.push(json!({
-                    "tool": "memoryport",
-                    "status": "ok",
-                    "output": compact(stdout.trim(), 500),
-                }));
+                json!({"action": "flush", "status": "ok", "output": compact(stdout.trim(), 200)})
             }
             Ok((false, _, stderr)) => {
-                results.push(json!({
-                    "tool": "memoryport",
-                    "status": "error",
-                    "error": compact(stderr.trim(), 500),
-                }));
+                json!({"action": "flush", "status": "error", "error": compact(stderr.trim(), 200)})
             }
             Err(e) => {
-                results.push(json!({
-                    "tool": "memoryport",
-                    "status": "error",
-                    "error": e.to_string(),
-                }));
+                json!({"action": "flush", "status": "error", "error": e.to_string()})
             }
-        }
+        };
+
+        // Check status
+        let status_args = ["uc", "-c", &uc_cfg_str, "status"];
+        let status_result = match run_command(&status_args, &root) {
+            Ok((true, stdout, _)) => {
+                json!({"action": "status", "status": "ok", "output": compact(stdout.trim(), 500)})
+            }
+            Ok((false, _, stderr)) => {
+                json!({"action": "status", "status": "error", "error": compact(stderr.trim(), 500)})
+            }
+            Err(e) => {
+                json!({"action": "status", "status": "error", "error": e.to_string()})
+            }
+        };
+
+        let mp_ok = flush_result["status"] != "error" && status_result["status"] != "error";
+        results.push(json!({
+            "tool": "memoryport",
+            "status": if mp_ok { "ok" } else { "error" },
+            "steps": [flush_result, status_result],
+        }));
     } else {
         results.push(json!({
             "tool": "memoryport",
