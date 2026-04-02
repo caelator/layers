@@ -56,9 +56,11 @@ const HISTORICAL_SIGNALS: &[&str] = &[
     "prior",
     "previous",
     "last time",
-    "decided",
-    "agreed",
-    "why",
+    "decid",     // matches decide, decided, decision
+    "agree",     // matches agree, agreed, agreement
+    "why did",
+    "why was",
+    "why do",
     "learn",
     "memory",
     "rationale",
@@ -68,17 +70,21 @@ const HISTORICAL_SIGNALS: &[&str] = &[
     "history",
     "before",
     "earlier",
+    "already",
+    "back when",
+    "last session",
+    "recall",
 ];
 
 const STRUCTURAL_SIGNALS: &[&str] = &[
     "file",
     "module",
-    "dependency",
+    "depend",    // matches dependency, dependencies, dependent, depends
     "import",
     "path",
     "codebase",
     "repo",
-    "architecture",
+    "architect", // matches architecture, architectural
     "impact",
     "refactor",
     "implement",
@@ -88,6 +94,8 @@ const STRUCTURAL_SIGNALS: &[&str] = &[
     "class",
     "caller",
     "callee",
+    "symbol",
+    "flow",
 ];
 
 const LOCAL_SIGNALS: &[&str] = &[
@@ -108,14 +116,17 @@ const LOCAL_SIGNALS: &[&str] = &[
 
 const ACTION_SIGNALS: &[&str] = &[
     "implement",
-    "revise",
+    "revis",     // matches revise, revision, revised
     "align",
     "build",
     "recover",
-    "migrate",
+    "migrat",    // matches migrate, migration
     "plan",
     "design",
     "create",
+    "add",
+    "fix",
+    "update",
 ];
 
 fn score_signals(task: &str, signals: &[&str]) -> u32 {
