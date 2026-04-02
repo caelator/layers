@@ -675,7 +675,7 @@ fn curated_import_to_record(import: CuratedImportRecord) -> Result<ProjectRecord
 // validate
 // ---------------------------------------------------------------------------
 
-pub fn handle_validate() -> Result<()> {
+pub fn handle_validate(routing_benchmarks: Option<String>) -> Result<()> {
     // Check JSONL stores exist
     let spine_files: Vec<_> = council_files()
         .into_iter()
@@ -716,7 +716,14 @@ pub fn handle_validate() -> Result<()> {
 
     let ok = has_uc || has_gitnexus; // at least one retrieval source
 
-    let payload = json!({
+    // Run routing benchmarks if requested
+    let benchmark_result = if let Some(ref bench_file) = routing_benchmarks {
+        Some(run_routing_benchmarks(bench_file)?)
+    } else {
+        None
+    };
+
+    let mut payload = json!({
         "ok": ok,
         "memory_spine": spine_files,
         "curated_memory": {
@@ -733,6 +740,211 @@ pub fn handle_validate() -> Result<()> {
             "gitnexus": has_gitnexus,
         },
         "workspace": workspace_root(),
+    });
+
+    if let Some(bench) = &benchmark_result {
+        payload["routing_benchmarks"] = bench.clone();
+        if bench["pass_rate"].as_f64().unwrap_or(0.0) < 1.0 {
+            payload["ok"] = json!(false);
+        }
+    }
+
+    println!("{}", serde_json::to_string_pretty(&payload)?);
+    Ok(())
+}
+
+/// Run routing benchmarks from an answer-key JSONL file.
+///
+/// Each line: `{"query": "...", "expected_route": "neither|memory_only|graph_only|both"}`
+/// Optional: `"expected_confidence": "high|low"`, `"note": "..."`
+fn run_routing_benchmarks(file: &str) -> Result<Value> {
+    let path = Path::new(file);
+    if !path.exists() {
+        anyhow::bail!("benchmark file not found: {}", file);
+    }
+    let lines = fs::read_to_string(path)?;
+    let mut total = 0u32;
+    let mut passed = 0u32;
+    let mut failures: Vec<Value> = Vec::new();
+
+    for (line_num, line) in lines.lines().enumerate() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') || line.starts_with("//") {
+            continue;
+        }
+        let case: Value = serde_json::from_str(line)
+            .with_context(|| format!("parse error on line {}", line_num + 1))?;
+
+        let query = case["query"]
+            .as_str()
+            .context("missing 'query' field")?;
+        let expected_route = case["expected_route"]
+            .as_str()
+            .context("missing 'expected_route' field")?;
+
+        let result = router::classify(query);
+
+        // Apply refusal bias (same as handle_query)
+        let effective_route = if result.confidence == Confidence::Low {
+            Route::Neither
+        } else {
+            result.route
+        };
+
+        let route_match = effective_route.label() == expected_route;
+
+        let confidence_match = case
+            .get("expected_confidence")
+            .and_then(|v| v.as_str())
+            .map(|ec| {
+                let actual = format!("{:?}", result.confidence).to_lowercase();
+                actual == ec
+            })
+            .unwrap_or(true); // no expectation = pass
+
+        total += 1;
+        if route_match && confidence_match {
+            passed += 1;
+        } else {
+            let mut failure = json!({
+                "line": line_num + 1,
+                "query": query,
+                "expected_route": expected_route,
+                "actual_route": effective_route.label(),
+                "actual_confidence": format!("{:?}", result.confidence).to_lowercase(),
+                "scores": result.scores,
+            });
+            if let Some(ec) = case.get("expected_confidence") {
+                failure["expected_confidence"] = ec.clone();
+            }
+            if let Some(note) = case.get("note") {
+                failure["note"] = note.clone();
+            }
+            failures.push(failure);
+        }
+    }
+
+    let pass_rate = if total > 0 {
+        passed as f64 / total as f64
+    } else {
+        1.0
+    };
+
+    Ok(json!({
+        "file": file,
+        "total": total,
+        "passed": passed,
+        "failed": total - passed,
+        "pass_rate": pass_rate,
+        "failures": failures,
+    }))
+}
+
+// ---------------------------------------------------------------------------
+// refresh
+// ---------------------------------------------------------------------------
+
+pub fn handle_refresh(embeddings: bool) -> Result<()> {
+    let root = workspace_root();
+    let mut results: Vec<Value> = Vec::new();
+
+    // 1. Refresh GitNexus index
+    if which("npx").is_some() {
+        let mut args = vec!["npx", "gitnexus", "analyze"];
+        if embeddings {
+            args.push("--embeddings");
+        }
+        eprintln!("Running: {}", args.join(" "));
+        match run_command(&args, &root) {
+            Ok((true, stdout, _)) => {
+                results.push(json!({
+                    "tool": "gitnexus",
+                    "status": "ok",
+                    "output": compact(stdout.trim(), 500),
+                }));
+            }
+            Ok((false, _, stderr)) => {
+                results.push(json!({
+                    "tool": "gitnexus",
+                    "status": "error",
+                    "error": compact(stderr.trim(), 500),
+                }));
+            }
+            Err(e) => {
+                results.push(json!({
+                    "tool": "gitnexus",
+                    "status": "error",
+                    "error": e.to_string(),
+                }));
+            }
+        }
+    } else {
+        results.push(json!({
+            "tool": "gitnexus",
+            "status": "skipped",
+            "reason": "npx not found in PATH",
+        }));
+    }
+
+    // 2. Verify MemoryPort
+    let has_uc = which("uc").is_some() && uc_config_path().exists();
+    if has_uc {
+        let uc_cfg = uc_config_path();
+        let args = ["uc", "-c", &uc_cfg.to_string_lossy(), "status"];
+        match run_command(&args, &root) {
+            Ok((true, stdout, _)) => {
+                results.push(json!({
+                    "tool": "memoryport",
+                    "status": "ok",
+                    "output": compact(stdout.trim(), 500),
+                }));
+            }
+            Ok((false, _, stderr)) => {
+                results.push(json!({
+                    "tool": "memoryport",
+                    "status": "error",
+                    "error": compact(stderr.trim(), 500),
+                }));
+            }
+            Err(e) => {
+                results.push(json!({
+                    "tool": "memoryport",
+                    "status": "error",
+                    "error": e.to_string(),
+                }));
+            }
+        }
+    } else {
+        results.push(json!({
+            "tool": "memoryport",
+            "status": "skipped",
+            "reason": if which("uc").is_none() { "uc not found in PATH" } else { "uc.toml not found" },
+        }));
+    }
+
+    // 3. Verify JSONL stores
+    let spine_status: Vec<_> = council_files()
+        .into_iter()
+        .map(|(kind, path)| {
+            let exists = path.exists();
+            let count = if exists {
+                load_jsonl(&path).map(|v| v.len()).unwrap_or(0)
+            } else {
+                0
+            };
+            json!({"kind": kind, "exists": exists, "records": count})
+        })
+        .collect();
+    results.push(json!({
+        "tool": "memory_spine",
+        "status": "ok",
+        "stores": spine_status,
+    }));
+
+    let ok = results.iter().all(|r| r["status"] != "error");
+    let payload = json!({
+        "ok": ok,
+        "results": results,
     });
     println!("{}", serde_json::to_string_pretty(&payload)?);
     Ok(())
@@ -1074,6 +1286,57 @@ mod tests {
             ..Default::default()
         };
         let result = council_promotion_record(&run, &convergence, "layers");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn validate_runs_without_benchmarks() {
+        let _ws = TestWorkspace::new("validate-no-bench");
+        let result = handle_validate(None);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn validate_runs_routing_benchmarks() {
+        let ws = TestWorkspace::new("validate-bench");
+        let root = ws.root();
+        let bench_file = root.join("benchmarks.jsonl");
+        fs::write(
+            &bench_file,
+            concat!(
+                r#"{"query": "rename this variable to snake_case", "expected_route": "neither", "expected_confidence": "high"}"#,
+                "\n",
+                r#"{"query": "hello", "expected_route": "neither", "expected_confidence": "low"}"#,
+                "\n",
+            ),
+        )
+        .unwrap();
+
+        let result = handle_validate(Some(bench_file.to_string_lossy().to_string()));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn validate_benchmarks_reports_failures() {
+        let ws = TestWorkspace::new("validate-bench-fail");
+        let root = ws.root();
+        let bench_file = root.join("bad-bench.jsonl");
+        // Force a mismatch: expect "both" for a trivial query
+        fs::write(
+            &bench_file,
+            r#"{"query": "rename x to y", "expected_route": "both"}"#,
+        )
+        .unwrap();
+
+        // validate should still succeed (it reports, doesn't bail)
+        let result = handle_validate(Some(bench_file.to_string_lossy().to_string()));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn validate_benchmarks_rejects_missing_file() {
+        let _ws = TestWorkspace::new("validate-bench-missing");
+        let result = handle_validate(Some("/nonexistent/file.jsonl".to_string()));
         assert!(result.is_err());
     }
 

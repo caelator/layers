@@ -1,0 +1,16 @@
+{"query": "rename this variable to snake_case", "expected_route": "neither", "expected_confidence": "high", "note": "trivial local edit"}
+{"query": "fix a typo in the format string", "expected_route": "neither", "expected_confidence": "high", "note": "trivial local fix"}
+{"query": "explain this line of regex", "expected_route": "neither", "expected_confidence": "high", "note": "local snippet question"}
+{"query": "hello", "expected_route": "neither", "expected_confidence": "low", "note": "no signal at all, refusal bias"}
+{"query": "something", "expected_route": "neither", "expected_confidence": "low", "note": "ambiguous, refusal bias"}
+{"query": "why did we previously decide to use that rationale? what was the prior agreed approach?", "expected_route": "memory_only", "note": "strong historical signals"}
+{"query": "what was the council's earlier decision about the architecture before?", "expected_route": "memory_only", "note": "historical + council context"}
+{"query": "recover the rationale from the previous council history", "expected_route": "memory_only", "note": "recover + rationale + previous + council + history"}
+{"query": "which module imports this file and what is the dependency architecture of the codebase?", "expected_route": "graph_only", "note": "structural signals: module, imports, dependency, architecture, codebase"}
+{"query": "where is the function that handles file path resolution in the repo?", "expected_route": "graph_only", "note": "structural: where, function, file, path, repo"}
+{"query": "what are the callers and callees of the struct in this module?", "expected_route": "graph_only", "note": "structural: callers, callees, struct, module"}
+{"query": "implement the previously decided refactor of the module dependency architecture", "expected_route": "both", "note": "historical (previously, decided) + structural (refactor, module, dependency, architecture) + action (implement, refactor)"}
+{"query": "revise the previously agreed architecture plan and align the codebase module dependencies based on prior decisions", "expected_route": "both", "note": "historical (previously, agreed, prior) + structural (architecture, codebase, module, dependency) + action (revise, align)"}
+{"query": "build on the prior council decision to migrate the import path in the repo", "expected_route": "both", "note": "historical (prior, council, decision) + structural (import, path, repo) + action (build, migrate)"}
+{"query": "what color should the button be", "expected_route": "neither", "expected_confidence": "low", "note": "no relevant signals"}
+{"query": "add a semicolon to line 42", "expected_route": "neither", "expected_confidence": "high", "note": "local: semicolon"}

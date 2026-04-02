@@ -13,7 +13,7 @@ mod router;
 
 use commands::{
     handle_council_promote, handle_council_run, handle_curated_import, handle_query,
-    handle_remember, handle_validate,
+    handle_refresh, handle_remember, handle_validate,
 };
 
 /// Council orchestrator and memory spine for multi-model AI workflows.
@@ -58,7 +58,17 @@ enum Commands {
         targets: Option<String>,
     },
     /// Run a self-test to verify council config and JSONL stores.
-    Validate,
+    Validate {
+        /// Run routing benchmarks from an answer-key JSONL file.
+        #[arg(long)]
+        routing: Option<String>,
+    },
+    /// Refresh GitNexus index and verify MemoryPort readiness.
+    Refresh {
+        /// Also regenerate embeddings (passes --embeddings to gitnexus analyze).
+        #[arg(long)]
+        embeddings: bool,
+    },
     /// Import or manage curated memory records.
     Curated {
         #[command(subcommand)]
@@ -143,7 +153,8 @@ fn main() -> Result<()> {
             artifacts_dir,
             targets,
         } => handle_remember(&kind, task, task_type, summary, file, artifacts_dir, targets),
-        Commands::Validate => handle_validate(),
+        Commands::Validate { routing } => handle_validate(routing),
+        Commands::Refresh { embeddings } => handle_refresh(embeddings),
         Commands::Curated { command } => match command {
             CuratedCommands::Import { file } => handle_curated_import(&file),
         },
