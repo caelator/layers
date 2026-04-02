@@ -13,7 +13,7 @@ pub fn workspace_root() -> PathBuf {
     PathBuf::from(".")
 }
 
-pub fn find_git_root(start: &Path) -> Option<PathBuf> {
+fn find_git_root(start: &Path) -> Option<PathBuf> {
     let mut current = start.to_path_buf();
     loop {
         if current.join(".git").exists() {
@@ -30,24 +30,8 @@ pub fn memoryport_dir() -> PathBuf {
     workspace_root().join("memoryport")
 }
 
-pub fn audit_path() -> PathBuf {
-    memoryport_dir().join("layers-audit.jsonl")
-}
-
-pub fn curated_memory_path() -> PathBuf {
-    memoryport_dir().join("curated-memory.jsonl")
-}
-
 pub fn canonical_curated_memory_path() -> PathBuf {
-    curated_memory_path()
-}
-
-pub fn legacy_project_records_path() -> PathBuf {
-    memoryport_dir().join("project-records.jsonl")
-}
-
-pub fn project_records_path() -> PathBuf {
-    canonical_curated_memory_path()
+    memoryport_dir().join("curated-memory.jsonl")
 }
 
 pub fn uc_config_path() -> PathBuf {
@@ -63,6 +47,6 @@ pub fn council_files() -> Vec<(&'static str, PathBuf)> {
     ]
 }
 
-pub fn dirs_home() -> PathBuf {
-    PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| "/Users/bri".to_string()))
+fn dirs_home() -> PathBuf {
+    PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string()))
 }

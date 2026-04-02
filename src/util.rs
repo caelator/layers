@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
 use chrono::Utc;
-use regex::Regex;
 use serde_json::Value;
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
@@ -46,14 +45,6 @@ pub fn load_jsonl(path: &Path) -> Result<Vec<Value>> {
         }
     }
     Ok(out)
-}
-
-pub fn tokenize(text: &str) -> std::collections::HashSet<String> {
-    Regex::new(r"[a-z0-9]{3,}")
-        .unwrap()
-        .find_iter(&text.to_lowercase())
-        .map(|m| m.as_str().to_string())
-        .collect()
 }
 
 pub fn run_command(args: &[&str], cwd: &Path) -> Result<(bool, String, String)> {
