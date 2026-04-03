@@ -71,6 +71,12 @@ See [docs/walkthrough.md](docs/walkthrough.md) for a full getting-started guide.
 
 Full command reference: [docs/cli.md](docs/cli.md)
 
+For repeatable benchmark checks, run:
+
+```bash
+layers validate --routing benchmarks/routing-answer-keys.jsonl --ci
+```
+
 ## External Dependencies
 
 Layers is intentionally small and shells out to local tools:

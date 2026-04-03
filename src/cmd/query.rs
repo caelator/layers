@@ -2,8 +2,8 @@ use anyhow::Result;
 use serde_json::json;
 
 use crate::config::memoryport_dir;
-use crate::memory;
 use crate::graph;
+use crate::memory;
 use crate::router::{self, Confidence, Route};
 use crate::util::{append_jsonl, iso_now};
 
@@ -56,8 +56,10 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
                 evidence_sections.push(format!("### GitNexus\n{}", facts.join("\n")));
             }
             Ok(_) => {
-                open_uncertainty
-                    .push("GitNexus query returned no results. Run `layers refresh` to update the index.".into());
+                open_uncertainty.push(
+                    "GitNexus query returned no results. Run `layers refresh` to update the index."
+                        .into(),
+                );
             }
             Err(e) => {
                 open_uncertainty.push(format!("GitNexus retrieval failed: {e}"));

@@ -5,7 +5,6 @@
 /// - `memory_only`: historical context needed
 /// - `graph_only`: structural/code context needed
 /// - `both`: both historical and structural context needed
-
 use serde::Serialize;
 use std::fmt;
 
@@ -66,8 +65,8 @@ const HISTORICAL_SIGNALS: &[&str] = &[
     "prior",
     "previous",
     "last time",
-    "decid",     // matches decide, decided, decision
-    "agree",     // matches agree, agreed, agreement
+    "decid", // matches decide, decided, decision
+    "agree", // matches agree, agreed, agreement
     "why did",
     "why was",
     "why do",
@@ -89,7 +88,7 @@ const HISTORICAL_SIGNALS: &[&str] = &[
 const STRUCTURAL_SIGNALS: &[&str] = &[
     "file",
     "module",
-    "depend",    // matches dependency, dependencies, dependent, depends
+    "depend", // matches dependency, dependencies, dependent, depends
     "import",
     "path",
     "codebase",
@@ -126,11 +125,11 @@ const LOCAL_SIGNALS: &[&str] = &[
 
 const ACTION_SIGNALS: &[&str] = &[
     "implement",
-    "revis",     // matches revise, revision, revised
+    "revis", // matches revise, revision, revised
     "align",
     "build",
     "recover",
-    "migrat",    // matches migrate, migration
+    "migrat", // matches migrate, migration
     "plan",
     "design",
     "create",
@@ -291,19 +290,25 @@ mod tests {
 
     #[test]
     fn history_question_routes_memory() {
-        let result = classify("why did we previously decide to use that rationale? what was the prior agreed approach?");
+        let result = classify(
+            "why did we previously decide to use that rationale? what was the prior agreed approach?",
+        );
         assert_eq!(result.route, Route::MemoryOnly);
     }
 
     #[test]
     fn structural_question_routes_graph() {
-        let result = classify("which module imports this file and what is the dependency architecture of the codebase?");
+        let result = classify(
+            "which module imports this file and what is the dependency architecture of the codebase?",
+        );
         assert_eq!(result.route, Route::GraphOnly);
     }
 
     #[test]
     fn combined_question_routes_both() {
-        let result = classify("implement the previously decided refactor of the module dependency architecture");
+        let result = classify(
+            "implement the previously decided refactor of the module dependency architecture",
+        );
         assert_eq!(result.route, Route::Both);
     }
 

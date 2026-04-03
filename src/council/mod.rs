@@ -15,7 +15,7 @@ use artifacts::{
     validate_run_artifacts,
 };
 use convergence::{build_convergence_record, build_failure_convergence_record};
-use stage::{execute_stage, StageOutcome, StageSpec};
+use stage::{StageOutcome, StageSpec, execute_stage};
 
 pub struct CouncilRunRequest {
     pub task: String,

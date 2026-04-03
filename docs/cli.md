@@ -42,7 +42,12 @@ layers query "Show me the call graph for handle_query" --no-audit
 
 Run a health check across routing, provider reachability, memory workflows, graph workflows, and record shape validation.
 
-**Options:** None.
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--routing <file>` | Run answer-key routing benchmarks from a JSONL file |
+| `--ci` | Exit non-zero if validation or routing benchmarks fail |
 
 **Output:** Pass/fail summary for each check, plus an overall status.
 
@@ -50,6 +55,8 @@ Run a health check across routing, provider reachability, memory workflows, grap
 
 ```bash
 layers validate
+layers validate --routing benchmarks/routing-answer-keys.jsonl
+layers validate --routing benchmarks/routing-answer-keys.jsonl --ci
 ```
 
 ---

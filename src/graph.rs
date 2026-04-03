@@ -25,13 +25,7 @@ pub fn query(task: &str, limit: usize) -> Result<Vec<String>> {
     let repo = repo_name();
     let limit_str = limit.to_string();
     let args = [
-        "gitnexus",
-        "query",
-        task,
-        "--limit",
-        &limit_str,
-        "--repo",
-        &repo,
+        "gitnexus", "query", task, "--limit", &limit_str, "--repo", &repo,
     ];
     match run_command(&args, &workspace_root()) {
         Ok((true, stdout, _)) => {

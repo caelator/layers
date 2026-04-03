@@ -163,11 +163,7 @@ pub fn handle_council_promote(
         .iter()
         .any(|r| r.get("id").and_then(|v| v.as_str()) == Some(&record.id))
     {
-        anyhow::bail!(
-            "run '{}' was already promoted as '{}'",
-            run_id,
-            record.id
-        );
+        anyhow::bail!("run '{}' was already promoted as '{}'", run_id, record.id);
     }
 
     let payload = json!({
@@ -293,14 +289,15 @@ mod tests {
     use std::path::Path;
 
     fn seed_promotable_run(root: &Path, run_id: &str) {
-        let artifacts_dir = root
-            .join("memoryport")
-            .join("council-runs")
-            .join(run_id);
+        let artifacts_dir = root.join("memoryport").join("council-runs").join(run_id);
         fs::create_dir_all(&artifacts_dir).unwrap();
 
         let convergence_output = artifacts_dir.join("codex-attempt-1.stdout.txt");
-        fs::write(&convergence_output, "## Decision\n- adopt this\n## Why\n- it works\n").unwrap();
+        fs::write(
+            &convergence_output,
+            "## Decision\n- adopt this\n## Why\n- it works\n",
+        )
+        .unwrap();
 
         let run = json!({
             "run_id": run_id,
@@ -443,8 +440,7 @@ mod tests {
 
         handle_council_promote("promote-ok", "layers", None, false, true).unwrap();
 
-        let records =
-            load_jsonl(&root.join("memoryport").join("curated-memory.jsonl")).unwrap();
+        let records = load_jsonl(&root.join("memoryport").join("curated-memory.jsonl")).unwrap();
         assert_eq!(records.len(), 1);
         assert_eq!(records[0]["entity"], "decision");
         assert_eq!(records[0]["source"], "council-promotion-v1");
@@ -458,8 +454,7 @@ mod tests {
 
         handle_council_promote("promote-dry", "layers", None, true, true).unwrap();
 
-        let records =
-            load_jsonl(&root.join("memoryport").join("curated-memory.jsonl")).unwrap();
+        let records = load_jsonl(&root.join("memoryport").join("curated-memory.jsonl")).unwrap();
         assert!(records.is_empty());
     }
 

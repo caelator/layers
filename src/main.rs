@@ -71,6 +71,9 @@ enum Commands {
         /// Run routing benchmarks from an answer-key JSONL file.
         #[arg(long)]
         routing: Option<String>,
+        /// Exit with non-zero status when validation fails.
+        #[arg(long)]
+        ci: bool,
     },
     /// Refresh GitNexus index and verify MemoryPort readiness.
     Refresh {
@@ -224,7 +227,11 @@ enum TaskCommands {
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
-        Commands::Query { task, json, no_audit } => handle_query(&task, json, no_audit),
+        Commands::Query {
+            task,
+            json,
+            no_audit,
+        } => handle_query(&task, json, no_audit),
         Commands::Remember {
             kind,
             task,
@@ -233,8 +240,16 @@ fn main() -> Result<()> {
             file,
             artifacts_dir,
             targets,
-        } => handle_remember(&kind, task, task_type, summary, file, artifacts_dir, targets),
-        Commands::Validate { routing } => handle_validate(routing),
+        } => handle_remember(
+            &kind,
+            task,
+            task_type,
+            summary,
+            file,
+            artifacts_dir,
+            targets,
+        ),
+        Commands::Validate { routing, ci } => handle_validate(routing, ci),
         Commands::Refresh { embeddings } => handle_refresh(embeddings),
         Commands::Curated { command } => match command {
             CuratedCommands::Import { file } => handle_curated_import(&file),
@@ -270,18 +285,29 @@ fn main() -> Result<()> {
             } => handle_council_promote(&run_id, &project, artifacts_dir, dry_run, json),
         },
         Commands::Project { command } => match command {
-            ProjectCommands::Create { slug, title, summary, status, json } => {
-                handle_project_create(&slug, &title, summary, status, json)
-            }
+            ProjectCommands::Create {
+                slug,
+                title,
+                summary,
+                status,
+                json,
+            } => handle_project_create(&slug, &title, summary, status, json),
             ProjectCommands::List { json } => handle_project_list(json),
         },
         Commands::Task { command } => match command {
-            TaskCommands::Create { project, slug, title, summary, status, json } => {
-                handle_task_create(&project, &slug, &title, summary, status, json)
-            }
-            TaskCommands::List { project, status, json } => {
-                handle_task_list(project.as_deref(), status.as_deref(), json)
-            }
+            TaskCommands::Create {
+                project,
+                slug,
+                title,
+                summary,
+                status,
+                json,
+            } => handle_task_create(&project, &slug, &title, summary, status, json),
+            TaskCommands::List {
+                project,
+                status,
+                json,
+            } => handle_task_list(project.as_deref(), status.as_deref(), json),
         },
     }
 }

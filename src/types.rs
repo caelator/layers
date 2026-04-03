@@ -217,7 +217,6 @@ pub enum ProjectRecordPayload {
     Postmortem(Postmortem),
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectRecord {
     pub id: String,

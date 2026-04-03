@@ -24,6 +24,15 @@ Validate:
 
 ```bash
 cargo run -- validate
+cargo run -- validate --routing benchmarks/routing-answer-keys.jsonl
+```
+
+CI-equivalent validation:
+
+```bash
+cargo build --release
+cargo test
+./target/release/layers validate --routing benchmarks/routing-answer-keys.jsonl --ci
 ```
 
 Inspect help:
@@ -55,6 +64,7 @@ If a behavior matters, it should be exercised by Rust tests or by `validate`.
 Current validation covers:
 
 - routing sanity
+- routing benchmark pass/fail enforcement for CI
 - graph provider reachability
 - graph workflow retrieval
 - memory workflow retrieval

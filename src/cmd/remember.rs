@@ -47,7 +47,10 @@ pub fn handle_remember(
                 "task_type": task_type,
             })
         }
-        _ => anyhow::bail!("unsupported kind: {}. Valid kinds: plan, learning, trace", kind),
+        _ => anyhow::bail!(
+            "unsupported kind: {}. Valid kinds: plan, learning, trace",
+            kind
+        ),
     };
     let path = match kind {
         "plan" => memoryport_dir().join("council-plans.jsonl"),
@@ -91,10 +94,12 @@ mod tests {
         let records = load_jsonl(&root.join("memoryport").join("council-plans.jsonl")).unwrap();
         assert_eq!(records.len(), 1);
         assert_eq!(records[0]["task"], "test-task");
-        assert!(records[0]["plan_markdown"]
-            .as_str()
-            .unwrap()
-            .contains("Do the thing"));
+        assert!(
+            records[0]["plan_markdown"]
+                .as_str()
+                .unwrap()
+                .contains("Do the thing")
+        );
     }
 
     #[test]
@@ -113,8 +118,7 @@ mod tests {
         )
         .unwrap();
 
-        let records =
-            load_jsonl(&root.join("memoryport").join("council-learnings.jsonl")).unwrap();
+        let records = load_jsonl(&root.join("memoryport").join("council-learnings.jsonl")).unwrap();
         assert_eq!(records.len(), 1);
         assert_eq!(
             records[0]["summary"],

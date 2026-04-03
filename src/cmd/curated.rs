@@ -160,16 +160,11 @@ mod tests {
             "timestamp": "2026-04-02T00:00:00Z",
             "tags": ["layers"]
         });
-        fs::write(
-            &import_file,
-            format!("{}\n{}\n", record, record),
-        )
-        .unwrap();
+        fs::write(&import_file, format!("{}\n{}\n", record, record)).unwrap();
 
         handle_curated_import(&import_file.to_string_lossy()).unwrap();
 
-        let records =
-            load_jsonl(&root.join("memoryport").join("curated-memory.jsonl")).unwrap();
+        let records = load_jsonl(&root.join("memoryport").join("curated-memory.jsonl")).unwrap();
         assert_eq!(records.len(), 1, "duplicate should be skipped");
     }
 

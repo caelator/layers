@@ -7,7 +7,7 @@ use crate::config::{canonical_curated_memory_path, council_files, uc_config_path
 use crate::router::{self, Confidence, Route};
 use crate::util::{load_jsonl, which};
 
-pub fn handle_validate(routing_benchmarks: Option<String>) -> Result<()> {
+pub fn handle_validate(routing_benchmarks: Option<String>, ci: bool) -> Result<()> {
     // Check JSONL stores exist
     let spine_files: Vec<_> = council_files()
         .into_iter()
@@ -86,6 +86,9 @@ pub fn handle_validate(routing_benchmarks: Option<String>) -> Result<()> {
     }
 
     println!("{}", serde_json::to_string_pretty(&payload)?);
+    if ci && payload["ok"] == json!(false) {
+        anyhow::bail!("validation failed");
+    }
     Ok(())
 }
 
@@ -111,9 +114,7 @@ pub fn run_routing_benchmarks(file: &str) -> Result<Value> {
         let case: Value = serde_json::from_str(line)
             .with_context(|| format!("parse error on line {}", line_num + 1))?;
 
-        let query = case["query"]
-            .as_str()
-            .context("missing 'query' field")?;
+        let query = case["query"].as_str().context("missing 'query' field")?;
         let expected_route = case["expected_route"]
             .as_str()
             .context("missing 'expected_route' field")?;
@@ -185,7 +186,7 @@ mod tests {
     #[test]
     fn validate_runs_without_benchmarks() {
         let _ws = TestWorkspace::new("validate-no-bench");
-        let result = handle_validate(None);
+        let result = handle_validate(None, false);
         assert!(result.is_ok());
     }
 
@@ -205,7 +206,7 @@ mod tests {
         )
         .unwrap();
 
-        let result = handle_validate(Some(bench_file.to_string_lossy().to_string()));
+        let result = handle_validate(Some(bench_file.to_string_lossy().to_string()), false);
         assert!(result.is_ok());
     }
 
@@ -222,14 +223,49 @@ mod tests {
         .unwrap();
 
         // validate should still succeed (it reports, doesn't bail)
-        let result = handle_validate(Some(bench_file.to_string_lossy().to_string()));
+        let result = handle_validate(Some(bench_file.to_string_lossy().to_string()), false);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn validate_ci_mode_fails_when_benchmarks_fail() {
+        let ws = TestWorkspace::new("validate-bench-ci-fail");
+        let root = ws.root();
+        let bench_file = root.join("bad-bench.jsonl");
+        fs::write(
+            &bench_file,
+            r#"{"query": "rename x to y", "expected_route": "both"}"#,
+        )
+        .unwrap();
+
+        let result = handle_validate(Some(bench_file.to_string_lossy().to_string()), true);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn validate_ci_mode_succeeds_when_benchmarks_pass() {
+        let ws = TestWorkspace::new("validate-bench-ci-pass");
+        let root = ws.root();
+        let bench_file = root.join("benchmarks.jsonl");
+        fs::write(
+            &bench_file,
+            concat!(
+                r#"{"query": "rename this variable to snake_case", "expected_route": "neither", "expected_confidence": "high"}"#,
+                "\n",
+                r#"{"query": "why did we already decide this about Layers? What was the rationale?", "expected_route": "memory_only"}"#,
+                "\n",
+            ),
+        )
+        .unwrap();
+
+        let result = handle_validate(Some(bench_file.to_string_lossy().to_string()), true);
         assert!(result.is_ok());
     }
 
     #[test]
     fn validate_benchmarks_rejects_missing_file() {
         let _ws = TestWorkspace::new("validate-bench-missing");
-        let result = handle_validate(Some("/nonexistent/file.jsonl".to_string()));
+        let result = handle_validate(Some("/nonexistent/file.jsonl".to_string()), false);
         assert!(result.is_err());
     }
 }
