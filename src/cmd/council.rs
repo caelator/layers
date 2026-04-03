@@ -2,6 +2,7 @@ use anyhow::Result;
 use serde_json::json;
 use std::path::PathBuf;
 
+use crate::cmd::query::{build_context_payload, RetrievalMeta};
 use crate::config::{canonical_curated_memory_path, uc_config_path, workspace_root};
 use crate::council::{
     CouncilRunRequest, execute_council_run, load_council_convergence_record,
@@ -32,6 +33,22 @@ pub fn handle_council_run(
     let target_symbols = parse_targets(targets.as_deref());
     let graph_context = graph::impact(&target_symbols)?;
 
+    // Build structured context payload for the council handshake
+    let context_payload = build_context_payload(
+        task,
+        crate::router::Route::Both,
+        "high",
+        Vec::new(),
+        Vec::new(),
+        RetrievalMeta {
+            memory_source: "direct".to_string(),
+            memory_latency_ms: 0,
+            graph_latency_ms: 0,
+            fallback_reason: None,
+        },
+    );
+    let payload_value = serde_json::to_value(&context_payload)?;
+
     let run = execute_council_run(CouncilRunRequest {
         task: task.to_string(),
         route: "direct".to_string(),
@@ -46,6 +63,7 @@ pub fn handle_council_run(
         timeout_secs,
         artifacts_dir: artifacts_dir.map(PathBuf::from),
         trace_path_override: None,
+        context_payload: Some(payload_value),
     })?;
 
     if json_out {

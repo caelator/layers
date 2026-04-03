@@ -6,7 +6,7 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::config::{memoryport_dir, workspace_root};
+use crate::config::{memoryport_dir, workspace_root, CONTEXT_PAYLOAD_SCHEMA_VERSION};
 use crate::types::{CouncilConvergenceRecord, CouncilRunRecord, ImpactSummary};
 use crate::util::iso_now;
 
@@ -31,6 +31,8 @@ pub struct CouncilRunRequest {
     pub timeout_secs: u64,
     pub artifacts_dir: Option<PathBuf>,
     pub trace_path_override: Option<PathBuf>,
+    /// Structured context payload (schema-versioned) for the council handshake.
+    pub context_payload: Option<serde_json::Value>,
 }
 
 pub fn execute_council_run(request: CouncilRunRequest) -> Result<CouncilRunRecord> {
@@ -49,6 +51,22 @@ pub fn execute_council_run(request: CouncilRunRequest) -> Result<CouncilRunRecor
         &context_json_path,
         serde_json::to_string_pretty(&request.context_json)?,
     )?;
+
+    // Write versioned context payload if provided
+    if let Some(payload) = &request.context_payload {
+        // Validate schema version
+        if let Some(v) = payload.get("schema_version").and_then(|v| v.as_u64()) {
+            if v as u32 != CONTEXT_PAYLOAD_SCHEMA_VERSION {
+                anyhow::bail!(
+                    "unsupported context payload schema version: {} (expected {})",
+                    v,
+                    CONTEXT_PAYLOAD_SCHEMA_VERSION
+                );
+            }
+        }
+        let payload_path = artifacts_dir.join("payload.json");
+        fs::write(&payload_path, serde_json::to_string_pretty(payload)?)?;
+    }
 
     let mut run = CouncilRunRecord {
         run_id: run_id.clone(),
@@ -339,6 +357,7 @@ mod tests {
             timeout_secs: 2,
             artifacts_dir: Some(artifacts_dir.clone()),
             trace_path_override: Some(artifacts_dir.join("council-traces.jsonl")),
+            context_payload: None,
         };
 
         let run = execute_council_run(request).unwrap();
@@ -386,6 +405,7 @@ mod tests {
             timeout_secs: 2,
             artifacts_dir: Some(artifacts_dir),
             trace_path_override: Some(counter.parent().unwrap().join("council-traces.jsonl")),
+            context_payload: None,
         };
 
         let run = execute_council_run(request).unwrap();
@@ -413,6 +433,7 @@ mod tests {
             timeout_secs: 2,
             artifacts_dir: Some(artifacts_dir),
             trace_path_override: None,
+            context_payload: None,
         };
 
         let run = execute_council_run(request).unwrap();
@@ -440,6 +461,7 @@ mod tests {
             timeout_secs: 1,
             artifacts_dir: Some(artifacts_dir),
             trace_path_override: None,
+            context_payload: None,
         };
 
         let run = execute_council_run(request).unwrap();
@@ -470,6 +492,7 @@ mod tests {
             timeout_secs: 2,
             artifacts_dir: Some(artifacts_dir),
             trace_path_override: None,
+            context_payload: None,
         };
 
         let run = execute_council_run(request).unwrap();

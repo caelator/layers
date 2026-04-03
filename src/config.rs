@@ -38,14 +38,6 @@ pub fn uc_config_path() -> PathBuf {
     dirs_home().join(".memoryport").join("uc.toml")
 }
 
-pub fn projects_path() -> PathBuf {
-    memoryport_dir().join("projects.jsonl")
-}
-
-pub fn tasks_path() -> PathBuf {
-    memoryport_dir().join("tasks.jsonl")
-}
-
 pub fn council_files() -> Vec<(&'static str, PathBuf)> {
     let base = memoryport_dir();
     vec![
@@ -54,6 +46,28 @@ pub fn council_files() -> Vec<(&'static str, PathBuf)> {
         ("learning", base.join("council-learnings.jsonl")),
     ]
 }
+
+/// Timeout in milliseconds before falling back from `uc` to local JSONL.
+/// Override with LAYERS_UC_TIMEOUT_MS.
+pub fn uc_timeout_ms() -> u64 {
+    std::env::var("LAYERS_UC_TIMEOUT_MS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(500)
+}
+
+/// Minimum results from `uc` to consider the retrieval successful.
+/// If fewer are returned, local JSONL gets boosted.
+/// Override with LAYERS_UC_MIN_RESULTS.
+pub fn uc_min_results() -> usize {
+    std::env::var("LAYERS_UC_MIN_RESULTS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(1)
+}
+
+/// Current schema version for ContextPayload.
+pub const CONTEXT_PAYLOAD_SCHEMA_VERSION: u32 = 1;
 
 fn dirs_home() -> PathBuf {
     PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string()))
