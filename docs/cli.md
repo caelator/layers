@@ -30,9 +30,11 @@ layers query "Show me the call graph for handle_query" --no-audit
 **Behavior:**
 
 1. Pattern-matches the query to determine a routing mode: `memory_only`, `graph_only`, `both`, or `neither`.
-2. Retrieves results from applicable providers (curated records, semantic search, GitNexus graph).
+2. Retrieves results from applicable providers (curated records, semantic search via `uc`, GitNexus graph).
 3. Assembles and prints a context packet.
 4. Appends an audit event to `memoryport/layers-audit.jsonl` (unless `--no-audit`).
+
+**Integration note:** GitNexus is expected to be reachable as a local CLI/MCP-backed system. MemoryPort is expected to be reachable through `uc` and local canonical files. The existing `codex-memoryport-bridge` is a model proxy, not a generic MCP tool surface.
 
 ---
 
@@ -163,6 +165,7 @@ Re-index the current repository using GitNexus.
 
 - Runs `gitnexus analyze` on the workspace root.
 - If `.gitnexus/` already exists with embeddings configured, preserves that setting by passing `--embeddings`.
+- Flushes/checks MemoryPort through `uc` when available.
 - Outputs JSON status on completion.
 
 **Requires:** `gitnexus` on `PATH`.
@@ -310,5 +313,13 @@ layers council promote 20260401T120000Z_design-caching --project layers
 
 | Path | Purpose |
 |------|---------|
-| `~/.memoryport/uc.toml` | Memoryport semantic retrieval configuration (used by `uc`) |
+| `~/.memoryport/uc.toml` | MemoryPort semantic retrieval configuration (used by `uc`) |
 | `.gitnexus/meta.json` | GitNexus index metadata (generated, not hand-edited) |
+
+## Integration Reality
+
+Layers currently assumes:
+
+- **GitNexus** is a code-intelligence system reachable via the local `gitnexus` CLI and optionally MCP-backed runtimes.
+- **MemoryPort** is a memory system reachable via `uc` and local canonical files.
+- **codex-memoryport-bridge** is an optional OpenAI/Codex Responses proxy for memory injection, not a first-class Layers provider and not a raw MCP tool server.

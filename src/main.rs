@@ -1,9 +1,11 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
-mod commands;
+mod cmd;
 mod config;
 mod council;
+mod graph;
+mod memory;
 #[cfg(test)]
 mod test_support;
 mod types;
@@ -11,10 +13,14 @@ mod util;
 
 mod router;
 
-use commands::{
-    handle_council_promote, handle_council_run, handle_curated_import, handle_query,
-    handle_refresh, handle_remember, handle_validate,
-};
+use cmd::council::{handle_council_promote, handle_council_run};
+use cmd::curated::handle_curated_import;
+use cmd::project::{handle_project_create, handle_project_list};
+use cmd::query::handle_query;
+use cmd::refresh::handle_refresh;
+use cmd::remember::handle_remember;
+use cmd::task::{handle_task_create, handle_task_list};
+use cmd::validate::handle_validate;
 
 /// Council orchestrator and memory spine for multi-model AI workflows.
 #[derive(Parser)]
@@ -33,6 +39,9 @@ enum Commands {
         /// Output structured JSON instead of human-readable text.
         #[arg(long)]
         json: bool,
+        /// Skip writing to the audit log.
+        #[arg(long)]
+        no_audit: bool,
     },
     /// Append a plan, learning, or trace record to the JSONL memory spine.
     Remember {
@@ -78,6 +87,16 @@ enum Commands {
     Council {
         #[command(subcommand)]
         command: CouncilCommands,
+    },
+    /// Manage projects in the memory spine.
+    Project {
+        #[command(subcommand)]
+        command: ProjectCommands,
+    },
+    /// Manage tasks associated with projects.
+    Task {
+        #[command(subcommand)]
+        command: TaskCommands,
     },
 }
 
@@ -140,10 +159,72 @@ enum CouncilCommands {
     },
 }
 
+#[derive(Subcommand)]
+enum ProjectCommands {
+    /// Create a new project entry.
+    Create {
+        /// Project slug (short identifier).
+        slug: String,
+        /// Project title.
+        #[arg(long)]
+        title: String,
+        /// Project summary.
+        #[arg(long)]
+        summary: Option<String>,
+        /// Project status (default: active).
+        #[arg(long)]
+        status: Option<String>,
+        /// Output JSON.
+        #[arg(long)]
+        json: bool,
+    },
+    /// List all non-archived projects.
+    List {
+        /// Output JSON.
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum TaskCommands {
+    /// Create a new task within a project.
+    Create {
+        /// Project slug the task belongs to.
+        project: String,
+        /// Task slug (short identifier).
+        slug: String,
+        /// Task title.
+        #[arg(long)]
+        title: String,
+        /// Task summary.
+        #[arg(long)]
+        summary: Option<String>,
+        /// Task status (default: open).
+        #[arg(long)]
+        status: Option<String>,
+        /// Output JSON.
+        #[arg(long)]
+        json: bool,
+    },
+    /// List tasks, optionally filtered by project or status.
+    List {
+        /// Filter by project slug.
+        #[arg(long)]
+        project: Option<String>,
+        /// Filter by status.
+        #[arg(long)]
+        status: Option<String>,
+        /// Output JSON.
+        #[arg(long)]
+        json: bool,
+    },
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
-        Commands::Query { task, json } => handle_query(&task, json),
+        Commands::Query { task, json, no_audit } => handle_query(&task, json, no_audit),
         Commands::Remember {
             kind,
             task,
@@ -187,6 +268,20 @@ fn main() -> Result<()> {
                 dry_run,
                 json,
             } => handle_council_promote(&run_id, &project, artifacts_dir, dry_run, json),
+        },
+        Commands::Project { command } => match command {
+            ProjectCommands::Create { slug, title, summary, status, json } => {
+                handle_project_create(&slug, &title, summary, status, json)
+            }
+            ProjectCommands::List { json } => handle_project_list(json),
+        },
+        Commands::Task { command } => match command {
+            TaskCommands::Create { project, slug, title, summary, status, json } => {
+                handle_task_create(&project, &slug, &title, summary, status, json)
+            }
+            TaskCommands::List { project, status, json } => {
+                handle_task_list(project.as_deref(), status.as_deref(), json)
+            }
         },
     }
 }

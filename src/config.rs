@@ -38,6 +38,14 @@ pub fn uc_config_path() -> PathBuf {
     dirs_home().join(".memoryport").join("uc.toml")
 }
 
+pub fn projects_path() -> PathBuf {
+    memoryport_dir().join("projects.jsonl")
+}
+
+pub fn tasks_path() -> PathBuf {
+    memoryport_dir().join("tasks.jsonl")
+}
+
 pub fn council_files() -> Vec<(&'static str, PathBuf)> {
     let base = memoryport_dir();
     vec![

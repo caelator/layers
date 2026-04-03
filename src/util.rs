@@ -15,8 +15,23 @@ pub fn compact(text: &str, limit: usize) -> String {
     if normalized.len() <= limit {
         normalized
     } else {
-        format!("{}...", &normalized[..limit.saturating_sub(3)].trim_end())
+        let end = limit.saturating_sub(3);
+        // Walk backwards to find a valid UTF-8 char boundary
+        let mut boundary = end.min(normalized.len());
+        while boundary > 0 && !normalized.is_char_boundary(boundary) {
+            boundary -= 1;
+        }
+        format!("{}...", normalized[..boundary].trim_end())
     }
+}
+
+pub fn parse_targets(raw: Option<&str>) -> Vec<String> {
+    raw.unwrap_or_default()
+        .split(',')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect()
 }
 
 pub fn append_jsonl(path: &Path, value: &Value) -> Result<()> {

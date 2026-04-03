@@ -10,7 +10,8 @@ This guide takes you from a fresh clone to running your first query, creating pr
 Optional (enables additional features):
 
 - **gitnexus** on your `PATH` — enables graph-backed queries and impact analysis. Install with `npm install -g gitnexus`.
-- **uc** and a config at `~/.memoryport/uc.toml` — enables semantic memory retrieval via Memoryport embeddings.
+- **uc** and a config at `~/.memoryport/uc.toml` — enables semantic memory retrieval and direct MemoryPort store/query operations.
+- **codex-memoryport-bridge** (optional) — enables memory injection into OpenAI/Codex Responses traffic, but is not required for Layers and is not treated as an MCP tool surface.
 - **gemini**, **claude**, and/or **codex** CLIs — enables the council workflow.
 
 You can use Layers without any of the optional tools. It will work with whatever local data is available and skip features that require missing tools.
@@ -55,6 +56,8 @@ Layers will:
 2. **Retrieve** relevant records from canonical curated memory (`memoryport/curated-memory.jsonl`), semantic search (if `uc` is available), and/or the GitNexus graph (if indexed).
 3. **Assemble** a context packet combining the results.
 4. **Print** the context to stdout.
+
+Important note: Layers does not assume MemoryPort is available as a raw MCP tool. The current local MemoryPort bridge pattern is a model proxy, not a tool server, so Layers talks to MemoryPort through `uc` and local files.
 
 To get structured JSON output instead:
 
@@ -188,6 +191,12 @@ After normal use, your `memoryport/` directory will contain:
 **Canonical files** should be versioned and reviewed. **Generated files** are local operational output — useful for debugging and replay, but not the source of truth.
 
 The `.gitnexus/` directory at the repo root contains the GitNexus index. It is generated and should not be committed.
+
+MemoryPort integration summary for this workflow:
+
+- `uc` = direct retrieval/store interface Layers expects
+- `curated-memory.jsonl` = canonical source of truth
+- `codex-memoryport-bridge` = optional request proxy for memory-aware model traffic, not a generic tool provider
 
 ## Next Steps
 

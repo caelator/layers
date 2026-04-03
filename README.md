@@ -4,8 +4,13 @@ A local-first Rust CLI that assembles grounded working context from structured m
 
 Layers routes questions through two external local systems:
 
-- **[Memoryport](https://github.com/caelator/memoryport)** for durable memory: decisions, constraints, project status, postmortems
+- **[MemoryPort](https://github.com/caelator/memoryport)** for durable memory and semantic retrieval, primarily via the local `uc` CLI and `~/.memoryport/uc.toml`
 - **[GitNexus](https://github.com/caelator/gitnexus)** for codebase structure: call graphs, impact analysis, execution flows
+
+Important integration note:
+
+- **GitNexus** is a real MCP-capable tool surface and can also be reached through OpenClaw GitNexus skills.
+- **MemoryPort** in this workflow is **not** assumed to be an MCP tool surface. The existing `codex-memoryport-bridge` is an OpenAI Responses-style memory injection proxy, not a generic MCP server. Layers therefore treats MemoryPort as a local CLI/service integration (`uc`, curated JSONL, optional proxy), not as a raw MCP tool provider.
 
 The result is a **context packet** — a structured bundle of relevant memory and structural information — delivered as plain text or JSON.
 
@@ -74,12 +79,15 @@ Layers is intentionally small and shells out to local tools:
 |------------|-------------|---------|
 | **Rust 1.85+** | Building from source | [rustup.rs](https://rustup.rs) |
 | **gitnexus** | Graph queries, impact analysis, `refresh` | `npm install -g gitnexus` |
-| **uc** + `~/.memoryport/uc.toml` | Semantic memory retrieval | See Memoryport docs |
+| **uc** + `~/.memoryport/uc.toml` | Semantic memory retrieval and direct MemoryPort store/query operations | See MemoryPort docs |
+| **codex-memoryport-bridge** (optional) | OpenAI/Codex Responses proxy with automatic memory injection | Local custom integration; not required for Layers CLI |
 | **gemini**, **claude**, **codex** CLIs | Council workflow stages | Optional; configurable per-command |
 
 **Without gitnexus:** `layers refresh` fails; graph-backed query results are empty. Everything else works.
 
 **Without uc:** Semantic recall is unavailable. Layers still searches canonical structured records and local fallback files.
+
+**Without codex-memoryport-bridge:** Nothing breaks in Layers itself. That bridge is for model-traffic augmentation, not for Layers retrieval.
 
 **Without model CLIs:** `layers council run` fails. All other commands work normally.
 
@@ -93,6 +101,8 @@ Layers is intentionally small and shells out to local tools:
 ## Data Model
 
 Canonical project state lives in one file: `memoryport/curated-memory.jsonl`
+
+Semantic retrieval is an optimization layered on top of canonical records via `uc`/MemoryPort; it is not the canonical store. Likewise, the local `codex-memoryport-bridge` can inject retrieved context into OpenAI/Codex Responses traffic, but it is not itself a canonical data store or MCP tool registry.
 
 This is an append-friendly JSONL file containing typed records: projects, tasks, decisions, constraints, status snapshots, next steps, and postmortems. Each record has a standard envelope with an ID, entity type, timestamp, and payload.
 

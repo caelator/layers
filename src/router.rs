@@ -7,6 +7,7 @@
 /// - `both`: both historical and structural context needed
 
 use serde::Serialize;
+use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -42,6 +43,15 @@ pub struct RouteResult {
 pub enum Confidence {
     High,
     Low,
+}
+
+impl fmt::Display for Confidence {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Confidence::High => write!(f, "high"),
+            Confidence::Low => write!(f, "low"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]

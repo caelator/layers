@@ -27,10 +27,29 @@ pub struct ImpactSummary {
     pub affected_processes: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct GraphContext {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub impact_summary: Option<ImpactSummary>,
+// ---------------------------------------------------------------------------
+// Project and task management types
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectMeta {
+    pub id: String,
+    pub slug: String,
+    pub title: String,
+    pub summary: String,
+    pub status: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskMeta {
+    pub id: String,
+    pub project: String,
+    pub slug: String,
+    pub title: String,
+    pub summary: String,
+    pub status: String,
+    pub created_at: String,
 }
 
 // ---------------------------------------------------------------------------
@@ -126,7 +145,7 @@ pub struct CouncilRunRecord {
     #[serde(default)]
     pub targets: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub graph_context: Option<GraphContext>,
+    pub graph_context: Option<ImpactSummary>,
     #[serde(default)]
     pub context_text_path: String,
     #[serde(default)]
