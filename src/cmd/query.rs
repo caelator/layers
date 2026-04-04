@@ -6,6 +6,7 @@ use crate::config::{memoryport_dir, CONTEXT_PAYLOAD_SCHEMA_VERSION};
 use crate::graph;
 use crate::memory;
 use crate::router::{self, Confidence, Route};
+use crate::uc;
 use crate::util::{append_jsonl, iso_now};
 
 const MAX_MEMORY_RECORDS: usize = 3;
@@ -58,32 +59,60 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
     let mut graph_latency_ms: u64 = 0;
     let mut fallback_reason: Option<String> = None;
 
-    // Retrieve memory if routed
+    // Retrieve memory if routed — try uc (semantic) first, fall back to local JSONL
     if matches!(effective_route, Route::MemoryOnly | Route::Both) {
         let t0 = Instant::now();
-        match memory::retrieve_relevant(task, MAX_MEMORY_RECORDS) {
-            Ok(records) if !records.is_empty() => {
-                memory_source = "keyword".to_string();
-                for r in &records {
+        let mut used_uc = false;
+
+        if uc::is_available() {
+            let uc_result = uc::retrieve(task, MAX_MEMORY_RECORDS);
+            if uc::meets_threshold(&uc_result) {
+                memory_source = "uc".to_string();
+                used_uc = true;
+                for line in &uc_result.lines {
                     memory_items.push(RetrievalItem {
-                        source: r.source.clone(),
-                        text: r.text.clone(),
-                        timestamp: if r.timestamp.is_empty() {
-                            None
-                        } else {
-                            Some(r.timestamp.clone())
-                        },
+                        source: "uc".to_string(),
+                        text: line.clone(),
+                        timestamp: None,
                     });
                 }
-            }
-            Ok(_) => {
-                open_uncertainty.push("Memory retrieval returned no matching records.".into());
-            }
-            Err(e) => {
-                open_uncertainty.push(format!("Memory retrieval failed: {e}"));
-                fallback_reason = Some(format!("memory error: {e}"));
+            } else if let Some(reason) = &uc_result.fallback_reason {
+                fallback_reason = Some(reason.clone());
+            } else {
+                fallback_reason = Some("uc returned too few results".into());
             }
         }
+
+        // Fall back to local keyword retrieval
+        if !used_uc {
+            match memory::retrieve_relevant(task, MAX_MEMORY_RECORDS) {
+                Ok(records) if !records.is_empty() => {
+                    memory_source = "keyword".to_string();
+                    for r in &records {
+                        memory_items.push(RetrievalItem {
+                            source: r.source.clone(),
+                            text: r.text.clone(),
+                            timestamp: if r.timestamp.is_empty() {
+                                None
+                            } else {
+                                Some(r.timestamp.clone())
+                            },
+                        });
+                    }
+                }
+                Ok(_) => {
+                    open_uncertainty
+                        .push("Memory retrieval returned no matching records.".into());
+                }
+                Err(e) => {
+                    open_uncertainty.push(format!("Memory retrieval failed: {e}"));
+                    if fallback_reason.is_none() {
+                        fallback_reason = Some(format!("memory error: {e}"));
+                    }
+                }
+            }
+        }
+
         memory_latency_ms = t0.elapsed().as_millis() as u64;
     }
 

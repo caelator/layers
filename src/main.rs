@@ -12,6 +12,7 @@ mod types;
 mod util;
 
 mod router;
+mod uc;
 
 use cmd::council::{handle_council_promote, handle_council_run};
 use cmd::curated::handle_curated_import;
