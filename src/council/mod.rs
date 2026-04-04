@@ -475,6 +475,112 @@ mod tests {
     }
 
     #[test]
+    fn council_handshake_writes_versioned_payload_json() {
+        use crate::config::CONTEXT_PAYLOAD_SCHEMA_VERSION;
+
+        let _guard = workspace_guard();
+        let artifacts_dir = temp_artifact_dir("council-handshake");
+
+        let payload = json!({
+            "schema_version": CONTEXT_PAYLOAD_SCHEMA_VERSION,
+            "task": "handshake test",
+            "route": "both",
+            "confidence": "high",
+            "memory_results": [],
+            "graph_results": [],
+            "retrieval_meta": {
+                "memory_source": "none",
+                "memory_latency_ms": 0,
+                "graph_latency_ms": 0,
+                "fallback_reason": null,
+            },
+        });
+
+        let request = CouncilRunRequest {
+            task: "Validate council handshake writes payload.json".to_string(),
+            route: "both".to_string(),
+            context_text: "Route: both\nEvidence: handshake test".to_string(),
+            context_json: json!({"route": "both"}),
+            graph_context: None,
+            targets: vec![],
+            gemini_cmd: "printf '## Options\n- option a\n## Key Evidence\n- evidence\n## Open Questions\n- none\n'".to_string(),
+            claude_cmd: "printf '## Critique\n- looks good\n## Risks\n- none\n## Best Surviving Direction\n- option a\n'".to_string(),
+            codex_cmd: "printf '## Decision\n- proceed with option a\n## Why\n- grounded in evidence\n## Risks\n- minimal\n## Next Steps\n- ship it\nConvergence: converged\n'".to_string(),
+            retry_limit: 1,
+            timeout_secs: 2,
+            artifacts_dir: Some(artifacts_dir.clone()),
+            trace_path_override: Some(artifacts_dir.join("council-traces.jsonl")),
+            context_payload: Some(payload),
+        };
+
+        let run = execute_council_run(request).unwrap();
+
+        // The run should complete successfully
+        assert_eq!(run.status, "completed");
+        assert_eq!(run.status_reason, "converged");
+
+        // payload.json must exist in the artifacts directory
+        let payload_path = artifacts_dir.join("payload.json");
+        assert!(
+            payload_path.exists(),
+            "payload.json was not written to artifacts dir"
+        );
+
+        // Parse and validate schema version
+        let payload_content = fs::read_to_string(&payload_path).unwrap();
+        let payload_value: serde_json::Value =
+            serde_json::from_str(&payload_content).expect("payload.json is not valid JSON");
+        assert_eq!(
+            payload_value["schema_version"],
+            json!(CONTEXT_PAYLOAD_SCHEMA_VERSION),
+            "payload.json schema_version mismatch"
+        );
+        assert_eq!(payload_value["task"], "handshake test");
+        assert_eq!(payload_value["route"], "both");
+
+        // run.json and convergence.json must also exist (standard artifacts)
+        assert!(artifacts_dir.join("run.json").exists());
+        assert!(artifacts_dir.join("convergence.json").exists());
+    }
+
+    #[test]
+    fn council_handshake_rejects_wrong_schema_version() {
+        let _guard = workspace_guard();
+        let artifacts_dir = temp_artifact_dir("council-bad-schema");
+
+        let bad_payload = json!({
+            "schema_version": 999,
+            "task": "bad version",
+        });
+
+        let request = CouncilRunRequest {
+            task: "Schema version mismatch should fail".to_string(),
+            route: "both".to_string(),
+            context_text: "Route: both".to_string(),
+            context_json: json!({"route": "both"}),
+            graph_context: None,
+            targets: vec![],
+            gemini_cmd: "printf 'unused\n'".to_string(),
+            claude_cmd: "printf 'unused\n'".to_string(),
+            codex_cmd: "printf 'unused\n'".to_string(),
+            retry_limit: 1,
+            timeout_secs: 2,
+            artifacts_dir: Some(artifacts_dir),
+            trace_path_override: None,
+            context_payload: Some(bad_payload),
+        };
+
+        let result = execute_council_run(request);
+        assert!(result.is_err(), "expected error for wrong schema version");
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("unsupported context payload schema version"),
+            "unexpected error: {}",
+            msg
+        );
+    }
+
+    #[test]
     fn council_run_is_incomplete_when_codex_does_not_meet_contract() {
         let _guard = workspace_guard();
         let artifacts_dir = temp_artifact_dir("council-incomplete");

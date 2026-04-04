@@ -65,8 +65,9 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
         let mut used_uc = false;
 
         if uc::is_available() {
-            let uc_result = uc::retrieve(task, MAX_MEMORY_RECORDS);
-            if uc::meets_threshold(&uc_result) {
+            let uc_opts = uc::UcOptions::default();
+            let uc_result = uc::retrieve_with_opts(task, MAX_MEMORY_RECORDS, &uc_opts);
+            if uc::meets_threshold_with(&uc_result, uc_opts.min_results) {
                 memory_source = "uc".to_string();
                 used_uc = true;
                 for line in &uc_result.lines {
