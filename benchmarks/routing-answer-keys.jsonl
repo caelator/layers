@@ -23,3 +23,8 @@
 {"query": "recall what the council decided earlier about the module architecture and update the implementation", "expected_route": "both", "note": "historical (recall, earlier, decid, council) + structural (module, architect) + action (update, implement)"}
 {"query": "fix the lint warning on line 5", "expected_route": "neither", "expected_confidence": "high", "note": "local: fix + lint"}
 {"query": "what is 2 + 2", "expected_route": "neither", "expected_confidence": "low", "note": "no signals, pure refusal"}
+{"query": "what did we decide about caching? I am not asking about the code or implementation", "expected_route": "neither", "expected_confidence": "low", "note": "historical phrasing plus explicit structural negation should stay refusal-biased"}
+{"query": "show me the module dependency flow in the repo, not the history of why we chose it", "expected_route": "graph_only", "expected_confidence": "high", "note": "strong structural request with historical clause treated as secondary"}
+{"query": "maybe check the prior decision or maybe inspect the module imports, not sure yet", "expected_route": "neither", "expected_confidence": "low", "note": "ambiguous mixed-intent phrasing should refuse rather than over-route"}
+{"query": "do not recall prior rationale; just show the callers of this function in the repo", "expected_route": "graph_only", "expected_confidence": "high", "note": "explicit historical negation plus strong structural ask"}
+{"query": "recover the earlier council rationale, but do not inspect code", "expected_route": "memory_only", "expected_confidence": "high", "note": "explicit structural negation should preserve a strong memory route"}

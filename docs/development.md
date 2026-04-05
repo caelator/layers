@@ -69,7 +69,7 @@ Current validation covers:
 - graph workflow retrieval
 - memory workflow retrieval
 - typed-memory brief assembly
-- project record shape checks
+- curated record shape checks
 - council command configuration shape
 
 `validate` is useful, but it is not a substitute for focused unit tests.

@@ -67,7 +67,7 @@ pub fn uc_min_results() -> usize {
 }
 
 /// Current schema version for ContextPayload.
-pub const CONTEXT_PAYLOAD_SCHEMA_VERSION: u32 = 1;
+pub const CONTEXT_PAYLOAD_SCHEMA_VERSION: u32 = 2;
 
 fn dirs_home() -> PathBuf {
     PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string()))

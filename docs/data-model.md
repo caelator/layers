@@ -8,11 +8,8 @@ The current public canonical record store is:
 
 This file is append-friendly JSONL and stores structured records such as:
 
-- `project`
-- `task`
 - `decision`
 - `constraint`
-- `status`
 - `next_step`
 - `postmortem`
 
@@ -20,32 +17,22 @@ Each record uses a common envelope:
 
 ```json
 {
-  "id": "pm_20260401T120000Z_task_release-readiness",
-  "entity": "task",
+  "id": "cm_decision_layers_adopt-direct-uc-retrieval",
+  "entity": "decision",
   "project": "layers",
-  "task": "release-readiness",
   "created_at": "2026-04-01T12:00:00Z",
-  "source": "manual",
+  "source": "curated-import",
   "tags": [],
   "archived": false,
   "payload": {
-    "type": "task",
-    "slug": "release-readiness",
-    "title": "Finish public docs",
-    "summary": "Document release setup and caveats",
-    "status": "in_progress",
-    "priority": "high"
+    "type": "decision",
+    "slug": "adopt-direct-uc-retrieval",
+    "title": "Adopt direct uc retrieval",
+    "summary": "Layers should use uc semantic retrieval before local token overlap fallback.",
+    "rationale": "This preserves semantic recall when MemoryPort is available without making it a hard dependency."
   }
 }
 ```
-
-## Compatibility Read Paths
-
-Layers still reads from this legacy path if it exists:
-
-- `memoryport/project-records.jsonl`
-
-That file is no longer the canonical write target in the current implementation. It is a compatibility input only.
 
 ## Generated Local Artifacts
 
@@ -77,10 +64,8 @@ Those artifacts are generated execution evidence for one run. They are not canon
 
 When a query is routed to memory, Layers currently searches in this order:
 
-1. canonical curated records
-2. structured record search over the same canonical store
-3. Memoryport semantic retrieval through `uc`
-4. local fallback JSONL workflow files
+1. MemoryPort semantic retrieval through `uc`
+2. local token-overlap search over canonical curated records and workflow JSONL files
 
 When a query is routed to graph, Layers delegates to GitNexus.
 

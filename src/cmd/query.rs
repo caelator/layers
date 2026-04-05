@@ -2,7 +2,7 @@ use anyhow::Result;
 use serde_json::json;
 use std::time::Instant;
 
-use crate::config::{memoryport_dir, CONTEXT_PAYLOAD_SCHEMA_VERSION};
+use crate::config::{CONTEXT_PAYLOAD_SCHEMA_VERSION, memoryport_dir};
 use crate::graph;
 use crate::memory;
 use crate::router::{self, Confidence, Route};
@@ -62,26 +62,23 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
     // Retrieve memory if routed — try uc (semantic) first, fall back to local JSONL
     if matches!(effective_route, Route::MemoryOnly | Route::Both) {
         let t0 = Instant::now();
-        let mut used_uc = false;
+        let uc_retriever = uc::UcRetriever::new(uc::UcOptions::default());
+        let uc_result = uc_retriever.retrieve(task, MAX_MEMORY_RECORDS);
+        let used_uc = uc::meets_threshold_with(&uc_result, uc_retriever.min_results());
 
-        if uc::is_available() {
-            let uc_opts = uc::UcOptions::default();
-            let uc_result = uc::retrieve_with_opts(task, MAX_MEMORY_RECORDS, &uc_opts);
-            if uc::meets_threshold_with(&uc_result, uc_opts.min_results) {
-                memory_source = "uc".to_string();
-                used_uc = true;
-                for line in &uc_result.lines {
-                    memory_items.push(RetrievalItem {
-                        source: "uc".to_string(),
-                        text: line.clone(),
-                        timestamp: None,
-                    });
-                }
-            } else if let Some(reason) = &uc_result.fallback_reason {
-                fallback_reason = Some(reason.clone());
-            } else {
-                fallback_reason = Some("uc returned too few results".into());
+        if used_uc {
+            memory_source = "uc".to_string();
+            for line in &uc_result.lines {
+                memory_items.push(RetrievalItem {
+                    source: "uc".to_string(),
+                    text: line.clone(),
+                    timestamp: None,
+                });
             }
+        } else if let Some(reason) = &uc_result.fallback_reason {
+            fallback_reason = Some(reason.clone());
+        } else {
+            fallback_reason = Some("uc returned too few results".into());
         }
 
         // Fall back to local keyword retrieval
@@ -102,14 +99,11 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
                     }
                 }
                 Ok(_) => {
-                    open_uncertainty
-                        .push("Memory retrieval returned no matching records.".into());
+                    open_uncertainty.push("Memory retrieval returned no matching records.".into());
                 }
                 Err(e) => {
                     open_uncertainty.push(format!("Memory retrieval failed: {e}"));
-                    if fallback_reason.is_none() {
-                        fallback_reason = Some(format!("memory error: {e}"));
-                    }
+                    fallback_reason.get_or_insert_with(|| format!("memory error: {e}"));
                 }
             }
         }
@@ -173,6 +167,7 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
     // Audit log (skip if --no-audit)
     if !no_audit {
         let audit = json!({
+            "schema_version": CONTEXT_PAYLOAD_SCHEMA_VERSION,
             "timestamp": iso_now(),
             "action": "query",
             "task": task,
@@ -270,7 +265,7 @@ fn interleave_results(
 
     let mut sections = Vec::new();
     match route {
-        Route::MemoryOnly | Route::Both if matches!(route, Route::MemoryOnly) => {
+        Route::MemoryOnly => {
             if let Some(s) = format_memory(memory_items) {
                 sections.push(s);
             }
@@ -286,8 +281,32 @@ fn interleave_results(
                 sections.push(s);
             }
         }
-        _ => {
-            // Both: alternate — memory first, then graph
+        Route::Both => {
+            // Round-robin interleave: alternate memory and graph items
+            let max_len = memory_items.len().max(graph_items.len());
+            let mut interleaved_memory = Vec::new();
+            let mut interleaved_graph = Vec::new();
+            for i in 0..max_len {
+                if let Some(item) = memory_items.get(i) {
+                    let line = match &item.timestamp {
+                        Some(ts) => format!("- [{}][{}] {}", item.source, ts, item.text),
+                        None => format!("- [{}] {}", item.source, item.text),
+                    };
+                    interleaved_memory.push(line);
+                }
+                if let Some(item) = graph_items.get(i) {
+                    interleaved_graph.push(item.text.clone());
+                }
+            }
+            if !interleaved_memory.is_empty() {
+                sections.push(format!("### Memory\n{}", interleaved_memory.join("\n")));
+            }
+            if !interleaved_graph.is_empty() {
+                sections.push(format!("### GitNexus\n{}", interleaved_graph.join("\n")));
+            }
+        }
+        Route::Neither => {
+            // Neither: no results expected, but include any that exist
             if let Some(s) = format_memory(memory_items) {
                 sections.push(s);
             }
@@ -297,6 +316,96 @@ fn interleave_results(
         }
     }
     sections
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::CONTEXT_PAYLOAD_SCHEMA_VERSION;
+    use crate::test_support::TestWorkspace;
+    use crate::util::load_jsonl;
+
+    /// Memory-only routing produces correct output structure (JSON mode).
+    /// Uses a task that triggers MemoryOnly routing via historical keywords.
+    #[test]
+    fn handle_query_memory_only_produces_correct_structure() {
+        let ws = TestWorkspace::new("query-memory-only");
+        let root = ws.root();
+
+        // Seed a memory record so keyword retrieval has something to find
+        let plans_path = root.join("memoryport").join("council-plans.jsonl");
+        std::fs::write(
+            &plans_path,
+            r#"{"task":"prior council decision","summary":"We previously decided to use Rust for the memory spine.","timestamp":"2026-04-01T00:00:00Z"}"#,
+        )
+        .unwrap();
+        std::fs::write(&plans_path.with_file_name("council-traces.jsonl"), "").unwrap();
+        std::fs::write(&plans_path.with_file_name("council-learnings.jsonl"), "").unwrap();
+
+        // Task with strong historical signal: "prior", "decided", "rationale", "recall"
+        let result = handle_query(
+            "recall the prior decided rationale from the council history",
+            true,
+            true,
+        );
+        assert!(result.is_ok(), "handle_query failed: {:?}", result.err());
+    }
+
+    /// Neither routing returns appropriate empty/refusal response.
+    #[test]
+    fn handle_query_neither_returns_refusal() {
+        let _ws = TestWorkspace::new("query-neither");
+
+        // "hello" has no historical/structural signal → routes to Neither
+        let result = handle_query("hello", true, true);
+        assert!(result.is_ok(), "handle_query failed: {:?}", result.err());
+    }
+
+    /// Audit log entry is written with schema_version and correct fields.
+    #[test]
+    fn handle_query_writes_audit_with_schema_version() {
+        let ws = TestWorkspace::new("query-audit");
+        let root = ws.root();
+
+        // Seed empty JSONL files so memory retrieval doesn't error
+        for name in &[
+            "council-plans.jsonl",
+            "council-traces.jsonl",
+            "council-learnings.jsonl",
+        ] {
+            std::fs::write(root.join("memoryport").join(name), "").unwrap();
+        }
+
+        // Run with audit enabled (no_audit = false)
+        let result = handle_query("hello", false, false);
+        assert!(result.is_ok(), "handle_query failed: {:?}", result.err());
+
+        let audit_path = root.join("memoryport").join("layers-audit.jsonl");
+        let records = load_jsonl(&audit_path).unwrap();
+        assert_eq!(records.len(), 1, "expected exactly one audit entry");
+
+        let entry = &records[0];
+        assert_eq!(
+            entry["schema_version"].as_u64().unwrap(),
+            CONTEXT_PAYLOAD_SCHEMA_VERSION as u64,
+            "audit entry must include schema_version"
+        );
+        assert_eq!(entry["action"], "query");
+        assert_eq!(entry["task"], "hello");
+        assert!(entry.get("route").is_some(), "audit must include route");
+        assert!(
+            entry.get("effective_route").is_some(),
+            "audit must include effective_route"
+        );
+        assert!(
+            entry.get("confidence").is_some(),
+            "audit must include confidence"
+        );
+        assert!(
+            entry.get("retrieval").is_some(),
+            "audit must include retrieval metadata"
+        );
+    }
 }
 
 /// Build a ContextPayload for passing to the council binary.

@@ -18,6 +18,10 @@ pub struct UcOptions {
     pub min_results: usize,
 }
 
+pub struct UcRetriever {
+    opts: UcOptions,
+}
+
 impl Default for UcOptions {
     fn default() -> Self {
         Self {
@@ -27,22 +31,29 @@ impl Default for UcOptions {
     }
 }
 
+impl UcRetriever {
+    pub fn new(opts: UcOptions) -> Self {
+        Self { opts }
+    }
+
+    pub fn retrieve(&self, query: &str, top_k: usize) -> UcResult {
+        if !is_available() {
+            return UcResult {
+                lines: vec![],
+                fallback_reason: Some("uc is unavailable".to_string()),
+            };
+        }
+        retrieve_impl(query, top_k, &self.opts, &uc_config_path())
+    }
+
+    pub fn min_results(&self) -> usize {
+        self.opts.min_results
+    }
+}
+
 /// Check whether `uc` is available (binary on PATH + config file exists).
 pub fn is_available() -> bool {
     which("uc") && uc_config_path().exists()
-}
-
-/// Run `uc retrieve <query> --top-k <top_k>` with the configured timeout.
-/// Returns retrieved lines on success, or a fallback reason on failure/timeout.
-/// Convenience wrapper around [`retrieve_with_opts`] using default config.
-#[allow(dead_code)]
-pub fn retrieve(query: &str, top_k: usize) -> UcResult {
-    retrieve_with_opts(query, top_k, &UcOptions::default())
-}
-
-/// Run `uc retrieve` with explicit options for timeout and min-results thresholds.
-pub fn retrieve_with_opts(query: &str, top_k: usize, opts: &UcOptions) -> UcResult {
-    retrieve_impl(query, top_k, opts, &uc_config_path())
 }
 
 /// Inner implementation that also accepts a config path (for testing).
@@ -94,11 +105,7 @@ fn retrieve_impl(query: &str, top_k: usize, opts: &UcOptions, config_path: &Path
                 .unwrap_or_default();
             UcResult {
                 lines: vec![],
-                fallback_reason: Some(format!(
-                    "uc exited with {}: {}",
-                    status,
-                    stderr.trim()
-                )),
+                fallback_reason: Some(format!("uc exited with {}: {}", status, stderr.trim())),
             }
         }
         Ok(None) => {
@@ -107,10 +114,7 @@ fn retrieve_impl(query: &str, top_k: usize, opts: &UcOptions, config_path: &Path
             let _ = child.wait();
             UcResult {
                 lines: vec![],
-                fallback_reason: Some(format!(
-                    "uc timed out after {}ms",
-                    opts.timeout_ms
-                )),
+                fallback_reason: Some(format!("uc timed out after {}ms", opts.timeout_ms)),
             }
         }
         Err(e) => UcResult {
@@ -183,7 +187,7 @@ mod tests {
         if which("uc") {
             return; // skip if uc happens to be installed
         }
-        let result = retrieve("test query", 3);
+        let result = UcRetriever::new(UcOptions::default()).retrieve("test query", 3);
         assert!(result.fallback_reason.is_some());
         assert!(result.lines.is_empty());
     }
@@ -260,5 +264,17 @@ mod tests {
         // The default from config.rs is 500ms / 1 result (unless env overrides)
         assert!(opts.timeout_ms > 0);
         assert!(opts.min_results > 0);
+    }
+
+    #[test]
+    fn retriever_reports_unavailable_uc_cleanly() {
+        if which("uc") && uc_config_path().exists() {
+            return;
+        }
+
+        let retriever = UcRetriever::new(UcOptions::default());
+        let result = retriever.retrieve("test query", 3);
+        assert!(result.lines.is_empty());
+        assert_eq!(result.fallback_reason.as_deref(), Some("uc is unavailable"));
     }
 }

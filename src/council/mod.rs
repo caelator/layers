@@ -6,7 +6,7 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::config::{memoryport_dir, workspace_root, CONTEXT_PAYLOAD_SCHEMA_VERSION};
+use crate::config::{CONTEXT_PAYLOAD_SCHEMA_VERSION, memoryport_dir, workspace_root};
 use crate::types::{CouncilConvergenceRecord, CouncilRunRecord, ImpactSummary};
 use crate::util::iso_now;
 

@@ -56,11 +56,18 @@ fn import_curated_memory(path: &Path) -> Result<(usize, usize, usize)> {
         };
         let import: CuratedImportRecord = match serde_json::from_value(parsed) {
             Ok(v) => v,
-            Err(e) => {
-                anyhow::bail!("record parse error: {}", e);
+            Err(_) => {
+                errors += 1;
+                continue;
             }
         };
-        let record = curated_import_to_record(import)?;
+        let record = match curated_import_to_record(import) {
+            Ok(record) => record,
+            Err(_) => {
+                errors += 1;
+                continue;
+            }
+        };
         if !existing_keys.insert(record.id.clone()) {
             skipped += 1;
             continue;

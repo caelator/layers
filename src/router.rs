@@ -138,6 +138,36 @@ const ACTION_SIGNALS: &[&str] = &[
     "update",
 ];
 
+const HISTORICAL_NEGATIONS: &[&str] = &[
+    "not asking what we decided",
+    "not asking about what we decided",
+    "don't recall",
+    "do not recall",
+    "not about history",
+    "not asking about history",
+    "without history",
+];
+
+const STRUCTURAL_NEGATIONS: &[&str] = &[
+    "not asking about code",
+    "not asking about the code",
+    "not the code",
+    "without looking at code",
+    "don't inspect code",
+    "do not inspect code",
+    "not asking about implementation",
+    "not asking about the repo",
+];
+
+const AMBIGUITY_SIGNALS: &[&str] = &[
+    "maybe",
+    "perhaps",
+    "either",
+    "or maybe",
+    "not sure",
+    "if needed",
+];
+
 fn score_signals(task: &str, signals: &[&str]) -> u32 {
     let lower = task.to_lowercase();
     signals
@@ -147,12 +177,24 @@ fn score_signals(task: &str, signals: &[&str]) -> u32 {
 }
 
 pub fn classify(task: &str) -> RouteResult {
-    let scores = Scores {
+    let lower = task.to_lowercase();
+    let mut scores = Scores {
         historical: score_signals(task, HISTORICAL_SIGNALS),
         structural: score_signals(task, STRUCTURAL_SIGNALS),
         local: score_signals(task, LOCAL_SIGNALS),
         action: score_signals(task, ACTION_SIGNALS),
     };
+
+    if HISTORICAL_NEGATIONS.iter().any(|p| lower.contains(p)) {
+        scores.historical = 0;
+    }
+    if STRUCTURAL_NEGATIONS.iter().any(|p| lower.contains(p)) {
+        scores.structural = 0;
+    }
+    if AMBIGUITY_SIGNALS.iter().any(|p| lower.contains(p)) {
+        scores.historical = scores.historical.saturating_sub(1);
+        scores.structural = scores.structural.saturating_sub(1);
+    }
 
     let (route, confidence, why, why_not) = determine_route(&scores);
 
@@ -324,5 +366,31 @@ mod tests {
         // Low-confidence should default to Neither (refusal bias)
         let result = classify("something");
         assert_eq!(result.route, Route::Neither);
+    }
+
+    #[test]
+    fn negated_structural_query_does_not_route_graph() {
+        let result = classify(
+            "what did we decide about caching? I am not asking about the code or implementation",
+        );
+        assert_eq!(result.route, Route::Neither);
+        assert_eq!(result.confidence, Confidence::Low);
+    }
+
+    #[test]
+    fn negated_historical_query_prefers_graph() {
+        let result = classify(
+            "show me the module dependency flow in the repo, not the history of why we chose it",
+        );
+        assert_eq!(result.route, Route::GraphOnly);
+    }
+
+    #[test]
+    fn ambiguous_mixed_intent_refuses() {
+        let result = classify(
+            "maybe check the prior decision or maybe inspect the module imports, not sure yet",
+        );
+        assert_eq!(result.route, Route::Neither);
+        assert_eq!(result.confidence, Confidence::Low);
     }
 }

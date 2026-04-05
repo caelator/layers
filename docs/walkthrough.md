@@ -1,6 +1,6 @@
 # Walkthrough
 
-This guide takes you from a fresh clone to running your first query, creating project records, and understanding what Layers produces.
+This guide takes you from a fresh clone to running your first query, importing curated memory, and understanding what Layers produces.
 
 ## Prerequisites
 
@@ -71,46 +71,9 @@ By default, each query also appends an audit event to `memoryport/layers-audit.j
 layers query "some question" --no-audit
 ```
 
-## Creating Projects and Tasks
-
-Layers stores structured project records locally in `memoryport/curated-memory.jsonl`.
-
-Create a project:
-
-```bash
-layers project create my-project "My Project Title" \
-  --summary "A short description of this project" \
-  --status active
-```
-
-List projects:
-
-```bash
-layers project list
-layers project list --json
-```
-
-Create a task within a project:
-
-```bash
-layers task create my-project first-task "Implement the thing" \
-  --summary "Details about what needs doing" \
-  --status in_progress \
-  --priority high \
-  --acceptance "Tests pass, docs updated"
-```
-
-List tasks:
-
-```bash
-layers task list
-layers task list --project my-project
-layers task list --status in_progress --json
-```
-
-These records become part of the canonical memory that `layers query` searches.
-
 ## Importing Curated Records
+
+Layers stores structured curated memory locally in `memoryport/curated-memory.jsonl`.
 
 If you have structured records in a JSONL file (perhaps exported from another tool or handwritten), import them:
 
@@ -170,7 +133,7 @@ The `--targets` flag tells Layers which code symbols to include as structural co
 If the council run converges successfully, you can promote its output into canonical curated memory:
 
 ```bash
-layers council promote <run_id> --project my-project
+layers council promote <run_id> --project layers
 ```
 
 Use `--dry-run` to preview the record before writing it.
@@ -181,7 +144,7 @@ After normal use, your `memoryport/` directory will contain:
 
 | File | Type | Purpose |
 |------|------|---------|
-| `curated-memory.jsonl` | **Canonical** | Structured project records — the source of truth |
+| `curated-memory.jsonl` | **Canonical** | Structured curated records — the source of truth |
 | `layers-audit.jsonl` | Generated | Query audit log (routing decisions, timing, result counts) |
 | `council-plans.jsonl` | Generated | Stored plan records from `remember plan` |
 | `council-learnings.jsonl` | Generated | Stored learnings from `remember learning` |

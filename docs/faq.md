@@ -77,7 +77,7 @@ Every query appends an event to `memoryport/layers-audit.jsonl` recording the qu
 
 ### What is `curated-memory.jsonl`?
 
-The canonical source of truth for project state. It is an append-friendly JSONL file containing typed records: projects, tasks, decisions, constraints, status snapshots, next steps, and postmortems. Each record has a standard envelope with an ID, entity type, timestamp, and payload.
+The canonical source of truth for curated memory. It is an append-friendly JSONL file containing typed records such as decisions, constraints, next steps, and postmortems. Each record has a standard envelope with an ID, entity type, timestamp, and payload.
 
 ### Can I edit `curated-memory.jsonl` by hand?
 
@@ -88,12 +88,6 @@ Yes. It is a plain JSONL file — one JSON object per line. You can add, edit, o
 **Canonical** (`curated-memory.jsonl`): the source of truth. Version it, review it, curate it.
 
 **Generated** (audit logs, council traces, council run directories, `.gitnexus/`): operational output from running Layers. Useful for debugging and replay, but reproducible and not the source of truth. Generally should not be committed.
-
-### What is `project-records.jsonl`?
-
-A legacy compatibility path. If this file exists from an older version of Layers, it is read as a fallback input. New records are always written to `curated-memory.jsonl`.
-
----
 
 ## Council Workflow
 
@@ -134,7 +128,7 @@ Under `memoryport/council-runs/<run_id>/`. Each run directory contains:
 
 Check which providers are actually reachable. `validate` can pass with just structured record search — if your curated memory file is empty and optional providers are unavailable, queries will naturally return little.
 
-Add some records with `layers project create` or `layers curated import`, or install the optional tools.
+Add some records with `layers curated import`, or install the optional tools.
 
 ### `layers refresh` fails
 

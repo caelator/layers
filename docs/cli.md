@@ -59,95 +59,6 @@ layers validate --routing benchmarks/routing-answer-keys.jsonl
 layers validate --routing benchmarks/routing-answer-keys.jsonl --ci
 ```
 
----
-
-## `layers project create <slug> <title>`
-
-Create a new project record in canonical curated memory.
-
-**Arguments:**
-
-- `<slug>` — short identifier for the project (e.g., `my-project`)
-- `<title>` — human-readable project title
-
-**Options:**
-
-| Flag | Description |
-|------|-------------|
-| `--summary <text>` | Project description |
-| `--status <status>` | Project status (e.g., `active`, `planned`, `completed`) |
-
-**Example:**
-
-```bash
-layers project create layers "Layers CLI" --summary "Local context assembly tool" --status active
-```
-
----
-
-## `layers project list`
-
-List all project records.
-
-**Options:**
-
-| Flag | Description |
-|------|-------------|
-| `--json` | Emit JSON output |
-
----
-
-## `layers task create <project> <slug> <title>`
-
-Create a task record within an existing project.
-
-**Arguments:**
-
-- `<project>` — the project slug this task belongs to
-- `<slug>` — short identifier for the task
-- `<title>` — human-readable task title
-
-**Options:**
-
-| Flag | Description |
-|------|-------------|
-| `--summary <text>` | Task description |
-| `--status <status>` | Task status (e.g., `planned`, `in_progress`, `done`) |
-| `--priority <level>` | Priority level (e.g., `low`, `medium`, `high`) |
-| `--acceptance <text>` | Acceptance criteria |
-
-**Example:**
-
-```bash
-layers task create layers docs "Write public documentation" \
-  --summary "README, walkthrough, FAQ, CLI reference" \
-  --status in_progress \
-  --priority high \
-  --acceptance "All docs reviewed and linked"
-```
-
----
-
-## `layers task list`
-
-List task records.
-
-**Options:**
-
-| Flag | Description |
-|------|-------------|
-| `--project <slug>` | Filter by project |
-| `--status <status>` | Filter by status |
-| `--json` | Emit JSON output |
-
-**Example:**
-
-```bash
-layers task list --project layers --status in_progress
-```
-
----
-
 ## `layers curated import <file>`
 
 Import JSONL records from an external file into the canonical curated memory store.
@@ -287,7 +198,7 @@ Promote a completed, converged council run into canonical curated memory.
 
 | Flag | Description |
 |------|-------------|
-| `--project <slug>` | Target project for the promoted record |
+| `--project <slug>` | Target project slug for the promoted record metadata |
 | `--artifacts-dir <dir>` | Override the artifacts directory (default: `memoryport/council-runs`) |
 | `--dry-run` | Print the record that would be written without writing it |
 
@@ -295,7 +206,6 @@ Promote a completed, converged council run into canonical curated memory.
 
 - The run did not complete
 - Convergence did not succeed
-- The target project does not exist in curated memory
 - The run was already promoted
 
 **Example:**

@@ -26,7 +26,7 @@ Early software. Usable for local evaluation today.
 
 | Category | State |
 |----------|-------|
-| `query`, `project`, `task`, `curated import`, `validate` | Stable enough for daily use |
+| `query`, `curated import`, `validate` | Stable enough for daily use |
 | `refresh`, `remember`, `council run`, `council promote` | Useful but depends on external tool setup |
 | Provider contracts, council ergonomics | Experimental |
 
@@ -59,10 +59,6 @@ See [docs/walkthrough.md](docs/walkthrough.md) for a full getting-started guide.
 |---------|---------|
 | `layers query <text>` | Route a question and return assembled context |
 | `layers validate` | Health check across routing, providers, and records |
-| `layers project create` | Create a structured project record |
-| `layers project list` | List projects |
-| `layers task create` | Create a task within a project |
-| `layers task list` | List tasks (filterable by project, status) |
 | `layers curated import <file>` | Import JSONL records into canonical memory |
 | `layers refresh` | Re-index the repo via GitNexus |
 | `layers remember <kind>` | Append workflow memory (plan, learning, trace) |
@@ -106,11 +102,11 @@ Layers is intentionally small and shells out to local tools:
 
 ## Data Model
 
-Canonical project state lives in one file: `memoryport/curated-memory.jsonl`
+Canonical memory lives in one file: `memoryport/curated-memory.jsonl`
 
 Semantic retrieval is an optimization layered on top of canonical records via `uc`/MemoryPort; it is not the canonical store. Likewise, the local `codex-memoryport-bridge` can inject retrieved context into OpenAI/Codex Responses traffic, but it is not itself a canonical data store or MCP tool registry.
 
-This is an append-friendly JSONL file containing typed records: projects, tasks, decisions, constraints, status snapshots, next steps, and postmortems. Each record has a standard envelope with an ID, entity type, timestamp, and payload.
+This is an append-friendly JSONL file containing typed records such as decisions, constraints, next steps, and postmortems. Each record has a standard envelope with an ID, entity type, timestamp, and payload.
 
 Everything else under `memoryport/` (audit logs, council traces, council run directories) is generated local output — useful for debugging but not the source of truth.
 

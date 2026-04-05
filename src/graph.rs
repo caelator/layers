@@ -9,7 +9,7 @@ use crate::util::{run_command, which};
 // Unified graph retrieval
 // ---------------------------------------------------------------------------
 
-fn repo_name() -> String {
+pub fn repo_name() -> String {
     workspace_root()
         .file_name()
         .and_then(|n| n.to_str())
@@ -58,11 +58,13 @@ pub fn impact(targets: &[String]) -> Result<Option<ImpactSummary>> {
     let mut all_transitive = 0u64;
     let mut risk_level = String::new();
     let mut affected_processes = Vec::new();
+    let mut succeeded = 0usize;
 
     for target in targets {
         let args = ["gitnexus", "impact", target, "--direction", "upstream"];
         if let Ok((true, stdout, _)) = run_command(&args, &workspace_root()) {
             if let Ok(parsed) = serde_json::from_str::<Value>(&stdout) {
+                succeeded += 1;
                 if let Some(d) = parsed.get("direct").and_then(|v| v.as_u64()) {
                     all_direct += d;
                 }
@@ -86,6 +88,11 @@ pub fn impact(targets: &[String]) -> Result<Option<ImpactSummary>> {
                 }
             }
         }
+    }
+
+    // Return None when no targets succeeded, rather than a misleading zeros summary
+    if succeeded == 0 {
+        return Ok(None);
     }
 
     Ok(Some(ImpactSummary {

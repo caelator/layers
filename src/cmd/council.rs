@@ -2,8 +2,8 @@ use anyhow::Result;
 use serde_json::json;
 use std::path::PathBuf;
 
-use crate::cmd::query::{build_context_payload, RetrievalMeta};
-use crate::config::{canonical_curated_memory_path, uc_config_path, workspace_root};
+use crate::cmd::query::{RetrievalMeta, build_context_payload};
+use crate::config::{canonical_curated_memory_path, workspace_root};
 use crate::council::{
     CouncilRunRequest, execute_council_run, load_council_convergence_record,
     load_council_run_record,
@@ -11,6 +11,7 @@ use crate::council::{
 use crate::graph;
 use crate::memory;
 use crate::types::{Decision, ProjectRecord, ProjectRecordPayload};
+use crate::uc;
 use crate::util::{append_jsonl, compact, iso_now, load_jsonl, parse_targets, run_command, which};
 
 pub fn handle_council_run(
@@ -90,26 +91,16 @@ pub fn handle_council_run(
 fn gather_context(task: &str) -> Result<String> {
     let mut sections = Vec::new();
 
-    // MemoryPort semantic retrieval via `uc` CLI.
+    // MemoryPort semantic retrieval via the `uc` module (timeout + threshold protected).
     // Important: the local `codex-memoryport-bridge` is an OpenAI Responses proxy,
     // not a generic MCP tool server, so Layers intentionally talks to MemoryPort
     // through `uc` and canonical files rather than assuming a raw tool surface.
-    let uc_config = uc_config_path();
-    if which("uc").is_some() && uc_config.exists() {
-        let args = [
-            "uc",
-            "-c",
-            &uc_config.to_string_lossy(),
-            "retrieve",
-            task,
-            "--top-k",
-            "5",
-        ];
-        if let Ok((true, stdout, _)) = run_command(&args, &workspace_root()) {
-            let trimmed = stdout.trim();
-            if !trimmed.is_empty() {
-                sections.push(format!("## MemoryPort\n{}", trimmed));
-            }
+    let uc_retriever = uc::UcRetriever::new(uc::UcOptions::default());
+    let uc_result = uc_retriever.retrieve(task, 5);
+    if uc::meets_threshold_with(&uc_result, uc_retriever.min_results()) {
+        let joined = uc_result.lines.join("\n");
+        if !joined.trim().is_empty() {
+            sections.push(format!("## MemoryPort\n{}", joined.trim()));
         }
     }
 
@@ -123,9 +114,10 @@ fn gather_context(task: &str) -> Result<String> {
         sections.push(format!("## Memory Spine\n{}", spine_hits.join("\n")));
     }
 
-    // GitNexus graph query (without --repo flag for gather_context backward compat)
+    // GitNexus graph query (with --repo to avoid multi-repo ambiguity)
     if which("gitnexus").is_some() {
-        let args = ["gitnexus", "query", task, "--limit", "5"];
+        let repo = graph::repo_name();
+        let args = ["gitnexus", "query", task, "--limit", "5", "--repo", &repo];
         if let Ok((true, stdout, _)) = run_command(&args, &workspace_root()) {
             let trimmed = stdout.trim();
             if !trimmed.is_empty() {

@@ -13,7 +13,6 @@ The repo builds, tests, and validates cleanly. Public documentation covers the f
 
 - Local evaluation from source
 - Query routing and context assembly
-- Structured project/task record creation and listing
 - Curated record import
 - Validation reporting
 - Public documentation for all commands and workflows
