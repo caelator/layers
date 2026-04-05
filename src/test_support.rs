@@ -1,3 +1,4 @@
+#![allow(clippy::fn_to_numeric_cast)]
 //! Test utilities for layers integration tests.
 
 use std::ffi::OsString;
@@ -86,10 +87,9 @@ extern "C" fn usr1_handler(_sig: libc::c_int) {
 pub fn set_usr1_handler() -> io::Result<()> {
     unsafe {
         let mut act: libc::sigaction = std::mem::zeroed();
-        // sighandler_t is usize on macOS BSD — this cast is the only way to install
-        // a custom sigaction handler in raw FFI; the address is never converted back.
-        #[allow(clippy::fn_to_numeric_cast)]
-        let fn_ptr = usr1_handler as usize;
+        // sighandler_t is usize on macOS BSD.
+        // transmute with explicit type annotation to get the function address as usize.
+        let fn_ptr: usize = std::mem::transmute::<extern "C" fn(i32), usize>(usr1_handler);
         act.sa_sigaction = fn_ptr as libc::sighandler_t;
         act.sa_flags = libc::SA_SIGINFO;
         if libc::sigemptyset(&mut act.sa_mask) != 0 {
