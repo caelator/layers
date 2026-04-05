@@ -18,6 +18,7 @@ use cmd::council::{handle_council_promote, handle_council_run};
 use cmd::curated::handle_curated_import;
 use cmd::feedback::handle_feedback;
 use cmd::infrastructure::{handle_infrastructure, InfrastructureArgs};
+use cmd::monitor::handle_monitor;
 use cmd::query::handle_query;
 use cmd::refresh::handle_refresh;
 use cmd::remember::handle_remember;
@@ -107,6 +108,11 @@ enum Commands {
     Infrastructure {
         #[command(subcommand)]
         command: InfrastructureCommands,
+    },
+    /// Autonomous repo monitor: git sync, build/test checks, CI watching, fix subagents.
+    Monitor {
+        #[command(subcommand)]
+        command: cmd::monitor::MonitorArgs,
     },
 }
 
@@ -345,5 +351,6 @@ fn main() -> Result<()> {
             };
             handle_infrastructure(&args)
         }
+        Commands::Monitor { command } => handle_monitor(&command),
     }
 }
