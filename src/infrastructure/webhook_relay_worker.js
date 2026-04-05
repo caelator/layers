@@ -13,7 +13,7 @@
  *   RELAY_SECRET: a bearer token the local relay agent must present
  */
 
-const SECRET = {{GITHUB_SECRET}};
+const SECRET = "{{GITHUB_SECRET}}";
 const RELAY_SECRET = "{{RELAY_SECRET}}";
 
 /**
