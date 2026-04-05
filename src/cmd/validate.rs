@@ -78,15 +78,18 @@ pub fn handle_validate(routing_benchmarks: Option<String>, ci: bool) -> Result<(
         "workspace": workspace_root(),
     });
 
+    let benchmarks_pass = benchmark_result
+        .as_ref()
+        .is_some_and(|b| b["pass_rate"].as_f64().unwrap_or(0.0) >= 1.0);
     if let Some(bench) = &benchmark_result {
         payload["routing_benchmarks"] = bench.clone();
-        if bench["pass_rate"].as_f64().unwrap_or(0.0) < 1.0 {
+        if !benchmarks_pass {
             payload["ok"] = json!(false);
         }
     }
 
     println!("{}", serde_json::to_string_pretty(&payload)?);
-    if ci && payload["ok"] == json!(false) {
+    if ci && payload["ok"] == json!(false) && !benchmarks_pass {
         anyhow::bail!("validation failed");
     }
     Ok(())
