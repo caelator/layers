@@ -1,3 +1,112 @@
+/// Route-correction feedback loop for Layers query.
+///
+/// When the caller tells Layers "that was the wrong route", a [`RouteCorrection`]
+/// is recorded to `~/.layers/route-corrections.jsonl`.  On every [`classify()`]
+/// call the correction file is loaded and used to adjust signal scores so that
+/// repeatedly-corrected patterns are demoted.
+
+use crate::config::workspace_root;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::io::Write;
+use std::path::PathBuf;
+
+/// A single route correction record.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RouteCorrection {
+    /// The task text that was originally classified.
+    pub task: String,
+    /// The route the system predicted.
+    pub predicted: Route,
+    /// The route the human or caller indicated was correct.
+    pub actual: Route,
+    /// When the correction was recorded (ISO-8601).
+    pub timestamp: String,
+}
+
+impl RouteCorrection {
+    pub fn new(task: String, predicted: Route, actual: Route) -> Self {
+        Self {
+            task,
+            predicted,
+            actual,
+            timestamp: crate::util::iso_now(),
+        }
+    }
+}
+
+/// Returns the path to the route-corrections JSONL file.
+pub fn corrections_path() -> PathBuf {
+    workspace_root()
+        .join(".layers")
+        .join("route-corrections.jsonl")
+}
+
+/// Load all corrections from the corrections file.
+/// Returns an empty vec if the file does not exist yet.
+pub fn load_corrections() -> Vec<RouteCorrection> {
+    let path = corrections_path();
+    if !path.exists() {
+        return Vec::new();
+    }
+    let Ok(content) = std::fs::read_to_string(&path) else {
+        return Vec::new();
+    };
+    content
+        .lines()
+        .filter_map(|line| serde_json::from_str(line).ok())
+        .collect()
+}
+
+/// Record a route correction (append-only to JSONL).
+pub fn record_correction(correction: &RouteCorrection) -> std::io::Result<()> {
+    let path = corrections_path();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let line = serde_json::to_string(correction)?;
+    std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)?
+        .write_all(line.as_bytes())?;
+    std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)?
+        .write_all(b"\n")?;
+    Ok(())
+}
+
+/// In-memory correction cache — populated once per process from the JSONL file.
+static CORRECTION_CACHE: std::sync::OnceLock<HashMap<(Route, Route), usize>> =
+    std::sync::OnceLock::new();
+
+fn load_correction_cache() -> &'static HashMap<(Route, Route), usize> {
+    CORRECTION_CACHE.get_or_init(|| {
+        let corrections = load_corrections();
+        let mut counts: HashMap<(Route, Route), usize> = HashMap::new();
+        for c in corrections {
+            *counts.entry((c.predicted, c.actual)).or_insert(0) += 1;
+        }
+        counts
+    })
+}
+
+/// Force a reload of the correction cache from disk.
+/// Call this after [`record_correction`] so the next [`classify()`] picks up the change.
+#[allow(dead_code)]
+pub fn reload_corrections() {
+    let _ = CORRECTION_CACHE.set({
+        let corrections = load_corrections();
+        let mut counts: HashMap<(Route, Route), usize> = HashMap::new();
+        for c in corrections {
+            *counts.entry((c.predicted, c.actual)).or_insert(0) += 1;
+        }
+        counts
+    });
+}
+
 /// Heuristic routing algorithm for Layers query.
 ///
 /// Classifies a task into one of four routes based on keyword signal scoring:
@@ -5,10 +114,9 @@
 /// - `memory_only`: historical context needed
 /// - `graph_only`: structural/code context needed
 /// - `both`: both historical and structural context needed
-use serde::Serialize;
 use std::fmt;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Route {
     Neither,
@@ -196,6 +304,10 @@ pub fn classify(task: &str) -> RouteResult {
         scores.structural = scores.structural.saturating_sub(1);
     }
 
+    // Apply route-correction bias: if corrections exist, adjust scores so
+    // repeatedly-wrong routes get demoted and correct routes get a small boost.
+    apply_correction_bias(&mut scores);
+
     let (route, confidence, why, why_not) = determine_route(&scores);
 
     RouteResult {
@@ -204,6 +316,58 @@ pub fn classify(task: &str) -> RouteResult {
         scores,
         why,
         why_not,
+    }
+}
+
+/// Apply correction-based bias to signal scores.
+///
+/// For each (predicted, actual) correction on record, demote signals that
+/// support the predicted route and boost signals that support the actual route.
+/// This has the effect of gradually adjusting route decisions when the same
+/// pattern keeps getting corrected.
+fn apply_correction_bias(scores: &mut Scores) {
+    // Short-circuit if there are no corrections yet.
+    if load_correction_cache().is_empty() {
+        return;
+    }
+
+
+    // For every (predicted → actual) correction on record, apply demotion/boost.
+    // We do this per-correction-entry so a pattern corrected N times gets N× demotion.
+    for ((predicted, actual), &count) in load_correction_cache().iter() {
+        if count == 0 {
+            continue;
+        }
+        let weight = (count as f64 * 0.15).min(0.6); // 15% per correction, cap at 60%
+
+        // Demote the predicted route signals (predicted is &Route)
+        match *predicted {
+            Route::MemoryOnly | Route::Both => {
+                scores.historical =
+                    (scores.historical as f64 * (1.0 - weight)).round() as u32;
+            }
+            Route::GraphOnly => {
+                scores.structural =
+                    (scores.structural as f64 * (1.0 - weight)).round() as u32;
+            }
+            Route::Neither => {
+                scores.local = (scores.local as f64 * (1.0 - weight)).round() as u32;
+            }
+        }
+
+        // Boost the actual route signals (smaller boost = 1/3 of demotion)
+        let boost = weight / 3.0;
+        match *actual {
+            Route::MemoryOnly | Route::Both => {
+                scores.historical = (scores.historical as f64 * (1.0 + boost)).round() as u32;
+            }
+            Route::GraphOnly => {
+                scores.structural = (scores.structural as f64 * (1.0 + boost)).round() as u32;
+            }
+            Route::Neither => {
+                scores.local = (scores.local as f64 * (1.0 + boost)).round() as u32;
+            }
+        }
     }
 }
 

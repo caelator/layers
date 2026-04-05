@@ -16,6 +16,7 @@ mod uc;
 
 use cmd::council::{handle_council_promote, handle_council_run};
 use cmd::curated::handle_curated_import;
+use cmd::feedback::handle_feedback;
 use cmd::query::handle_query;
 use cmd::refresh::handle_refresh;
 use cmd::remember::handle_remember;
@@ -79,6 +80,17 @@ enum Commands {
         /// Also regenerate embeddings (passes --embeddings to gitnexus analyze).
         #[arg(long)]
         embeddings: bool,
+    },
+    /// Record a route correction to improve future routing decisions.
+    Feedback {
+        /// The task text that was originally classified.
+        task: String,
+        /// The route the system originally predicted.
+        #[arg(long)]
+        predicted: String,
+        /// The route that was actually correct.
+        #[arg(long)]
+        actual: String,
     },
     /// Import or manage curated memory records.
     Curated {
@@ -178,6 +190,14 @@ fn main() -> Result<()> {
         ),
         Commands::Validate { routing, ci } => handle_validate(routing, ci),
         Commands::Refresh { embeddings } => handle_refresh(embeddings),
+        Commands::Feedback { task, predicted, actual } => {
+            let args = cmd::feedback::FeedbackArgs {
+                task,
+                predicted: predicted.parse().map_err(|e: String| anyhow::anyhow!("{e}"))?,
+                actual: actual.parse().map_err(|e: String| anyhow::anyhow!("{e}"))?,
+            };
+            handle_feedback(&args)
+        }
         Commands::Curated { command } => match command {
             CuratedCommands::Import { file } => handle_curated_import(&file),
         },

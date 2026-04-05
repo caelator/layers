@@ -1,5 +1,6 @@
 pub mod council;
 pub mod curated;
+pub mod feedback;
 pub mod query;
 pub mod refresh;
 pub mod remember;

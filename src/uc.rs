@@ -277,4 +277,127 @@ mod tests {
         assert!(result.lines.is_empty());
         assert_eq!(result.fallback_reason.as_deref(), Some("uc is unavailable"));
     }
+
+    /// UC returns fewer than min_results → fallback, not success.
+    #[test]
+    fn retrieve_falls_back_when_below_min_results() {
+        if which("uc") {
+            return; // skip if real uc is on PATH
+        }
+
+        let tmp = std::env::temp_dir().join(format!(
+            "layers-uc-min-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&tmp).unwrap();
+
+        // Fake uc that prints only ONE line (below typical min_results=1, but we'll test 2)
+        let fake_uc = tmp.join("uc");
+        std::fs::write(&fake_uc, "#!/bin/sh\necho 'only one result'\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&fake_uc, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
+        let fake_config = tmp.join("uc.toml");
+        std::fs::write(&fake_config, "[uc]\n").unwrap();
+
+        let original_path = std::env::var("PATH").unwrap_or_default();
+        unsafe { std::env::set_var("PATH", format!("{}:{}", tmp.display(), original_path)); }
+
+        let opts = UcOptions { timeout_ms: 5000, min_results: 3 };
+        let result = retrieve_impl("query", 3, &opts, &fake_config);
+
+        unsafe { std::env::set_var("PATH", &original_path); }
+        let _ = std::fs::remove_dir_all(&tmp);
+
+        // Should succeed but return fewer than min_results
+        assert!(result.fallback_reason.is_none());
+        assert_eq!(result.lines.len(), 1);
+        // meets_threshold_with(1, min_results=3) should be false
+        assert!(!meets_threshold_with(&result, 3));
+    }
+
+    /// UC returns garbage/malformed output → treated as success with empty lines.
+    #[test]
+    fn retrieve_handles_garbage_output_without_crashing() {
+        if which("uc") {
+            return;
+        }
+
+        let tmp = std::env::temp_dir().join(format!(
+            "layers-uc-garbage-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&tmp).unwrap();
+
+        // Fake uc that prints pure garbage
+        let fake_uc = tmp.join("uc");
+        std::fs::write(&fake_uc, "#!/bin/sh\necho '}{not valid json}{'\necho '¥≈ç√∫~≤≥'\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&fake_uc, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
+        let fake_config = tmp.join("uc.toml");
+        std::fs::write(&fake_config, "[uc]\n").unwrap();
+
+        let original_path = std::env::var("PATH").unwrap_or_default();
+        unsafe { std::env::set_var("PATH", format!("{}:{}", tmp.display(), original_path)); }
+
+        let result = retrieve_impl("query", 5, &UcOptions { timeout_ms: 5000, min_results: 1 }, &fake_config);
+
+        unsafe { std::env::set_var("PATH", &original_path); }
+        let _ = std::fs::remove_dir_all(&tmp);
+
+        // Should NOT crash — garbage lines are trimmed and filtered
+        assert!(result.fallback_reason.is_none());
+        // Lines that are just garbage get filtered as empty by .trim().is_empty()
+        assert!(result.lines.is_empty());
+    }
+
+    /// UC config file missing → falls back gracefully.
+    #[test]
+    fn retrieve_falls_back_when_config_missing() {
+        if which("uc") {
+            return;
+        }
+
+        let tmp = std::env::temp_dir().join(format!(
+            "layers-uc-noconfig-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&tmp).unwrap();
+
+        // Fake uc that would succeed if it ran
+        let fake_uc = tmp.join("uc");
+        std::fs::write(&fake_uc, "#!/bin/sh\necho 'good result'\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&fake_uc, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
+        let missing_config = tmp.join("does-not-exist.toml");
+
+        let original_path = std::env::var("PATH").unwrap_or_default();
+        unsafe { std::env::set_var("PATH", format!("{}:{}", tmp.display(), original_path)); }
+
+        let result = retrieve_impl("query", 3, &UcOptions { timeout_ms: 5000, min_results: 1 }, &missing_config);
+
+        unsafe { std::env::set_var("PATH", &original_path); }
+        let _ = std::fs::remove_dir_all(&tmp);
+
+        // uc exits non-zero because config doesn't exist → fallback reason set
+        assert!(result.fallback_reason.is_some());
+        assert!(result.lines.is_empty());
+    }
 }
