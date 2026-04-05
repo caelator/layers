@@ -1,0 +1,19 @@
+name = "github-webhook-relay"
+main = "webhook_relay_worker.js"
+compatibility_date = "2024-01-01"
+
+# Bind to a Durable Object for event storage
+# (The relay agent also supports polling without Durable Objects via KV)
+#
+# To enable Durable Objects:
+# [[durable_objects.bindings]]
+# name = "EVENT_STORE"
+# class_name = "EventStore"
+
+# Or use Workers KV for simpler storage:
+[vars]
+MAX_EVENTS_PER_DAY = "500"
+
+# Secrets (set via `wrangler secret put`):
+# GITHUB_WEBHOOK_SECRET=your-github-webhook-secret
+# RELAY_SECRET=your-random-secret-for-local-agent

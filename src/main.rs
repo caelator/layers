@@ -17,6 +17,7 @@ mod uc;
 use cmd::council::{handle_council_promote, handle_council_run};
 use cmd::curated::handle_curated_import;
 use cmd::feedback::handle_feedback;
+use cmd::infrastructure::{handle_infrastructure, InfrastructureArgs};
 use cmd::query::handle_query;
 use cmd::refresh::handle_refresh;
 use cmd::remember::handle_remember;
@@ -102,6 +103,11 @@ enum Commands {
         #[command(subcommand)]
         command: CouncilCommands,
     },
+    /// Manage cloud and infrastructure credentials (SSH, Fly.io, Vercel, Cloudflare, Hetzner, Render, Railway, GitHub, Webhook relay).
+    Infrastructure {
+        #[command(subcommand)]
+        command: InfrastructureCommands,
+    },
 }
 
 #[derive(Subcommand)]
@@ -111,6 +117,66 @@ enum CuratedCommands {
         /// Path to the JSONL file to import.
         file: String,
     },
+}
+
+#[derive(Subcommand)]
+enum InfrastructureCommands {
+    /// Interactive setup wizard for infrastructure credentials.
+    Setup,
+    /// List all configured providers.
+    List,
+    /// Remove credentials for a provider.
+    Remove {
+        provider: String,
+    },
+    /// Test connectivity to all configured providers.
+    Test,
+    /// Manage SSH host aliases.
+    Ssh {
+        #[command(subcommand)]
+        command: SshCommands,
+    },
+    /// Manage GitHub webhook relay endpoint.
+    Webhook {
+        #[command(subcommand)]
+        command: WebhookCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum SshCommands {
+    /// Add an SSH host alias.
+    Add {
+        alias: String,
+        connection: String,
+        #[arg(long)]
+        key: Option<String>,
+        #[arg(long)]
+        provider: Option<String>,
+    },
+    /// List all SSH host aliases.
+    List,
+    /// Remove an SSH host alias.
+    Remove {
+        alias: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum WebhookCommands {
+    /// Configure a GitHub webhook relay via Cloudflare Worker.
+    Setup {
+        #[arg(long)]
+        cf_token: Option<String>,
+        #[arg(long)]
+        cf_account: Option<String>,
+        #[arg(long)]
+        github_secret: Option<String>,
+    },
+    /// Show current webhook relay URL and status.
+    Status,
+    /// Remove webhook relay configuration.
+    Remove,
 }
 
 #[derive(Subcommand)]
@@ -231,5 +297,53 @@ fn main() -> Result<()> {
                 json,
             } => handle_council_promote(&run_id, &project, artifacts_dir, dry_run, json),
         },
+        Commands::Infrastructure { command } => {
+            let args = match command {
+                InfrastructureCommands::Setup => InfrastructureArgs::Setup,
+                InfrastructureCommands::List => InfrastructureArgs::List,
+                InfrastructureCommands::Remove { provider } => InfrastructureArgs::Remove { provider },
+                InfrastructureCommands::Test => InfrastructureArgs::Test,
+                InfrastructureCommands::Ssh { command } => {
+                    InfrastructureArgs::Ssh {
+                        command: match command {
+                            SshCommands::Add { alias, connection, key, provider } => {
+                                cmd::infrastructure::SshCommands::Add {
+                                    alias,
+                                    connection,
+                                    key,
+                                    provider,
+                                }
+                            }
+                            SshCommands::List => cmd::infrastructure::SshCommands::List,
+                            SshCommands::Remove { alias } => {
+                                cmd::infrastructure::SshCommands::Remove { alias }
+                            }
+                        },
+                    }
+                }
+                InfrastructureCommands::Webhook { command } => {
+                    InfrastructureArgs::Webhook {
+                        command: match command {
+                            WebhookCommands::Setup {
+                                cf_token,
+                                cf_account,
+                                github_secret,
+                            } => cmd::infrastructure::WebhookCommands::Setup {
+                                cf_token,
+                                cf_account,
+                                github_secret,
+                            },
+                            WebhookCommands::Status => {
+                                cmd::infrastructure::WebhookCommands::Status
+                            }
+                            WebhookCommands::Remove => {
+                                cmd::infrastructure::WebhookCommands::Remove
+                            }
+                        },
+                    }
+                }
+            };
+            handle_infrastructure(&args)
+        }
     }
 }
