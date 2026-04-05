@@ -18,8 +18,6 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::io::{self, Write};
 
-const INFRA_FILE: &str = "~/.layers/infrastructure.json";
-
 #[derive(Parser, Debug)]
 #[command(author, version)]
 pub enum InfrastructureArgs {
