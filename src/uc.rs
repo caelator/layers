@@ -296,7 +296,7 @@ mod tests {
 
         // Fake uc that prints only ONE line (below typical min_results=1, but we'll test 2)
         let fake_uc = tmp.join("uc");
-        std::fs::write(&fake_uc, "#!/bin/sh\necho 'only one result'\n").unwrap();
+        std::fs::write(&fake_uc, "#!/bin/sh\nprintf '%s' 'only one result'\n").unwrap();
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -339,7 +339,7 @@ mod tests {
 
         // Fake uc that prints pure garbage
         let fake_uc = tmp.join("uc");
-        std::fs::write(&fake_uc, "#!/bin/sh\necho '}{not valid json}{'\necho '¥≈ç√∫~≤≥'\n").unwrap();
+        std::fs::write(&fake_uc, "#!/bin/sh\nprintf '%s' ''\n").unwrap();
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -380,7 +380,7 @@ mod tests {
 
         // Fake uc that would succeed if it ran
         let fake_uc = tmp.join("uc");
-        std::fs::write(&fake_uc, "#!/bin/sh\necho 'good result'\n").unwrap();
+        std::fs::write(&fake_uc, "#!/bin/sh\nexit 1\n").unwrap();
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;

@@ -13,3 +13,7 @@ memoryport/council-runs/
 *.tmp
 *.swp
 *.log
+
+# Infrastructure credentials (secrets)
+infrastructure/infrastructure.json
+.layers/infrastructure.json
