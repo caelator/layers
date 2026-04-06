@@ -199,7 +199,8 @@ fn setup_wizard() -> Result<()> {
     Ok(())
 }
 
-fn setup_ssh(cfg: &mut InfraConfig) -> Result<()> {
+#[allow(clippy::unnecessary_wraps)]
+    fn setup_ssh(cfg: &mut InfraConfig) -> Result<()> {
     let alias = prompt("SSH alias (e.g. prod-server)");
     if alias.is_empty() {
         return Ok(());
@@ -220,7 +221,8 @@ fn setup_ssh(cfg: &mut InfraConfig) -> Result<()> {
     Ok(())
 }
 
-fn setup_provider(cfg: &mut InfraConfig, name: &str, label: &str, _is_api: bool) -> Result<()> {
+#[allow(clippy::unnecessary_wraps)]
+    fn setup_provider(cfg: &mut InfraConfig, name: &str, label: &str, _is_api: bool) -> Result<()> {
     let token = prompt(label);
     if token.is_empty() {
         return Ok(());
@@ -235,7 +237,8 @@ fn setup_provider(cfg: &mut InfraConfig, name: &str, label: &str, _is_api: bool)
     Ok(())
 }
 
-fn setup_cloudflare(cfg: &mut InfraConfig) -> Result<()> {
+#[allow(clippy::unnecessary_wraps)]
+    fn setup_cloudflare(cfg: &mut InfraConfig) -> Result<()> {
     let account = prompt("Cloudflare Account ID");
     let token = prompt("Cloudflare API Token");
     if token.is_empty() || account.is_empty() {
@@ -252,7 +255,8 @@ fn setup_cloudflare(cfg: &mut InfraConfig) -> Result<()> {
     Ok(())
 }
 
-fn setup_github(cfg: &mut InfraConfig) -> Result<()> {
+#[allow(clippy::unnecessary_wraps)]
+    fn setup_github(cfg: &mut InfraConfig) -> Result<()> {
     let token = prompt("GitHub personal access token");
     let secret = prompt("Webhook secret (blank to skip)");
     if token.is_empty() {

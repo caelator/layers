@@ -65,13 +65,13 @@ pub fn impact(targets: &[String]) -> Result<Option<ImpactSummary>> {
         if let Ok((true, stdout, _)) = run_command(&args, &workspace_root()) {
             if let Ok(parsed) = serde_json::from_str::<Value>(&stdout) {
                 succeeded += 1;
-                if let Some(d) = parsed.get("direct").and_then(|v| v.as_u64()) {
+                if let Some(d) = parsed.get("direct").and_then(serde_json::Value::as_u64) {
                     all_direct += d;
                 }
-                if let Some(i) = parsed.get("indirect").and_then(|v| v.as_u64()) {
+                if let Some(i) = parsed.get("indirect").and_then(serde_json::Value::as_u64) {
                     all_indirect += i;
                 }
-                if let Some(t) = parsed.get("transitive").and_then(|v| v.as_u64()) {
+                if let Some(t) = parsed.get("transitive").and_then(serde_json::Value::as_u64) {
                     all_transitive += t;
                 }
                 if let Some(r) = parsed.get("risk_level").and_then(|v| v.as_str()) {

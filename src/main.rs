@@ -92,7 +92,7 @@ enum Commands {
         #[arg(long)]
         ci: bool,
     },
-    /// Refresh GitNexus index and verify MemoryPort readiness.
+    /// Refresh GitNexus index and verify `MemoryPort` readiness.
     Refresh {
         /// Also regenerate embeddings (passes --embeddings to gitnexus analyze).
         #[arg(long)]
@@ -224,7 +224,7 @@ enum CouncilCommands {
         /// Custom artifacts directory (default: memoryport/council-runs/<run-id>).
         #[arg(long)]
         artifacts_dir: Option<String>,
-        /// Comma-separated symbol names for GitNexus impact context.
+        /// Comma-separated symbol names for `GitNexus` impact context.
         #[arg(long)]
         targets: Option<String>,
         /// Output full JSON instead of human summary.
