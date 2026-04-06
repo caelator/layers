@@ -589,34 +589,31 @@ fn spawn_fix_subagent(label: &str, task: &str) -> Result<()> {
     writeln!(file)?; // trailing newline for jsonl
 
     // Spawn fix subagent via OpenClaw CLI
-    let openclaw_path = std::env::var("OPENCLAW_CLI")
-        .ok()
-        .map_or_else(
-            || {
-                // Try PATH lookup first (expanding ~ in path components), then fall back
-                std::env::var_os("PATH")
-                    .and_then(|p| {
-                        std::env::split_paths(&p).find_map(|d| {
-                            // Expand ~ to home dir so ~/.local/bin resolves correctly
-                            let d = if d.to_string_lossy().starts_with('~') {
-                                if let Some(home) = std::env::var_os("HOME") {
-                                    PathBuf::from(home).join(
-                                        d.to_string_lossy().strip_prefix("~").unwrap(),
-                                    )
-                                } else {
-                                    d.clone()
-                                }
+    let openclaw_path = std::env::var("OPENCLAW_CLI").ok().map_or_else(
+        || {
+            // Try PATH lookup first (expanding ~ in path components), then fall back
+            std::env::var_os("PATH")
+                .and_then(|p| {
+                    std::env::split_paths(&p).find_map(|d| {
+                        // Expand ~ to home dir so ~/.local/bin resolves correctly
+                        let d = if d.to_string_lossy().starts_with('~') {
+                            if let Some(home) = std::env::var_os("HOME") {
+                                PathBuf::from(home)
+                                    .join(d.to_string_lossy().strip_prefix("~").unwrap())
                             } else {
                                 d.clone()
-                            };
-                            let candidate = d.join("openclaw");
-                            candidate.exists().then_some(candidate)
-                        })
+                            }
+                        } else {
+                            d.clone()
+                        };
+                        let candidate = d.join("openclaw");
+                        candidate.exists().then_some(candidate)
                     })
-                    .unwrap_or_else(|| PathBuf::from("/Users/bri/.local/bin/openclaw"))
-            },
-            PathBuf::from,
-        );
+                })
+                .unwrap_or_else(|| PathBuf::from("/Users/bri/.local/bin/openclaw"))
+        },
+        PathBuf::from,
+    );
     let child = Command::new(&openclaw_path)
         .args([
             "sessions",

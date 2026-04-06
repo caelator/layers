@@ -13,8 +13,7 @@ pub const TECHNICIAN_SCHEMA_VERSION: u32 = 1;
 use std::path::PathBuf;
 
 fn layers_root() -> PathBuf {
-    PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string()))
-        .join(".layers")
+    PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string())).join(".layers")
 }
 
 pub fn state_path() -> PathBuf {
@@ -354,9 +353,10 @@ impl DiagnosisKind {
     pub fn signal(&self) -> Signal {
         match self {
             Self::PluginPanic | Self::PluginNotCompiling => Signal::Plugin,
-            Self::UcBinaryMissing | Self::UcConfigMissing | Self::UcTimeout | Self::UcNonZeroExit => {
-                Signal::Uc
-            }
+            Self::UcBinaryMissing
+            | Self::UcConfigMissing
+            | Self::UcTimeout
+            | Self::UcNonZeroExit => Signal::Uc,
             Self::GitNexusBinaryMissing | Self::GitNexusIndexStale | Self::GitNexusIndexMissing => {
                 Signal::GitNexus
             }

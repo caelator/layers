@@ -30,12 +30,11 @@ use std::fmt::Write;
 
 use chrono::Utc;
 
-use data::{
-    CycleReport, Diagnosis, RepairBudget, TechnicianState,
-    TECHNICIAN_SCHEMA_VERSION,
-};
+use data::{CycleReport, Diagnosis, RepairBudget, TECHNICIAN_SCHEMA_VERSION, TechnicianState};
 use detection::run_all_detections;
-use escalation::{append_escalation, append_repair, evaluate_escalations, load_recent_diagnosis_counts};
+use escalation::{
+    append_escalation, append_repair, evaluate_escalations, load_recent_diagnosis_counts,
+};
 use repair::{attempt_repair, can_repair};
 
 /// Run one full technician cycle.
@@ -62,7 +61,10 @@ pub fn run_technician_cycle(dry_run: bool) -> anyhow::Result<CycleReport> {
 
     // Run all detection suites
     let diagnoses = run_all_detections();
-    let diagnoses_this_cycle: Vec<String> = diagnoses.iter().map(|d| d.kind.name().to_string()).collect();
+    let diagnoses_this_cycle: Vec<String> = diagnoses
+        .iter()
+        .map(|d| d.kind.name().to_string())
+        .collect();
 
     // Build cycle report skeleton
     let mut report = CycleReport {
@@ -73,16 +75,26 @@ pub fn run_technician_cycle(dry_run: bool) -> anyhow::Result<CycleReport> {
         repairs: Vec::new(),
         escalations: Vec::new(),
         uc_available: !diagnoses.iter().any(|d| {
-            matches!(d.kind, data::DiagnosisKind::UcBinaryMissing | data::DiagnosisKind::UcConfigMissing)
+            matches!(
+                d.kind,
+                data::DiagnosisKind::UcBinaryMissing | data::DiagnosisKind::UcConfigMissing
+            )
         }),
-        gitnexus_available: !diagnoses.iter().any(|d| {
-            matches!(d.kind, data::DiagnosisKind::GitNexusBinaryMissing)
-        }),
+        gitnexus_available: !diagnoses
+            .iter()
+            .any(|d| matches!(d.kind, data::DiagnosisKind::GitNexusBinaryMissing)),
         telemetry_event_count: 0,
         telemetry_error_rate: 0.0,
         council_runs_failed_7d: diagnoses
             .iter()
-            .filter(|d| matches!(d.kind, data::DiagnosisKind::CircuitBreakerTripped | data::DiagnosisKind::StageRetriesExhausted | data::DiagnosisKind::StageTimedOut))
+            .filter(|d| {
+                matches!(
+                    d.kind,
+                    data::DiagnosisKind::CircuitBreakerTripped
+                        | data::DiagnosisKind::StageRetriesExhausted
+                        | data::DiagnosisKind::StageTimedOut
+                )
+            })
             .count(),
         repair_budget_remaining: state.repair_budget_remaining.clone(),
     };
@@ -123,9 +135,24 @@ pub fn format_cycle_report(report: &CycleReport) -> String {
 
     // Integration health
     writeln!(&mut out, "Integration Health").unwrap();
-    writeln!(&mut out, "  UC available:      {}", bool_icon(report.uc_available)).unwrap();
-    writeln!(&mut out, "  GitNexus available: {}", bool_icon(report.gitnexus_available)).unwrap();
-    writeln!(&mut out, "  Council failures:   {} (7d)", report.council_runs_failed_7d).unwrap();
+    writeln!(
+        &mut out,
+        "  UC available:      {}",
+        bool_icon(report.uc_available)
+    )
+    .unwrap();
+    writeln!(
+        &mut out,
+        "  GitNexus available: {}",
+        bool_icon(report.gitnexus_available)
+    )
+    .unwrap();
+    writeln!(
+        &mut out,
+        "  Council failures:   {} (7d)",
+        report.council_runs_failed_7d
+    )
+    .unwrap();
     writeln!(&mut out).unwrap();
 
     // Diagnoses
@@ -134,7 +161,14 @@ pub fn format_cycle_report(report: &CycleReport) -> String {
     } else {
         writeln!(&mut out, "Diagnoses: {} found", report.diagnoses.len()).unwrap();
         for d in &report.diagnoses {
-            writeln!(&mut out, "  [{}] {} — {}", d.signal_tag(), d.kind.name(), d.summary).unwrap();
+            writeln!(
+                &mut out,
+                "  [{}] {} — {}",
+                d.signal_tag(),
+                d.kind.name(),
+                d.summary
+            )
+            .unwrap();
         }
         writeln!(&mut out).unwrap();
     }
@@ -145,7 +179,14 @@ pub fn format_cycle_report(report: &CycleReport) -> String {
     } else {
         writeln!(&mut out, "Repairs: {} applied", report.repairs.len()).unwrap();
         for r in &report.repairs {
-            writeln!(&mut out, "  [{}] {} — {}", r.outcome.tag(), r.repair_action, r.diagnosis).unwrap();
+            writeln!(
+                &mut out,
+                "  [{}] {} — {}",
+                r.outcome.tag(),
+                r.repair_action,
+                r.diagnosis
+            )
+            .unwrap();
         }
         writeln!(&mut out).unwrap();
     }
@@ -154,7 +195,13 @@ pub fn format_cycle_report(report: &CycleReport) -> String {
     if report.escalations.is_empty() {
         writeln!(&mut out, "Escalations: none").unwrap();
     } else {
-        writeln!(&mut out, "Escalations: {} ({} pending)", report.escalations.len(), report.pending_escalations()).unwrap();
+        writeln!(
+            &mut out,
+            "Escalations: {} ({} pending)",
+            report.escalations.len(),
+            report.pending_escalations()
+        )
+        .unwrap();
         for e in &report.escalations {
             writeln!(&mut out, "  [!] {} — {}", e.diagnosis, e.escalation_reason).unwrap();
         }
@@ -182,8 +229,6 @@ impl Diagnosis {
         }
     }
 }
-
-
 
 impl data::RepairOutcome {
     fn tag(self) -> &'static str {

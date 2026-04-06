@@ -50,8 +50,8 @@ use cmd::monitor::handle_monitor;
 use cmd::query::handle_query;
 use cmd::refresh::handle_refresh;
 use cmd::remember::handle_remember;
-use cmd::telemetry::{TelemetryCommands, handle_telemetry};
 use cmd::technician::handle_technician;
+use cmd::telemetry::{TelemetryCommands, handle_telemetry};
 use cmd::validate::handle_validate;
 
 /// Council orchestrator and memory spine for multi-model AI workflows.

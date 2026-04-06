@@ -1,9 +1,7 @@
 //! `layers telemetry` subcommand — integration health reporting.
 
 use crate::config::memoryport_dir;
-use crate::plugins::telemetry::schema::{
-    CouncilData, PluginCall, ResultQuality, RoutingOutcome,
-};
+use crate::plugins::telemetry::schema::{CouncilData, PluginCall, ResultQuality, RoutingOutcome};
 use crate::plugins::telemetry::{RoutingDecision, TelemetryPlugin};
 use clap::Subcommand;
 

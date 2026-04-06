@@ -2,14 +2,14 @@ use anyhow::Result;
 use serde_json::json;
 use std::time::Instant;
 
+use crate::cmd::telemetry::PluginResult;
 use crate::config::{CONTEXT_PAYLOAD_SCHEMA_VERSION, memoryport_dir};
 use crate::graph;
 use crate::memory;
+use crate::plugins::telemetry::schema::fingerprint_query;
 use crate::router::{self, Confidence, Route};
 use crate::uc;
 use crate::util::{append_jsonl, iso_now};
-use crate::plugins::telemetry::schema::fingerprint_query;
-use crate::cmd::telemetry::PluginResult;
 
 const MAX_MEMORY_RECORDS: usize = 3;
 const MAX_GITNEXUS_FACTS: usize = 5;
@@ -233,13 +233,10 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
     }
 
     // Emit telemetry event
-    let end_to_end_ms =
-        u64::try_from(t0.elapsed().as_millis()).unwrap_or(u64::MAX);
+    let end_to_end_ms = u64::try_from(t0.elapsed().as_millis()).unwrap_or(u64::MAX);
     let fp = fingerprint_query(task);
-    let memory_invoked =
-        matches!(effective_route, Route::MemoryOnly | Route::Both);
-    let gitnexus_invoked =
-        matches!(effective_route, Route::GraphOnly | Route::Both);
+    let memory_invoked = matches!(effective_route, Route::MemoryOnly | Route::Both);
+    let gitnexus_invoked = matches!(effective_route, Route::GraphOnly | Route::Both);
     let memory_success = !memory_items.is_empty();
     let gitnexus_success = !graph_items.is_empty();
 

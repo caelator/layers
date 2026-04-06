@@ -39,14 +39,8 @@ pub fn handle_technician(args: &TechnicianArgs) -> Result<()> {
             println!("  Last cycle:      {}", state.last_cycle_ts);
             println!("  UC available:    {}", state.uc_available);
             println!("  GitNexus avail:  {}", state.gitnexus_available);
-            println!(
-                "  Council failed:  {} (7d)",
-                state.council_runs_failed_7d
-            );
-            println!(
-                "  Pending esc.:    {}",
-                state.pending_escalations
-            );
+            println!("  Council failed:  {} (7d)", state.council_runs_failed_7d);
+            println!("  Pending esc.:    {}", state.pending_escalations);
 
             // Print recent escalations
             let esc_path = crate::technician::data::escalations_path();
@@ -62,9 +56,7 @@ pub fn handle_technician(args: &TechnicianArgs) -> Result<()> {
                     if let Ok(record) =
                         serde_json::from_str::<crate::technician::data::EscalationRecord>(line)
                     {
-                        if let Ok(ts) =
-                            chrono::DateTime::parse_from_rfc3339(&record.ts)
-                        {
+                        if let Ok(ts) = chrono::DateTime::parse_from_rfc3339(&record.ts) {
                             if ts.with_timezone(&chrono::Utc) >= cutoff {
                                 println!(
                                     "  [{}] {} — {}",

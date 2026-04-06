@@ -30,13 +30,11 @@ pub mod schema;
 use std::path::Path;
 
 use aggregator::{IntegrationHealthReport, aggregate, format_report};
-use schema::{
-    SCHEMA_VERSION,
-};
+use schema::SCHEMA_VERSION;
 // Re-export schema items so the technician detection module can use them
 // without depending on the private schema submodule.
 pub use schema::load_events_from_file;
-pub use schema::{RoutingOutcome, CouncilData, PluginCall, RoutingDecisionEvent};
+pub use schema::{CouncilData, PluginCall, RoutingDecisionEvent, RoutingOutcome};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::path::PathBuf;

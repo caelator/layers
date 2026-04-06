@@ -7,9 +7,7 @@ use std::io::Write;
 
 use chrono::{Duration, Utc};
 
-use super::data::{
-    CycleReport, DiagnosisKind, EscalationRecord, RepairRecord,
-};
+use super::data::{CycleReport, DiagnosisKind, EscalationRecord, RepairRecord};
 
 // ---------------------------------------------------------------------------
 // EscalationRecord persistence
@@ -75,7 +73,10 @@ pub fn evaluate_escalations(
 
     for diagnosis in &report.diagnoses {
         let diagnosis_name = diagnosis.kind.name();
-        let count_24h = diagnosis_counts_24h.get(diagnosis_name).copied().unwrap_or(0);
+        let count_24h = diagnosis_counts_24h
+            .get(diagnosis_name)
+            .copied()
+            .unwrap_or(0);
 
         let reason = if matches!(
             diagnosis.kind,
@@ -83,7 +84,9 @@ pub fn evaluate_escalations(
         ) {
             Some("human_required: council stage exhausted all retries".to_string())
         } else if count_24h >= 3 {
-            Some(format!("repeated_failure: same diagnosis {count_24h} times in rolling 24h"))
+            Some(format!(
+                "repeated_failure: same diagnosis {count_24h} times in rolling 24h"
+            ))
         } else if diagnosis.requires_escalation {
             Some(format!("requires_escalation: {diagnosis_name}"))
         } else {
