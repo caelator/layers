@@ -226,6 +226,7 @@ impl Diagnosis {
             data::Signal::CircuitBreaker => "cb",
             data::Signal::Telemetry => "telemetry",
             data::Signal::RouteCorrections => "route-corr",
+            data::Signal::Sentry => "sentry",
         }
     }
 }

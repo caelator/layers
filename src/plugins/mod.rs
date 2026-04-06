@@ -24,4 +24,5 @@
 //!   after each routing decision and produces health reports.
 
 pub mod rlef;
+pub mod sentry;
 pub mod telemetry;

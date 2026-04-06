@@ -507,6 +507,71 @@ pub fn detect_route_corrections() -> Vec<Diagnosis> {
 }
 
 // ---------------------------------------------------------------------------
+// Sentry monitoring
+// ---------------------------------------------------------------------------
+
+/// Check Sentry for new, unresolved, and stale errors.
+pub fn detect_sentry() -> Vec<Diagnosis> {
+    use crate::plugins::sentry::{SentryConfig, SentryPlugin};
+    use crate::config::memoryport_dir;
+
+    let mut diagnoses = Vec::new();
+
+    let config = SentryConfig::default();
+    if !config.is_configured() {
+        // Not configured — not a problem, skip silently
+        return diagnoses;
+    }
+
+    let plugin = SentryPlugin::new(memoryport_dir());
+    let results = match plugin.run_cycle() {
+        Ok(r) => r,
+        Err(e) => {
+            diagnoses.push(Diagnosis::new(
+                DiagnosisKind::SentryApiError,
+                format!("Sentry API error: {}", e),
+                serde_json::json!({ "error": e.to_string() }),
+            ));
+            return diagnoses;
+        }
+    };
+
+    for result in results {
+        let diagnosis = match result.classification {
+            crate::plugins::sentry::IssueClassification::SelfHealable(_) => {
+                DiagnosisKind::SentryNewError
+            }
+            crate::plugins::sentry::IssueClassification::NeedsCouncil(_) => {
+                DiagnosisKind::SentryErrorStale
+            }
+            crate::plugins::sentry::IssueClassification::EscalateHuman(_) => {
+                DiagnosisKind::SentryErrorStale
+            }
+        };
+
+        let summary = format!(
+            "[{}] {} (count={}, url={})",
+            result.level, result.issue_title, result.count, result.url
+        );
+
+        diagnoses.push(Diagnosis::new(
+            diagnosis,
+            summary,
+            serde_json::json!({
+                "issue_id": result.issue_id,
+                "title": result.issue_title,
+                "level": result.level,
+                "count": result.count,
+                "url": result.url,
+                "diagnosis_signal": result.diagnosis_signal,
+            }),
+        ));
+    }
+
+    diagnoses
+}
+
+// ---------------------------------------------------------------------------
 // Orchestration
 // ---------------------------------------------------------------------------
 
@@ -520,5 +585,6 @@ pub fn run_all_detections() -> Vec<Diagnosis> {
     all.extend(detect_circuit_breaker());
     all.extend(detect_telemetry_health());
     all.extend(detect_route_corrections());
+    all.extend(detect_sentry());
     all
 }

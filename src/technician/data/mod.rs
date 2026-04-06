@@ -292,6 +292,7 @@ pub enum Signal {
     CircuitBreaker,
     Telemetry,
     RouteCorrections,
+    Sentry,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -325,6 +326,12 @@ pub enum DiagnosisKind {
     TelemetryLatencySpike,
     // Route corrections
     RouteCorrectionsJsonlCorrupt,
+    // Sentry
+    SentryApiError,
+    SentryNewError,
+    SentryErrorSpike,
+    SentryErrorStale,
+    SentryConfigMissing,
 }
 
 impl DiagnosisKind {
@@ -336,6 +343,7 @@ impl DiagnosisKind {
                 | Self::RouteCorrectionsJsonlCorrupt
                 | Self::UcConfigMissing
                 | Self::CircuitBreakerTripped
+                | Self::SentryNewError // self-healable errors will be handled by the sentry repair logic
         )
     }
 
@@ -347,6 +355,8 @@ impl DiagnosisKind {
                 | Self::PluginPanic
                 | Self::GitNexusIndexStale
                 | Self::TelemetryErrorRateHigh
+                | Self::SentryErrorStale
+                | Self::SentryApiError
         )
     }
 
@@ -372,6 +382,11 @@ impl DiagnosisKind {
             | Self::TelemetryErrorRateHigh
             | Self::TelemetryLatencySpike => Signal::Telemetry,
             Self::RouteCorrectionsJsonlCorrupt => Signal::RouteCorrections,
+            Self::SentryApiError
+            | Self::SentryNewError
+            | Self::SentryErrorSpike
+            | Self::SentryErrorStale
+            | Self::SentryConfigMissing => Signal::Sentry,
         }
     }
 
@@ -398,6 +413,11 @@ impl DiagnosisKind {
             Self::TelemetryErrorRateHigh => "telemetry_error_rate_high",
             Self::TelemetryLatencySpike => "telemetry_latency_spike",
             Self::RouteCorrectionsJsonlCorrupt => "route_corrections_jsonl_corrupt",
+            Self::SentryApiError => "sentry_api_error",
+            Self::SentryNewError => "sentry_new_error",
+            Self::SentryErrorSpike => "sentry_error_spike",
+            Self::SentryErrorStale => "sentry_error_stale",
+            Self::SentryConfigMissing => "sentry_config_missing",
         }
     }
 }
