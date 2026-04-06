@@ -157,17 +157,20 @@ pub fn execute_council_run(request: CouncilRunRequest) -> Result<CouncilRunRecor
             request.timeout_secs,
         )?;
 
-        // Apply circuit breaker after successful stages only
-        if let StageOutcome::Succeeded(stage_output) = &output {
-            if !circuit_breaker.record_round(stage_output) {
-                run.status = "failed".to_string();
-                run.status_reason = format!(
-                    "circuit breaker tripped after {} no-progress rounds",
-                    circuit_breaker.consecutive_no_progress()
-                );
-                run.updated_at = iso_now();
-                break;
-            }
+        // Record this round's output in the circuit breaker — both successful
+        // and failed stages count toward no-progress tracking.
+        let round_output = match &output {
+            StageOutcome::Succeeded(s) => s.as_str(),
+            StageOutcome::Failed { .. } => "",
+        };
+        if !circuit_breaker.record_round(round_output) {
+            run.status = "failed".to_string();
+            run.status_reason = format!(
+                "circuit breaker tripped after {} no-progress rounds",
+                circuit_breaker.consecutive_no_progress()
+            );
+            run.updated_at = iso_now();
+            break;
         }
 
         match output {

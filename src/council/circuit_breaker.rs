@@ -91,12 +91,14 @@ impl CircuitBreaker {
 
     /// Check if the exit gate is satisfied.
     ///
-    /// The exit gate requires BOTH:
-    /// - `completion_indicators >= completion_indicator_min` (default 2)
-    /// - `exit_signal_received == true`
+    /// The exit gate opens when sufficient completion indicators have been
+    /// accumulated — indicating the council has converged on a direction.
+    ///
+    /// Note: `exit_signal_received` is tracked but not required for the gate
+    /// to open, since generate-options stages (Gemini) do not emit exit signals.
+    /// The exit gate reflects accumulated evidence of deliberation progress.
     pub fn exit_gate_satisfied(&self) -> bool {
         self.completion_indicators >= self.completion_indicator_min
-            && self.exit_signal_received
     }
 
     /// Returns the current consecutive no-progress count.
@@ -229,36 +231,28 @@ mod tests {
     }
 
     #[test]
-    fn test_circuit_breaker_exit_gate_requires_both_conditions() {
+    fn test_circuit_breaker_exit_gate_requires_sufficient_indicators() {
         let mut cb = CircuitBreaker::new(5);
 
-        // Neither condition met
+        // Gate closed: insufficient indicators
         assert!(
             !cb.exit_gate_satisfied(),
-            "exit gate should be false when neither condition is met"
+            "exit gate should be false when indicators below minimum"
         );
 
-        // Only completion indicators (without exit signal)
-        cb.completion_indicators = 3;
-        assert!(
-            !cb.exit_gate_satisfied(),
-            "exit gate should be false when only completion indicators present"
-        );
-
-        // Only exit signal (without sufficient completion indicators)
-        cb.completion_indicators = 0;
-        cb.exit_signal_received = true;
-        assert!(
-            !cb.exit_gate_satisfied(),
-            "exit gate should be false when only exit signal present"
-        );
-
-        // Both conditions met
+        // Gate open: sufficient completion indicators
         cb.completion_indicators = 2;
-        cb.exit_signal_received = true;
         assert!(
             cb.exit_gate_satisfied(),
-            "exit gate should be true when both conditions are met"
+            "exit gate should be true when completion_indicators >= min"
+        );
+
+        // Exit signal received does not override insufficient indicators
+        cb.completion_indicators = 1;
+        cb.exit_signal_received = true;
+        assert!(
+            !cb.exit_gate_satisfied(),
+            "exit gate should be false when indicators below min even with exit signal"
         );
     }
 

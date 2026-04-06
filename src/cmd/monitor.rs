@@ -589,8 +589,23 @@ fn spawn_fix_subagent(label: &str, task: &str) -> Result<()> {
     writeln!(file)?; // trailing newline for jsonl
 
     // Spawn fix subagent via OpenClaw CLI
-    let openclaw_cmd = std::env::var("OPENCLAW_CLI").unwrap_or_else(|_| "openclaw".into());
-    let child = Command::new(&openclaw_cmd)
+    let openclaw_path = std::env::var("OPENCLAW_CLI")
+        .ok()
+        .map_or_else(
+            || {
+                // Try PATH lookup first, then fall back to hardcoded path
+                std::env::var_os("PATH")
+                    .and_then(|p| {
+                        std::env::split_paths(&p).find_map(|d| {
+                            let candidate = d.join("openclaw");
+                            candidate.exists().then_some(candidate)
+                        })
+                    })
+                    .unwrap_or_else(|| PathBuf::from("/Users/bri/.local/bin/openclaw"))
+            },
+            PathBuf::from,
+        );
+    let child = Command::new(&openclaw_path)
         .args([
             "sessions",
             "spawn",
