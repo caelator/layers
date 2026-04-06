@@ -279,7 +279,7 @@ fn score_signals(task: &str, signals: &[&str]) -> u32 {
     let lower = task.to_lowercase();
     signals
         .iter()
-        .filter(|s| lower.contains(&s.to_lowercase()))
+        .filter(|s| lower.contains(*s))
         .count() as u32
 }
 

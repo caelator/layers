@@ -44,14 +44,18 @@ pub fn handle_monitor(args: &MonitorArgs) -> Result<()> {
 
 // ─── Paths ────────────────────────────────────────────────────────────────────
 
-fn layers_root() -> PathBuf {
+/// Returns the layers root directory (~/.layers).
+    
+    fn layers_root() -> PathBuf {
     std::env::var_os("HOME")
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("."))
+        .map_or_else(|| PathBuf::from("."), std::convert::identity)
         .join(".layers")
 }
 
-fn repos_dir() -> PathBuf {
+/// Returns the repos directory (~/Documents/GitHub).
+    
+    fn repos_dir() -> PathBuf {
     std::env::var_os("HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."))
@@ -164,23 +168,20 @@ fn acquire_lock() -> Result<File> {
 
     // Try non-blocking exclusive lock
     let ret = unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) };
-    match ret {
-        0 => {
-            // Write our PID and start time
-            let now = Utc::now().format("%Y-%m-%dT%H:%M:%SZ");
-            let info = format!("pid:{}\nstarted:{}\nworkdir:idle\n", std::process::id(), now);
-            file.set_len(0)?;
-            file.write_all(info.as_bytes())?;
-            Ok(file)
-        }
-        _ => {
-            // Lock held by another process - that's fine, just exit
-            log(&format!(
-                "Lock held by another process (PID from lock file: {}), exiting",
-                fs::read_to_string(&lock_path).unwrap_or_default()
-            ));
-            std::process::exit(0);
-        }
+    if ret == 0 {
+        // Write our PID and start time
+        let now = Utc::now().format("%Y-%m-%dT%H:%M:%SZ");
+        let info = format!("pid:{}\nstarted:{}\nworkdir:idle\n", std::process::id(), now);
+        file.set_len(0)?;
+        file.write_all(info.as_bytes())?;
+        Ok(file)
+    } else {
+        // Lock held by another process - that's fine, just exit
+        log(&format!(
+            "Lock held by another process (PID from lock file: {}), exiting",
+            fs::read_to_string(&lock_path).unwrap_or_default()
+        ));
+        std::process::exit(0);
     }
 }
 
@@ -314,7 +315,7 @@ fn check_build_and_tests(dir: &PathBuf, name: &str) -> Result<()> {
         .map_or(false, |o| o.status.success());
 
     if !build_ok {
-        let errors = parse_build_errors(&build.as_ref().ok().map_or(vec![], |o| o.stderr.clone()));
+        let errors = parse_build_errors(&build.as_ref().ok().map_or_else(Vec::new, |o| o.stderr.clone()));
         log(&format!("Build errors in {name}: {} errors", errors.len()));
         record_finding(
             Severity::Warning,
@@ -351,8 +352,8 @@ fn check_build_and_tests(dir: &PathBuf, name: &str) -> Result<()> {
     if test_ok {
         log(&format!("Tests passed: {name}"));
     } else {
-        let stdout = test.as_ref().ok().map_or(&[] as &[u8], |o| o.stdout.as_slice());
-        let stderr = test.as_ref().ok().map_or(&[] as &[u8], |o| o.stderr.as_slice());
+        let stdout = test.as_ref().ok().map_or_else(|| &[][..], |o| o.stdout.as_slice());
+        let stderr = test.as_ref().ok().map_or_else(|| &[][..], |o| o.stderr.as_slice());
         let failed = parse_test_failures(stdout);
         let build_errors = parse_build_errors(stderr);
         if !failed.is_empty() {

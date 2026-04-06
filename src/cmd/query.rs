@@ -108,7 +108,7 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
             }
         }
 
-        memory_latency_ms = t0.elapsed().as_millis() as u64;
+        memory_latency_ms = u64::try_from(t0.elapsed().as_millis()).unwrap_or(u64::MAX);
     }
 
     // Retrieve graph context if routed
@@ -134,7 +134,7 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
                 open_uncertainty.push(format!("GitNexus retrieval failed: {e}"));
             }
         }
-        graph_latency_ms = t0.elapsed().as_millis() as u64;
+        graph_latency_ms = u64::try_from(t0.elapsed().as_millis()).unwrap_or(u64::MAX);
     }
 
     // Route-weighted interleave: prioritize the dominant signal's results
