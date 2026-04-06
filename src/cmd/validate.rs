@@ -135,12 +135,8 @@ pub fn run_routing_benchmarks(file: &str) -> Result<Value> {
 
         let confidence_match = case
             .get("expected_confidence")
-            .and_then(|v| v.as_str())
-            .map(|ec| {
-                let actual = result.confidence.to_string();
-                actual == ec
-            })
-            .unwrap_or(true); // no expectation = pass
+            .and_then(serde_json::Value::as_str)
+            .map_or(true, |ec| result.confidence.to_string() == ec);
 
         total += 1;
         if route_match && confidence_match {

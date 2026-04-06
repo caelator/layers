@@ -497,7 +497,7 @@ fn rand_secret() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
     let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
     let pid = std::process::id() as u64;
-    format!("{:016X}{:016X}", now.as_nanos() as u64, pid.wrapping_mul(0xF00DCAFE))
+    format!("{:016X}{:016X}", now.as_nanos() as u64, pid.wrapping_mul(0xF00D_CAFE))
 }
 
 fn test_url(cfg: &ProviderConfig, url: &str, _auth_header: &str) -> Result<()> {

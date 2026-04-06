@@ -4,7 +4,6 @@
 /// is recorded to `~/.layers/route-corrections.jsonl`.  On every [`classify()`]
 /// call the correction file is loaded and used to adjust signal scores so that
 /// repeatedly-corrected patterns are demoted.
-
 use crate::config::workspace_root;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

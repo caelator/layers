@@ -73,8 +73,7 @@ pub fn handle_council_run(
         let convergence = run
             .convergence
             .as_ref()
-            .map(|c| format!("{} ({}): {}", c.status, c.reason, c.summary))
-            .unwrap_or_else(|| "no convergence record".to_string());
+            .map_or_else(|| "no convergence record".to_string(), |c| format!("{} ({}): {}", c.status, c.reason, c.summary));
         println!(
             "Council run {} {} ({})\nArtifacts: {}\n{}",
             run.run_id, run.status, run.status_reason, run.artifacts_dir, convergence
