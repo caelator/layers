@@ -71,8 +71,10 @@ pub fn append_trace_record(
             "stages": stage_statuses,
         }
     });
-    let trace_path = trace_path_override
-        .map_or_else(|| memoryport_dir().join("council-traces.jsonl"), Path::to_path_buf);
+    let trace_path = trace_path_override.map_or_else(
+        || memoryport_dir().join("council-traces.jsonl"),
+        Path::to_path_buf,
+    );
     append_jsonl(&trace_path, &record)
 }
 

@@ -167,7 +167,11 @@ fn acquire_lock() -> Result<File> {
     if ret == 0 {
         // Write our PID and start time
         let now = Utc::now().format("%Y-%m-%dT%H:%M:%SZ");
-        let info = format!("pid:{}\nstarted:{}\nworkdir:idle\n", std::process::id(), now);
+        let info = format!(
+            "pid:{}\nstarted:{}\nworkdir:idle\n",
+            std::process::id(),
+            now
+        );
         file.set_len(0)?;
         file.write_all(info.as_bytes())?;
         Ok(file)
@@ -213,7 +217,10 @@ fn push_if_dirty(dir: &PathBuf, name: &str) -> Result<()> {
         return Ok(());
     }
 
-    let msg = format!("auto-commit by autonomous monitor {}\n", Utc::now().format("%Y-%m-%d"));
+    let msg = format!(
+        "auto-commit by autonomous monitor {}\n",
+        Utc::now().format("%Y-%m-%d")
+    );
     let commit_status = Command::new("git")
         .args(["commit", "-m", &msg, "--quiet"])
         .current_dir(dir)
@@ -307,7 +314,12 @@ fn check_build_and_tests(dir: &PathBuf, name: &str) -> Result<()> {
     let build_ok = build.as_ref().ok().is_some_and(|o| o.status.success());
 
     if !build_ok {
-        let errors = parse_build_errors(&build.as_ref().ok().map_or_else(Vec::new, |o| o.stderr.clone()));
+        let errors = parse_build_errors(
+            &build
+                .as_ref()
+                .ok()
+                .map_or_else(Vec::new, |o| o.stderr.clone()),
+        );
         log(&format!("Build errors in {name}: {} errors", errors.len()));
         record_finding(
             Severity::Warning,
@@ -341,16 +353,29 @@ fn check_build_and_tests(dir: &PathBuf, name: &str) -> Result<()> {
     if test_ok {
         log(&format!("Tests passed: {name}"));
     } else {
-        let stdout = test.as_ref().ok().map_or_else(|| &[][..], |o| o.stdout.as_slice());
-        let stderr = test.as_ref().ok().map_or_else(|| &[][..], |o| o.stderr.as_slice());
+        let stdout = test
+            .as_ref()
+            .ok()
+            .map_or_else(|| &[][..], |o| o.stdout.as_slice());
+        let stderr = test
+            .as_ref()
+            .ok()
+            .map_or_else(|| &[][..], |o| o.stderr.as_slice());
         let failed = parse_test_failures(stdout);
         let build_errors = parse_build_errors(stderr);
         if !failed.is_empty() {
-            log(&format!("Test failures in {name}: {} tests failed", failed.len()));
+            log(&format!(
+                "Test failures in {name}: {} tests failed",
+                failed.len()
+            ));
             record_finding(
                 Severity::Warning,
                 name,
-                &format!("Test failures in {}: {} tests failed", dir.display(), failed.len()),
+                &format!(
+                    "Test failures in {}: {} tests failed",
+                    dir.display(),
+                    failed.len()
+                ),
             );
             spawn_fix_subagent(
                 &format!("tests-{name}"),
@@ -365,11 +390,18 @@ fn check_build_and_tests(dir: &PathBuf, name: &str) -> Result<()> {
                 ),
             )?;
         } else if !build_errors.is_empty() {
-            log(&format!("Test compilation errors in {name}: {} errors", build_errors.len()));
+            log(&format!(
+                "Test compilation errors in {name}: {} errors",
+                build_errors.len()
+            ));
             record_finding(
                 Severity::Warning,
                 name,
-                &format!("Test compilation errors in {}: {} errors", dir.display(), build_errors.len()),
+                &format!(
+                    "Test compilation errors in {}: {} errors",
+                    dir.display(),
+                    build_errors.len()
+                ),
             );
             spawn_fix_subagent(
                 &format!("tests-{name}"),
@@ -384,7 +416,9 @@ fn check_build_and_tests(dir: &PathBuf, name: &str) -> Result<()> {
             )?;
         } else {
             // Non-zero exit but no detected failures — cargo itself may have been killed or timed out
-            log(&format!("cargo test exited non-zero for {name} with no parsed errors"));
+            log(&format!(
+                "cargo test exited non-zero for {name} with no parsed errors"
+            ));
         }
     }
     Ok(())
@@ -428,10 +462,14 @@ fn check_ci_status(name: &str, dir: &Path) -> Result<()> {
 
     let output = Command::new("gh")
         .args([
-            "run", "list",
-            "--repo", &format!("caelator/{name}"),
-            "--limit", "3",
-            "--json", "status,conclusion,name",
+            "run",
+            "list",
+            "--repo",
+            &format!("caelator/{name}"),
+            "--limit",
+            "3",
+            "--json",
+            "status,conclusion,name",
         ])
         .output();
 
@@ -492,19 +530,27 @@ fn archive_stale_council_runs() -> Result<()> {
             continue;
         }
 
-        let name = path.file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
 
         if !name.starts_with("council-") {
             continue;
         }
 
         // Extract date from council-<date> format (first 8 chars after council-)
-        let date_str = name.strip_prefix("council-").unwrap_or("").chars().take(8).collect::<String>();
+        let date_str = name
+            .strip_prefix("council-")
+            .unwrap_or("")
+            .chars()
+            .take(8)
+            .collect::<String>();
         let run_date = chrono::NaiveDate::parse_from_str(&date_str, "%Y%m%d")
             .ok()
-            .map(|d| DateTime::<Utc>::from_naive_utc_and_offset(d.and_hms_opt(0,0,0).unwrap_or_default(), Utc));
+            .map(|d| {
+                DateTime::<Utc>::from_naive_utc_and_offset(
+                    d.and_hms_opt(0, 0, 0).unwrap_or_default(),
+                    Utc,
+                )
+            });
 
         let is_stale = run_date.is_some_and(|d| d < stale_cutoff);
 
@@ -546,11 +592,16 @@ fn spawn_fix_subagent(label: &str, task: &str) -> Result<()> {
     let openclaw_cmd = std::env::var("OPENCLAW_CLI").unwrap_or_else(|_| "openclaw".into());
     let child = Command::new(&openclaw_cmd)
         .args([
-            "sessions", "spawn",
-            "--label", &format!("fix-{label}-{}", Utc::now().timestamp()),
-            "--runtime", "subagent",
-            "--mode", "run",
-            "--task", task,
+            "sessions",
+            "spawn",
+            "--label",
+            &format!("fix-{label}-{}", Utc::now().timestamp()),
+            "--runtime",
+            "subagent",
+            "--mode",
+            "run",
+            "--task",
+            task,
         ])
         .spawn();
 

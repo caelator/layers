@@ -70,10 +70,10 @@ pub fn handle_council_run(
     if json_out {
         println!("{}", serde_json::to_string_pretty(&run)?);
     } else {
-        let convergence = run
-            .convergence
-            .as_ref()
-            .map_or_else(|| "no convergence record".to_string(), |c| format!("{} ({}): {}", c.status, c.reason, c.summary));
+        let convergence = run.convergence.as_ref().map_or_else(
+            || "no convergence record".to_string(),
+            |c| format!("{} ({}): {}", c.status, c.reason, c.summary),
+        );
         println!(
             "Council run {} {} ({})\nArtifacts: {}\n{}",
             run.run_id, run.status, run.status_reason, run.artifacts_dir, convergence
@@ -280,9 +280,7 @@ pub(crate) fn council_command(stage: &str, explicit: Option<String>) -> Result<S
         _ => anyhow::bail!("unsupported council stage: {stage}"),
     };
     std::env::var(env_key).with_context(|| {
-        format!(
-            "{env_key} not set; pass --{stage}-cmd or set the environment variable"
-        )
+        format!("{env_key} not set; pass --{stage}-cmd or set the environment variable")
     })
 }
 

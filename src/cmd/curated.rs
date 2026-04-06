@@ -36,7 +36,11 @@ fn import_curated_memory(path: &Path) -> Result<(usize, usize, usize)> {
     let existing = load_jsonl(&canonical_curated_memory_path())?;
     let mut existing_keys: std::collections::BTreeSet<String> = existing
         .iter()
-        .filter_map(|r| r.get("id").and_then(serde_json::Value::as_str).map(std::string::ToString::to_string))
+        .filter_map(|r| {
+            r.get("id")
+                .and_then(serde_json::Value::as_str)
+                .map(std::string::ToString::to_string)
+        })
         .collect();
 
     let mut imported = 0;
@@ -47,11 +51,15 @@ fn import_curated_memory(path: &Path) -> Result<(usize, usize, usize)> {
         if line.trim().is_empty() {
             continue;
         }
-        let parsed: Value = if let Ok(v) = serde_json::from_str(line) { v } else {
+        let parsed: Value = if let Ok(v) = serde_json::from_str(line) {
+            v
+        } else {
             errors += 1;
             continue;
         };
-        let import: CuratedImportRecord = if let Ok(v) = serde_json::from_value(parsed) { v } else {
+        let import: CuratedImportRecord = if let Ok(v) = serde_json::from_value(parsed) {
+            v
+        } else {
             errors += 1;
             continue;
         };

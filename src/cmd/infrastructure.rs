@@ -15,8 +15,8 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::io::{self, Write};
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(author, version)]
@@ -52,7 +52,9 @@ pub enum SshCommands {
         provider: Option<String>,
     },
     List,
-    Remove { alias: String },
+    Remove {
+        alias: String,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -200,7 +202,7 @@ fn setup_wizard() -> Result<()> {
 }
 
 #[allow(clippy::unnecessary_wraps)]
-    fn setup_ssh(cfg: &mut InfraConfig) -> Result<()> {
+fn setup_ssh(cfg: &mut InfraConfig) -> Result<()> {
     let alias = prompt("SSH alias (e.g. prod-server)");
     if alias.is_empty() {
         return Ok(());
@@ -210,53 +212,70 @@ fn setup_wizard() -> Result<()> {
         return Ok(());
     }
     let key = prompt("Private key path (~/.ssh/id_ed25519 if blank)");
-    let key = if key.is_empty() { "~/.ssh/id_ed25519".into() } else { key };
+    let key = if key.is_empty() {
+        "~/.ssh/id_ed25519".into()
+    } else {
+        key
+    };
     let provider = prompt("Provider label (or blank for 'ssh')");
-    cfg.ssh.insert(alias.clone(), SshHost {
-        connection,
-        key,
-        provider: if provider.is_empty() { None } else { Some(provider) },
-    });
+    cfg.ssh.insert(
+        alias.clone(),
+        SshHost {
+            connection,
+            key,
+            provider: if provider.is_empty() {
+                None
+            } else {
+                Some(provider)
+            },
+        },
+    );
     println!("Added SSH host: {alias}");
     Ok(())
 }
 
 #[allow(clippy::unnecessary_wraps)]
-    fn setup_provider(cfg: &mut InfraConfig, name: &str, label: &str, _is_api: bool) -> Result<()> {
+fn setup_provider(cfg: &mut InfraConfig, name: &str, label: &str, _is_api: bool) -> Result<()> {
     let token = prompt(label);
     if token.is_empty() {
         return Ok(());
     }
-    cfg.providers.insert(name.into(), ProviderConfig {
-        api_token: Some(token),
-        api_secret: None,
-        account_id: None,
-        extra: HashMap::default(),
-    });
+    cfg.providers.insert(
+        name.into(),
+        ProviderConfig {
+            api_token: Some(token),
+            api_secret: None,
+            account_id: None,
+            extra: HashMap::default(),
+        },
+    );
     println!("Saved {name} credentials.");
     Ok(())
 }
 
 #[allow(clippy::unnecessary_wraps)]
-    fn setup_cloudflare(cfg: &mut InfraConfig) -> Result<()> {
+fn setup_cloudflare(cfg: &mut InfraConfig) -> Result<()> {
     let account = prompt("Cloudflare Account ID");
     let token = prompt("Cloudflare API Token");
     if token.is_empty() || account.is_empty() {
         println!("Both account and token required.");
         return Ok(());
     }
-    cfg.providers.insert("cloudflare".into(), ProviderConfig {
-        api_token: Some(token),
-        api_secret: None,
-        account_id: Some(account),
-        extra: HashMap::default(),
-    });
+    cfg.providers.insert(
+        "cloudflare".into(),
+        ProviderConfig {
+            api_token: Some(token),
+            api_secret: None,
+            account_id: Some(account),
+            extra: HashMap::default(),
+        },
+    );
     println!("Saved Cloudflare credentials.");
     Ok(())
 }
 
 #[allow(clippy::unnecessary_wraps)]
-    fn setup_github(cfg: &mut InfraConfig) -> Result<()> {
+fn setup_github(cfg: &mut InfraConfig) -> Result<()> {
     let token = prompt("GitHub personal access token");
     let secret = prompt("Webhook secret (blank to skip)");
     if token.is_empty() {
@@ -285,7 +304,11 @@ fn setup_webhook_relay(cfg: &mut InfraConfig) -> Result<()> {
     let cf_token = prompt("Cloudflare API Token");
     let github_secret = prompt("GitHub webhook secret");
     let port = prompt("Local relay port [default: 18790]");
-    let port = if port.is_empty() { "18790".into() } else { port };
+    let port = if port.is_empty() {
+        "18790".into()
+    } else {
+        port
+    };
 
     if cf_token.is_empty() || account.is_empty() {
         println!("Account and token required.");
@@ -301,7 +324,9 @@ fn setup_webhook_relay(cfg: &mut InfraConfig) -> Result<()> {
     std::fs::create_dir_all(std::path::Path::new(&worker_path).parent().unwrap())?;
     std::fs::write(&worker_path, &worker_script)?;
     println!("Worker script: {worker_path}");
-    println!("Deploy: wrangler deploy --config ~/.layers/infrastructure/wrangler.toml {worker_path}");
+    println!(
+        "Deploy: wrangler deploy --config ~/.layers/infrastructure/wrangler.toml {worker_path}"
+    );
 
     cfg.webhook_relay = Some(WebhookRelayConfig {
         cf_account: account,
@@ -321,13 +346,21 @@ fn setup_webhook_relay(cfg: &mut InfraConfig) -> Result<()> {
 fn handle_ssh(cmd: &SshCommands) -> Result<()> {
     let mut cfg = load_cfg()?;
     match cmd {
-        SshCommands::Add { alias, connection, key, provider } => {
+        SshCommands::Add {
+            alias,
+            connection,
+            key,
+            provider,
+        } => {
             let key_path = key.clone().unwrap_or_else(|| "~/.ssh/id_ed25519".into());
-            cfg.ssh.insert(alias.clone(), SshHost {
-                connection: connection.clone(),
-                key: key_path,
-                provider: provider.clone(),
-            });
+            cfg.ssh.insert(
+                alias.clone(),
+                SshHost {
+                    connection: connection.clone(),
+                    key: key_path,
+                    provider: provider.clone(),
+                },
+            );
             save_cfg(&cfg)?;
             println!("Added SSH host: {alias} → {connection}");
         }
@@ -359,12 +392,26 @@ fn handle_ssh(cmd: &SshCommands) -> Result<()> {
 fn handle_webhook(cmd: &WebhookCommands) -> Result<()> {
     let mut cfg = load_cfg()?;
     match cmd {
-        WebhookCommands::Setup { cf_token, cf_account, github_secret } => {
-            let account = cf_account.clone().unwrap_or_else(|| prompt("Cloudflare Account ID"));
-            let token = cf_token.clone().unwrap_or_else(|| prompt("Cloudflare API Token"));
-            let secret = github_secret.clone().unwrap_or_else(|| prompt("GitHub webhook secret"));
+        WebhookCommands::Setup {
+            cf_token,
+            cf_account,
+            github_secret,
+        } => {
+            let account = cf_account
+                .clone()
+                .unwrap_or_else(|| prompt("Cloudflare Account ID"));
+            let token = cf_token
+                .clone()
+                .unwrap_or_else(|| prompt("Cloudflare API Token"));
+            let secret = github_secret
+                .clone()
+                .unwrap_or_else(|| prompt("GitHub webhook secret"));
             let port = prompt("Local relay port [blank: 18790]");
-            let port = if port.is_empty() { "18790".into() } else { port };
+            let port = if port.is_empty() {
+                "18790".into()
+            } else {
+                port
+            };
 
             if token.is_empty() || account.is_empty() {
                 println!("Account and token required.");
@@ -390,7 +437,9 @@ fn handle_webhook(cmd: &WebhookCommands) -> Result<()> {
             });
             save_cfg(&cfg)?;
             println!("Worker script: {worker_path}");
-            println!("Deploy with: wrangler deploy --config ~/.layers/infrastructure/wrangler.toml {worker_path}");
+            println!(
+                "Deploy with: wrangler deploy --config ~/.layers/infrastructure/wrangler.toml {worker_path}"
+            );
             println!("Then add the Worker URL to GitHub → repo Settings → Webhooks.");
         }
         WebhookCommands::Status => {
@@ -398,7 +447,13 @@ fn handle_webhook(cmd: &WebhookCommands) -> Result<()> {
                 println!("GitHub webhook relay: configured");
                 println!("  Cloudflare account: {}", relay.cf_account);
                 println!("  Local port: {}", relay.local_port);
-                println!("  Worker URL: {}", relay.worker_url.as_ref().unwrap_or(&"(not set — deploy worker and update)".into()));
+                println!(
+                    "  Worker URL: {}",
+                    relay
+                        .worker_url
+                        .as_ref()
+                        .unwrap_or(&"(not set — deploy worker and update)".into())
+                );
             } else {
                 println!("Webhook relay: not configured.");
                 println!("Run: layers infrastructure webhook setup");
@@ -449,7 +504,10 @@ fn remove_provider(name: &str) -> Result<()> {
     let mut cfg = load_cfg()?;
     if cfg.providers.remove(name).is_some()
         || cfg.ssh.remove(name).is_some()
-        || (name == "github-webhook-relay" && { cfg.webhook_relay = None; true })
+        || (name == "github-webhook-relay" && {
+            cfg.webhook_relay = None;
+            true
+        })
     {
         save_cfg(&cfg)?;
         println!("Removed: {name}");
@@ -468,7 +526,11 @@ fn test_connections() -> Result<()> {
             "vercel" => test_url(p, "https://api.vercel.com/v2/user", "Authorization"),
             "cloudflare" => {
                 if let Some(account) = &p.account_id {
-                    test_url(p, &format!("https://api.cloudflare.com/client/v4/accounts/{account}"), "Authorization")
+                    test_url(
+                        p,
+                        &format!("https://api.cloudflare.com/client/v4/accounts/{account}"),
+                        "Authorization",
+                    )
                 } else {
                     println!("  ✗ {name}: no account_id");
                     continue;
@@ -476,7 +538,11 @@ fn test_connections() -> Result<()> {
             }
             "hetzner" => test_url(p, "https://api.hetzner.cloud/v1/servers", "Authorization"),
             "render" => test_url(p, "https://api.render.com/v1/owners", "Authorization"),
-            "railway" => test_url(p, "https://backboard.railway.app/api/v1/me", "Authorization"),
+            "railway" => test_url(
+                p,
+                "https://backboard.railway.app/api/v1/me",
+                "Authorization",
+            ),
             "github" => test_url(p, "https://api.github.com/user", "Authorization"),
             _ => {
                 println!("  ? {name}: no test available");
@@ -499,7 +565,9 @@ fn test_connections() -> Result<()> {
 
 fn rand_secret() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
     // Lower 64 bits of nanosecond timestamp — truncation is intentional for ID generation.
     #[allow(clippy::cast_possible_truncation)]
     let nanos_lower = now.as_nanos() as u64;
@@ -508,9 +576,22 @@ fn rand_secret() -> String {
 }
 
 fn test_url(cfg: &ProviderConfig, url: &str, _auth_header: &str) -> Result<()> {
-    let token = cfg.api_token.as_ref().or(cfg.api_secret.as_ref()).context("no token")?;
+    let token = cfg
+        .api_token
+        .as_ref()
+        .or(cfg.api_secret.as_ref())
+        .context("no token")?;
     let output = std::process::Command::new("curl")
-        .args(["-s", "-o", "/dev/null", "-w", "%{http_code}", "-H", &format!("Authorization: Bearer {token}"), url])
+        .args([
+            "-s",
+            "-o",
+            "/dev/null",
+            "-w",
+            "%{http_code}",
+            "-H",
+            &format!("Authorization: Bearer {token}"),
+            url,
+        ])
         .output()
         .context("curl failed")?;
     let code = String::from_utf8_lossy(&output.stdout);

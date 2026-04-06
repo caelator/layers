@@ -7,10 +7,8 @@
 #![deny(unreachable_pub)]
 #![deny(elided_lifetimes_in_paths)]
 #![warn(missing_docs)]
-
 // Binary crate — all items are pub for internal clarity but not exported as a library.
 #![allow(unreachable_pub)]
-
 // Structural lints that cannot be fixed without invasive refactoring:
 #![allow(
     clippy::too_many_arguments,
@@ -22,11 +20,10 @@
     clippy::cast_precision_loss,
     clippy::needless_pass_by_value,
     clippy::unnecessary_wraps,
-    clippy::result_large_err,
+    clippy::result_large_err
 )]
 
 //! Layers — council orchestrator and memory spine for multi-model AI workflows.
-
 
 use clap::{Parser, Subcommand};
 
@@ -46,7 +43,7 @@ mod uc;
 use cmd::council::{handle_council_promote, handle_council_run};
 use cmd::curated::handle_curated_import;
 use cmd::feedback::handle_feedback;
-use cmd::infrastructure::{handle_infrastructure, InfrastructureArgs};
+use cmd::infrastructure::{InfrastructureArgs, handle_infrastructure};
 use cmd::monitor::handle_monitor;
 use cmd::query::handle_query;
 use cmd::refresh::handle_refresh;
@@ -161,9 +158,7 @@ enum InfrastructureCommands {
     /// List all configured providers.
     List,
     /// Remove credentials for a provider.
-    Remove {
-        provider: String,
-    },
+    Remove { provider: String },
     /// Test connectivity to all configured providers.
     Test,
     /// Manage SSH host aliases.
@@ -192,9 +187,7 @@ enum SshCommands {
     /// List all SSH host aliases.
     List,
     /// Remove an SSH host alias.
-    Remove {
-        alias: String,
-    },
+    Remove { alias: String },
 }
 
 #[derive(Subcommand)]
@@ -291,10 +284,16 @@ fn main() -> anyhow::Result<()> {
         ),
         Commands::Validate { routing, ci } => handle_validate(routing, ci),
         Commands::Refresh { embeddings } => handle_refresh(embeddings),
-        Commands::Feedback { task, predicted, actual } => {
+        Commands::Feedback {
+            task,
+            predicted,
+            actual,
+        } => {
             let args = cmd::feedback::FeedbackArgs {
                 task,
-                predicted: predicted.parse().map_err(|e: String| anyhow::anyhow!("{e}"))?,
+                predicted: predicted
+                    .parse()
+                    .map_err(|e: String| anyhow::anyhow!("{e}"))?,
                 actual: actual.parse().map_err(|e: String| anyhow::anyhow!("{e}"))?,
             };
             handle_feedback(&args)
@@ -336,47 +335,44 @@ fn main() -> anyhow::Result<()> {
             let args = match command {
                 InfrastructureCommands::Setup => InfrastructureArgs::Setup,
                 InfrastructureCommands::List => InfrastructureArgs::List,
-                InfrastructureCommands::Remove { provider } => InfrastructureArgs::Remove { provider },
+                InfrastructureCommands::Remove { provider } => {
+                    InfrastructureArgs::Remove { provider }
+                }
                 InfrastructureCommands::Test => InfrastructureArgs::Test,
-                InfrastructureCommands::Ssh { command } => {
-                    InfrastructureArgs::Ssh {
-                        command: match command {
-                            SshCommands::Add { alias, connection, key, provider } => {
-                                cmd::infrastructure::SshCommands::Add {
-                                    alias,
-                                    connection,
-                                    key,
-                                    provider,
-                                }
-                            }
-                            SshCommands::List => cmd::infrastructure::SshCommands::List,
-                            SshCommands::Remove { alias } => {
-                                cmd::infrastructure::SshCommands::Remove { alias }
-                            }
+                InfrastructureCommands::Ssh { command } => InfrastructureArgs::Ssh {
+                    command: match command {
+                        SshCommands::Add {
+                            alias,
+                            connection,
+                            key,
+                            provider,
+                        } => cmd::infrastructure::SshCommands::Add {
+                            alias,
+                            connection,
+                            key,
+                            provider,
                         },
-                    }
-                }
-                InfrastructureCommands::Webhook { command } => {
-                    InfrastructureArgs::Webhook {
-                        command: match command {
-                            WebhookCommands::Setup {
-                                cf_token,
-                                cf_account,
-                                github_secret,
-                            } => cmd::infrastructure::WebhookCommands::Setup {
-                                cf_token,
-                                cf_account,
-                                github_secret,
-                            },
-                            WebhookCommands::Status => {
-                                cmd::infrastructure::WebhookCommands::Status
-                            }
-                            WebhookCommands::Remove => {
-                                cmd::infrastructure::WebhookCommands::Remove
-                            }
+                        SshCommands::List => cmd::infrastructure::SshCommands::List,
+                        SshCommands::Remove { alias } => {
+                            cmd::infrastructure::SshCommands::Remove { alias }
+                        }
+                    },
+                },
+                InfrastructureCommands::Webhook { command } => InfrastructureArgs::Webhook {
+                    command: match command {
+                        WebhookCommands::Setup {
+                            cf_token,
+                            cf_account,
+                            github_secret,
+                        } => cmd::infrastructure::WebhookCommands::Setup {
+                            cf_token,
+                            cf_account,
+                            github_secret,
                         },
-                    }
-                }
+                        WebhookCommands::Status => cmd::infrastructure::WebhookCommands::Status,
+                        WebhookCommands::Remove => cmd::infrastructure::WebhookCommands::Remove,
+                    },
+                },
             };
             handle_infrastructure(&args)
         }

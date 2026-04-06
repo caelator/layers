@@ -55,8 +55,12 @@ pub fn execute_council_run(request: CouncilRunRequest) -> Result<CouncilRunRecor
     // Write versioned context payload if provided
     if let Some(payload) = &request.context_payload {
         // Validate schema version
-        if let Some(found_version) = payload.get("schema_version").and_then(serde_json::Value::as_u64) {
-            if !u32::try_from(found_version).is_ok_and(|v64| v64 == CONTEXT_PAYLOAD_SCHEMA_VERSION) {
+        if let Some(found_version) = payload
+            .get("schema_version")
+            .and_then(serde_json::Value::as_u64)
+        {
+            if !u32::try_from(found_version).is_ok_and(|v64| v64 == CONTEXT_PAYLOAD_SCHEMA_VERSION)
+            {
                 anyhow::bail!(
                     "unsupported context payload schema version: {found_version} (expected {CONTEXT_PAYLOAD_SCHEMA_VERSION})"
                 );
@@ -217,8 +221,8 @@ pub fn load_council_run_record(
     run_id: &str,
     artifacts_dir_override: Option<&Path>,
 ) -> Result<CouncilRunRecord> {
-    let artifacts_dir = artifacts_dir_override
-        .map_or_else(|| default_run_artifacts_dir(run_id), Path::to_path_buf);
+    let artifacts_dir =
+        artifacts_dir_override.map_or_else(|| default_run_artifacts_dir(run_id), Path::to_path_buf);
     let run_path = artifacts_dir.join("run.json");
     let run = fs::read_to_string(&run_path)
         .with_context(|| format!("failed to read {}", run_path.display()))?;
@@ -238,8 +242,8 @@ pub fn load_council_convergence_record(
     run: &CouncilRunRecord,
     artifacts_dir_override: Option<&Path>,
 ) -> Result<CouncilConvergenceRecord> {
-    let artifacts_dir = artifacts_dir_override
-        .map_or_else(|| PathBuf::from(&run.artifacts_dir), Path::to_path_buf);
+    let artifacts_dir =
+        artifacts_dir_override.map_or_else(|| PathBuf::from(&run.artifacts_dir), Path::to_path_buf);
     let convergence_path = artifacts_dir.join("convergence.json");
     let convergence = fs::read_to_string(&convergence_path)
         .with_context(|| format!("failed to read {}", convergence_path.display()))?;

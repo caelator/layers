@@ -153,7 +153,10 @@ fn usr1_handler_sets_flag() {
     // Give the kernel a moment to deliver the signal
     std::thread::sleep(Duration::from_millis(50));
 
-    assert!(SIGNALED.load(Ordering::SeqCst), "SIGNALED flag should be set after SIGUSR1");
+    assert!(
+        SIGNALED.load(Ordering::SeqCst),
+        "SIGNALED flag should be set after SIGUSR1"
+    );
 
     SIGNALED.store(false, Ordering::SeqCst);
     assert!(!SIGNALED.load(Ordering::SeqCst));

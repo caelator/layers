@@ -47,9 +47,7 @@ pub fn handle_remember(
                 "task_type": task_type,
             })
         }
-        _ => anyhow::bail!(
-            "unsupported kind: {kind}. Valid kinds: plan, learning, trace",
-        ),
+        _ => anyhow::bail!("unsupported kind: {kind}. Valid kinds: plan, learning, trace",),
     };
     let path = match kind {
         "plan" => memoryport_dir().join("council-plans.jsonl"),

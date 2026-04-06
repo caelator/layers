@@ -74,14 +74,15 @@ impl From<RouteArg> for Route {
 }
 
 pub fn handle_feedback(args: &FeedbackArgs) -> Result<()> {
-    let correction = RouteCorrection::new(
-        args.task.clone(),
-        args.predicted.into(),
-        args.actual.into(),
-    );
+    let correction =
+        RouteCorrection::new(args.task.clone(), args.predicted.into(), args.actual.into());
 
-    router::record_correction(&correction)
-        .with_context(|| format!("failed to write to {}", router::corrections_path().display()))?;
+    router::record_correction(&correction).with_context(|| {
+        format!(
+            "failed to write to {}",
+            router::corrections_path().display()
+        )
+    })?;
 
     // Reload the in-process cache so classify() picks up the new correction immediately.
     router::reload_corrections();

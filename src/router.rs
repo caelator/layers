@@ -277,10 +277,7 @@ const AMBIGUITY_SIGNALS: &[&str] = &[
 
 fn score_signals(task: &str, signals: &[&str]) -> u32 {
     let lower = task.to_lowercase();
-    signals
-        .iter()
-        .filter(|s| lower.contains(*s))
-        .count() as u32
+    signals.iter().filter(|s| lower.contains(*s)).count() as u32
 }
 
 pub fn classify(task: &str) -> RouteResult {
@@ -330,7 +327,6 @@ fn apply_correction_bias(scores: &mut Scores) {
         return;
     }
 
-
     // For every (predicted → actual) correction on record, apply demotion/boost.
     // We do this per-correction-entry so a pattern corrected N times gets N× demotion.
     for ((predicted, actual), &count) in load_correction_cache() {
@@ -342,12 +338,10 @@ fn apply_correction_bias(scores: &mut Scores) {
         // Demote the predicted route signals (predicted is &Route)
         match *predicted {
             Route::MemoryOnly | Route::Both => {
-                scores.historical =
-                    (f64::from(scores.historical) * (1.0 - weight)).round() as u32;
+                scores.historical = (f64::from(scores.historical) * (1.0 - weight)).round() as u32;
             }
             Route::GraphOnly => {
-                scores.structural =
-                    (f64::from(scores.structural) * (1.0 - weight)).round() as u32;
+                scores.structural = (f64::from(scores.structural) * (1.0 - weight)).round() as u32;
             }
             Route::Neither => {
                 scores.local = (f64::from(scores.local) * (1.0 - weight)).round() as u32;

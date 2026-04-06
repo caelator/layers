@@ -308,12 +308,19 @@ mod tests {
         std::fs::write(&fake_config, "[uc]\n").unwrap();
 
         let original_path = std::env::var("PATH").unwrap_or_default();
-        unsafe { std::env::set_var("PATH", format!("{}:{}", tmp.display(), original_path)); }
+        unsafe {
+            std::env::set_var("PATH", format!("{}:{}", tmp.display(), original_path));
+        }
 
-        let opts = UcOptions { timeout_ms: 5000, min_results: 3 };
+        let opts = UcOptions {
+            timeout_ms: 5000,
+            min_results: 3,
+        };
         let result = retrieve_impl("query", 3, &opts, &fake_config);
 
-        unsafe { std::env::set_var("PATH", &original_path); }
+        unsafe {
+            std::env::set_var("PATH", &original_path);
+        }
         let _ = std::fs::remove_dir_all(&tmp);
 
         // Should succeed but return fewer than min_results
@@ -352,11 +359,23 @@ mod tests {
         std::fs::write(&fake_config, "[uc]\n").unwrap();
 
         let original_path = std::env::var("PATH").unwrap_or_default();
-        unsafe { std::env::set_var("PATH", format!("{}:{}", tmp.display(), original_path)); }
+        unsafe {
+            std::env::set_var("PATH", format!("{}:{}", tmp.display(), original_path));
+        }
 
-        let result = retrieve_impl("query", 5, &UcOptions { timeout_ms: 5000, min_results: 1 }, &fake_config);
+        let result = retrieve_impl(
+            "query",
+            5,
+            &UcOptions {
+                timeout_ms: 5000,
+                min_results: 1,
+            },
+            &fake_config,
+        );
 
-        unsafe { std::env::set_var("PATH", &original_path); }
+        unsafe {
+            std::env::set_var("PATH", &original_path);
+        }
         let _ = std::fs::remove_dir_all(&tmp);
 
         // Should NOT crash — garbage lines are trimmed and filtered
@@ -393,11 +412,23 @@ mod tests {
         let missing_config = tmp.join("does-not-exist.toml");
 
         let original_path = std::env::var("PATH").unwrap_or_default();
-        unsafe { std::env::set_var("PATH", format!("{}:{}", tmp.display(), original_path)); }
+        unsafe {
+            std::env::set_var("PATH", format!("{}:{}", tmp.display(), original_path));
+        }
 
-        let result = retrieve_impl("query", 3, &UcOptions { timeout_ms: 5000, min_results: 1 }, &missing_config);
+        let result = retrieve_impl(
+            "query",
+            3,
+            &UcOptions {
+                timeout_ms: 5000,
+                min_results: 1,
+            },
+            &missing_config,
+        );
 
-        unsafe { std::env::set_var("PATH", &original_path); }
+        unsafe {
+            std::env::set_var("PATH", &original_path);
+        }
         let _ = std::fs::remove_dir_all(&tmp);
 
         // uc exits non-zero because config doesn't exist → fallback reason set
