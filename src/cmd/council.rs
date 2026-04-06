@@ -272,13 +272,13 @@ pub(crate) fn council_command(stage: &str, explicit: Option<String>) -> Result<S
             return Ok(cmd);
         }
     }
+    use anyhow::Context;
     let env_key = match stage {
         "gemini" => "LAYERS_COUNCIL_GEMINI_CMD",
         "claude" => "LAYERS_COUNCIL_CLAUDE_CMD",
         "codex" => "LAYERS_COUNCIL_CODEX_CMD",
         _ => anyhow::bail!("unsupported council stage: {stage}"),
     };
-    use anyhow::Context;
     std::env::var(env_key).with_context(|| {
         format!(
             "{env_key} not set; pass --{stage}-cmd or set the environment variable"

@@ -1,4 +1,4 @@
-//! `layers monitor` — autonomous repo health monitor.
+//! `layers monitor` - autonomous repo health monitor.
 //!
 //! Runs one monitoring cycle per invocation: git sync, build check, test check,
 //! GitHub Actions CI check, stale council-run archival, and fix subagent spawning.
@@ -36,7 +36,7 @@ pub enum MonitorArgs {
 
 pub fn handle_monitor(args: &MonitorArgs) -> Result<()> {
     match args {
-        MonitorArgs::Run { repos } => run_monitor_cycle(repos),
+        MonitorArgs::Run { repos } => run_monitor_cycle(repos.as_ref()),
         MonitorArgs::Status => print_status(),
         MonitorArgs::Findings => print_findings(),
     }
@@ -148,7 +148,7 @@ fn record_finding(severity: Severity, repo: &str, msg: &str) {
 /// Exits the process if the lock is held by another process.
 // SAFETY: flock is the only viable file-locking mechanism on BSD/macOS.
 // The file descriptor is held for the duration of the process and only used
-// for kernel-level advisory locking — no other unsafe behavior flows from this call.
+// for kernel-level advisory locking - no other unsafe behavior flows from this call.
 #[allow(unsafe_code)]
 fn acquire_lock() -> Result<File> {
     let lock_path = lock_file();
@@ -158,6 +158,7 @@ fn acquire_lock() -> Result<File> {
         .read(true)
         .write(true)
         .create(true)
+        .truncate(true)
         .open(&lock_path)
         .context("open lock file")?;
 
@@ -173,7 +174,7 @@ fn acquire_lock() -> Result<File> {
             Ok(file)
         }
         _ => {
-            // Lock held by another process — that's fine, just exit
+            // Lock held by another process - that's fine, just exit
             log(&format!(
                 "Lock held by another process (PID from lock file: {}), exiting",
                 fs::read_to_string(&lock_path).unwrap_or_default()
@@ -201,7 +202,7 @@ fn push_if_dirty(dir: &PathBuf, name: &str) -> Result<()> {
         return Ok(());
     }
 
-    log(&format!("Dirty: {name} — committing and pushing"));
+    log(&format!("Dirty: {name} - committing and pushing"));
     update_state(&format!("committing:{name}"));
 
     let status = Command::new("git")
@@ -221,12 +222,12 @@ fn push_if_dirty(dir: &PathBuf, name: &str) -> Result<()> {
         .current_dir(dir)
         .status();
 
-    if commit_status.map_or(false, |s| s.success()) {
+    if commit_status.is_ok_and(|s| s.success()) {
         let push_status = Command::new("git")
             .args(["push", "origin", "main"])
             .current_dir(dir)
             .status();
-        if push_status.map_or(false, |s| s.success()) {
+        if push_status.is_ok_and(|s| s.success()) {
             log(&format!("Pushed: {name}"));
         } else {
             log(&format!("Push failed: {name}"));
@@ -268,7 +269,7 @@ fn check_remote_sync(dir: &PathBuf, name: &str) -> Result<()> {
         .unwrap_or_default();
 
     if local_sha != remote_sha && !remote_sha.is_empty() {
-        log(&format!("{name} behind origin — rebasing"));
+        log(&format!("{name} behind origin - rebasing"));
         update_state(&format!("rebasing:{name}"));
         let rebase = Command::new("git")
             .args(["pull", "--rebase", "origin", "main"])
@@ -276,16 +277,17 @@ fn check_remote_sync(dir: &PathBuf, name: &str) -> Result<()> {
             .output();
 
         if rebase.as_ref().is_err() || !rebase.as_ref().ok().map_or(false, |o| o.status.success()) {
-            log(&format!("Rebase conflict: {name} — spawning fix subagent"));
+            log(&format!("Rebase conflict: {name} - spawning fix subagent"));
             record_finding(
                 Severity::Critical,
                 name,
-                &format!("Rebase conflict in {dir:?}"),
+                &format!("Rebase conflict in {}", dir.as_path().display()),
             );
             spawn_fix_subagent(
                 &format!("rebase-{name}"),
                 &format!(
-                    "Fix rebase conflict in {dir:?}:\ngit status to see the conflict files,\nresolve with git add/rm, then git rebase --continue"
+                    "Fix rebase conflict in {name}:\ngit status to see the conflict files,\nresolve with git add/rm, then git rebase --continue",
+                    name = name
                 ),
             )?;
         } else {
@@ -317,16 +319,17 @@ fn check_build_and_tests(dir: &PathBuf, name: &str) -> Result<()> {
         record_finding(
             Severity::Warning,
             name,
-            &format!("Build errors in {dir:?}: {} errors", errors.len()),
+            &format!("Build errors in {}: {} errors", dir.as_path().display(), errors.len()),
         );
         spawn_fix_subagent(
             &format!("build-{name}"),
             &format!(
-                "Fix build errors in {dir:?}:\n\
+                "Fix build errors in {}:\n\
                  cargo build --release 2>&1 | grep error to see errors\n\
                  Apply minimal fixes (typos, missing imports, API changes)\n\
                  Run cargo build --release && cargo test\n\
-                 Commit and push if all pass"
+                 Commit and push if all pass",
+                dir.display()
             ),
         )?;
         return Ok(());
@@ -345,27 +348,28 @@ fn check_build_and_tests(dir: &PathBuf, name: &str) -> Result<()> {
         .ok()
         .map_or(false, |o| o.status.success());
 
-    if !test_ok {
-        let failed = parse_test_failures(&test.as_ref().ok().map_or(vec![], |o| o.stdout.clone()));
+    if test_ok {
+        log(&format!("Tests passed: {name}"));
+    } else {
+        let failed = parse_test_failures(&test.as_ref().ok().map_or_else(Vec::new, |o| o.stdout.clone()));
         log(&format!("Test failures in {name}: {} tests failed", failed.len()));
         record_finding(
             Severity::Warning,
             name,
-            &format!("Test failures in {dir:?}: {} tests failed", failed.len()),
+            &format!("Test failures in {}: {} tests failed", dir.as_path().display(), failed.len()),
         );
         spawn_fix_subagent(
             &format!("tests-{name}"),
             &format!(
-                "Fix failing tests in {dir:?}:\n\
+                "Fix failing tests in {}:\n\
                  cargo test 2>&1 to see all failures\n\
                  Read failing test code and fix the underlying code\n\
                  Do NOT change tests unless the test itself is wrong\n\
                  Run cargo test to verify all pass\n\
-                 Commit and push if all pass"
+                 Commit and push if all pass",
+                dir.display()
             ),
         )?;
-    } else {
-        log(&format!("Tests passed: {name}"));
     }
     Ok(())
 }
@@ -374,7 +378,7 @@ fn parse_build_errors(stderr: &[u8]) -> Vec<String> {
     let text = String::from_utf8_lossy(stderr);
     text.lines()
         .filter(|l| l.contains("error[E"))
-        .map(|l| l.to_string())
+        .map(std::string::ToString::to_string)
         .collect()
 }
 
@@ -382,7 +386,7 @@ fn parse_test_failures(stdout: &[u8]) -> Vec<String> {
     let text = String::from_utf8_lossy(stdout);
     text.lines()
         .filter(|l| l.contains(" FAILED"))
-        .map(|l| l.to_string())
+        .map(std::string::ToString::to_string)
         .collect()
 }
 
@@ -443,10 +447,11 @@ fn check_ci_status(name: &str, dir: &PathBuf) -> Result<()> {
                 "Fix GitHub Actions CI failure in caelator/{name}:\n\
                  gh run list --repo caelator/{name} --limit 3 to see recent runs\n\
                  gh run view <run-id> --log-failed to get failure logs\n\
-                 Reproduce locally: cd {dir:?} && cargo test\n\
+                 Reproduce locally: cd {} && cargo test\n\
                  Apply minimal fix to make CI green\n\
                  Push to trigger CI again\n\
-                 Verify: gh run list --repo caelator/{name} --limit 3"
+                 Verify: gh run list --repo caelator/{name} --limit 3",
+                dir.display()
             ),
         )?;
     }
@@ -572,9 +577,9 @@ fn check_repo(name: &str) -> Result<()> {
 
 // ─── Main cycle ───────────────────────────────────────────────────────────────
 
-fn run_monitor_cycle(repos_override: &Option<String>) -> Result<()> {
+fn run_monitor_cycle(repos_override: Option<&String>) -> Result<()> {
     let _lock = acquire_lock();
-    log(&format!("=== Monitor cycle started ==="));
+    log("=== Monitor cycle started ===");
 
     let default_repos = ["layers", "openclaw-pm", "research-radar", "council"];
     let repos: Vec<&str> = repos_override
@@ -605,7 +610,7 @@ fn print_status() -> Result<()> {
         let content = fs::read_to_string(&lock_path)?;
         println!("Lock file contents:\n{content}");
     } else {
-        println!("No lock file — monitor is not running.");
+        println!("No lock file - monitor is not running.");
     }
 
     if let Ok(state) = fs::read_to_string(state_file()) {
