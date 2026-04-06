@@ -20,7 +20,7 @@ pub fn workspace_lock() -> &'static Mutex<()> {
 pub fn workspace_guard() -> MutexGuard<'static, ()> {
     workspace_lock()
         .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 pub struct TestWorkspace {
@@ -92,13 +92,13 @@ pub fn set_usr1_handler() -> io::Result<()> {
         let mut act: libc::sigaction = std::mem::zeroed();
         // sighandler_t is usize on macOS BSD.
         // transmute with explicit type annotation to get the function address as usize.
-        let fn_ptr: usize = std::mem::transmute::<extern "C" fn(i32), usize>(usr1_handler);
+        let fn_ptr: usize = usr1_handler as *const () as usize;
         act.sa_sigaction = fn_ptr as libc::sighandler_t;
         act.sa_flags = libc::SA_SIGINFO;
-        if libc::sigemptyset(&mut act.sa_mask) != 0 {
+        if libc::sigemptyset(&raw mut act.sa_mask) != 0 {
             return Err(io::Error::last_os_error());
         }
-        if libc::sigaction(libc::SIGUSR1, &act, std::ptr::null_mut()) != 0 {
+        if libc::sigaction(libc::SIGUSR1, &raw const act, std::ptr::null_mut()) != 0 {
             return Err(io::Error::last_os_error());
         }
     }

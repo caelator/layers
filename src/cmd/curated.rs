@@ -157,7 +157,7 @@ mod tests {
             "timestamp": "2026-04-02T00:00:00Z",
             "tags": ["layers"]
         });
-        fs::write(&import_file, format!("{}\n{}\n", record, record)).unwrap();
+        fs::write(&import_file, format!("{record}\n{record}\n")).unwrap();
 
         handle_curated_import(&import_file.to_string_lossy()).unwrap();
 

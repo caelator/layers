@@ -437,8 +437,7 @@ mod tests {
         let msg = result.unwrap_err().to_string();
         assert!(
             msg.contains("not promotable") || msg.contains("incomplete"),
-            "unexpected error: {}",
-            msg
+            "unexpected error: {msg}",
         );
     }
 

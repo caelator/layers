@@ -384,8 +384,7 @@ mod tests {
         let counter = artifacts_dir.join("counter.txt");
         let counter_text = counter.display().to_string();
         let retry_cmd = format!(
-            "count=0; [ -f '{0}' ] && count=$(cat '{0}'); count=$((count+1)); echo $count > '{0}'; if [ \"$count\" -eq 1 ]; then echo 'first failure' >&2; exit 1; fi; printf '## Decision\\n- retry worked with a real contract\\n## Why\\n- the second attempt reused the same grounded task\\n## Risks\\n- minor residual risk\\n## Next Steps\\n- keep the final artifacts\\nConvergence: converged\\n'",
-            counter_text
+            "count=0; [ -f '{counter_text}' ] && count=$(cat '{counter_text}'); count=$((count+1)); echo $count > '{counter_text}'; if [ \"$count\" -eq 1 ]; then echo 'first failure' >&2; exit 1; fi; printf '## Decision\\n- retry worked with a real contract\\n## Why\\n- the second attempt reused the same grounded task\\n## Risks\\n- minor residual risk\\n## Next Steps\\n- keep the final artifacts\\nConvergence: converged\\n'",
         );
         let request = CouncilRunRequest {
             task: "Retry on transient stage failure".to_string(),
@@ -571,8 +570,7 @@ mod tests {
         let msg = result.unwrap_err().to_string();
         assert!(
             msg.contains("unsupported context payload schema version"),
-            "unexpected error: {}",
-            msg
+            "unexpected error: {msg}",
         );
     }
 

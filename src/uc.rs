@@ -279,7 +279,7 @@ mod tests {
         assert_eq!(result.fallback_reason.as_deref(), Some("uc is unavailable"));
     }
 
-    /// UC returns fewer than min_results → fallback, not success.
+    /// UC returns fewer than `min_results` → fallback, not success.
     #[test]
     #[allow(unsafe_code)]
     fn retrieve_falls_back_when_below_min_results() {

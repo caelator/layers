@@ -318,6 +318,26 @@ fn interleave_results(
     sections
 }
 
+/// Build a `ContextPayload` for passing to the council binary.
+pub fn build_context_payload(
+    task: &str,
+    route: Route,
+    confidence: &str,
+    memory_items: Vec<RetrievalItem>,
+    graph_items: Vec<RetrievalItem>,
+    retrieval_meta: RetrievalMeta,
+) -> ContextPayload {
+    ContextPayload {
+        schema_version: CONTEXT_PAYLOAD_SCHEMA_VERSION,
+        task: task.to_string(),
+        route: route.label().to_string(),
+        confidence: confidence.to_string(),
+        memory_results: memory_items,
+        graph_results: graph_items,
+        retrieval_meta,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -326,7 +346,7 @@ mod tests {
     use crate::util::load_jsonl;
 
     /// Memory-only routing produces correct output structure (JSON mode).
-    /// Uses a task that triggers MemoryOnly routing via historical keywords.
+    /// Uses a task that triggers `MemoryOnly` routing via historical keywords.
     #[test]
     fn handle_query_memory_only_produces_correct_structure() {
         let ws = TestWorkspace::new("query-memory-only");
@@ -339,8 +359,8 @@ mod tests {
             r#"{"task":"prior council decision","summary":"We previously decided to use Rust for the memory spine.","timestamp":"2026-04-01T00:00:00Z"}"#,
         )
         .unwrap();
-        std::fs::write(&plans_path.with_file_name("council-traces.jsonl"), "").unwrap();
-        std::fs::write(&plans_path.with_file_name("council-learnings.jsonl"), "").unwrap();
+        std::fs::write(plans_path.with_file_name("council-traces.jsonl"), "").unwrap();
+        std::fs::write(plans_path.with_file_name("council-learnings.jsonl"), "").unwrap();
 
         // Task with strong historical signal: "prior", "decided", "rationale", "recall"
         let result = handle_query(
@@ -361,7 +381,7 @@ mod tests {
         assert!(result.is_ok(), "handle_query failed: {:?}", result.err());
     }
 
-    /// Audit log entry is written with schema_version and correct fields.
+    /// Audit log entry is written with `schema_version` and correct fields.
     #[test]
     fn handle_query_writes_audit_with_schema_version() {
         let ws = TestWorkspace::new("query-audit");
@@ -405,25 +425,5 @@ mod tests {
             entry.get("retrieval").is_some(),
             "audit must include retrieval metadata"
         );
-    }
-}
-
-/// Build a `ContextPayload` for passing to the council binary.
-pub fn build_context_payload(
-    task: &str,
-    route: Route,
-    confidence: &str,
-    memory_items: Vec<RetrievalItem>,
-    graph_items: Vec<RetrievalItem>,
-    retrieval_meta: RetrievalMeta,
-) -> ContextPayload {
-    ContextPayload {
-        schema_version: CONTEXT_PAYLOAD_SCHEMA_VERSION,
-        task: task.to_string(),
-        route: route.label().to_string(),
-        confidence: confidence.to_string(),
-        memory_results: memory_items,
-        graph_results: graph_items,
-        retrieval_meta,
     }
 }
