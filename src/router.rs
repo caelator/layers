@@ -7,6 +7,7 @@
 use crate::config::workspace_root;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
@@ -110,7 +111,6 @@ pub fn reload_corrections() {
 /// - `memory_only`: historical context needed
 /// - `graph_only`: structural/code context needed
 /// - `both`: both historical and structural context needed
-use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
