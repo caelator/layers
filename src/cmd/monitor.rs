@@ -9,7 +9,7 @@
 use std::fs::{self, File};
 use std::io::Write;
 use std::os::unix::io::AsRawFd;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use anyhow::{Context, Result};
@@ -45,18 +45,16 @@ pub fn handle_monitor(args: &MonitorArgs) -> Result<()> {
 // ─── Paths ────────────────────────────────────────────────────────────────────
 
 /// Returns the layers root directory (~/.layers).
-    fn layers_root() -> PathBuf {
+fn layers_root() -> PathBuf {
     std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .map_or_else(|| PathBuf::from("."), std::convert::identity)
+        .map_or_else(|| PathBuf::from("."), PathBuf::from)
         .join(".layers")
 }
 
 /// Returns the repos directory (~/Documents/GitHub).
-    fn repos_dir() -> PathBuf {
+fn repos_dir() -> PathBuf {
     std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("."))
+        .map_or_else(|| PathBuf::from("."), PathBuf::from)
         .join("Documents/GitHub")
 }
 
@@ -280,13 +278,12 @@ fn check_remote_sync(dir: &PathBuf, name: &str) -> Result<()> {
             record_finding(
                 Severity::Critical,
                 name,
-                &format!("Rebase conflict in {}", dir.as_path().display()),
+                &format!("Rebase conflict in {}", dir.display()),
             );
             spawn_fix_subagent(
                 &format!("rebase-{name}"),
                 &format!(
-                    "Fix rebase conflict in {}:\ngit status to see the conflict files,\nresolve with git add/rm, then git rebase --continue",
-                    name
+                    "Fix rebase conflict in {name}:\ngit status to see the conflict files,\nresolve with git add/rm, then git rebase --continue"
                 ),
             )?;
         } else {
@@ -307,10 +304,7 @@ fn check_build_and_tests(dir: &PathBuf, name: &str) -> Result<()> {
         .current_dir(dir)
         .output();
 
-    let build_ok = build
-        .as_ref()
-        .ok()
-        .map_or(false, |o| o.status.success());
+    let build_ok = build.as_ref().ok().is_some_and(|o| o.status.success());
 
     if !build_ok {
         let errors = parse_build_errors(&build.as_ref().ok().map_or_else(Vec::new, |o| o.stderr.clone()));
@@ -318,7 +312,7 @@ fn check_build_and_tests(dir: &PathBuf, name: &str) -> Result<()> {
         record_finding(
             Severity::Warning,
             name,
-            &format!("Build errors in {}: {} errors", dir.as_path().display(), errors.len()),
+            &format!("Build errors in {}: {} errors", dir.display(), errors.len()),
         );
         spawn_fix_subagent(
             &format!("build-{name}"),
@@ -342,10 +336,7 @@ fn check_build_and_tests(dir: &PathBuf, name: &str) -> Result<()> {
         .current_dir(dir)
         .output();
 
-    let test_ok = test
-        .as_ref()
-        .ok()
-        .map_or(false, |o| o.status.success());
+    let test_ok = test.as_ref().ok().is_some_and(|o| o.status.success());
 
     if test_ok {
         log(&format!("Tests passed: {name}"));
@@ -359,7 +350,7 @@ fn check_build_and_tests(dir: &PathBuf, name: &str) -> Result<()> {
             record_finding(
                 Severity::Warning,
                 name,
-                &format!("Test failures in {}: {} tests failed", dir.as_path().display(), failed.len()),
+                &format!("Test failures in {}: {} tests failed", dir.display(), failed.len()),
             );
             spawn_fix_subagent(
                 &format!("tests-{name}"),
@@ -370,7 +361,7 @@ fn check_build_and_tests(dir: &PathBuf, name: &str) -> Result<()> {
                      Do NOT change tests unless the test itself is wrong\n\
                      Run cargo test to verify all pass\n\
                      Commit and push if all pass",
-                    dir = dir.display().to_string()
+                    dir = dir.display()
                 ),
             )?;
         } else if !build_errors.is_empty() {
@@ -378,7 +369,7 @@ fn check_build_and_tests(dir: &PathBuf, name: &str) -> Result<()> {
             record_finding(
                 Severity::Warning,
                 name,
-                &format!("Test compilation errors in {}: {} errors", dir.as_path().display(), build_errors.len()),
+                &format!("Test compilation errors in {}: {} errors", dir.display(), build_errors.len()),
             );
             spawn_fix_subagent(
                 &format!("tests-{name}"),
@@ -388,7 +379,7 @@ fn check_build_and_tests(dir: &PathBuf, name: &str) -> Result<()> {
                      Apply minimal fixes\n\
                      Run cargo test to verify all pass\n\
                      Commit and push if all pass",
-                    dir = dir.display().to_string()
+                    dir = dir.display()
                 ),
             )?;
         } else {
@@ -428,7 +419,7 @@ struct GhRun {
     name: Option<String>,
 }
 
-fn check_ci_status(name: &str, dir: &PathBuf) -> Result<()> {
+fn check_ci_status(name: &str, dir: &Path) -> Result<()> {
     if !dir.join(".git").exists() {
         return Ok(());
     }
@@ -515,7 +506,7 @@ fn archive_stale_council_runs() -> Result<()> {
             .ok()
             .map(|d| DateTime::<Utc>::from_naive_utc_and_offset(d.and_hms_opt(0,0,0).unwrap_or_default(), Utc));
 
-        let is_stale = run_date.map_or(false, |d| d < stale_cutoff);
+        let is_stale = run_date.is_some_and(|d| d < stale_cutoff);
 
         if is_stale {
             let archived_dir = runs_dir.join("archived");

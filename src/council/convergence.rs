@@ -11,7 +11,7 @@ pub fn build_convergence_record(
     final_output_path: &str,
 ) -> Result<CouncilConvergenceRecord> {
     let decision = first_bullet_after_heading(final_output, "## Decision")
-        .map(|item| item.to_string())
+        .map(std::string::ToString::to_string)
         .unwrap_or_default();
     let why = extract_bullets_after_heading(final_output, "## Why");
     let unresolved = extract_bullets_after_heading(final_output, "## Risks");

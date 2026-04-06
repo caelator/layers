@@ -333,7 +333,7 @@ fn apply_correction_bias(scores: &mut Scores) {
 
     // For every (predicted → actual) correction on record, apply demotion/boost.
     // We do this per-correction-entry so a pattern corrected N times gets N× demotion.
-    for ((predicted, actual), &count) in load_correction_cache().iter() {
+    for ((predicted, actual), &count) in load_correction_cache() {
         if count == 0 {
             continue;
         }

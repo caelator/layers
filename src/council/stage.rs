@@ -121,11 +121,11 @@ pub fn execute_stage(
             ),
         };
 
-        attempt_record.status = attempt_status.clone();
+        attempt_record.status.clone_from(&attempt_status);
         attempt_record.finished_at = Some(finished_at);
         attempt_record.duration_ms = Some(duration_ms);
         attempt_record.exit_code = exit_code;
-        attempt_record.error = error.clone();
+        attempt_record.error.clone_from(&error);
         if let Some(slot) = run.stages[stage_index].attempts.last_mut() {
             *slot = attempt_record;
         }
@@ -152,14 +152,13 @@ pub fn execute_stage(
     let terminal_reason = run.stages[stage_index]
         .attempts
         .last()
-        .map(|attempt| match attempt.status.as_str() {
+        .map_or("stage_failed", |attempt| match attempt.status.as_str() {
             "timed_out" => "stage_timed_out",
             _ => "retries_exhausted",
         })
-        .unwrap_or("stage_failed")
         .to_string();
     run.status = "failed".to_string();
-    run.status_reason = terminal_reason.clone();
+    run.status_reason.clone_from(&terminal_reason);
     run.updated_at = iso_now();
     persist_run_state(artifacts_dir, run)?;
     Ok(StageOutcome::Failed {

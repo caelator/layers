@@ -58,8 +58,7 @@ pub fn execute_council_run(request: CouncilRunRequest) -> Result<CouncilRunRecor
         if let Some(found_version) = payload.get("schema_version").and_then(serde_json::Value::as_u64) {
             if !u32::try_from(found_version).is_ok_and(|v64| v64 == CONTEXT_PAYLOAD_SCHEMA_VERSION) {
                 anyhow::bail!(
-                    "unsupported context payload schema version: {found_version} (expected {VERSION})",
-                    VERSION = CONTEXT_PAYLOAD_SCHEMA_VERSION
+                    "unsupported context payload schema version: {found_version} (expected {CONTEXT_PAYLOAD_SCHEMA_VERSION})"
                 );
             }
         }
@@ -138,7 +137,7 @@ pub fn execute_council_run(request: CouncilRunRequest) -> Result<CouncilRunRecor
             spec.role,
             &request.task,
             &request.context_text,
-            &graph_context,
+            graph_context.as_ref(),
             &prior_outputs,
         );
         let output = execute_stage(
@@ -184,7 +183,7 @@ pub fn execute_council_run(request: CouncilRunRequest) -> Result<CouncilRunRecor
             run.status_reason = "converged".to_string();
         } else {
             run.status = "incomplete".to_string();
-            run.status_reason = convergence.reason.clone();
+            run.status_reason.clone_from(&convergence.reason);
         }
     }
 
@@ -219,8 +218,7 @@ pub fn load_council_run_record(
     artifacts_dir_override: Option<&Path>,
 ) -> Result<CouncilRunRecord> {
     let artifacts_dir = artifacts_dir_override
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| default_run_artifacts_dir(run_id));
+        .map_or_else(|| default_run_artifacts_dir(run_id), Path::to_path_buf);
     let run_path = artifacts_dir.join("run.json");
     let run = fs::read_to_string(&run_path)
         .with_context(|| format!("failed to read {}", run_path.display()))?;
@@ -241,8 +239,7 @@ pub fn load_council_convergence_record(
     artifacts_dir_override: Option<&Path>,
 ) -> Result<CouncilConvergenceRecord> {
     let artifacts_dir = artifacts_dir_override
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| PathBuf::from(&run.artifacts_dir));
+        .map_or_else(|| PathBuf::from(&run.artifacts_dir), Path::to_path_buf);
     let convergence_path = artifacts_dir.join("convergence.json");
     let convergence = fs::read_to_string(&convergence_path)
         .with_context(|| format!("failed to read {}", convergence_path.display()))?;
@@ -256,7 +253,7 @@ fn build_stage_prompt(
     role: &str,
     task: &str,
     context_text: &str,
-    graph_context: &Option<ImpactSummary>,
+    graph_context: Option<&ImpactSummary>,
     prior_outputs: &[(String, String)],
 ) -> String {
     let mut prompt = vec![
@@ -285,7 +282,7 @@ fn build_stage_prompt(
         prompt.push("Earlier council stages:".to_string());
         for (name, output) in prior_outputs {
             prompt.push(format!("## {}", name.to_uppercase()));
-            prompt.push(output.to_string());
+            prompt.push(output.clone());
         }
     }
 

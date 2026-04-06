@@ -19,7 +19,7 @@ pub fn handle_remember(
             let task = task.context("--task required for kind=plan")?;
             let file = file.context("--file required for kind=plan")?;
             let plan_markdown = fs::read_to_string(&file)
-                .with_context(|| format!("failed to read plan file: {}", file))?;
+                .with_context(|| format!("failed to read plan file: {file}"))?;
             json!({
                 "timestamp": iso_now(),
                 "task_type": task_type.unwrap_or_else(|| "architecture".to_string()),

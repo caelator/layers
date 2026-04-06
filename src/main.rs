@@ -11,6 +11,20 @@
 // Binary crate — all items are pub for internal clarity but not exported as a library.
 #![allow(unreachable_pub)]
 
+// Structural lints that cannot be fixed without invasive refactoring:
+#![allow(
+    clippy::too_many_arguments,
+    clippy::too_many_lines,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss,
+    clippy::cast_lossless,
+    clippy::cast_precision_loss,
+    clippy::needless_pass_by_value,
+    clippy::unnecessary_wraps,
+    clippy::result_large_err,
+)]
+
 //! Layers — council orchestrator and memory spine for multi-model AI workflows.
 
 
@@ -92,7 +106,7 @@ enum Commands {
         #[arg(long)]
         ci: bool,
     },
-    /// Refresh GitNexus index and verify `MemoryPort` readiness.
+    /// Refresh `GitNexus` index and verify `MemoryPort` readiness.
     Refresh {
         /// Also regenerate embeddings (passes --embeddings to gitnexus analyze).
         #[arg(long)]

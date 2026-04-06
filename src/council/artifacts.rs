@@ -72,8 +72,7 @@ pub fn append_trace_record(
         }
     });
     let trace_path = trace_path_override
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| memoryport_dir().join("council-traces.jsonl"));
+        .map_or_else(|| memoryport_dir().join("council-traces.jsonl"), Path::to_path_buf);
     append_jsonl(&trace_path, &record)
 }
 
@@ -94,12 +93,12 @@ pub fn build_run_id(task: &str, created_at: &str) -> String {
     };
     let stamp = created_at
         .chars()
-        .filter(|ch| ch.is_ascii_alphanumeric())
+        .filter(char::is_ascii_alphanumeric)
         .collect::<String>()
         .chars()
         .take(14)
         .collect::<String>();
-    format!("council-{}-{}", stamp, short_slug)
+    format!("council-{stamp}-{short_slug}")
 }
 
 pub fn degraded_reasons(context_json: &serde_json::Value) -> Vec<String> {
@@ -132,8 +131,7 @@ pub fn output_quality_error(stage: &str, stdout: &str) -> Option<String> {
     };
     if word_count < minimum_words {
         return Some(format!(
-            "stage output failed quality gate: {} words < {}",
-            word_count, minimum_words
+            "stage output failed quality gate: {word_count} words < {minimum_words}"
         ));
     }
     if !trimmed.contains("## ") {

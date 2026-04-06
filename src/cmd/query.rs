@@ -233,8 +233,8 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
 }
 
 /// Route-weighted interleave:
-/// - memory_only → memory first, graph as supplement
-/// - graph_only → graph first, memory as supplement
+/// - `memory_only` → memory first, graph as supplement
+/// - `graph_only` → graph first, memory as supplement
 /// - both → alternate memory/graph by position
 fn interleave_results(
     route: Route,
@@ -408,7 +408,7 @@ mod tests {
     }
 }
 
-/// Build a ContextPayload for passing to the council binary.
+/// Build a `ContextPayload` for passing to the council binary.
 pub fn build_context_payload(
     task: &str,
     route: Route,
