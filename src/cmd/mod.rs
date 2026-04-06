@@ -8,3 +8,16 @@ pub mod refresh;
 pub mod remember;
 pub mod telemetry;
 pub mod validate;
+
+use std::sync::{LazyLock, Mutex};
+use crate::config::memoryport_dir;
+use crate::plugins::telemetry::TelemetryPlugin;
+
+/// Global telemetry plugin — initialized once on first use.
+static TELEMETRY_PLUGIN: LazyLock<Mutex<TelemetryPlugin>> =
+    LazyLock::new(|| Mutex::new(TelemetryPlugin::new(&memoryport_dir())));
+
+/// Access the global telemetry plugin for recording events.
+pub fn telemetry_plugin() -> std::sync::MutexGuard<'static, TelemetryPlugin> {
+    TELEMETRY_PLUGIN.lock().expect("telemetry plugin lock poisoned")
+}

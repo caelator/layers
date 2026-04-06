@@ -157,8 +157,9 @@ pub fn detect_completion_indicators(output: &str) -> u32 {
 ///
 /// Three-layer detection:
 /// 1. exit code 124 → Timeout
-/// 2. `rate_limit_event` in err → RateLimitEvent
-/// 3. "rate limit" / "too many requests" / "429" / "api limit" → TextPatternMatch
+/// 2. `rate_limit_event` in err → `RateLimitEvent`
+/// 3. "rate limit" / "too many requests" / "429" / "api limit" → `TextPatternMatch`
+#[allow(dead_code)]
 pub fn detect_api_limit(err: &str, exit_code: Option<u32>) -> Option<ApiLimitReason> {
     // Layer 1: Timeout exit code
     if exit_code == Some(124) {

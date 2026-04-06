@@ -8,6 +8,8 @@ use crate::memory;
 use crate::router::{self, Confidence, Route};
 use crate::uc;
 use crate::util::{append_jsonl, iso_now};
+use crate::plugins::telemetry::schema::fingerprint_query;
+use crate::cmd::telemetry::PluginResult;
 
 const MAX_MEMORY_RECORDS: usize = 3;
 const MAX_GITNEXUS_FACTS: usize = 5;
@@ -42,6 +44,7 @@ pub struct RetrievalMeta {
 }
 
 pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
+    let t0 = Instant::now();
     let route_result = router::classify(task);
 
     // Low-confidence downgrades to neither (refusal bias)
@@ -228,6 +231,46 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
         }
         println!("</layers_context>");
     }
+
+    // Emit telemetry event
+    let end_to_end_ms =
+        u64::try_from(t0.elapsed().as_millis()).unwrap_or(u64::MAX);
+    let fp = fingerprint_query(task);
+    let memory_invoked =
+        matches!(effective_route, Route::MemoryOnly | Route::Both);
+    let gitnexus_invoked =
+        matches!(effective_route, Route::GraphOnly | Route::Both);
+    let memory_success = !memory_items.is_empty();
+    let gitnexus_success = !graph_items.is_empty();
+
+    let memory_result = if !memory_invoked {
+        PluginResult::NotInvoked
+    } else if memory_success {
+        PluginResult::Success
+    } else {
+        PluginResult::Empty
+    };
+    let gitnexus_result = if !gitnexus_invoked {
+        PluginResult::NotInvoked
+    } else if gitnexus_success {
+        PluginResult::Success
+    } else {
+        PluginResult::Empty
+    };
+
+    crate::cmd::telemetry::record_query_event(crate::cmd::telemetry::QueryEventParams {
+        query_fingerprint: fp,
+        route: effective_route.label().to_string(),
+        confidence: match route_result.confidence {
+            router::Confidence::High => 1.0,
+            router::Confidence::Low => 0.5,
+        },
+        memory_result,
+        memory_latency_ms,
+        gitnexus_result,
+        gitnexus_latency_ms: graph_latency_ms,
+        end_to_end_ms,
+    });
 
     Ok(())
 }
