@@ -1,12 +1,13 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde_json::json;
 use std::path::PathBuf;
 
 use crate::cmd::query::{RetrievalMeta, build_context_payload};
 use crate::config::{canonical_curated_memory_path, workspace_root};
 use crate::council::{
-    CouncilRunRequest, execute_council_run, load_council_convergence_record,
-    load_council_run_record,
+    CouncilRunRequest, execute_council_run, latest_incomplete_council_run, list_council_runs,
+    load_council_checkpoint, load_council_convergence_record, load_council_run_record,
+    resume_council_run,
 };
 use crate::graph;
 use crate::memory;
@@ -80,6 +81,118 @@ pub fn handle_council_run(
         );
         if !run.degraded_reasons.is_empty() {
             println!("Degraded: {}", run.degraded_reasons.join(" | "));
+        }
+    }
+    Ok(())
+}
+
+pub fn handle_council_resume(
+    run_id: &str,
+    gemini_cmd: Option<String>,
+    claude_cmd: Option<String>,
+    codex_cmd: Option<String>,
+    timeout_secs: u64,
+    retry_limit: u32,
+    artifacts_dir: Option<String>,
+    json_out: bool,
+) -> Result<()> {
+    let gemini_cmd = council_command("gemini", gemini_cmd)?;
+    let claude_cmd = council_command("claude", claude_cmd)?;
+    let codex_cmd = council_command("codex", codex_cmd)?;
+    let artifacts_dir = artifacts_dir.map_or_else(
+        || crate::council::default_run_artifacts_dir(run_id),
+        PathBuf::from,
+    );
+
+    let run = resume_council_run(CouncilRunRequest {
+        task: String::new(),
+        route: String::new(),
+        context_text: String::new(),
+        context_json: json!({}),
+        graph_context: None,
+        targets: vec![],
+        gemini_cmd,
+        claude_cmd,
+        codex_cmd,
+        retry_limit,
+        timeout_secs,
+        artifacts_dir: Some(artifacts_dir),
+        trace_path_override: None,
+        context_payload: None,
+    })?;
+
+    if json_out {
+        println!("{}", serde_json::to_string_pretty(&run)?);
+    } else {
+        println!(
+            "Resumed council run {} {} ({})\nArtifacts: {}",
+            run.run_id, run.status, run.status_reason, run.artifacts_dir
+        );
+    }
+    Ok(())
+}
+
+pub fn handle_council_resume_last(
+    gemini_cmd: Option<String>,
+    claude_cmd: Option<String>,
+    codex_cmd: Option<String>,
+    timeout_secs: u64,
+    retry_limit: u32,
+    json_out: bool,
+) -> Result<()> {
+    let run = latest_incomplete_council_run()?.context("no incomplete council runs found")?;
+    handle_council_resume(
+        &run.run_id,
+        gemini_cmd,
+        claude_cmd,
+        codex_cmd,
+        timeout_secs,
+        retry_limit,
+        Some(run.artifacts_dir),
+        json_out,
+    )
+}
+
+pub fn handle_council_status(
+    run_id: &str,
+    artifacts_dir: Option<String>,
+    json_out: bool,
+) -> Result<()> {
+    let artifacts_dir = artifacts_dir.as_deref().map(PathBuf::from);
+    let run = load_council_run_record(run_id, artifacts_dir.as_deref())?;
+    let checkpoint = load_council_checkpoint(run_id, artifacts_dir.as_deref())?;
+
+    if json_out {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&json!({"run": run, "checkpoint": checkpoint}))?
+        );
+    } else {
+        println!(
+            "Run {} {} ({})\nUpdated: {}\nNext stage index: {}\nArtifacts: {}",
+            run.run_id,
+            run.status,
+            run.status_reason,
+            run.updated_at,
+            checkpoint.current_stage_index,
+            run.artifacts_dir
+        );
+    }
+    Ok(())
+}
+
+pub fn handle_council_list(limit: usize, json_out: bool) -> Result<()> {
+    let runs = list_council_runs(limit)?;
+    if json_out {
+        println!("{}", serde_json::to_string_pretty(&runs)?);
+    } else if runs.is_empty() {
+        println!("No council runs found.");
+    } else {
+        for run in runs {
+            println!(
+                "{} | {} | {} | {}",
+                run.run_id, run.status, run.updated_at, run.artifacts_dir
+            );
         }
     }
     Ok(())

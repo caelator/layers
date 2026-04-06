@@ -42,7 +42,10 @@ mod router;
 mod technician;
 mod uc;
 
-use cmd::council::{handle_council_promote, handle_council_run};
+use cmd::council::{
+    handle_council_list, handle_council_promote, handle_council_resume, handle_council_resume_last,
+    handle_council_run, handle_council_status,
+};
 use cmd::curated::handle_curated_import;
 use cmd::feedback::handle_feedback;
 use cmd::infrastructure::{InfrastructureArgs, handle_infrastructure};
@@ -252,6 +255,55 @@ enum CouncilCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Resume a previously interrupted council run.
+    Resume {
+        /// The run ID to resume.
+        run_id: String,
+        #[arg(long)]
+        gemini_cmd: Option<String>,
+        #[arg(long)]
+        claude_cmd: Option<String>,
+        #[arg(long)]
+        codex_cmd: Option<String>,
+        #[arg(long, default_value_t = 120)]
+        timeout_secs: u64,
+        #[arg(long, default_value_t = 1)]
+        retry_limit: u32,
+        #[arg(long)]
+        artifacts_dir: Option<String>,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Resume the most recent incomplete council run.
+    ResumeLast {
+        #[arg(long)]
+        gemini_cmd: Option<String>,
+        #[arg(long)]
+        claude_cmd: Option<String>,
+        #[arg(long)]
+        codex_cmd: Option<String>,
+        #[arg(long, default_value_t = 120)]
+        timeout_secs: u64,
+        #[arg(long, default_value_t = 1)]
+        retry_limit: u32,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Show council run status plus checkpoint state.
+    Status {
+        run_id: String,
+        #[arg(long)]
+        artifacts_dir: Option<String>,
+        #[arg(long)]
+        json: bool,
+    },
+    /// List recent council runs.
+    List {
+        #[arg(long, default_value_t = 10)]
+        limit: usize,
+        #[arg(long)]
+        json: bool,
+    },
     /// Promote a converged council run into canonical curated memory.
     Promote {
         /// The run ID to promote (from council run output).
@@ -337,6 +389,46 @@ fn main() -> anyhow::Result<()> {
                 targets,
                 json,
             ),
+            CouncilCommands::Resume {
+                run_id,
+                gemini_cmd,
+                claude_cmd,
+                codex_cmd,
+                timeout_secs,
+                retry_limit,
+                artifacts_dir,
+                json,
+            } => handle_council_resume(
+                &run_id,
+                gemini_cmd,
+                claude_cmd,
+                codex_cmd,
+                timeout_secs,
+                retry_limit,
+                artifacts_dir,
+                json,
+            ),
+            CouncilCommands::ResumeLast {
+                gemini_cmd,
+                claude_cmd,
+                codex_cmd,
+                timeout_secs,
+                retry_limit,
+                json,
+            } => handle_council_resume_last(
+                gemini_cmd,
+                claude_cmd,
+                codex_cmd,
+                timeout_secs,
+                retry_limit,
+                json,
+            ),
+            CouncilCommands::Status {
+                run_id,
+                artifacts_dir,
+                json,
+            } => handle_council_status(&run_id, artifacts_dir, json),
+            CouncilCommands::List { limit, json } => handle_council_list(limit, json),
             CouncilCommands::Promote {
                 run_id,
                 project,

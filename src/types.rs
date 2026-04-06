@@ -139,6 +139,46 @@ pub struct CouncilRunRecord {
     pub convergence: Option<CouncilConvergenceRecord>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CouncilCompletedStage {
+    #[serde(default)]
+    pub stage_name: String,
+    #[serde(default)]
+    pub output_path: String,
+    #[serde(default)]
+    pub outcome: String,
+    #[serde(default)]
+    pub duration_ms: u64,
+    #[serde(default)]
+    pub summary: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CouncilRunCheckpoint {
+    #[serde(default)]
+    pub run_id: String,
+    #[serde(default)]
+    pub task: String,
+    #[serde(default)]
+    pub created_at: String,
+    #[serde(default)]
+    pub last_modified: String,
+    #[serde(default)]
+    pub current_stage_index: usize,
+    #[serde(default)]
+    pub stages_completed: Vec<CouncilCompletedStage>,
+    #[serde(default)]
+    pub convergence_state: String,
+    #[serde(default)]
+    pub status: String,
+    #[serde(default)]
+    pub status_reason: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_payload: Option<Value>,
+    #[serde(default)]
+    pub schema_version: u32,
+}
+
 // ---------------------------------------------------------------------------
 // Curated memory record types (used by council promote and curated import)
 // ---------------------------------------------------------------------------

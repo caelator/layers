@@ -3,8 +3,11 @@ use serde_json::json;
 use std::fs;
 use std::path::Path;
 
-use crate::config::memoryport_dir;
-use crate::types::{CouncilConvergenceRecord, CouncilRunRecord, CouncilStageRecord};
+use crate::config::{CONTEXT_PAYLOAD_SCHEMA_VERSION, memoryport_dir};
+use crate::types::{
+    CouncilCompletedStage, CouncilConvergenceRecord, CouncilRunCheckpoint, CouncilRunRecord,
+    CouncilStageRecord,
+};
 use crate::util::{append_jsonl, iso_now};
 
 pub fn initial_stage_record(
@@ -33,7 +36,68 @@ pub fn persist_run_state(artifacts_dir: &Path, run: &CouncilRunRecord) -> Result
         artifacts_dir.join("run.json"),
         serde_json::to_string_pretty(run)?,
     )?;
+    let checkpoint = build_checkpoint(artifacts_dir, run)?;
+    fs::write(
+        artifacts_dir.join("checkpoint.json"),
+        serde_json::to_string_pretty(&checkpoint)?,
+    )?;
     Ok(())
+}
+
+pub fn build_checkpoint(
+    artifacts_dir: &Path,
+    run: &CouncilRunRecord,
+) -> Result<CouncilRunCheckpoint> {
+    let current_stage_index = run
+        .stages
+        .iter()
+        .position(|stage| stage.status != "succeeded")
+        .unwrap_or(run.stages.len());
+    let stages_completed = run
+        .stages
+        .iter()
+        .filter(|stage| stage.status == "succeeded")
+        .map(|stage| CouncilCompletedStage {
+            stage_name: stage.stage.clone(),
+            output_path: stage.output_path.clone(),
+            outcome: stage.status.clone(),
+            duration_ms: stage
+                .attempts
+                .last()
+                .and_then(|attempt| attempt.duration_ms)
+                .unwrap_or_default(),
+            summary: stage.summary.clone(),
+        })
+        .collect::<Vec<_>>();
+    let context_payload = load_context_payload(artifacts_dir)?;
+    let convergence_state = run
+        .convergence
+        .as_ref()
+        .map_or_else(|| "unknown".to_string(), |record| record.status.clone());
+
+    Ok(CouncilRunCheckpoint {
+        run_id: run.run_id.clone(),
+        task: run.task.clone(),
+        created_at: run.created_at.clone(),
+        last_modified: run.updated_at.clone(),
+        current_stage_index,
+        stages_completed,
+        convergence_state,
+        status: run.status.clone(),
+        status_reason: run.status_reason.clone(),
+        context_payload,
+        schema_version: CONTEXT_PAYLOAD_SCHEMA_VERSION,
+    })
+}
+
+pub fn load_context_payload(artifacts_dir: &Path) -> Result<Option<serde_json::Value>> {
+    let payload_path = artifacts_dir.join("payload.json");
+    if !payload_path.exists() {
+        return Ok(None);
+    }
+    let payload = fs::read_to_string(&payload_path)?;
+    let value = serde_json::from_str::<serde_json::Value>(&payload)?;
+    Ok(Some(value))
 }
 
 pub fn append_trace_record(
@@ -153,6 +217,9 @@ pub fn validate_run_artifacts(artifacts_dir: &Path, run: &CouncilRunRecord) -> V
     }
     if !Path::new(&run.context_json_path).exists() {
         errors.push("missing context.json artifact".to_string());
+    }
+    if !artifacts_dir.join("checkpoint.json").exists() {
+        errors.push("missing checkpoint.json".to_string());
     }
     if !artifacts_dir.join("convergence.json").exists() {
         errors.push("missing convergence.json".to_string());
