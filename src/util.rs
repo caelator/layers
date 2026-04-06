@@ -28,9 +28,9 @@ pub fn compact(text: &str, limit: usize) -> String {
 pub fn parse_targets(raw: Option<&str>) -> Vec<String> {
     raw.unwrap_or_default()
         .split(',')
-        .map(|s| s.trim())
+        .map(str::trim)
         .filter(|s| !s.is_empty())
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .collect()
 }
 

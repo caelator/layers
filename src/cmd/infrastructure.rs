@@ -216,7 +216,7 @@ fn setup_ssh(cfg: &mut InfraConfig) -> Result<()> {
         key,
         provider: if provider.is_empty() { None } else { Some(provider) },
     });
-    println!("Added SSH host: {}", alias);
+    println!("Added SSH host: {alias}");
     Ok(())
 }
 
@@ -229,9 +229,9 @@ fn setup_provider(cfg: &mut InfraConfig, name: &str, label: &str, _is_api: bool)
         api_token: Some(token),
         api_secret: None,
         account_id: None,
-        extra: Default::default(),
+        extra: HashMap::default(),
     });
-    println!("Saved {} credentials.", name);
+    println!("Saved {name} credentials.");
     Ok(())
 }
 
@@ -246,7 +246,7 @@ fn setup_cloudflare(cfg: &mut InfraConfig) -> Result<()> {
         api_token: Some(token),
         api_secret: None,
         account_id: Some(account),
-        extra: Default::default(),
+        extra: HashMap::default(),
     });
     println!("Saved Cloudflare credentials.");
     Ok(())
@@ -262,7 +262,7 @@ fn setup_github(cfg: &mut InfraConfig) -> Result<()> {
         api_token: Some(token),
         api_secret: None,
         account_id: None,
-        extra: Default::default(),
+        extra: HashMap::default(),
     };
     if !secret.is_empty() {
         p.extra.insert("webhook_secret".into(), secret);
@@ -325,7 +325,7 @@ fn handle_ssh(cmd: &SshCommands) -> Result<()> {
                 provider: provider.clone(),
             });
             save_cfg(&cfg)?;
-            println!("Added SSH host: {} → {}", alias, connection);
+            println!("Added SSH host: {alias} → {connection}");
         }
         SshCommands::List => {
             if cfg.ssh.is_empty() {
@@ -339,9 +339,9 @@ fn handle_ssh(cmd: &SshCommands) -> Result<()> {
         SshCommands::Remove { alias } => {
             if cfg.ssh.remove(alias).is_some() {
                 save_cfg(&cfg)?;
-                println!("Removed SSH host: {}", alias);
+                println!("Removed SSH host: {alias}");
             } else {
-                println!("SSH host not found: {}", alias);
+                println!("SSH host not found: {alias}");
             }
         }
     }
@@ -427,7 +427,7 @@ fn list_providers() -> Result<()> {
     }
     if !cfg.ssh.is_empty() {
         any = true;
-        for (alias, _) in &cfg.ssh {
+        for alias in cfg.ssh.keys() {
             println!("  ssh:{alias}: ✓ configured");
         }
     }
@@ -496,8 +496,11 @@ fn test_connections() -> Result<()> {
 fn rand_secret() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
     let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
-    let pid = std::process::id() as u64;
-    format!("{:016X}{:016X}", now.as_nanos() as u64, pid.wrapping_mul(0xF00D_CAFE))
+    // Lower 64 bits of nanosecond timestamp — truncation is intentional for ID generation.
+    #[allow(clippy::cast_possible_truncation)]
+    let nanos_lower = now.as_nanos() as u64;
+    let pid = u64::from(std::process::id());
+    format!("{:016X}{:016X}", nanos_lower, pid.wrapping_mul(0xF00D_CAFE))
 }
 
 fn test_url(cfg: &ProviderConfig, url: &str, _auth_header: &str) -> Result<()> {

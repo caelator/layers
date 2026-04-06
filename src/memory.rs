@@ -60,7 +60,7 @@ pub fn retrieve_recent(per_store_limit: usize) -> Result<Vec<MemoryRecord>> {
             let (entity, text) = extract_curated_text(&record);
             if !text.is_empty() {
                 out.push(MemoryRecord {
-                    source: format!("curated/{}", entity),
+                    source: format!("curated/{entity}"),
                     timestamp: String::new(),
                     text: compact(text, 200),
                     relevance: 0,
@@ -103,7 +103,7 @@ fn scan_all_stores(score_fn: impl Fn(&str) -> usize) -> Result<Vec<MemoryRecord>
                 continue;
             }
             out.push(MemoryRecord {
-                source: format!("curated/{}", entity),
+                source: format!("curated/{entity}"),
                 timestamp: String::new(),
                 text: compact(text, 200),
                 relevance: score_fn(text),
@@ -121,12 +121,12 @@ fn extract_spine_text(record: &serde_json::Value) -> &str {
         .or_else(|| record.get("task"))
         .or_else(|| record.get("plan_markdown"))
         .and_then(|v| v.as_str())
-        .map(|s| s.trim())
+        .map(str::trim)
         .filter(|s| !s.is_empty())
         .unwrap_or_default()
 }
 
-/// Extract (entity, summary_text) from a curated memory record.
+/// Extract (entity, `summary_text`) from a curated memory record.
 fn extract_curated_text(record: &serde_json::Value) -> (&str, &str) {
     let entity = record
         .get("entity")
@@ -136,7 +136,7 @@ fn extract_curated_text(record: &serde_json::Value) -> (&str, &str) {
         .get("payload")
         .and_then(|p| p.get("summary").or_else(|| p.get("title")))
         .and_then(|v| v.as_str())
-        .map(|s| s.trim())
+        .map(str::trim)
         .filter(|s| !s.is_empty())
         .unwrap_or_default();
     (entity, text)

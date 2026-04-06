@@ -85,7 +85,7 @@ pub fn handle_council_run(
     Ok(())
 }
 
-/// Gather context by calling MemoryPort and GitNexus directly.
+/// Gather context by calling `MemoryPort` and `GitNexus` directly.
 /// No routing heuristics — just retrieve from both and concatenate.
 fn gather_context(task: &str) -> Result<String> {
     let mut sections = Vec::new();
@@ -238,7 +238,7 @@ pub fn council_promotion_record(
     };
 
     Ok(ProjectRecord {
-        id: format!("cm_decision_council_{}", slug),
+        id: format!("cm_decision_council_{slug}"),
         entity: "decision".to_string(),
         project: project.to_string(),
         task: None,
@@ -276,13 +276,12 @@ pub(crate) fn council_command(stage: &str, explicit: Option<String>) -> Result<S
         "gemini" => "LAYERS_COUNCIL_GEMINI_CMD",
         "claude" => "LAYERS_COUNCIL_CLAUDE_CMD",
         "codex" => "LAYERS_COUNCIL_CODEX_CMD",
-        _ => anyhow::bail!("unsupported council stage: {}", stage),
+        _ => anyhow::bail!("unsupported council stage: {stage}"),
     };
     use anyhow::Context;
     std::env::var(env_key).with_context(|| {
         format!(
-            "{} not set; pass --{}-cmd or set the environment variable",
-            env_key, stage
+            "{env_key} not set; pass --{stage}-cmd or set the environment variable"
         )
     })
 }

@@ -1,7 +1,7 @@
 //! `layers feedback` — record a route correction.
 //!
 //! Usage:
-//!   layers feedback "task text" --predicted memory_only --actual graph_only
+//!   layers feedback "task text" --predicted `memory_only` --actual `graph_only`
 //!   layers feedback "task text" --predicted both --actual neither
 //!
 //! Corrections are written to ~/.layers/route-corrections.jsonl and used

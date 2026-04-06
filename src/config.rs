@@ -48,7 +48,7 @@ pub fn council_files() -> Vec<(&'static str, PathBuf)> {
 }
 
 /// Timeout in milliseconds before falling back from `uc` to local JSONL.
-/// Override with LAYERS_UC_TIMEOUT_MS.
+/// Override with `LAYERS_UC_TIMEOUT_MS`.
 pub fn uc_timeout_ms() -> u64 {
     std::env::var("LAYERS_UC_TIMEOUT_MS")
         .ok()
@@ -58,7 +58,7 @@ pub fn uc_timeout_ms() -> u64 {
 
 /// Minimum results from `uc` to consider the retrieval successful.
 /// If fewer are returned, local JSONL gets boosted.
-/// Override with LAYERS_UC_MIN_RESULTS.
+/// Override with `LAYERS_UC_MIN_RESULTS`.
 pub fn uc_min_results() -> usize {
     std::env::var("LAYERS_UC_MIN_RESULTS")
         .ok()
@@ -66,7 +66,7 @@ pub fn uc_min_results() -> usize {
         .unwrap_or(1)
 }
 
-/// Current schema version for ContextPayload.
+/// Current schema version for `ContextPayload`.
 pub const CONTEXT_PAYLOAD_SCHEMA_VERSION: u32 = 2;
 
 fn dirs_home() -> PathBuf {

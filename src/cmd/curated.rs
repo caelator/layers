@@ -10,7 +10,7 @@ use crate::util::{append_jsonl, compact, iso_now, load_jsonl};
 pub fn handle_curated_import(file: &str) -> Result<()> {
     let path = Path::new(file);
     if !path.exists() {
-        anyhow::bail!("file not found: {}", file);
+        anyhow::bail!("file not found: {file}");
     }
     let (imported, skipped, errors) = import_curated_memory(path)?;
     let ok = errors == 0;
@@ -26,7 +26,7 @@ pub fn handle_curated_import(file: &str) -> Result<()> {
         }))?
     );
     if !ok {
-        anyhow::bail!("{} records failed to parse", errors);
+        anyhow::bail!("{errors} records failed to parse");
     }
     Ok(())
 }
@@ -36,7 +36,7 @@ fn import_curated_memory(path: &Path) -> Result<(usize, usize, usize)> {
     let existing = load_jsonl(&canonical_curated_memory_path())?;
     let mut existing_keys: std::collections::BTreeSet<String> = existing
         .iter()
-        .filter_map(|r| r.get("id").and_then(|v| v.as_str()).map(|s| s.to_string()))
+        .filter_map(|r| r.get("id").and_then(serde_json::Value::as_str).map(std::string::ToString::to_string))
         .collect();
 
     let mut imported = 0;
@@ -47,26 +47,17 @@ fn import_curated_memory(path: &Path) -> Result<(usize, usize, usize)> {
         if line.trim().is_empty() {
             continue;
         }
-        let parsed: Value = match serde_json::from_str(line) {
-            Ok(v) => v,
-            Err(_) => {
-                errors += 1;
-                continue;
-            }
+        let parsed: Value = if let Ok(v) = serde_json::from_str(line) { v } else {
+            errors += 1;
+            continue;
         };
-        let import: CuratedImportRecord = match serde_json::from_value(parsed) {
-            Ok(v) => v,
-            Err(_) => {
-                errors += 1;
-                continue;
-            }
+        let import: CuratedImportRecord = if let Ok(v) = serde_json::from_value(parsed) { v } else {
+            errors += 1;
+            continue;
         };
-        let record = match curated_import_to_record(import) {
-            Ok(record) => record,
-            Err(_) => {
-                errors += 1;
-                continue;
-            }
+        let Ok(record) = curated_import_to_record(import) else {
+            errors += 1;
+            continue;
         };
         if !existing_keys.insert(record.id.clone()) {
             skipped += 1;
@@ -85,8 +76,7 @@ pub(crate) fn curated_import_to_record(import: CuratedImportRecord) -> Result<Pr
     let entity = match import.kind.as_str() {
         "decision" | "constraint" | "next_step" | "postmortem" => import.kind.as_str(),
         other => anyhow::bail!(
-            "unsupported curated import kind: {}. Valid kinds: decision, constraint, next_step, postmortem",
-            other
+            "unsupported curated import kind: {other}. Valid kinds: decision, constraint, next_step, postmortem"
         ),
     };
     let slug = import
@@ -99,7 +89,7 @@ pub(crate) fn curated_import_to_record(import: CuratedImportRecord) -> Result<Pr
         .collect::<Vec<_>>()
         .join("-")
         .to_lowercase();
-    let id = format!("cm_{}_{}", entity, slug);
+    let id = format!("cm_{entity}_{slug}");
     let payload = match entity {
         "decision" => ProjectRecordPayload::Decision(Decision {
             slug: slug.clone(),
