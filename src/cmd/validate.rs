@@ -102,7 +102,7 @@ pub fn handle_validate(routing_benchmarks: Option<String>, ci: bool) -> Result<(
 pub fn run_routing_benchmarks(file: &str) -> Result<Value> {
     let path = Path::new(file);
     if !path.exists() {
-        anyhow::bail!("benchmark file not found: {}", file);
+        anyhow::bail!("benchmark file not found: {file}");
     }
     let lines = fs::read_to_string(path)?;
     let mut total = 0u32;
@@ -136,7 +136,7 @@ pub fn run_routing_benchmarks(file: &str) -> Result<Value> {
         let confidence_match = case
             .get("expected_confidence")
             .and_then(serde_json::Value::as_str)
-            .map_or(true, |ec| result.confidence.to_string() == ec);
+            .map_or(true, |ec| ec == result.confidence.to_string());
 
         total += 1;
         if route_match && confidence_match {

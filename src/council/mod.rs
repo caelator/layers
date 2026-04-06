@@ -55,12 +55,11 @@ pub fn execute_council_run(request: CouncilRunRequest) -> Result<CouncilRunRecor
     // Write versioned context payload if provided
     if let Some(payload) = &request.context_payload {
         // Validate schema version
-        if let Some(v) = payload.get("schema_version").and_then(serde_json::Value::as_u64) {
-            if !u32::try_from(v).is_ok_and(|v64| v64 == CONTEXT_PAYLOAD_SCHEMA_VERSION) {
+        if let Some(found_version) = payload.get("schema_version").and_then(serde_json::Value::as_u64) {
+            if !u32::try_from(found_version).is_ok_and(|v64| v64 == CONTEXT_PAYLOAD_SCHEMA_VERSION) {
                 anyhow::bail!(
-                    "unsupported context payload schema version: {} (expected {})",
-                    v,
-                    CONTEXT_PAYLOAD_SCHEMA_VERSION
+                    "unsupported context payload schema version: {found_version} (expected {VERSION})",
+                    VERSION = CONTEXT_PAYLOAD_SCHEMA_VERSION
                 );
             }
         }

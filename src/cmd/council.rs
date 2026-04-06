@@ -386,6 +386,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(unsafe_code)]
     fn council_command_falls_back_to_env() {
         unsafe {
             std::env::set_var("LAYERS_COUNCIL_GEMINI_CMD", "gemini-cli");
@@ -398,6 +399,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(unsafe_code)]
     fn council_command_fails_without_env_or_explicit() {
         unsafe {
             std::env::remove_var("LAYERS_COUNCIL_CODEX_CMD");

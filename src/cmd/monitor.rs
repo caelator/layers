@@ -285,8 +285,8 @@ fn check_remote_sync(dir: &PathBuf, name: &str) -> Result<()> {
             spawn_fix_subagent(
                 &format!("rebase-{name}"),
                 &format!(
-                    "Fix rebase conflict in {name}:\ngit status to see the conflict files,\nresolve with git add/rm, then git rebase --continue",
-                    name = name
+                    "Fix rebase conflict in {}:\ngit status to see the conflict files,\nresolve with git add/rm, then git rebase --continue",
+                    name
                 ),
             )?;
         } else {

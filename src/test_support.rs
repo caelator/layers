@@ -30,6 +30,7 @@ pub struct TestWorkspace {
 }
 
 impl TestWorkspace {
+    #[allow(unsafe_code)]
     pub fn new(name: &str) -> Self {
         let guard = workspace_guard();
         let root = std::env::temp_dir().join(format!(
@@ -61,6 +62,7 @@ impl TestWorkspace {
 }
 
 impl Drop for TestWorkspace {
+    #[allow(unsafe_code)]
     fn drop(&mut self) {
         if let Some(value) = &self.original_root {
             unsafe {
@@ -84,6 +86,7 @@ extern "C" fn usr1_handler(_sig: libc::c_int) {
 }
 
 /// Register `SIGUSR1` handler that sets the global `SIGNALED` flag.
+#[allow(unsafe_code)]
 pub fn set_usr1_handler() -> io::Result<()> {
     unsafe {
         let mut act: libc::sigaction = std::mem::zeroed();
@@ -137,6 +140,7 @@ pub fn wait_child_timeout(child: &mut Child, timeout: Duration) -> ChildResult {
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 #[test]
+#[allow(unsafe_code)]
 fn usr1_handler_sets_flag() {
     assert!(!SIGNALED.load(Ordering::SeqCst));
 

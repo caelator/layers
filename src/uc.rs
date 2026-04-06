@@ -193,6 +193,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(unsafe_code)]
     fn retrieve_with_opts_passes_timeout_and_returns_lines() {
         // Smoke-test: use a tiny shell script as a fake `uc` binary.
         // If real `uc` is on PATH we skip — the mock cannot shadow it without
@@ -280,6 +281,7 @@ mod tests {
 
     /// UC returns fewer than min_results → fallback, not success.
     #[test]
+    #[allow(unsafe_code)]
     fn retrieve_falls_back_when_below_min_results() {
         if which("uc") {
             return; // skip if real uc is on PATH
@@ -323,6 +325,7 @@ mod tests {
 
     /// UC returns garbage/malformed output → treated as success with empty lines.
     #[test]
+    #[allow(unsafe_code)]
     fn retrieve_handles_garbage_output_without_crashing() {
         if which("uc") {
             return;
@@ -364,6 +367,7 @@ mod tests {
 
     /// UC config file missing → falls back gracefully.
     #[test]
+    #[allow(unsafe_code)]
     fn retrieve_falls_back_when_config_missing() {
         if which("uc") {
             return;

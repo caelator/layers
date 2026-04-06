@@ -98,7 +98,8 @@ pub fn execute_stage(
         };
 
         let finished_at = iso_now();
-        let duration_ms = started.elapsed().as_millis() as u64;
+        let duration_ms = started.elapsed().as_millis() as u64
+        /* #[allow(clippy::cast_possible_truncation)] */;
         let stdout = fs::read_to_string(&stdout_path).unwrap_or_default();
         let stderr = fs::read_to_string(&stderr_path).unwrap_or_default();
 

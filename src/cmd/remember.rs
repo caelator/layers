@@ -48,8 +48,7 @@ pub fn handle_remember(
             })
         }
         _ => anyhow::bail!(
-            "unsupported kind: {}. Valid kinds: plan, learning, trace",
-            kind
+            "unsupported kind: {kind}. Valid kinds: plan, learning, trace",
         ),
     };
     let path = match kind {
