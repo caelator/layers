@@ -206,13 +206,13 @@ enum CouncilCommands {
     Run {
         /// The task or question to deliberate on.
         task: String,
-        /// Command to invoke Gemini (overrides LAYERS_COUNCIL_GEMINI_CMD).
+        /// Command to invoke Gemini (overrides `LAYERS_COUNCIL_GEMINI_CMD`).
         #[arg(long)]
         gemini_cmd: Option<String>,
-        /// Command to invoke Claude (overrides LAYERS_COUNCIL_CLAUDE_CMD).
+        /// Command to invoke Claude (overrides `LAYERS_COUNCIL_CLAUDE_CMD`).
         #[arg(long)]
         claude_cmd: Option<String>,
-        /// Command to invoke Codex (overrides LAYERS_COUNCIL_CODEX_CMD).
+        /// Command to invoke Codex (overrides `LAYERS_COUNCIL_CODEX_CMD`).
         #[arg(long)]
         codex_cmd: Option<String>,
         /// Per-stage timeout in seconds.

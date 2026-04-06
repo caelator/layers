@@ -45,7 +45,6 @@ pub fn handle_monitor(args: &MonitorArgs) -> Result<()> {
 // ─── Paths ────────────────────────────────────────────────────────────────────
 
 /// Returns the layers root directory (~/.layers).
-    
     fn layers_root() -> PathBuf {
     std::env::var_os("HOME")
         .map(PathBuf::from)
@@ -54,7 +53,6 @@ pub fn handle_monitor(args: &MonitorArgs) -> Result<()> {
 }
 
 /// Returns the repos directory (~/Documents/GitHub).
-    
     fn repos_dir() -> PathBuf {
     std::env::var_os("HOME")
         .map(PathBuf::from)

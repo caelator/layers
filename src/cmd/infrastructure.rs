@@ -480,7 +480,7 @@ fn test_connections() -> Result<()> {
             }
         };
         match result {
-            Ok(_) => println!("  ✓ {name}"),
+            Ok(()) => println!("  ✓ {name}"),
             Err(e) => println!("  ✗ {name}: {e}"),
         }
     }
