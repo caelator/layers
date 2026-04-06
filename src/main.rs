@@ -37,6 +37,7 @@ mod test_support;
 mod types;
 mod util;
 
+mod plugins;
 mod router;
 mod uc;
 
@@ -45,6 +46,7 @@ use cmd::curated::handle_curated_import;
 use cmd::feedback::handle_feedback;
 use cmd::infrastructure::{InfrastructureArgs, handle_infrastructure};
 use cmd::monitor::handle_monitor;
+use cmd::telemetry::{handle_telemetry, TelemetryCommands};
 use cmd::query::handle_query;
 use cmd::refresh::handle_refresh;
 use cmd::remember::handle_remember;
@@ -139,6 +141,11 @@ enum Commands {
     Monitor {
         #[command(subcommand)]
         command: cmd::monitor::MonitorArgs,
+    },
+    /// View integration telemetry and health reports.
+    Telemetry {
+        #[command(subcommand)]
+        command: TelemetryCommands,
     },
 }
 
@@ -256,6 +263,7 @@ enum CouncilCommands {
         json: bool,
     },
 }
+
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
@@ -377,5 +385,6 @@ fn main() -> anyhow::Result<()> {
             handle_infrastructure(&args)
         }
         Commands::Monitor { command } => handle_monitor(&command),
+        Commands::Telemetry { command } => handle_telemetry(&command),
     }
 }
