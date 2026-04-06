@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::PathBuf;
+use std::sync::{Mutex, OnceLock};
 
 /// A single route correction record.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,46 +65,42 @@ pub fn record_correction(correction: &RouteCorrection) -> std::io::Result<()> {
         std::fs::create_dir_all(parent)?;
     }
     let line = serde_json::to_string(correction)?;
-    std::fs::OpenOptions::new()
+    let mut file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open(&path)?
-        .write_all(line.as_bytes())?;
-    std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&path)?
-        .write_all(b"\n")?;
+        .open(&path)?;
+    // Write the full record + newline in a single atomic write to avoid
+    // leaving a partial line in the JSONL if the process crashes mid-write.
+    writeln!(file, "{line}")?;
     Ok(())
 }
 
-/// In-memory correction cache — populated once per process from the JSONL file.
-static CORRECTION_CACHE: std::sync::OnceLock<HashMap<(Route, Route), usize>> =
-    std::sync::OnceLock::new();
+/// In-memory correction cache — populated once per process from the JSONL file
+/// and reloadable after feedback is recorded.
+static CORRECTION_CACHE: OnceLock<Mutex<HashMap<(Route, Route), usize>>> = OnceLock::new();
 
-fn load_correction_cache() -> &'static HashMap<(Route, Route), usize> {
-    CORRECTION_CACHE.get_or_init(|| {
-        let corrections = load_corrections();
-        let mut counts: HashMap<(Route, Route), usize> = HashMap::new();
-        for c in corrections {
-            *counts.entry((c.predicted, c.actual)).or_insert(0) += 1;
-        }
-        counts
-    })
+fn build_correction_cache() -> HashMap<(Route, Route), usize> {
+    let corrections = load_corrections();
+    let mut counts: HashMap<(Route, Route), usize> = HashMap::new();
+    for c in corrections {
+        *counts.entry((c.predicted, c.actual)).or_insert(0) += 1;
+    }
+    counts
+}
+
+fn correction_cache() -> &'static Mutex<HashMap<(Route, Route), usize>> {
+    CORRECTION_CACHE.get_or_init(|| Mutex::new(build_correction_cache()))
 }
 
 /// Force a reload of the correction cache from disk.
 /// Call this after [`record_correction`] so the next [`classify()`] picks up the change.
 #[allow(dead_code)]
 pub fn reload_corrections() {
-    let _ = CORRECTION_CACHE.set({
-        let corrections = load_corrections();
-        let mut counts: HashMap<(Route, Route), usize> = HashMap::new();
-        for c in corrections {
-            *counts.entry((c.predicted, c.actual)).or_insert(0) += 1;
-        }
-        counts
-    });
+    let fresh = build_correction_cache();
+    match correction_cache().lock() {
+        Ok(mut cache) => *cache = fresh,
+        Err(poisoned) => *poisoned.into_inner() = fresh,
+    }
 }
 
 /// Heuristic routing algorithm for Layers query.
@@ -190,6 +187,9 @@ const HISTORICAL_SIGNALS: &[&str] = &[
     "back when",
     "last session",
     "recall",
+    "concluded",
+    "summarize",
+    "retry",
 ];
 
 const STRUCTURAL_SIGNALS: &[&str] = &[
@@ -212,6 +212,12 @@ const STRUCTURAL_SIGNALS: &[&str] = &[
     "callee",
     "symbol",
     "flow",
+    "trace",
+    "tree",
+    "diagram",
+    "configuration",
+    "service architecture",
+    "error handling",
 ];
 
 const LOCAL_SIGNALS: &[&str] = &[
@@ -243,6 +249,9 @@ const ACTION_SIGNALS: &[&str] = &[
     "add",
     "fix",
     "update",
+    "deploy",
+    "run",
+    "generate",
 ];
 
 const HISTORICAL_NEGATIONS: &[&str] = &[
@@ -322,18 +331,23 @@ pub fn classify(task: &str) -> RouteResult {
 /// This has the effect of gradually adjusting route decisions when the same
 /// pattern keeps getting corrected.
 fn apply_correction_bias(scores: &mut Scores) {
+    let correction_counts = match correction_cache().lock() {
+        Ok(cache) => cache.clone(),
+        Err(poisoned) => poisoned.into_inner().clone(),
+    };
+
     // Short-circuit if there are no corrections yet.
-    if load_correction_cache().is_empty() {
+    if correction_counts.is_empty() {
         return;
     }
 
     // For every (predicted → actual) correction on record, apply demotion/boost.
     // We do this per-correction-entry so a pattern corrected N times gets N× demotion.
-    for ((predicted, actual), &count) in load_correction_cache() {
-        if count == 0 {
+    for ((predicted, actual), count) in &correction_counts {
+        if *count == 0 {
             continue;
         }
-        let weight = (count as f64 * 0.15).min(0.6); // 15% per correction, cap at 60%
+        let weight = (*count as f64 * 0.15).min(0.6); // 15% per correction, cap at 60%
 
         // Demote the predicted route signals (predicted is &Route)
         match *predicted {
@@ -402,12 +416,12 @@ fn determine_route(s: &Scores) -> (Route, Confidence, String, String) {
         );
     }
 
-    if s.historical >= 2 && s.structural >= 2 && s.action >= 1 {
+    if s.historical >= 2 && s.structural >= 1 && s.action >= 1 {
         return (
             Route::Both,
             Confidence::High,
             format!(
-                "Moderate historical ({}) and structural ({}) signals with action intent ({})",
+                "Historical ({}) and structural ({}) signals reinforced by action intent ({})",
                 s.historical, s.structural, s.action
             ),
             String::new(),
@@ -549,5 +563,46 @@ mod tests {
         );
         assert_eq!(result.route, Route::Neither);
         assert_eq!(result.confidence, Confidence::Low);
+    }
+
+    #[test]
+    fn borderline_history_question_stays_refusal_biased() {
+        let result = classify("What did we already decide about Layers?");
+        assert_eq!(result.route, Route::MemoryOnly);
+        assert_eq!(result.confidence, Confidence::Low);
+    }
+
+    #[test]
+    fn previously_agreed_summary_routes_memory() {
+        let result = classify("summarize the previously agreed approach for handling auth tokens");
+        assert_eq!(result.route, Route::MemoryOnly);
+        assert_eq!(result.confidence, Confidence::High);
+    }
+
+    #[test]
+    fn deploying_prior_service_architecture_routes_both() {
+        let result = classify("deploy the previously agreed service architecture to production");
+        assert_eq!(result.route, Route::Both);
+        assert_eq!(result.confidence, Confidence::High);
+    }
+
+    #[test]
+    fn reload_corrections_refreshes_existing_cache() {
+        let ws = crate::test_support::TestWorkspace::new("router-reload-corrections");
+        let _ = ws.root();
+
+        let initial = classify("hello");
+        assert_eq!(initial.route, Route::Neither);
+
+        let correction =
+            RouteCorrection::new("hello".to_string(), Route::Neither, Route::MemoryOnly);
+        record_correction(&correction).unwrap();
+        reload_corrections();
+
+        let cache = match correction_cache().lock() {
+            Ok(cache) => cache.clone(),
+            Err(poisoned) => poisoned.into_inner().clone(),
+        };
+        assert_eq!(cache.get(&(Route::Neither, Route::MemoryOnly)), Some(&1));
     }
 }
