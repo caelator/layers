@@ -17,3 +17,7 @@ memoryport/council-runs/
 # Infrastructure credentials (secrets)
 infrastructure/infrastructure.json
 .layers/infrastructure.json
+# Test artifacts
+layers_load_test_*
+layers_telemetry_test_*
+layers_new_test_*
