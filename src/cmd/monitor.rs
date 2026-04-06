@@ -146,6 +146,10 @@ fn record_finding(severity: Severity, repo: &str, msg: &str) {
 /// Acquires an exclusive flock lock on the lock file.
 /// Returns the locked file descriptor (kept open to hold the lock).
 /// Exits the process if the lock is held by another process.
+// SAFETY: flock is the only viable file-locking mechanism on BSD/macOS.
+// The file descriptor is held for the duration of the process and only used
+// for kernel-level advisory locking — no other unsafe behavior flows from this call.
+#[allow(unsafe_code)]
 fn acquire_lock() -> Result<File> {
     let lock_path = lock_file();
     fs::create_dir_all(lock_path.parent().unwrap())?;

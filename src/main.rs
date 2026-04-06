@@ -1,4 +1,19 @@
-use anyhow::Result;
+#![deny(warnings)]
+#![deny(clippy::all)]
+#![deny(clippy::pedantic)]
+#![deny(unsafe_op_in_unsafe_fn)]
+#![deny(unused_variables)]
+#![deny(unused_must_use)]
+#![deny(unreachable_pub)]
+#![deny(elided_lifetimes_in_paths)]
+#![warn(missing_docs)]
+
+// Binary crate — all items are pub for internal clarity but not exported as a library.
+#![allow(unreachable_pub)]
+
+//! Layers — council orchestrator and memory spine for multi-model AI workflows.
+
+
 use clap::{Parser, Subcommand};
 
 mod cmd;
@@ -235,7 +250,7 @@ enum CouncilCommands {
     },
 }
 
-fn main() -> Result<()> {
+fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Commands::Query {

@@ -23,3 +23,10 @@ wait-timeout = "0.2"
 
 [dev-dependencies]
 libc = "0.2"
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = "deny"
+pedantic = "deny"
