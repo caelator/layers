@@ -245,7 +245,7 @@ fn check_remote_sync(dir: &PathBuf, name: &str) -> Result<()> {
         .current_dir(dir)
         .output();
 
-    if fetch.as_ref().is_err() || !fetch.as_ref().ok().map_or(false, |o| o.status.success()) {
+    if !fetch.as_ref().is_ok_and(|o| o.status.success()) {
         log(&format!("git fetch failed for {name}"));
         return Ok(());
     }
@@ -276,7 +276,7 @@ fn check_remote_sync(dir: &PathBuf, name: &str) -> Result<()> {
             .current_dir(dir)
             .output();
 
-        if rebase.as_ref().is_err() || !rebase.as_ref().ok().map_or(false, |o| o.status.success()) {
+        if rebase.as_ref().map_or(true, |o| !o.status.success()) {
             log(&format!("Rebase conflict: {name} - spawning fix subagent"));
             record_finding(
                 Severity::Critical,
@@ -351,25 +351,51 @@ fn check_build_and_tests(dir: &PathBuf, name: &str) -> Result<()> {
     if test_ok {
         log(&format!("Tests passed: {name}"));
     } else {
-        let failed = parse_test_failures(&test.as_ref().ok().map_or_else(Vec::new, |o| o.stdout.clone()));
-        log(&format!("Test failures in {name}: {} tests failed", failed.len()));
-        record_finding(
-            Severity::Warning,
-            name,
-            &format!("Test failures in {}: {} tests failed", dir.as_path().display(), failed.len()),
-        );
-        spawn_fix_subagent(
-            &format!("tests-{name}"),
-            &format!(
-                "Fix failing tests in {}:\n\
-                 cargo test 2>&1 to see all failures\n\
-                 Read failing test code and fix the underlying code\n\
-                 Do NOT change tests unless the test itself is wrong\n\
-                 Run cargo test to verify all pass\n\
-                 Commit and push if all pass",
-                dir.display()
-            ),
-        )?;
+        let stdout = test.as_ref().ok().map_or(&[] as &[u8], |o| o.stdout.as_slice());
+        let stderr = test.as_ref().ok().map_or(&[] as &[u8], |o| o.stderr.as_slice());
+        let failed = parse_test_failures(stdout);
+        let build_errors = parse_build_errors(stderr);
+        if !failed.is_empty() {
+            log(&format!("Test failures in {name}: {} tests failed", failed.len()));
+            record_finding(
+                Severity::Warning,
+                name,
+                &format!("Test failures in {}: {} tests failed", dir.as_path().display(), failed.len()),
+            );
+            spawn_fix_subagent(
+                &format!("tests-{name}"),
+                &format!(
+                    "Fix failing tests in {dir}:\n\
+                     cargo test 2>&1 to see all failures\n\
+                     Read failing test code and fix the underlying code\n\
+                     Do NOT change tests unless the test itself is wrong\n\
+                     Run cargo test to verify all pass\n\
+                     Commit and push if all pass",
+                    dir = dir.display().to_string()
+                ),
+            )?;
+        } else if !build_errors.is_empty() {
+            log(&format!("Test compilation errors in {name}: {} errors", build_errors.len()));
+            record_finding(
+                Severity::Warning,
+                name,
+                &format!("Test compilation errors in {}: {} errors", dir.as_path().display(), build_errors.len()),
+            );
+            spawn_fix_subagent(
+                &format!("tests-{name}"),
+                &format!(
+                    "Fix test compilation errors in {dir}:\n\
+                     cargo build --tests 2>&1 to see all errors\n\
+                     Apply minimal fixes\n\
+                     Run cargo test to verify all pass\n\
+                     Commit and push if all pass",
+                    dir = dir.display().to_string()
+                ),
+            )?;
+        } else {
+            // Non-zero exit but no detected failures — cargo itself may have been killed or timed out
+            log(&format!("cargo test exited non-zero for {name} with no parsed errors"));
+        }
     }
     Ok(())
 }
