@@ -29,7 +29,6 @@ use std::env;
 use std::io::{Read, Write as IoWrite};
 use std::path::PathBuf;
 
-
 pub use schema::{SentryEvent, SentryIssue, SentryIssueSummary, SeverityLevel};
 
 use crate::config::memoryport_dir;
@@ -336,33 +335,52 @@ impl SentryPlugin {
     }
 
     /// Classify from issue title — avoids expensive event-detail API call.
-    fn classify_issue_from_title(
-        title: &str,
-        issue: &SentryIssueSummary,
-    ) -> IssueClassification {
+    fn classify_issue_from_title(title: &str, issue: &SentryIssueSummary) -> IssueClassification {
         use IssueClassification::{NeedsCouncil, SelfHealable};
 
         let title_lower = title.to_lowercase();
         let err_value = issue.metadata.value.as_deref().unwrap_or("").to_lowercase();
 
         // Connection/timeout → restart (clears pools)
-        let conn = ["connection terminated", "timeout exceeded", "econnreset", "etimedout",
-            "too many connections", "could not connect", "connection refused"];
-        if conn.iter().any(|p| title_lower.contains(p) || err_value.contains(p)) {
+        let conn = [
+            "connection terminated",
+            "timeout exceeded",
+            "econnreset",
+            "etimedout",
+            "too many connections",
+            "could not connect",
+            "connection refused",
+        ];
+        if conn
+            .iter()
+            .any(|p| title_lower.contains(p) || err_value.contains(p))
+        {
             return SelfHealable(SelfHealType::RestartService);
         }
 
         // Missing native module → deployment issue → council
         let native = ["cannot find module", "@resvg/resvg-js"];
         if native.iter().any(|p| title_lower.contains(p)) {
-            return NeedsCouncil(CouncilReason::Config { message: title.to_string() });
+            return NeedsCouncil(CouncilReason::Config {
+                message: title.to_string(),
+            });
         }
 
         // Config / auth errors → council
-        let cfg = ["no active xpub", "not authenticated", "environmentvariable",
-            "missingenvvar", ".env"];
-        if cfg.iter().any(|p| title_lower.contains(p) || err_value.contains(p)) {
-            return NeedsCouncil(CouncilReason::Config { message: title.to_string() });
+        let cfg = [
+            "no active xpub",
+            "not authenticated",
+            "environmentvariable",
+            "missingenvvar",
+            ".env",
+        ];
+        if cfg
+            .iter()
+            .any(|p| title_lower.contains(p) || err_value.contains(p))
+        {
+            return NeedsCouncil(CouncilReason::Config {
+                message: title.to_string(),
+            });
         }
 
         // Rate limit → throttle
@@ -376,7 +394,10 @@ impl SentryPlugin {
             return SelfHealable(SelfHealType::PurgeCache);
         }
 
-        NeedsCouncil(CouncilReason::Unknown { title: title.to_string(), count: issue.count.clone() })
+        NeedsCouncil(CouncilReason::Unknown {
+            title: title.to_string(),
+            count: issue.count.clone(),
+        })
     }
 
     fn classification_to_signal(
