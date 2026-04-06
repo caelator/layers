@@ -8,6 +8,32 @@ use crate::router::{self, Confidence, Route};
 use crate::util::{load_jsonl, which};
 
 pub fn handle_validate(routing_benchmarks: Option<String>, ci: bool) -> Result<()> {
+    // Check council commands — configured if env var set OR binary found on PATH
+    fn council_cmd_available(stage: &str) -> bool {
+        let env_key = match stage {
+            "gemini" => "LAYERS_COUNCIL_GEMINI_CMD",
+            "claude" => "LAYERS_COUNCIL_CLAUDE_CMD",
+            "codex" => "LAYERS_COUNCIL_CODEX_CMD",
+            _ => return false,
+        };
+        if std::env::var(env_key)
+            .ok()
+            .is_some_and(|v| !v.trim().is_empty())
+        {
+            return true;
+        }
+        let candidates: &[&str] = match stage {
+            "gemini" => &["gemini", "gemini-cli"],
+            "claude" => &["claude", "claude-code"],
+            "codex" => &["codex", "opencode"],
+            _ => return false,
+        };
+        candidates.iter().any(|&c| which(c).is_some())
+    }
+    let council_configured = council_cmd_available("gemini")
+        && council_cmd_available("claude")
+        && council_cmd_available("codex");
+
     // Check JSONL stores exist
     let spine_files: Vec<_> = council_files()
         .into_iter()
@@ -28,19 +54,6 @@ pub fn handle_validate(routing_benchmarks: Option<String>, ci: bool) -> Result<(
     } else {
         0
     };
-
-    // Check council commands
-    let council_configured = [
-        "LAYERS_COUNCIL_GEMINI_CMD",
-        "LAYERS_COUNCIL_CLAUDE_CMD",
-        "LAYERS_COUNCIL_CODEX_CMD",
-    ]
-    .iter()
-    .all(|key| {
-        std::env::var(key)
-            .ok()
-            .is_some_and(|v| !v.trim().is_empty())
-    });
 
     // Check external tools
     let has_uc = which("uc").is_some() && uc_config_path().exists();

@@ -267,21 +267,43 @@ pub fn council_promotion_record(
 }
 
 pub(crate) fn council_command(stage: &str, explicit: Option<String>) -> Result<String> {
-    use anyhow::Context;
     if let Some(cmd) = explicit {
         if !cmd.trim().is_empty() {
             return Ok(cmd);
         }
     }
+
+    // Candidate binary names to try, in order of preference
+    let candidates: &[&str] = match stage {
+        "gemini" => &["gemini", "gemini-cli"],
+        "claude" => &["claude", "claude-code"],
+        "codex" => &["codex", "opencode"],
+        _ => anyhow::bail!("unsupported council stage: {stage}"),
+    };
+
+    // First: env var override
     let env_key = match stage {
         "gemini" => "LAYERS_COUNCIL_GEMINI_CMD",
         "claude" => "LAYERS_COUNCIL_CLAUDE_CMD",
         "codex" => "LAYERS_COUNCIL_CODEX_CMD",
-        _ => anyhow::bail!("unsupported council stage: {stage}"),
+        _ => unreachable!(),
     };
-    std::env::var(env_key).with_context(|| {
-        format!("{env_key} not set; pass --{stage}-cmd or set the environment variable")
-    })
+    if let Ok(cmd) = std::env::var(env_key) {
+        if !cmd.trim().is_empty() {
+            return Ok(cmd);
+        }
+    }
+
+    // Second: auto-detect from PATH
+    for &candidate in candidates {
+        if let Some(path) = crate::util::which(candidate) {
+            return Ok(path);
+        }
+    }
+
+    anyhow::bail!(
+        "{env_key} not set and '{stage}' not found on PATH; install one of {candidates:?} or set {env_key}",
+    )
 }
 
 #[cfg(test)]
@@ -398,12 +420,19 @@ mod tests {
 
     #[test]
     #[allow(unsafe_code)]
-    fn council_command_fails_without_env_or_explicit() {
+    fn council_command_falls_back_to_path_autodetect() {
+        // Remove env var — council_command should auto-detect via which() if binary is on PATH
         unsafe {
             std::env::remove_var("LAYERS_COUNCIL_CODEX_CMD");
         }
         let result = council_command("codex", None);
-        assert!(result.is_err());
+        // Succeeds because codex is on PATH; fails if binary not found
+        assert!(
+            result.is_ok(),
+            "council_command should auto-detect '{}' from PATH when env var is unset: {}",
+            "codex",
+            result.unwrap_err()
+        );
     }
 
     #[test]

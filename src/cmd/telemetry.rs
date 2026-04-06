@@ -122,12 +122,10 @@ pub fn record_query_event(params: QueryEventParams) {
         council_data: None,
     };
 
-    if let Err(e) = super::telemetry_plugin().record_routing_decision(decision) {
+    if let Err(e) = (*super::telemetry_plugin()).record_routing_decision(decision) {
         eprintln!("[telemetry] Warning: failed to record query event: {e}");
     }
 }
-
-/// Record a council run decision event to telemetry.
 #[allow(dead_code)]
 pub fn record_council_event(params: CouncilEventParams) {
     let outcome = if params.converged {
@@ -155,7 +153,7 @@ pub fn record_council_event(params: CouncilEventParams) {
         }),
     };
 
-    if let Err(e) = super::telemetry_plugin().record_routing_decision(decision) {
+    if let Err(e) = (*super::telemetry_plugin()).record_routing_decision(decision) {
         eprintln!("[telemetry] Warning: failed to record council event: {e}");
     }
 }
