@@ -153,7 +153,6 @@ impl From<&str> for SeverityLevel {
     fn from(s: &str) -> Self {
         match s {
             "fatal" => SeverityLevel::Fatal,
-            "error" => SeverityLevel::Error,
             "warning" => SeverityLevel::Warning,
             "info" => SeverityLevel::Info,
             "debug" => SeverityLevel::Debug,
@@ -165,7 +164,7 @@ impl From<&str> for SeverityLevel {
 }
 
 impl SeverityLevel {
-    pub fn is_critical(&self) -> bool {
+    pub fn is_critical(self) -> bool {
         matches!(self, SeverityLevel::Fatal | SeverityLevel::Critical | SeverityLevel::Error)
     }
 }

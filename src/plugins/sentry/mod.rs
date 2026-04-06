@@ -16,13 +16,13 @@
 //! Base URL: `https://sentry.io/api/0`
 //!
 //! Key endpoints:
-//!   GET /api/0/organizations/{org}/issues/?project={id}&statsFor=24h
-//!   GET /api/0/organizations/{org}/issues/{id}/
-//!   GET /api/0/organizations/{org}/events/{event_id}/
-//!   POST /api/0/organizations/{org}/issues/{id}/actions/resolve/
+//!   GET `/api/0/organizations/{org}/issues/?project={id}&statsFor=24h`
+//!   GET `/api/0/organizations/{org}/issues/{id}/`
+//!   GET `/api/0/organizations/{org}/events/{event_id}/`
+//!   POST `/api/0/organizations/{org}/issues/{id}/actions/resolve/`
 
+pub mod repair;
 pub mod schema;
-
 
 use std::env;
 use serde::{Deserialize, Serialize};
@@ -91,8 +91,8 @@ impl SentryConfig {
 // HTTP client
 // ---------------------------------------------------------------------------
 
-/// A minimal Sentry API client using std::http.
-/// The token is read from SENTRY_API_TOKEN env var.
+/// A minimal Sentry API client using `std::http`.
+/// The token is read from `SENTRY_API_TOKEN` env var.
 pub struct SentryClient {
     config: SentryConfig,
 }
@@ -141,7 +141,7 @@ impl SentryClient {
                 let status = resp.status();
                 let mut body = String::new();
                 resp.into_reader().read_to_string(&mut body)?;
-                if status >= 200 && status < 300 {
+                if (200..300).contains(&status) {
                     Ok(body)
                 } else {
                     anyhow::bail!("Sentry API error {status}: {body}")
@@ -191,9 +191,12 @@ impl SentryClient {
 
     /// Add a comment/note to an issue.
     pub fn add_issue_comment(&self, issue_id: &str, comment: &str) -> anyhow::Result<()> {
-        let url = format!("{}issues/{}/comments/", self.config.api_base(), issue_id);
         #[derive(Serialize)]
-        struct Body<'a> { text: &'a str }
+        struct Body<'a> {
+            text: &'a str,
+        }
+
+        let url = format!("{}issues/{}/comments/", self.config.api_base(), issue_id);
         let body = serde_json::to_string(&Body { text: comment })?;
         self.request("POST", &url, Some(&body))?;
         Ok(())
@@ -223,7 +226,7 @@ pub struct SentryPlugin {
 }
 
 impl SentryPlugin {
-    /// Create a new SentryPlugin. Reads config from SENTRY_* env vars.
+    /// Create a new `SentryPlugin`. Reads config from SENTRY_* env vars.
     pub fn new(plugin_dir: PathBuf) -> Self {
         let config = SentryConfig::default();
         let client = SentryClient::new(config.clone());
@@ -263,7 +266,7 @@ impl SentryPlugin {
             let latest_event = self.client.get_latest_event(&issue.id).ok();
 
             let classification = self.classify_issue(&issue, full_issue.as_ref(), latest_event.as_ref());
-            let diagnosis_signal = self.classification_to_signal(&issue, &classification);
+            let diagnosis_signal = Self::classification_to_signal(&issue, &classification);
             let ts = iso_now();
 
             let result = MonitorResult {
@@ -293,14 +296,14 @@ impl SentryPlugin {
         _full: Option<&SentryIssue>,
         event: Option<&SentryEvent>,
     ) -> IssueClassification {
-        use IssueClassification::*;
+        use IssueClassification::{NeedsCouncil, SelfHealable};
 
         // Check for restart-suitable patterns first
         if let Some(event) = event {
             let exc_type = event.exception.as_ref()
                 .and_then(|e| e.values.first())
                 .and_then(|f| f.type_.split('<').next())
-                .map(|s| s.trim());
+                .map(str::trim);
 
             // Memory patterns → self-healable
             let mem_patterns = ["MemoryError", "OOM", "OutOfMemory", "MemoryError:", "memory limit", "Cannot allocate"];
@@ -336,7 +339,7 @@ impl SentryPlugin {
                 "EnvVarNotFound", ".env", "configuration key",
             ];
             if config_patterns.iter().any(|p| event.message.as_ref().is_some_and(|m| m.contains(p))) {
-                return NeedsCouncil(CouncilReason::ConfigError {
+                return NeedsCouncil(CouncilReason::Config {
                     message: event.message.clone().unwrap_or_default(),
                 });
             }
@@ -346,20 +349,20 @@ impl SentryPlugin {
         if let Ok(last_seen) = DateTime::parse_from_rfc3339(&issue.last_seen) {
             let age_hours = (Utc::now() - last_seen.with_timezone(&Utc)).num_hours();
             if age_hours > self.config.stale_error_hours as i64 {
-                return NeedsCouncil(CouncilReason::StaleError {
+                return NeedsCouncil(CouncilReason::Stale {
                     age_hours: age_hours as u32,
                 });
             }
         }
 
         // Unknown error type → needs council
-        NeedsCouncil(CouncilReason::UnknownError {
+        NeedsCouncil(CouncilReason::Unknown {
             title: issue.title.clone(),
             count: issue.count,
         })
     }
 
-    fn classification_to_signal(&self, _issue: &SentryIssueSummary, classification: &IssueClassification) -> &'static str {
+    fn classification_to_signal(_issue: &SentryIssueSummary, classification: &IssueClassification) -> &'static str {
         match classification {
             IssueClassification::SelfHealable(_) => "self_healable",
             IssueClassification::NeedsCouncil(_) => "needs_council",
@@ -411,11 +414,11 @@ pub enum SelfHealType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CouncilReason {
     /// Config/env variable missing — cannot self-fix.
-    ConfigError { message: String },
+    Config { message: String },
     /// Error has been unresolved for >24h.
-    StaleError { age_hours: u32 },
+    Stale { age_hours: u32 },
     /// Unknown error type — needs investigation.
-    UnknownError { title: String, count: u32 },
+    Unknown { title: String, count: u32 },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

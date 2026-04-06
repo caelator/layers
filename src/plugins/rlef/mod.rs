@@ -353,9 +353,9 @@ mod tests {
             floor: 0.1,
         };
         let router = RlefRouterPlugin::with_config(config);
-        assert_eq!(router.base_weight, 2.0);
-        assert_eq!(router.charge_amount, 0.3);
-        assert_eq!(router.decay_factor, 0.7);
-        assert_eq!(router.floor, 0.1);
+        assert!((router.base_weight - 2.0).abs() < f64::EPSILON);
+        assert!((router.charge_amount - 0.3).abs() < f64::EPSILON);
+        assert!((router.decay_factor - 0.7).abs() < f64::EPSILON);
+        assert!((router.floor - 0.1).abs() < f64::EPSILON);
     }
 }

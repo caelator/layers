@@ -529,7 +529,7 @@ pub fn detect_sentry() -> Vec<Diagnosis> {
         Err(e) => {
             diagnoses.push(Diagnosis::new(
                 DiagnosisKind::SentryApiError,
-                format!("Sentry API error: {}", e),
+                format!("Sentry API error: {e}"),
                 serde_json::json!({ "error": e.to_string() }),
             ));
             return diagnoses;
@@ -537,14 +537,12 @@ pub fn detect_sentry() -> Vec<Diagnosis> {
     };
 
     for result in results {
-        let diagnosis = match result.classification {
+        let final_diagnosis = match result.classification {
             crate::plugins::sentry::IssueClassification::SelfHealable(_) => {
                 DiagnosisKind::SentryNewError
             }
-            crate::plugins::sentry::IssueClassification::NeedsCouncil(_) => {
-                DiagnosisKind::SentryErrorStale
-            }
-            crate::plugins::sentry::IssueClassification::EscalateHuman(_) => {
+            crate::plugins::sentry::IssueClassification::NeedsCouncil(_)
+            | crate::plugins::sentry::IssueClassification::EscalateHuman(_) => {
                 DiagnosisKind::SentryErrorStale
             }
         };
@@ -555,7 +553,7 @@ pub fn detect_sentry() -> Vec<Diagnosis> {
         );
 
         diagnoses.push(Diagnosis::new(
-            diagnosis,
+            final_diagnosis,
             summary,
             serde_json::json!({
                 "issue_id": result.issue_id,

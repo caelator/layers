@@ -24,7 +24,6 @@ use std::process::Command;
 
 use super::{IssueClassification, MonitorResult, SelfHealType, SentryClient, SentryConfig};
 use crate::config::memoryport_dir;
-use crate::plugins::sentry::SentryPlugin;
 
 /// Outcome of attempting a repair.
 #[derive(Debug, Clone)]
@@ -83,9 +82,9 @@ impl FlyClient {
             anyhow::bail!("FLY_API_TOKEN is not set");
         }
 
-        let url = format!("https://api.fly.io/v1{path}", path = path);
-        let mut req = ureq::request(method, &url)
-            .set("Authorization", &format!("Bearer {}", self.token))
+        let url = format!("https://api.fly.io/v1{path}");
+        let req = ureq::request(method, &url)
+            .set("Authorization", &format!("Bearer {token}", token = self.token))
             .set("Content-Type", "application/json");
 
         let response = if let Some(body) = body {
@@ -106,7 +105,7 @@ impl FlyClient {
 
     /// List running VMs for an app.
     fn list_vms(&self, app_name: &str) -> anyhow::Result<Vec<VmInfo>> {
-        let body = self.request("GET", &format!("/apps/{app_name}/vms"))?;
+        let body = self.request("GET", &format!("/apps/{app_name}/vms"), None)?;
         let vms: Vec<VmInfo> = serde_json::from_str(&body)
             .map_err(|e| anyhow::anyhow!("failed to parse VM list: {e}: {body}"))?;
         Ok(vms)
@@ -114,13 +113,13 @@ impl FlyClient {
 
     /// Stop a VM by ID.
     fn stop_vm(&self, app_name: &str, vm_id: &str) -> anyhow::Result<()> {
-        self.request("DELETE", &format!("/apps/{app_name}/vms/{vm_id}"))?;
+        self.request("DELETE", &format!("/apps/{app_name}/vms/{vm_id}"), None)?;
         Ok(())
     }
 
     /// Get the current deployment status.
     fn get_deployments(&self, app_name: &str) -> anyhow::Result<Vec<Deployment>> {
-        let body = self.request("GET", &format!("/apps/{app_name}/deploys"))?;
+        let body = self.request("GET", &format!("/apps/{app_name}/deploys"), None)?;
         let deploys: Vec<Deployment> = serde_json::from_str(&body)
             .map_err(|e| anyhow::anyhow!("failed to parse deployments: {e}: {body}"))?;
         Ok(deploys)
@@ -158,7 +157,7 @@ fn ssh_exec(host: &str, user: &str, key_path: &str, cmd: &str) -> anyhow::Result
             "-i", key_path,
             "-o", "StrictHostKeyChecking=no",
             "-o", "ConnectTimeout=10",
-            &format!("{}@{}", user, host),
+            &format!("{user}@{host}"),
             cmd,
         ])
         .output()?;
@@ -189,9 +188,9 @@ pub fn attempt_sentry_repair(
             RepairAction {
                 issue_id: result.issue_id.clone(),
                 title: result.issue_title.clone(),
-                action: format!("needs_council: {:?}", reason),
+                action: format!("needs_council: {reason:?}"),
                 outcome: if dry_run { RepairOutcome::SkippedDryRun } else { RepairOutcome::Escalated("queued for council".into()) },
-                details: format!("queued for council deliberation: {:?}", reason),
+                details: format!("queued for council deliberation: {reason:?}"),
             }
         }
         IssueClassification::EscalateHuman(reason) => {
@@ -199,15 +198,14 @@ pub fn attempt_sentry_repair(
                 issue_id: result.issue_id.clone(),
                 title: result.issue_title.clone(),
                 action: "escalate_human".into(),
-                outcome: RepairOutcome::Escalated(format!("human required: {:?}", reason)),
-                details: format!("human escalation required: {:?}", reason),
+                outcome: RepairOutcome::Escalated(format!("human required: {reason:?}")),
+                details: format!("human escalation required: {reason:?}"),
             }
         }
     };
 
     // Always resolve the issue in Sentry after attempting repair
     if !dry_run {
-        let plugin = SentryPlugin::new(memoryport_dir());
         let client = SentryClient::new(SentryConfig::default());
         if let Err(e) = client.resolve_issue(&result.issue_id) {
             eprintln!("warning: failed to resolve Sentry issue {}: {}", result.issue_id, e);
@@ -239,7 +237,7 @@ fn attempt_self_heal(
     match heal_type {
         SelfHealType::RestartService => {
             let svc = env::var("FLY_APP_NAME").unwrap_or_else(|_| "besatas".to_string());
-            let cmd = format!("sudo systemctl restart {}.service 2>/dev/null || flyctl restart -a {}", svc, svc);
+            let cmd = format!("sudo systemctl restart {svc}.service 2>/dev/null || flyctl restart -a {svc}");
 
             if dry_run {
                 return RepairAction {
@@ -247,7 +245,7 @@ fn attempt_self_heal(
                     title: result.issue_title.clone(),
                     action: "restart_service".into(),
                     outcome: RepairOutcome::SkippedDryRun,
-                    details: format!("would execute: {}", cmd),
+                    details: format!("would execute: {cmd}"),
                 };
             }
 
@@ -257,8 +255,7 @@ fn attempt_self_heal(
                     .args(["deploy", "--image", "", "--force"])
                     .output()
                     .ok()
-                    .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
-                    .unwrap_or_else(|| e.to_string())
+                    .map_or_else(|| e.to_string(), |o| String::from_utf8_lossy(&o.stdout).to_string())
             });
 
             RepairAction {
@@ -272,7 +269,7 @@ fn attempt_self_heal(
 
         SelfHealType::PurgeCache => {
             let cache_svc = env::var("CACHE_SERVICE").unwrap_or_else(|_| "redis".to_string());
-            let cmd = format!("sudo systemctl restart {}", cache_svc);
+            let cmd = format!("sudo systemctl restart {cache_svc}");
 
             if dry_run {
                 return RepairAction {
@@ -280,12 +277,12 @@ fn attempt_self_heal(
                     title: result.issue_title.clone(),
                     action: "purge_cache".into(),
                     outcome: RepairOutcome::SkippedDryRun,
-                    details: format!("would execute: {}", cmd),
+                    details: format!("would execute: {cmd}"),
                 };
             }
 
             let out = ssh_exec(&host, &user, &key, &cmd)
-                .unwrap_or_else(|e| format!("ssh failed (may not be remote): {}", e));
+                .unwrap_or_else(|e| format!("ssh failed (may not be remote): {e}"));
 
             RepairAction {
                 issue_id: result.issue_id.clone(),
@@ -311,7 +308,7 @@ fn attempt_self_heal(
             let app = env::var("FLY_APP_NAME").unwrap_or_default();
             let _ = fly.request(
                 "POST",
-                &format!("/apps/{}/config", app),
+                &format!("/apps/{app}/config"),
                 Some(r#"{"rate_limit": 100}"#),
             );
 
@@ -338,8 +335,7 @@ fn attempt_self_heal(
             let out = Command::new("flyctl")
                 .args(["deploy", "--image", "", "--remote-only"])
                 .output()
-                .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
-                .unwrap_or_else(|_| "flyctl not available".into());
+                .map_or_else(|_| "flyctl not available".into(), |o| String::from_utf8_lossy(&o.stdout).to_string());
 
             RepairAction {
                 issue_id: result.issue_id.clone(),
@@ -354,7 +350,6 @@ fn attempt_self_heal(
 
 fn queue_for_council(result: &MonitorResult, _reason: &crate::plugins::sentry::CouncilReason) {
     // Write the issue to a council queue directory so a council deliberation can be run
-    use std::io::Write;
     use chrono::Utc;
 
     let queue_dir = memoryport_dir().join("sentry-council-queue");
@@ -379,6 +374,7 @@ fn queue_for_council(result: &MonitorResult, _reason: &crate::plugins::sentry::C
     if let Ok(file) = std::fs::OpenOptions::new()
         .create(true)
         .write(true)
+        .truncate(true)
         .open(&path)
     {
         let mut file = file;
