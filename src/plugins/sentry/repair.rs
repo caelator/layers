@@ -84,7 +84,10 @@ impl FlyClient {
 
         let url = format!("https://api.fly.io/v1{path}");
         let req = ureq::request(method, &url)
-            .set("Authorization", &format!("Bearer {token}", token = self.token))
+            .set(
+                "Authorization",
+                &format!("Bearer {token}", token = self.token),
+            )
             .set("Content-Type", "application/json");
 
         let response = if let Some(body) = body {
@@ -154,9 +157,12 @@ pub struct Deployment {
 fn ssh_exec(host: &str, user: &str, key_path: &str, cmd: &str) -> anyhow::Result<String> {
     let output = Command::new("ssh")
         .args([
-            "-i", key_path,
-            "-o", "StrictHostKeyChecking=no",
-            "-o", "ConnectTimeout=10",
+            "-i",
+            key_path,
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "ConnectTimeout=10",
             &format!("{user}@{host}"),
             cmd,
         ])
@@ -175,10 +181,7 @@ fn ssh_exec(host: &str, user: &str, key_path: &str, cmd: &str) -> anyhow::Result
 // ---------------------------------------------------------------------------
 
 /// Attempt to repair a Sentry error, returning the repair action taken.
-pub fn attempt_sentry_repair(
-    result: &MonitorResult,
-    dry_run: bool,
-) -> RepairAction {
+pub fn attempt_sentry_repair(result: &MonitorResult, dry_run: bool) -> RepairAction {
     let action = match &result.classification {
         IssueClassification::SelfHealable(heal_type) => {
             attempt_self_heal(result, heal_type, dry_run)
@@ -189,26 +192,31 @@ pub fn attempt_sentry_repair(
                 issue_id: result.issue_id.clone(),
                 title: result.issue_title.clone(),
                 action: format!("needs_council: {reason:?}"),
-                outcome: if dry_run { RepairOutcome::SkippedDryRun } else { RepairOutcome::Escalated("queued for council".into()) },
+                outcome: if dry_run {
+                    RepairOutcome::SkippedDryRun
+                } else {
+                    RepairOutcome::Escalated("queued for council".into())
+                },
                 details: format!("queued for council deliberation: {reason:?}"),
             }
         }
-        IssueClassification::EscalateHuman(reason) => {
-            RepairAction {
-                issue_id: result.issue_id.clone(),
-                title: result.issue_title.clone(),
-                action: "escalate_human".into(),
-                outcome: RepairOutcome::Escalated(format!("human required: {reason:?}")),
-                details: format!("human escalation required: {reason:?}"),
-            }
-        }
+        IssueClassification::EscalateHuman(reason) => RepairAction {
+            issue_id: result.issue_id.clone(),
+            title: result.issue_title.clone(),
+            action: "escalate_human".into(),
+            outcome: RepairOutcome::Escalated(format!("human required: {reason:?}")),
+            details: format!("human escalation required: {reason:?}"),
+        },
     };
 
     // Always resolve the issue in Sentry after attempting repair
     if !dry_run {
         let client = SentryClient::new(SentryConfig::default());
         if let Err(e) = client.resolve_issue(&result.issue_id) {
-            eprintln!("warning: failed to resolve Sentry issue {}: {}", result.issue_id, e);
+            eprintln!(
+                "warning: failed to resolve Sentry issue {}: {}",
+                result.issue_id, e
+            );
         } else {
             let _ = client.add_issue_comment(
                 &result.issue_id,
@@ -237,7 +245,9 @@ fn attempt_self_heal(
     match heal_type {
         SelfHealType::RestartService => {
             let svc = env::var("FLY_APP_NAME").unwrap_or_else(|_| "besatas".to_string());
-            let cmd = format!("sudo systemctl restart {svc}.service 2>/dev/null || flyctl restart -a {svc}");
+            let cmd = format!(
+                "sudo systemctl restart {svc}.service 2>/dev/null || flyctl restart -a {svc}"
+            );
 
             if dry_run {
                 return RepairAction {
@@ -255,7 +265,10 @@ fn attempt_self_heal(
                     .args(["deploy", "--image", "", "--force"])
                     .output()
                     .ok()
-                    .map_or_else(|| e.to_string(), |o| String::from_utf8_lossy(&o.stdout).to_string())
+                    .map_or_else(
+                        || e.to_string(),
+                        |o| String::from_utf8_lossy(&o.stdout).to_string(),
+                    )
             });
 
             RepairAction {
@@ -335,7 +348,10 @@ fn attempt_self_heal(
             let out = Command::new("flyctl")
                 .args(["deploy", "--image", "", "--remote-only"])
                 .output()
-                .map_or_else(|_| "flyctl not available".into(), |o| String::from_utf8_lossy(&o.stdout).to_string());
+                .map_or_else(
+                    |_| "flyctl not available".into(),
+                    |o| String::from_utf8_lossy(&o.stdout).to_string(),
+                );
 
             RepairAction {
                 issue_id: result.issue_id.clone(),

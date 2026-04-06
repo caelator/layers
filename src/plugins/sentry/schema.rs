@@ -165,6 +165,9 @@ impl From<&str> for SeverityLevel {
 
 impl SeverityLevel {
     pub fn is_critical(self) -> bool {
-        matches!(self, SeverityLevel::Fatal | SeverityLevel::Critical | SeverityLevel::Error)
+        matches!(
+            self,
+            SeverityLevel::Fatal | SeverityLevel::Critical | SeverityLevel::Error
+        )
     }
 }

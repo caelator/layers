@@ -24,8 +24,8 @@
 pub mod repair;
 pub mod schema;
 
-use std::env;
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::io::{Read, Write as IoWrite};
 use std::path::PathBuf;
 
@@ -69,7 +69,11 @@ impl Default for SentryConfig {
             project_slug: env::var("SENTRY_PROJECT").unwrap_or_default(),
             api_token: env::var("SENTRY_API_TOKEN").unwrap_or_default(),
             poll_interval_secs: 60,
-            alert_levels: vec!["error".to_string(), "fatal".to_string(), "critical".to_string()],
+            alert_levels: vec![
+                "error".to_string(),
+                "fatal".to_string(),
+                "critical".to_string(),
+            ],
             stale_error_hours: 24,
         }
     }
@@ -152,7 +156,10 @@ impl SentryClient {
     }
 
     /// List all unresolved issues for the project, with 24h stats.
-    pub fn list_unresolved_issues(&self, project_id: &str) -> anyhow::Result<Vec<SentryIssueSummary>> {
+    pub fn list_unresolved_issues(
+        &self,
+        project_id: &str,
+    ) -> anyhow::Result<Vec<SentryIssueSummary>> {
         let url = format!(
             "{}issues/?project={}&statsFor=24h&query=is:unresolved",
             self.config.api_base(),
@@ -175,7 +182,11 @@ impl SentryClient {
 
     /// Get the most recent event for an issue (for stack trace / root cause).
     pub fn get_latest_event(&self, issue_id: &str) -> anyhow::Result<SentryEvent> {
-        let url = format!("{}issues/{}/events/latest/", self.config.api_base(), issue_id);
+        let url = format!(
+            "{}issues/{}/events/latest/",
+            self.config.api_base(),
+            issue_id
+        );
         let body = self.request("GET", &url, None)?;
         let event: SentryEvent = serde_json::from_str(&body)
             .map_err(|e| anyhow::anyhow!("failed to parse event response: {e}: {body}"))?;
@@ -184,7 +195,11 @@ impl SentryClient {
 
     /// Resolve an issue (mark it as resolved in Sentry).
     pub fn resolve_issue(&self, issue_id: &str) -> anyhow::Result<()> {
-        let url = format!("{}issues/{}/actions/resolve/", self.config.api_base(), issue_id);
+        let url = format!(
+            "{}issues/{}/actions/resolve/",
+            self.config.api_base(),
+            issue_id
+        );
         self.request("POST", &url, None)?;
         Ok(())
     }
@@ -205,8 +220,15 @@ impl SentryClient {
     /// Get project ID from project slug.
     pub fn get_project_id(&self, project_slug: &str) -> anyhow::Result<String> {
         #[derive(Deserialize)]
-        struct Project { id: String }
-        let url = format!("{}projects/{}/{}/", self.config.api_base(), self.config.org, project_slug);
+        struct Project {
+            id: String,
+        }
+        let url = format!(
+            "{}projects/{}/{}/",
+            self.config.api_base(),
+            self.config.org,
+            project_slug
+        );
         let body = self.request("GET", &url, None)?;
         let project: Project = serde_json::from_str(&body)
             .map_err(|e| anyhow::anyhow!("failed to parse project response: {e}"))?;
@@ -230,13 +252,21 @@ impl SentryPlugin {
     pub fn new(plugin_dir: PathBuf) -> Self {
         let config = SentryConfig::default();
         let client = SentryClient::new(config.clone());
-        Self { config, client, plugin_dir }
+        Self {
+            config,
+            client,
+            plugin_dir,
+        }
     }
 
     /// Create from explicit config.
     pub fn with_config(config: SentryConfig, plugin_dir: PathBuf) -> Self {
         let client = SentryClient::new(config.clone());
-        Self { config, client, plugin_dir }
+        Self {
+            config,
+            client,
+            plugin_dir,
+        }
     }
 
     /// Whether the plugin is configured with a valid API token.
@@ -265,7 +295,8 @@ impl SentryPlugin {
             let full_issue = self.client.get_issue(&issue.id).ok();
             let latest_event = self.client.get_latest_event(&issue.id).ok();
 
-            let classification = self.classify_issue(&issue, full_issue.as_ref(), latest_event.as_ref());
+            let classification =
+                self.classify_issue(&issue, full_issue.as_ref(), latest_event.as_ref());
             let diagnosis_signal = Self::classification_to_signal(&issue, &classification);
             let ts = iso_now();
 
@@ -300,45 +331,78 @@ impl SentryPlugin {
 
         // Check for restart-suitable patterns first
         if let Some(event) = event {
-            let exc_type = event.exception.as_ref()
+            let exc_type = event
+                .exception
+                .as_ref()
                 .and_then(|e| e.values.first())
                 .and_then(|f| f.type_.split('<').next())
                 .map(str::trim);
 
             // Memory patterns → self-healable
-            let mem_patterns = ["MemoryError", "OOM", "OutOfMemory", "MemoryError:", "memory limit", "Cannot allocate"];
-            if mem_patterns.iter().any(|p| exc_type == Some(p) || event.message.as_ref().is_some_and(|m| m.contains(p))) {
+            let mem_patterns = [
+                "MemoryError",
+                "OOM",
+                "OutOfMemory",
+                "MemoryError:",
+                "memory limit",
+                "Cannot allocate",
+            ];
+            if mem_patterns.iter().any(|p| {
+                exc_type == Some(p) || event.message.as_ref().is_some_and(|m| m.contains(p))
+            }) {
                 return SelfHealable(SelfHealType::RestartService);
             }
 
             // Database patterns → self-healable (restart clears connection pool)
             let db_patterns = [
-                "OperationalError", "TooManyConnections", "connection pool",
-                "ConnectionRefused", "ConnectionTimeout", "Deadlock",
+                "OperationalError",
+                "TooManyConnections",
+                "connection pool",
+                "ConnectionRefused",
+                "ConnectionTimeout",
+                "Deadlock",
                 "could not connect to server",
             ];
-            if db_patterns.iter().any(|p| exc_type == Some(p) || event.message.as_ref().is_some_and(|m| m.contains(p))) {
+            if db_patterns.iter().any(|p| {
+                exc_type == Some(p) || event.message.as_ref().is_some_and(|m| m.contains(p))
+            }) {
                 return SelfHealable(SelfHealType::RestartService);
             }
 
             // Cache patterns → self-healable
-            let cache_patterns = ["CacheMiss", "cache connection", "RedisError", "MemcachedError"];
-            if cache_patterns.iter().any(|p| exc_type == Some(p) || event.message.as_ref().is_some_and(|m| m.contains(p))) {
+            let cache_patterns = [
+                "CacheMiss",
+                "cache connection",
+                "RedisError",
+                "MemcachedError",
+            ];
+            if cache_patterns.iter().any(|p| {
+                exc_type == Some(p) || event.message.as_ref().is_some_and(|m| m.contains(p))
+            }) {
                 return SelfHealable(SelfHealType::PurgeCache);
             }
 
             // Rate limit patterns → self-healable
             let rate_patterns = ["429", "TooManyRequests", "rate limit", "RateLimitExceeded"];
-            if rate_patterns.iter().any(|p| exc_type == Some(p) || event.message.as_ref().is_some_and(|m| m.contains(p))) {
+            if rate_patterns.iter().any(|p| {
+                exc_type == Some(p) || event.message.as_ref().is_some_and(|m| m.contains(p))
+            }) {
                 return SelfHealable(SelfHealType::ThrottleBack);
             }
 
             // Config/env errors → needs council (can't self-fix env)
             let config_patterns = [
-                "EnvironmentVariableNotSet", "ConfigError", "MissingEnvVar",
-                "EnvVarNotFound", ".env", "configuration key",
+                "EnvironmentVariableNotSet",
+                "ConfigError",
+                "MissingEnvVar",
+                "EnvVarNotFound",
+                ".env",
+                "configuration key",
             ];
-            if config_patterns.iter().any(|p| event.message.as_ref().is_some_and(|m| m.contains(p))) {
+            if config_patterns
+                .iter()
+                .any(|p| event.message.as_ref().is_some_and(|m| m.contains(p)))
+            {
                 return NeedsCouncil(CouncilReason::Config {
                     message: event.message.clone().unwrap_or_default(),
                 });
@@ -362,7 +426,10 @@ impl SentryPlugin {
         })
     }
 
-    fn classification_to_signal(_issue: &SentryIssueSummary, classification: &IssueClassification) -> &'static str {
+    fn classification_to_signal(
+        _issue: &SentryIssueSummary,
+        classification: &IssueClassification,
+    ) -> &'static str {
         match classification {
             IssueClassification::SelfHealable(_) => "self_healable",
             IssueClassification::NeedsCouncil(_) => "needs_council",
@@ -461,7 +528,9 @@ mod tests {
         let config = SentryConfig::default();
         // If env var is not set, it's empty by default
         // The actual check is is_configured() which requires both org and token
-        assert!(!config.is_configured() || (!config.api_token.is_empty() && !config.org.is_empty()));
+        assert!(
+            !config.is_configured() || (!config.api_token.is_empty() && !config.org.is_empty())
+        );
     }
 
     #[test]

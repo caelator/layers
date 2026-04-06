@@ -512,8 +512,8 @@ pub fn detect_route_corrections() -> Vec<Diagnosis> {
 
 /// Check Sentry for new, unresolved, and stale errors.
 pub fn detect_sentry() -> Vec<Diagnosis> {
-    use crate::plugins::sentry::{SentryConfig, SentryPlugin};
     use crate::config::memoryport_dir;
+    use crate::plugins::sentry::{SentryConfig, SentryPlugin};
 
     let mut diagnoses = Vec::new();
 
