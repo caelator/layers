@@ -421,6 +421,20 @@ mod tests {
     #[test]
     #[allow(unsafe_code)]
     fn council_command_falls_back_to_path_autodetect() {
+        // Skip if neither codex nor opencode is on PATH — CI environments typically lack these.
+        let has_binary = |bin: &str| -> bool {
+            std::process::Command::new("which")
+                .arg(bin)
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false)
+        };
+        if !has_binary("codex") && !has_binary("opencode") {
+            return;
+        }
+
         // Remove env var — council_command should auto-detect via which() if binary is on PATH
         unsafe {
             std::env::remove_var("LAYERS_COUNCIL_CODEX_CMD");
