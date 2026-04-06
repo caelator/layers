@@ -29,7 +29,6 @@ use std::env;
 use std::io::{Read, Write as IoWrite};
 use std::path::PathBuf;
 
-use chrono::{DateTime, Utc};
 
 pub use schema::{SentryEvent, SentryIssue, SentryIssueSummary, SeverityLevel};
 
@@ -311,13 +310,8 @@ impl SentryPlugin {
                 continue;
             }
 
-            // Get full issue details for classification
-            let full_issue = self.client.get_issue(&issue.id).ok();
-            let latest_event = self.client.get_latest_event(&issue.id).ok();
-            eprintln!("[DEBUG] issue={}, latest_event.is_some()={}", issue.id, latest_event.is_some());
-
-            let classification =
-                self.classify_issue(&issue, full_issue.as_ref(), latest_event.as_ref());
+            // Classify directly from issue title and metadata — no event fetch needed
+            let classification = Self::classify_issue_from_title(&issue.title, &issue);
             let diagnosis_signal = Self::classification_to_signal(&issue, &classification);
             let ts = iso_now();
 
@@ -341,105 +335,48 @@ impl SentryPlugin {
         Ok(results)
     }
 
-    /// Classify a Sentry issue to determine repair strategy.
-    fn classify_issue(
-        &self,
+    /// Classify from issue title — avoids expensive event-detail API call.
+    fn classify_issue_from_title(
+        title: &str,
         issue: &SentryIssueSummary,
-        _full: Option<&SentryIssue>,
-        event: Option<&SentryEvent>,
     ) -> IssueClassification {
         use IssueClassification::{NeedsCouncil, SelfHealable};
 
-        // Check for restart-suitable patterns using metadata
-        if let Some(event) = event {
-            // Use metadata (type + value) as the primary signal; fall back to exception
-            let meta = event.metadata.as_ref();
-            let exc_type = meta.map(|m| m.type_.as_str());
-            let exc_value = meta.and_then(|m| m.value.as_deref());
+        let title_lower = title.to_lowercase();
+        let err_value = issue.metadata.value.as_deref().unwrap_or("").to_lowercase();
 
-            // Memory patterns → self-healable
-            let mem_patterns = [
-                "MemoryError", "OOM", "OutOfMemory", "memory limit", "Cannot allocate",
-            ];
-            if exc_type == Some("RangeError")
-                || exc_value.is_some_and(|v| mem_patterns.iter().any(|p| v.contains(p)))
-            {
-                return SelfHealable(SelfHealType::RestartService);
-            }
-
-            // Database / network connection patterns → self-healable
-            let conn_patterns = [
-                "Connection terminated",
-                "ECONNRESET",
-                "ETIMEDOUT",
-                "timeout exceeded when trying to connect",
-                "ConnectionRefused",
-                "ConnectionTimeout",
-                "could not connect to server",
-                "TooManyConnections",
-                "connection pool",
-                "Deadlock",
-            ];
-            eprintln!("[DEBUG] classify_issue: exc_type={exc_type:?}, exc_value={exc_value:?}");
-            if exc_value.is_some_and(|v| conn_patterns.iter().any(|p| v.contains(p))) {
-                eprintln!("[DEBUG] matched connection pattern -> SelfHealable(RestartService)");
-                return SelfHealable(SelfHealType::RestartService);
-            }
-
-            // Cache patterns → self-healable
-            let cache_patterns = ["CacheMiss", "RedisError", "MemcachedError", "cache connection"];
-            if exc_value.is_some_and(|v| cache_patterns.iter().any(|p| v.contains(p))) {
-                return SelfHealable(SelfHealType::PurgeCache);
-            }
-
-            // Rate limit patterns → self-healable
-            let rate_patterns = ["429", "TooManyRequests", "rate limit", "RateLimitExceeded"];
-            if exc_value.is_some_and(|v| rate_patterns.iter().any(|p| v.contains(p))) {
-                return SelfHealable(SelfHealType::ThrottleBack);
-            }
-
-            // Native module not found → deployment issue, needs council
-            let native_missing = ["Cannot find module", "modulenotfound", "@resvg/resvg-js"];
-            if exc_value.is_some_and(|v| native_missing.iter().any(|p| v.contains(p))) {
-                return NeedsCouncil(CouncilReason::Config {
-                    message: exc_value.unwrap_or("").to_string(),
-                });
-            }
-
-            // Config/env errors → needs council
-            let config_patterns = [
-                "EnvironmentVariableNotSet", "ConfigError", "MissingEnvVar",
-                "EnvVarNotFound", ".env", "configuration key", "No active xpub",
-            ];
-            if exc_value.is_some_and(|v| config_patterns.iter().any(|p| v.contains(p))) {
-                return NeedsCouncil(CouncilReason::Config {
-                    message: exc_value.unwrap_or("").to_string(),
-                });
-            }
-
-            // Auth errors → needs council (usually config or secrets issue)
-            if exc_type == Some("AppError") || exc_value.is_some_and(|v| v.contains("Not authenticated")) {
-                return NeedsCouncil(CouncilReason::Config {
-                    message: exc_value.unwrap_or("").to_string(),
-                });
-            }
+        // Connection/timeout → restart (clears pools)
+        let conn = ["connection terminated", "timeout exceeded", "econnreset", "etimedout",
+            "too many connections", "could not connect", "connection refused"];
+        if conn.iter().any(|p| title_lower.contains(p) || err_value.contains(p)) {
+            return SelfHealable(SelfHealType::RestartService);
         }
 
-        // Check age — unresolved for >24h needs council
-        if let Ok(last_seen) = DateTime::parse_from_rfc3339(&issue.last_seen) {
-            let age_hours = (Utc::now() - last_seen.with_timezone(&Utc)).num_hours();
-            if age_hours > self.config.stale_error_hours as i64 {
-                return NeedsCouncil(CouncilReason::Stale {
-                    age_hours: age_hours as u32,
-                });
-            }
+        // Missing native module → deployment issue → council
+        let native = ["cannot find module", "@resvg/resvg-js"];
+        if native.iter().any(|p| title_lower.contains(p)) {
+            return NeedsCouncil(CouncilReason::Config { message: title.to_string() });
         }
 
-        // Unknown error type → needs council
-        NeedsCouncil(CouncilReason::Unknown {
-            title: issue.title.clone(),
-            count: issue.count.clone(),
-        })
+        // Config / auth errors → council
+        let cfg = ["no active xpub", "not authenticated", "environmentvariable",
+            "missingenvvar", ".env"];
+        if cfg.iter().any(|p| title_lower.contains(p) || err_value.contains(p)) {
+            return NeedsCouncil(CouncilReason::Config { message: title.to_string() });
+        }
+
+        // Rate limit → throttle
+        if title_lower.contains("429") || err_value.contains("rate limit") {
+            return SelfHealable(SelfHealType::ThrottleBack);
+        }
+
+        // Cache → purge
+        let cache = ["cachemiss", "rediserror", "memcached"];
+        if cache.iter().any(|p| err_value.contains(p)) {
+            return SelfHealable(SelfHealType::PurgeCache);
+        }
+
+        NeedsCouncil(CouncilReason::Unknown { title: title.to_string(), count: issue.count.clone() })
     }
 
     fn classification_to_signal(

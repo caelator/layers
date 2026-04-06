@@ -78,6 +78,18 @@ pub struct SentryIssueSummary {
     #[serde(rename = "assignedTo")]
     pub assigned_to: Option<SentryUser>,
     pub status: String,
+    /// Issue-level metadata containing error type and value.
+    #[serde(default)]
+    pub metadata: IssueMetadata,
+}
+
+/// Issue-level metadata from the `/issues/` endpoint.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct IssueMetadata {
+    #[serde(rename = "type", default)]
+    pub type_: String,
+    #[serde(rename = "value", default)]
+    pub value: Option<String>,
 }
 
 /// Event detail for digging into a specific occurrence.
