@@ -593,10 +593,22 @@ fn spawn_fix_subagent(label: &str, task: &str) -> Result<()> {
         .ok()
         .map_or_else(
             || {
-                // Try PATH lookup first, then fall back to hardcoded path
+                // Try PATH lookup first (expanding ~ in path components), then fall back
                 std::env::var_os("PATH")
                     .and_then(|p| {
                         std::env::split_paths(&p).find_map(|d| {
+                            // Expand ~ to home dir so ~/.local/bin resolves correctly
+                            let d = if d.to_string_lossy().starts_with('~') {
+                                if let Some(home) = std::env::var_os("HOME") {
+                                    PathBuf::from(home).join(
+                                        d.to_string_lossy().strip_prefix("~").unwrap(),
+                                    )
+                                } else {
+                                    d.clone()
+                                }
+                            } else {
+                                d.clone()
+                            };
                             let candidate = d.join("openclaw");
                             candidate.exists().then_some(candidate)
                         })
