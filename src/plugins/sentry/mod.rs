@@ -113,9 +113,7 @@ impl SentryClient {
             format!("{}{}", self.config.api_base().trim_end_matches('/'), path)
         };
 
-        let token = env::var("SENTRY_API_TOKEN")
-            .or_else(|_| Ok::<String, ()>(self.config.api_token.clone()))
-            .unwrap_or_default();
+        let token = &self.config.api_token;
 
         if token.is_empty() {
             anyhow::bail!("SENTRY_API_TOKEN is not set");
@@ -218,21 +216,43 @@ impl SentryClient {
     }
 
     /// Get project ID from project slug.
+    ///
+    /// If `project_slug` is empty, fetches the first available project in the
+    /// org. This lets the plugin auto-discover the project when only the API
+    /// token + org are configured.
     pub fn get_project_id(&self, project_slug: &str) -> anyhow::Result<String> {
         #[derive(Deserialize)]
         struct Project {
             id: String,
+            #[allow(dead_code)]
+            name: String,
+            #[allow(dead_code)]
+            slug: String,
         }
-        let url = format!(
-            "{}projects/{}/{}/",
-            self.config.api_base(),
-            self.config.org,
-            project_slug
-        );
+
+        // If a slug was explicitly configured, use it directly
+        if !project_slug.is_empty() {
+            let url = format!(
+                "{}projects/{}/{}/",
+                self.config.api_base(),
+                self.config.org,
+                project_slug
+            );
+            let body = self.request("GET", &url, None)?;
+            let project: Project = serde_json::from_str(&body)
+                .map_err(|e| anyhow::anyhow!("failed to parse project response: {e}"))?;
+            return Ok(project.id);
+        }
+
+        // No slug configured — auto-discover from the org's project list
+        let url = format!("{}projects/", self.config.api_base());
         let body = self.request("GET", &url, None)?;
-        let project: Project = serde_json::from_str(&body)
-            .map_err(|e| anyhow::anyhow!("failed to parse project response: {e}"))?;
-        Ok(project.id)
+        let projects: Vec<Project> = serde_json::from_str(&body)
+            .map_err(|e| anyhow::anyhow!("failed to parse projects list: {e}: {body}"))?;
+        match projects.first() {
+            Some(p) => Ok(p.id.clone()),
+            None => anyhow::bail!("no projects found in org '{}'", self.config.org),
+        }
     }
 }
 
@@ -294,6 +314,7 @@ impl SentryPlugin {
             // Get full issue details for classification
             let full_issue = self.client.get_issue(&issue.id).ok();
             let latest_event = self.client.get_latest_event(&issue.id).ok();
+            eprintln!("[DEBUG] issue={}, latest_event.is_some()={}", issue.id, latest_event.is_some());
 
             let classification =
                 self.classify_issue(&issue, full_issue.as_ref(), latest_event.as_ref());
@@ -305,7 +326,7 @@ impl SentryPlugin {
                 issue_id: issue.id.clone(),
                 issue_title: issue.title.clone(),
                 level: issue.level.clone(),
-                count: issue.count,
+                count: issue.count.clone(),
                 url: issue.permalink.clone(),
                 classification,
                 diagnosis_signal,
@@ -329,82 +350,77 @@ impl SentryPlugin {
     ) -> IssueClassification {
         use IssueClassification::{NeedsCouncil, SelfHealable};
 
-        // Check for restart-suitable patterns first
+        // Check for restart-suitable patterns using metadata
         if let Some(event) = event {
-            let exc_type = event
-                .exception
-                .as_ref()
-                .and_then(|e| e.values.first())
-                .and_then(|f| f.type_.split('<').next())
-                .map(str::trim);
+            // Use metadata (type + value) as the primary signal; fall back to exception
+            let meta = event.metadata.as_ref();
+            let exc_type = meta.map(|m| m.type_.as_str());
+            let exc_value = meta.and_then(|m| m.value.as_deref());
 
             // Memory patterns → self-healable
             let mem_patterns = [
-                "MemoryError",
-                "OOM",
-                "OutOfMemory",
-                "MemoryError:",
-                "memory limit",
-                "Cannot allocate",
+                "MemoryError", "OOM", "OutOfMemory", "memory limit", "Cannot allocate",
             ];
-            if mem_patterns.iter().any(|p| {
-                exc_type == Some(p) || event.message.as_ref().is_some_and(|m| m.contains(p))
-            }) {
+            if exc_type == Some("RangeError")
+                || exc_value.is_some_and(|v| mem_patterns.iter().any(|p| v.contains(p)))
+            {
                 return SelfHealable(SelfHealType::RestartService);
             }
 
-            // Database patterns → self-healable (restart clears connection pool)
-            let db_patterns = [
-                "OperationalError",
-                "TooManyConnections",
-                "connection pool",
+            // Database / network connection patterns → self-healable
+            let conn_patterns = [
+                "Connection terminated",
+                "ECONNRESET",
+                "ETIMEDOUT",
+                "timeout exceeded when trying to connect",
                 "ConnectionRefused",
                 "ConnectionTimeout",
-                "Deadlock",
                 "could not connect to server",
+                "TooManyConnections",
+                "connection pool",
+                "Deadlock",
             ];
-            if db_patterns.iter().any(|p| {
-                exc_type == Some(p) || event.message.as_ref().is_some_and(|m| m.contains(p))
-            }) {
+            eprintln!("[DEBUG] classify_issue: exc_type={exc_type:?}, exc_value={exc_value:?}");
+            if exc_value.is_some_and(|v| conn_patterns.iter().any(|p| v.contains(p))) {
+                eprintln!("[DEBUG] matched connection pattern -> SelfHealable(RestartService)");
                 return SelfHealable(SelfHealType::RestartService);
             }
 
             // Cache patterns → self-healable
-            let cache_patterns = [
-                "CacheMiss",
-                "cache connection",
-                "RedisError",
-                "MemcachedError",
-            ];
-            if cache_patterns.iter().any(|p| {
-                exc_type == Some(p) || event.message.as_ref().is_some_and(|m| m.contains(p))
-            }) {
+            let cache_patterns = ["CacheMiss", "RedisError", "MemcachedError", "cache connection"];
+            if exc_value.is_some_and(|v| cache_patterns.iter().any(|p| v.contains(p))) {
                 return SelfHealable(SelfHealType::PurgeCache);
             }
 
             // Rate limit patterns → self-healable
             let rate_patterns = ["429", "TooManyRequests", "rate limit", "RateLimitExceeded"];
-            if rate_patterns.iter().any(|p| {
-                exc_type == Some(p) || event.message.as_ref().is_some_and(|m| m.contains(p))
-            }) {
+            if exc_value.is_some_and(|v| rate_patterns.iter().any(|p| v.contains(p))) {
                 return SelfHealable(SelfHealType::ThrottleBack);
             }
 
-            // Config/env errors → needs council (can't self-fix env)
-            let config_patterns = [
-                "EnvironmentVariableNotSet",
-                "ConfigError",
-                "MissingEnvVar",
-                "EnvVarNotFound",
-                ".env",
-                "configuration key",
-            ];
-            if config_patterns
-                .iter()
-                .any(|p| event.message.as_ref().is_some_and(|m| m.contains(p)))
-            {
+            // Native module not found → deployment issue, needs council
+            let native_missing = ["Cannot find module", "modulenotfound", "@resvg/resvg-js"];
+            if exc_value.is_some_and(|v| native_missing.iter().any(|p| v.contains(p))) {
                 return NeedsCouncil(CouncilReason::Config {
-                    message: event.message.clone().unwrap_or_default(),
+                    message: exc_value.unwrap_or("").to_string(),
+                });
+            }
+
+            // Config/env errors → needs council
+            let config_patterns = [
+                "EnvironmentVariableNotSet", "ConfigError", "MissingEnvVar",
+                "EnvVarNotFound", ".env", "configuration key", "No active xpub",
+            ];
+            if exc_value.is_some_and(|v| config_patterns.iter().any(|p| v.contains(p))) {
+                return NeedsCouncil(CouncilReason::Config {
+                    message: exc_value.unwrap_or("").to_string(),
+                });
+            }
+
+            // Auth errors → needs council (usually config or secrets issue)
+            if exc_type == Some("AppError") || exc_value.is_some_and(|v| v.contains("Not authenticated")) {
+                return NeedsCouncil(CouncilReason::Config {
+                    message: exc_value.unwrap_or("").to_string(),
                 });
             }
         }
@@ -422,7 +438,7 @@ impl SentryPlugin {
         // Unknown error type → needs council
         NeedsCouncil(CouncilReason::Unknown {
             title: issue.title.clone(),
-            count: issue.count,
+            count: issue.count.clone(),
         })
     }
 
@@ -485,7 +501,7 @@ pub enum CouncilReason {
     /// Error has been unresolved for >24h.
     Stale { age_hours: u32 },
     /// Unknown error type — needs investigation.
-    Unknown { title: String, count: u32 },
+    Unknown { title: String, count: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -495,7 +511,7 @@ pub enum EscalationReason {
     /// Data corruption detected.
     DataCorruption,
     /// User-impacting outage.
-    UserOutage { user_count: u32 },
+    UserOutage { user_count: String },
 }
 
 // ---------------------------------------------------------------------------
@@ -509,7 +525,7 @@ pub struct MonitorResult {
     pub issue_id: String,
     pub issue_title: String,
     pub level: String,
-    pub count: u32,
+    pub count: String,
     pub url: String,
     pub classification: IssueClassification,
     pub diagnosis_signal: &'static str,

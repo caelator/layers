@@ -57,17 +57,24 @@ pub struct SentryTag {
     pub values: Vec<String>,
 }
 
-/// A resolved + compact issue summary from the issues endpoint.
+/// Issue summary as returned by the `/issues/` endpoint.
+/// Note: `count` and `user_count` are strings in the live API.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SentryIssueSummary {
     pub id: String,
     pub title: String,
     pub level: String,
-    pub count: u32,
-    pub user_count: u32,
+    /// Occurrence count — a string in the live API (e.g. "38")
+    #[serde(default)]
+    pub count: String,
+    /// Affected user count — a string in the live API
+    #[serde(default)]
+    pub user_count: String,
     #[serde(rename = "lastSeen")]
     pub last_seen: String,
     pub permalink: String,
+    #[serde(rename = "shortId", default)]
+    pub short_id: String,
     #[serde(rename = "assignedTo")]
     pub assigned_to: Option<SentryUser>,
     pub status: String,
@@ -95,6 +102,9 @@ pub struct SentryEvent {
     pub timestamp: String,
     #[serde(rename = "received")]
     pub received: String,
+    /// Event metadata — contains the error type and value directly.
+    #[serde(default)]
+    pub metadata: Option<EventMetadata>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -113,6 +123,15 @@ pub struct ExceptionFrame {
     pub lineno: Option<u32>,
     pub colno: Option<u32>,
     pub in_app: Option<bool>,
+}
+
+/// Event metadata — extracted from the `metadata` field of Sentry event responses.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EventMetadata {
+    #[serde(rename = "type")]
+    pub type_: String,
+    #[serde(rename = "value", default)]
+    pub value: Option<String>,
 }
 
 /// Response from POST /api/0/organizations/{org}/issues/{id}/actions/resolve/
