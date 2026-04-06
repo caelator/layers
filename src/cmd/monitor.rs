@@ -588,49 +588,24 @@ fn spawn_fix_subagent(label: &str, task: &str) -> Result<()> {
     serde_json::to_writer(&mut file, &entry)?;
     writeln!(file)?; // trailing newline for jsonl
 
-    // Spawn fix subagent via OpenClaw CLI
-    let openclaw_path = std::env::var("OPENCLAW_CLI").ok().map_or_else(
-        || {
-            // Try PATH lookup first (expanding ~ in path components), then fall back
-            std::env::var_os("PATH")
-                .and_then(|p| {
-                    std::env::split_paths(&p).find_map(|d| {
-                        // Expand ~ to home dir so ~/.local/bin resolves correctly
-                        let d = if d.to_string_lossy().starts_with('~') {
-                            if let Some(home) = std::env::var_os("HOME") {
-                                PathBuf::from(home)
-                                    .join(d.to_string_lossy().strip_prefix("~").unwrap())
-                            } else {
-                                d.clone()
-                            }
-                        } else {
-                            d.clone()
-                        };
-                        let candidate = d.join("openclaw");
-                        candidate.exists().then_some(candidate)
-                    })
-                })
-                .unwrap_or_else(|| PathBuf::from("/Users/bri/.local/bin/openclaw"))
-        },
-        PathBuf::from,
-    );
-    let child = Command::new(&openclaw_path)
+    // Spawn an isolated OpenClaw agent turn in its own session.
+    // Local CLI help confirms `openclaw agent` is the supported non-interactive
+    // entrypoint, while `openclaw sessions` only supports listing/cleanup.
+    let session_id = format!("monitor-fix-{label}-{}", Utc::now().timestamp());
+    let child = Command::new(std::env::var("OPENCLAW_CLI").unwrap_or_else(|_| "openclaw".into()))
         .args([
-            "sessions",
-            "spawn",
-            "--label",
-            &format!("fix-{label}-{}", Utc::now().timestamp()),
-            "--runtime",
-            "subagent",
-            "--mode",
-            "run",
-            "--task",
+            "agent",
+            "--agent",
+            "main",
+            "--session-id",
+            &session_id,
+            "--message",
             task,
         ])
         .spawn();
 
     match child {
-        Ok(_) => log(&format!("Spawned fix subagent: {label}")),
+        Ok(_) => log(&format!("Spawned fix agent session: {label} ({session_id})")),
         Err(e) => log(&format!("Spawn failed for {label}: {e}")),
     }
 
