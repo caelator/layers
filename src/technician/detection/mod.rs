@@ -11,9 +11,9 @@ use crate::uc;
 use chrono::{Duration, Utc};
 
 use super::data::{
-    Diagnosis, DiagnosisKind, Signal,
+    Diagnosis, DiagnosisKind,
 };
-use super::data::repair::RepairBudget;
+
 
 // ---------------------------------------------------------------------------
 // Plugin registration
@@ -26,9 +26,9 @@ pub fn detect_plugins() -> Vec<Diagnosis> {
     // RLEF plugin: try instantiating and calling select
     match std::panic::catch_unwind(|| {
         let plugin = crate::plugins::rlef::RlefRouterPlugin::new();
-        plugin.select(["a", "b", "c"])
+        let _ = plugin.select(&["a", "b", "c"]);
     }) {
-        Ok(_) => {}
+        Ok(()) => {}
         Err(_) => {
             diagnoses.push(Diagnosis::new(
                 DiagnosisKind::PluginPanic,
@@ -39,26 +39,29 @@ pub fn detect_plugins() -> Vec<Diagnosis> {
     }
 
     // Telemetry plugin: try instantiating and recording a routing decision
-    let tempdir = tempfile::TempDir::new().ok();
-    if let Some(tmp) = &tempdir {
-        let path = tmp.path().join("events.jsonl");
-        match crate::plugins::telemetry::TelemetryPlugin::new(tmp.path().to_path_buf())
-            .record_routing_decision(
-                "test-task",
-                crate::router::Route::Both,
-                crate::router::Confidence::High,
-                None,
-            ) {
-            Ok(_) => {}
-            Err(_) => {
-                diagnoses.push(Diagnosis::new(
-                    DiagnosisKind::PluginPanic,
-                    "telemetry plugin returned error on record_routing_decision".to_string(),
-                    serde_json::json!({ "plugin": "telemetry" }),
-                ));
-            }
+    let tempdir = std::env::temp_dir().join(format!("layers-tech-test-{}", std::process::id()));
+    std::fs::create_dir_all(&tempdir).ok();
+    let mut plugin = crate::plugins::telemetry::TelemetryPlugin::new(&tempdir);
+    let decision = crate::plugins::telemetry::RoutingDecision {
+        query_fingerprint: "technician-health-check".to_string(),
+        chosen_route: "both".to_string(),
+        route_confidence: 0.9,
+        plugin_calls: vec![],
+        end_to_end_latency_ms: 0,
+        outcome: crate::plugins::telemetry::RoutingOutcome::Success,
+        council_data: None,
+    };
+    match plugin.record_routing_decision(decision) {
+        Ok(()) => {}
+        Err(_) => {
+            diagnoses.push(Diagnosis::new(
+                DiagnosisKind::PluginPanic,
+                "telemetry plugin returned error on record_routing_decision".to_string(),
+                serde_json::json!({ "plugin": "telemetry" }),
+            ));
         }
     }
+    let _ = std::fs::remove_dir_all(&tempdir);
 
     diagnoses
 }
@@ -75,7 +78,7 @@ pub fn detect_uc() -> Vec<Diagnosis> {
 
     if !available {
         // Try to distinguish binary-missing from config-missing
-        if !which::which("uc").is_ok() {
+        if crate::util::which("uc").is_none() {
             diagnoses.push(Diagnosis::new(
                 DiagnosisKind::UcBinaryMissing,
                 "uc binary not found on PATH".to_string(),
@@ -133,7 +136,7 @@ pub fn detect_uc() -> Vec<Diagnosis> {
 pub fn detect_gitnexus() -> Vec<Diagnosis> {
     let mut diagnoses = Vec::new();
 
-    if which::which("gitnexus").is_err() {
+    if crate::util::which("gitnexus").is_none() {
         diagnoses.push(Diagnosis::new(
             DiagnosisKind::GitNexusBinaryMissing,
             "gitnexus binary not found on PATH".to_string(),
@@ -183,9 +186,8 @@ pub fn detect_council_artifacts() -> Vec<Diagnosis> {
         return diagnoses;
     }
 
-    let entries = match fs::read_dir(&runs_dir) {
-        Ok(e) => e,
-        Err(_) => return diagnoses,
+    let Ok(entries) = fs::read_dir(&runs_dir) else {
+        return diagnoses;
     };
 
     for entry in entries.flatten() {
@@ -225,63 +227,61 @@ pub fn detect_council_artifacts() -> Vec<Diagnosis> {
             continue;
         }
 
-        let run_json_content = match fs::read_to_string(&run_json_path) {
-            Ok(c) => c,
-            Err(_) => {
-                diagnoses.push(Diagnosis::new(
-                    DiagnosisKind::CouncilRunJsonCorrupt,
-                    format!("run.json unreadable for council run {name}"),
-                    serde_json::json!({ "run_id": name }),
-                ));
-                continue;
-            }
+        let Ok(run_json_content) = fs::read_to_string(&run_json_path) else {
+            diagnoses.push(Diagnosis::new(
+                DiagnosisKind::CouncilRunJsonCorrupt,
+                format!("run.json unreadable for council run {name}"),
+                serde_json::json!({ "run_id": name }),
+            ));
+            continue;
         };
 
-        let record: CouncilRunRecord = match serde_json::from_str(&run_json_content) {
-            Ok(r) => r,
-            Err(_) => {
-                diagnoses.push(Diagnosis::new(
-                    DiagnosisKind::CouncilRunJsonCorrupt,
-                    format!("run.json is not valid JSON for council run {name}"),
-                    serde_json::json!({ "run_id": name }),
-                ));
-                continue;
-            }
+        let Ok(record) = serde_json::from_str::<CouncilRunRecord>(&run_json_content) else {
+            diagnoses.push(Diagnosis::new(
+                DiagnosisKind::CouncilRunJsonCorrupt,
+                format!("run.json is not valid JSON for council run {name}"),
+                serde_json::json!({ "run_id": name }),
+            ));
+            continue;
         };
 
-        // Check referenced files exist
+        // Check referenced files exist (stdout/stderr are on attempts, not stage)
         for stage in &record.stages {
-            if !stage.stdout_path.is_empty()
-                && !Path::new(&stage.stdout_path).exists()
-            {
-                diagnoses.push(Diagnosis::new(
-                    DiagnosisKind::CouncilRunArtifactsMissing,
-                    format!(
-                        "stage {} stdout file missing for run {}",
-                        stage.stage, name
-                    ),
-                    serde_json::json!({
-                        "run_id": name,
-                        "stage": stage.stage,
-                        "stdout_path": stage.stdout_path
-                    }),
-                ));
-            }
-            if !stage.stderr_path.is_empty()
-                && !Path::new(&stage.stderr_path).exists()
-            {
-                diagnoses.push(Diagnosis::new(
-                    DiagnosisKind::CouncilRunArtifactsMissing,
-                    format!(
-                        "stage {} stderr file missing for run {}",
-                        stage.stage, name
-                    ),
-                    serde_json::json!({
-                        "run_id": name,
-                        "stage": stage.stage,
-                        "stderr_path": stage.stderr_path
-                    }),
-                ));
+            for attempt in &stage.attempts {
+                if !attempt.stdout_path.is_empty()
+                    && !Path::new(&attempt.stdout_path).exists()
+                {
+                    diagnoses.push(Diagnosis::new(
+                        DiagnosisKind::CouncilRunArtifactsMissing,
+                        format!(
+                            "stage {} attempt {} stdout file missing for run {}",
+                            stage.stage, attempt.attempt, name
+                        ),
+                        serde_json::json!({
+                            "run_id": name,
+                            "stage": stage.stage,
+                            "attempt": attempt.attempt,
+                            "stdout_path": attempt.stdout_path
+                        }),
+                    ));
+                }
+                if !attempt.stderr_path.is_empty()
+                    && !Path::new(&attempt.stderr_path).exists()
+                {
+                    diagnoses.push(Diagnosis::new(
+                        DiagnosisKind::CouncilRunArtifactsMissing,
+                        format!(
+                            "stage {} attempt {} stderr file missing for run {}",
+                            stage.stage, attempt.attempt, name
+                        ),
+                        serde_json::json!({
+                            "run_id": name,
+                            "stage": stage.stage,
+                            "attempt": attempt.attempt,
+                            "stderr_path": attempt.stderr_path
+                        }),
+                    ));
+                }
             }
         }
     }
@@ -345,9 +345,8 @@ pub fn detect_circuit_breaker() -> Vec<Diagnosis> {
         return diagnoses;
     }
 
-    let entries = match fs::read_dir(&runs_dir) {
-        Ok(e) => e,
-        Err(_) => return diagnoses,
+    let Ok(entries) = fs::read_dir(&runs_dir) else {
+        return diagnoses;
     };
 
     for entry in entries.flatten() {
@@ -361,9 +360,8 @@ pub fn detect_circuit_breaker() -> Vec<Diagnosis> {
         }
 
         let run_json_path = path.join("run.json");
-        let content = match fs::read_to_string(&run_json_path) {
-            Ok(c) => c,
-            Err(_) => continue,
+        let Ok(content) = fs::read_to_string(&run_json_path) else {
+            continue;
         };
 
         let record: CouncilRunRecord = match serde_json::from_str(&content) {
@@ -381,7 +379,7 @@ pub fn detect_circuit_breaker() -> Vec<Diagnosis> {
         match record.status.as_str() {
             "failed" => {
                 let reason = &record.status_reason;
-                let diagnosis = if reason.contains("circuit breaker tripped") {
+                let kind = if reason.contains("circuit breaker tripped") {
                     DiagnosisKind::CircuitBreakerTripped
                 } else if reason.contains("retries_exhausted") {
                     DiagnosisKind::StageRetriesExhausted
@@ -392,7 +390,7 @@ pub fn detect_circuit_breaker() -> Vec<Diagnosis> {
                 };
 
                 diagnoses.push(Diagnosis::new(
-                    diagnosis,
+                    kind,
                     format!("council run {name} failed: {reason}"),
                     serde_json::json!({
                         "run_id": name,
@@ -438,16 +436,13 @@ pub fn detect_telemetry_health() -> Vec<Diagnosis> {
         return diagnoses;
     }
 
-    let events = match crate::plugins::telemetry::load_events_from_file(&events_path) {
-        Ok(e) => e,
-        Err(_) => {
-            diagnoses.push(Diagnosis::new(
-                DiagnosisKind::TelemetryFileMissing,
-                "telemetry events.jsonl could not be parsed".to_string(),
-                serde_json::json!({ "path": events_path.display().to_string() }),
-            ));
-            return diagnoses;
-        }
+    let Ok(events) = crate::plugins::telemetry::load_events_from_file(&events_path) else {
+        diagnoses.push(Diagnosis::new(
+            DiagnosisKind::TelemetryFileMissing,
+            "telemetry events.jsonl could not be parsed".to_string(),
+            serde_json::json!({ "path": events_path.display().to_string() }),
+        ));
+        return diagnoses;
     };
 
     let total = events.len();
@@ -462,7 +457,7 @@ pub fn detect_telemetry_health() -> Vec<Diagnosis> {
         .filter(|e| {
             matches!(
                 e,
-                crate::plugins::telemetry::schema::RoutingDecisionEvent { outcome: crate::plugins::telemetry::schema::RoutingOutcome::Failure, .. }
+                crate::plugins::telemetry::RoutingDecisionEvent { outcome: crate::plugins::telemetry::RoutingOutcome::Failure, .. }
             )
         })
         .count();

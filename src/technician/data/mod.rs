@@ -1,6 +1,6 @@
 //! Persistent state and artifact types for the technician.
 
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 /// Schema version for all technician artifacts.
@@ -29,10 +29,12 @@ pub fn escalations_path() -> PathBuf {
     layers_root().join("technician-escalations.jsonl")
 }
 
+#[allow(dead_code)]
 pub fn health_path() -> PathBuf {
     layers_root().join(".technician-health.jsonl")
 }
 
+#[allow(dead_code)]
 pub fn lock_path() -> PathBuf {
     layers_root().join(".technician.lock")
 }
@@ -52,7 +54,7 @@ pub struct TechnicianState {
     pub cycle_count: u64,
     /// Whether UC binary + config are available.
     pub uc_available: bool,
-    /// Whether GitNexus binary is available.
+    /// Whether `GitNexus` binary is available.
     pub gitnexus_available: bool,
     /// Number of telemetry events seen in the last cycle.
     pub telemetry_event_count: usize,
@@ -102,7 +104,10 @@ impl TechnicianState {
         if !path.exists() {
             return Self::default();
         }
-        serde_json::from_reader(std::fs::File::open(&path).ok()?).unwrap_or_default()
+        let Ok(file) = std::fs::File::open(&path) else {
+            return Self::default();
+        };
+        serde_json::from_reader(file).unwrap_or_default()
     }
 
     pub fn persist(&self) -> std::io::Result<()> {
@@ -127,7 +132,7 @@ impl TechnicianState {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RepairBudget {
     /// Remaining JSONL truncate operations this cycle.
     pub jsonl_truncate: u32,
@@ -222,7 +227,7 @@ impl EscalationRecord {
 // ---------------------------------------------------------------------------
 
 /// The output of a single technician cycle.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CycleReport {
     pub schema_version: u32,
     pub cycle_id: String,
@@ -399,13 +404,16 @@ impl DiagnosisKind {
 
 impl Diagnosis {
     pub fn new(kind: DiagnosisKind, summary: String, context: serde_json::Value) -> Self {
+        let signal = kind.signal();
+        let autonomously_repairable = kind.autonomously_repairable();
+        let requires_escalation = kind.requires_escalation();
         Self {
-            signal: kind.signal(),
+            signal,
             kind,
             summary,
             context,
-            autonomously_repairable: kind.autonomously_repairable(),
-            requires_escalation: kind.requires_escalation(),
+            autonomously_repairable,
+            requires_escalation,
         }
     }
 }

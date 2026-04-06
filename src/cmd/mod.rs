@@ -1,4 +1,5 @@
 pub mod council;
+pub mod technician;
 pub mod curated;
 pub mod feedback;
 pub mod infrastructure;

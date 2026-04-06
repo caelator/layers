@@ -31,11 +31,12 @@ use std::path::Path;
 
 use aggregator::{IntegrationHealthReport, aggregate, format_report};
 use schema::{
-    CouncilData, PluginCall, RoutingDecisionEvent, RoutingOutcome, SCHEMA_VERSION,
+    SCHEMA_VERSION,
 };
-// Re-export load_events_from_file so the technician detection module can use it
+// Re-export schema items so the technician detection module can use them
 // without depending on the private schema submodule.
 pub use schema::load_events_from_file;
+pub use schema::{RoutingOutcome, CouncilData, PluginCall, RoutingDecisionEvent};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::path::PathBuf;

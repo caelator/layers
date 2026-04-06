@@ -39,6 +39,7 @@ mod util;
 
 mod plugins;
 mod router;
+mod technician;
 mod uc;
 
 use cmd::council::{handle_council_promote, handle_council_run};
@@ -50,6 +51,7 @@ use cmd::query::handle_query;
 use cmd::refresh::handle_refresh;
 use cmd::remember::handle_remember;
 use cmd::telemetry::{TelemetryCommands, handle_telemetry};
+use cmd::technician::handle_technician;
 use cmd::validate::handle_validate;
 
 /// Council orchestrator and memory spine for multi-model AI workflows.
@@ -141,6 +143,11 @@ enum Commands {
     Monitor {
         #[command(subcommand)]
         command: cmd::monitor::MonitorArgs,
+    },
+    /// Self-healing technician: plugin wiring verification and integration health.
+    Technician {
+        #[command(subcommand)]
+        command: cmd::technician::TechnicianArgs,
     },
     /// View integration telemetry and health reports.
     Telemetry {
@@ -384,6 +391,7 @@ fn main() -> anyhow::Result<()> {
             handle_infrastructure(&args)
         }
         Commands::Monitor { command } => handle_monitor(&command),
+        Commands::Technician { command } => handle_technician(&command),
         Commands::Telemetry { command } => handle_telemetry(&command),
     }
 }
