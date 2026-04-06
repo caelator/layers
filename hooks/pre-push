@@ -1,0 +1,14 @@
+#!/bin/sh
+# Pre-push hook: same checks as pre-commit but also runs on push
+echo "Running pre-push checks..."
+cargo clippy -- -D warnings
+if [ $? -ne 0 ]; then
+    echo "Clippy failed. Fix warnings before pushing."
+    exit 1
+fi
+cargo test
+if [ $? -ne 0 ]; then
+    echo "Tests failed. Fix before pushing."
+    exit 1
+fi
+echo "Pre-push checks passed."

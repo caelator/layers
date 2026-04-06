@@ -55,3 +55,7 @@ Before sending changes upstream:
 3. `cargo run -- validate`
 
 If a test or validation check fails, fix the cause rather than documenting around it.
+
+## Strict Enforcement
+
+See [ENFORCEMENT.md](ENFORCEMENT.md) for details on the lint enforcement layers (CI, git hooks, RUSTFLAGS).

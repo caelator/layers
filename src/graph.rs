@@ -74,7 +74,7 @@ pub fn impact(targets: &[String]) -> Result<Option<ImpactSummary>> {
                 if let Some(t) = parsed.get("transitive").and_then(serde_json::Value::as_u64) {
                     all_transitive += t;
                 }
-                if let Some(r) = parsed.get("risk_level").and_then(|v| v.as_str()) {
+                if let Some(r) = parsed.get("risk_level").and_then(serde_json::Value::as_str) {
                     risk_level = r.to_string();
                 }
                 if let Some(procs) = parsed.get("affected_processes").and_then(|v| v.as_array()) {
