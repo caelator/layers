@@ -1,4 +1,5 @@
 mod artifacts;
+mod circuit_breaker;
 mod convergence;
 mod stage;
 
@@ -14,6 +15,7 @@ use artifacts::{
     append_trace_record, build_run_id, degraded_reasons, initial_stage_record, persist_run_state,
     validate_run_artifacts,
 };
+use circuit_breaker::from_env;
 use convergence::{build_convergence_record, build_failure_convergence_record};
 use stage::{StageOutcome, StageSpec, execute_stage};
 
@@ -134,6 +136,7 @@ pub fn execute_council_run(request: CouncilRunRequest) -> Result<CouncilRunRecor
     ];
 
     let mut prior_outputs = Vec::new();
+    let mut circuit_breaker = from_env();
     for (index, spec) in specs.iter().enumerate() {
         let prompt = build_stage_prompt(
             spec.stage,
@@ -153,6 +156,20 @@ pub fn execute_council_run(request: CouncilRunRequest) -> Result<CouncilRunRecor
             request.retry_limit,
             request.timeout_secs,
         )?;
+
+        // Apply circuit breaker after successful stages only
+        if let StageOutcome::Succeeded(stage_output) = &output {
+            if !circuit_breaker.record_round(stage_output) {
+                run.status = "failed".to_string();
+                run.status_reason = format!(
+                    "circuit breaker tripped after {} no-progress rounds",
+                    circuit_breaker.consecutive_no_progress()
+                );
+                run.updated_at = iso_now();
+                break;
+            }
+        }
+
         match output {
             StageOutcome::Succeeded(output) => {
                 prior_outputs.push((spec.stage.to_string(), output));
