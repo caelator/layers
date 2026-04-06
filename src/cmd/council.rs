@@ -267,12 +267,12 @@ pub fn council_promotion_record(
 }
 
 pub(crate) fn council_command(stage: &str, explicit: Option<String>) -> Result<String> {
+    use anyhow::Context;
     if let Some(cmd) = explicit {
         if !cmd.trim().is_empty() {
             return Ok(cmd);
         }
     }
-    use anyhow::Context;
     let env_key = match stage {
         "gemini" => "LAYERS_COUNCIL_GEMINI_CMD",
         "claude" => "LAYERS_COUNCIL_CLAUDE_CMD",

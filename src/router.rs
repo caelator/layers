@@ -343,14 +343,14 @@ fn apply_correction_bias(scores: &mut Scores) {
         match *predicted {
             Route::MemoryOnly | Route::Both => {
                 scores.historical =
-                    (scores.historical as f64 * (1.0 - weight)).round() as u32;
+                    (f64::from(scores.historical) * (1.0 - weight)).round() as u32;
             }
             Route::GraphOnly => {
                 scores.structural =
-                    (scores.structural as f64 * (1.0 - weight)).round() as u32;
+                    (f64::from(scores.structural) * (1.0 - weight)).round() as u32;
             }
             Route::Neither => {
-                scores.local = (scores.local as f64 * (1.0 - weight)).round() as u32;
+                scores.local = (f64::from(scores.local) * (1.0 - weight)).round() as u32;
             }
         }
 
@@ -358,13 +358,13 @@ fn apply_correction_bias(scores: &mut Scores) {
         let boost = weight / 3.0;
         match *actual {
             Route::MemoryOnly | Route::Both => {
-                scores.historical = (scores.historical as f64 * (1.0 + boost)).round() as u32;
+                scores.historical = (f64::from(scores.historical) * (1.0 + boost)).round() as u32;
             }
             Route::GraphOnly => {
-                scores.structural = (scores.structural as f64 * (1.0 + boost)).round() as u32;
+                scores.structural = (f64::from(scores.structural) * (1.0 + boost)).round() as u32;
             }
             Route::Neither => {
-                scores.local = (scores.local as f64 * (1.0 + boost)).round() as u32;
+                scores.local = (f64::from(scores.local) * (1.0 + boost)).round() as u32;
             }
         }
     }
