@@ -605,7 +605,9 @@ fn spawn_fix_subagent(label: &str, task: &str) -> Result<()> {
         .spawn();
 
     match child {
-        Ok(_) => log(&format!("Spawned fix agent session: {label} ({session_id})")),
+        Ok(_) => log(&format!(
+            "Spawned fix agent session: {label} ({session_id})"
+        )),
         Err(e) => log(&format!("Spawn failed for {label}: {e}")),
     }
 
