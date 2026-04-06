@@ -32,8 +32,10 @@ use std::path::Path;
 use aggregator::{IntegrationHealthReport, aggregate, format_report};
 use schema::{
     CouncilData, PluginCall, RoutingDecisionEvent, RoutingOutcome, SCHEMA_VERSION,
-    load_events_from_file,
 };
+// Re-export load_events_from_file so the technician detection module can use it
+// without depending on the private schema submodule.
+pub use schema::load_events_from_file;
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::path::PathBuf;
@@ -106,6 +108,13 @@ pub struct TelemetryPlugin {
     event_path: PathBuf,
     /// Whether the plugin has been flushed (events written to disk) this session.
     flushed_this_session: bool,
+}
+
+/// Return the canonical path to the telemetry events JSONL file.
+pub fn events_path() -> PathBuf {
+    crate::config::memoryport_dir()
+        .join(TELEMETRY_DIR)
+        .join(EVENTS_FILE)
 }
 
 impl TelemetryPlugin {
