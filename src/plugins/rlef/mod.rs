@@ -141,10 +141,8 @@ impl RlefRouterPlugin {
     ///
     /// Any option not in `options` is removed from the charge map.
     pub fn init_charges(&mut self, options: &[&str]) {
-        let new_options: HashMap<String, f64> = options
-            .iter()
-            .map(|&s| (s.to_string(), 0.0))
-            .collect();
+        let new_options: HashMap<String, f64> =
+            options.iter().map(|&s| (s.to_string(), 0.0)).collect();
         self.charges = new_options;
     }
 
@@ -183,12 +181,7 @@ impl RlefRouterPlugin {
     /// Panics if `candidates` is empty.
     #[must_use]
     pub fn select(&self, candidates: &[&str]) -> String {
-        selection::weighted_select(
-            &self.charges,
-            candidates,
-            self.base_weight,
-            self.floor,
-        )
+        selection::weighted_select(&self.charges, candidates, self.base_weight, self.floor)
     }
 
     /// Get the current charge value for an option.
@@ -326,20 +319,13 @@ mod tests {
         router.record_selection("b");
 
         let json = serde_json::to_string(&router).expect("must serialize");
-        let restored: RlefRouterPlugin =
-            serde_json::from_str(&json).expect("must deserialize");
+        let restored: RlefRouterPlugin = serde_json::from_str(&json).expect("must deserialize");
 
         // Charges should round-trip (f64 precision may differ slightly)
-        assert_eq!(
-            router.all_charges().len(),
-            restored.all_charges().len()
-        );
+        assert_eq!(router.all_charges().len(), restored.all_charges().len());
         for (k, v) in router.all_charges() {
             let rv = restored.all_charges().get(k);
-            assert!(
-                rv.is_some(),
-                "restored map missing key '{k}'"
-            );
+            assert!(rv.is_some(), "restored map missing key '{k}'");
             assert!(
                 (v - rv.unwrap()).abs() < 1e-6,
                 "charge mismatch for '{k}': {v} vs {}",

@@ -42,7 +42,10 @@ pub fn weighted_select(
     }
 
     // Fallback: return last (should not reach here if weights are correct)
-    candidates.last().map(|s: &&str| s.to_string()).unwrap_or_default()
+    candidates
+        .last()
+        .map(|s: &&str| s.to_string())
+        .unwrap_or_default()
 }
 
 #[cfg(test)]
@@ -62,8 +65,9 @@ mod tests {
 
     #[test]
     fn repeated_selection_distributes() {
-        let charges: HashMap<String, f64> =
-            vec![("a".into(), 0.0), ("b".into(), 0.0)].into_iter().collect();
+        let charges: HashMap<String, f64> = vec![("a".into(), 0.0), ("b".into(), 0.0)]
+            .into_iter()
+            .collect();
 
         let candidates = ["a", "b"];
 
@@ -85,8 +89,9 @@ mod tests {
     #[test]
     fn higher_charge_reduces_selection_probability() {
         // Option "a" has high charge → should be selected less often
-        let charges: HashMap<String, f64> =
-            vec![("a".into(), 0.8), ("b".into(), 0.1)].into_iter().collect();
+        let charges: HashMap<String, f64> = vec![("a".into(), 0.8), ("b".into(), 0.1)]
+            .into_iter()
+            .collect();
 
         let candidates = ["a", "b"];
 
@@ -118,8 +123,7 @@ mod tests {
     #[test]
     fn unknown_candidates_get_base_weight() {
         // "c" is not in charges map, should get base weight
-        let charges: HashMap<String, f64> =
-            vec![("a".into(), 0.0)].into_iter().collect();
+        let charges: HashMap<String, f64> = vec![("a".into(), 0.0)].into_iter().collect();
 
         let candidates = ["a", "c"];
         let selected = weighted_select(&charges, &candidates, 1.0, 0.05);

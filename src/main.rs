@@ -46,10 +46,10 @@ use cmd::curated::handle_curated_import;
 use cmd::feedback::handle_feedback;
 use cmd::infrastructure::{InfrastructureArgs, handle_infrastructure};
 use cmd::monitor::handle_monitor;
-use cmd::telemetry::{handle_telemetry, TelemetryCommands};
 use cmd::query::handle_query;
 use cmd::refresh::handle_refresh;
 use cmd::remember::handle_remember;
+use cmd::telemetry::{TelemetryCommands, handle_telemetry};
 use cmd::validate::handle_validate;
 
 /// Council orchestrator and memory spine for multi-model AI workflows.
@@ -263,7 +263,6 @@ enum CouncilCommands {
         json: bool,
     },
 }
-
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();

@@ -29,10 +29,10 @@ pub mod schema;
 
 use std::path::Path;
 
-use aggregator::{aggregate, format_report, IntegrationHealthReport};
+use aggregator::{IntegrationHealthReport, aggregate, format_report};
 use schema::{
-    load_events_from_file, CouncilData, PluginCall, RoutingDecisionEvent,
-    RoutingOutcome, SCHEMA_VERSION,
+    CouncilData, PluginCall, RoutingDecisionEvent, RoutingOutcome, SCHEMA_VERSION,
+    load_events_from_file,
 };
 use serde::{Deserialize, Serialize};
 use std::io::Write;
@@ -235,8 +235,8 @@ impl TelemetryPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use schema::{PluginCall, ResultQuality, RoutingOutcome};
     use RoutingOutcome::Success;
+    use schema::{PluginCall, ResultQuality, RoutingOutcome};
 
     // Global counter so each test invocation gets a unique temp dir
     static TELEMETRY_TEST_COUNTER: std::sync::atomic::AtomicU64 =
@@ -263,7 +263,8 @@ mod tests {
     #[test]
     fn new_creates_telemetry_dir() {
         let pid = std::process::id();
-        let counter = std::sync::atomic::AtomicU64::new(0).fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let counter =
+            std::sync::atomic::AtomicU64::new(0).fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let tempdir = std::env::current_dir()
             .unwrap_or_else(|_| PathBuf::from("."))
             .join(format!("layers_new_test_{pid}_{counter}"));
@@ -295,7 +296,9 @@ mod tests {
             ..Default::default()
         };
 
-        plugin.record_routing_decision(decision).expect("record must succeed");
+        plugin
+            .record_routing_decision(decision)
+            .expect("record must succeed");
 
         // Verify file contains the event
         let content = std::fs::read_to_string(&events_file).expect("file must exist");

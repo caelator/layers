@@ -4,7 +4,7 @@ pub mod feedback;
 pub mod infrastructure;
 pub mod monitor;
 pub mod query;
-pub mod telemetry;
 pub mod refresh;
 pub mod remember;
+pub mod telemetry;
 pub mod validate;

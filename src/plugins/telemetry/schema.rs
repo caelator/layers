@@ -148,9 +148,7 @@ pub fn load_events_from_file(path: &PathBuf) -> std::io::Result<Vec<RoutingDecis
         match serde_json::from_str::<RoutingDecisionEvent>(line) {
             Ok(event) => events.push(event),
             Err(e) => {
-                eprintln!(
-                    "[telemetry] Warning: skipped malformed event line: {e}"
-                );
+                eprintln!("[telemetry] Warning: skipped malformed event line: {e}");
             }
         }
     }
@@ -210,8 +208,7 @@ mod tests {
             "council_data": null
         }"#;
 
-        let event: RoutingDecisionEvent =
-            serde_json::from_str(json).expect("must deserialize");
+        let event: RoutingDecisionEvent = serde_json::from_str(json).expect("must deserialize");
 
         assert_eq!(event.schema_version, "1.0");
         assert_eq!(event.chosen_route, "graph_only");
@@ -221,7 +218,11 @@ mod tests {
 
     #[test]
     fn result_quality_roundtrip() {
-        for quality in [ResultQuality::Useful, ResultQuality::Neutral, ResultQuality::Useless] {
+        for quality in [
+            ResultQuality::Useful,
+            ResultQuality::Neutral,
+            ResultQuality::Useless,
+        ] {
             let json = serde_json::to_string(&quality).unwrap();
             let restored: ResultQuality = serde_json::from_str(&json).unwrap();
             assert_eq!(quality, restored);

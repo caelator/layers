@@ -146,10 +146,7 @@ pub fn format_report(report: &IntegrationHealthReport) -> String {
     let mut lines = vec![
         format!("IntegrationHealthReport (schema={SCHEMA_VERSION})"),
         format!("  total_events: {}", report.total_events),
-        format!(
-            "  average_latency_ms: {:.1}",
-            report.average_latency_ms
-        ),
+        format!("  average_latency_ms: {:.1}", report.average_latency_ms),
         format!("  error_rate: {:.1}%", report.error_rate * 100.0),
         format!(
             "  routing_accuracy_estimate: {:.1}%",
@@ -184,7 +181,9 @@ pub fn format_report(report: &IntegrationHealthReport) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::plugins::telemetry::schema::{CouncilData, PluginCall, ResultQuality, RoutingOutcome};
+    use crate::plugins::telemetry::schema::{
+        CouncilData, PluginCall, ResultQuality, RoutingOutcome,
+    };
 
     fn make_event(
         outcome: RoutingOutcome,

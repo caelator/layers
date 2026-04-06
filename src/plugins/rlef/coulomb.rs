@@ -94,8 +94,9 @@ mod tests {
 
     #[test]
     fn unselected_charges_decay() {
-        let mut charges: HashMap<String, f64> =
-            vec![("a".into(), 0.5), ("b".into(), 0.5)].into_iter().collect();
+        let mut charges: HashMap<String, f64> = vec![("a".into(), 0.5), ("b".into(), 0.5)]
+            .into_iter()
+            .collect();
 
         apply_coulomb_repulsion(&mut charges, "a", 0.5, 0.6, 0.05);
 
@@ -105,8 +106,9 @@ mod tests {
 
     #[test]
     fn charges_clamp_to_floor() {
-        let mut charges: HashMap<String, f64> =
-            vec![("a".into(), 0.01), ("b".into(), 0.01)].into_iter().collect();
+        let mut charges: HashMap<String, f64> = vec![("a".into(), 0.01), ("b".into(), 0.01)]
+            .into_iter()
+            .collect();
 
         apply_coulomb_repulsion(&mut charges, "a", 0.5, 0.6, 0.05);
 
@@ -116,8 +118,9 @@ mod tests {
 
     #[test]
     fn charges_clamp_to_max() {
-        let mut charges: HashMap<String, f64> =
-            vec![("a".into(), 0.95), ("b".into(), 0.95)].into_iter().collect();
+        let mut charges: HashMap<String, f64> = vec![("a".into(), 0.95), ("b".into(), 0.95)]
+            .into_iter()
+            .collect();
 
         // Repeated selections should push a's charge above max
         apply_coulomb_repulsion(&mut charges, "a", 0.5, 0.6, 0.05);
@@ -129,8 +132,9 @@ mod tests {
 
     #[test]
     fn compute_weights_prefers_lower_charge() {
-        let charges: HashMap<String, f64> =
-            vec![("a".into(), 0.5), ("b".into(), 0.2)].into_iter().collect();
+        let charges: HashMap<String, f64> = vec![("a".into(), 0.5), ("b".into(), 0.2)]
+            .into_iter()
+            .collect();
 
         let weights = compute_weights(&charges, &["a", "b"], 1.0, 0.05);
 
@@ -141,8 +145,7 @@ mod tests {
 
     #[test]
     fn compute_weights_respects_floor() {
-        let charges: HashMap<String, f64> =
-            vec![("a".into(), 0.99)].into_iter().collect();
+        let charges: HashMap<String, f64> = vec![("a".into(), 0.99)].into_iter().collect();
 
         let weights = compute_weights(&charges, &["a"], 1.0, 0.05);
 
