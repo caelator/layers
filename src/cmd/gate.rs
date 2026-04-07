@@ -27,10 +27,9 @@ use anyhow::{Context, Result};
 /// Arguments for the `layers gate` command.
 #[derive(Debug, Clone, clap::Parser)]
 pub struct GateArgs {
-    /// Run without requiring MCP tool connectivity (skip the gitnexus-rs ping).
-    /// Enable MCP connectivity check (enabled by default; use --no-mcp to disable).
-    #[arg(long, default_value = "true", action = clap::ArgAction::Set)]
-    pub mcp: bool,
+    /// Skip the MCP connectivity check (useful when gitnexus-rs is not on PATH).
+    #[arg(long)]
+    pub skip_mcp: bool,
 
     /// Override the timeout for `cargo audit` in seconds.
     /// Default is 120s. First run may need more time to fetch the advisory DB.
@@ -52,10 +51,10 @@ pub fn handle_gate(args: &GateArgs) -> Result<()> {
     eprintln!();
     eprintln!("═══ Perfect Code Gate ═══");
     eprintln!("  Workspace: {}", workspace.display());
-    eprintln!("  MCP check: {}", if args.mcp { "on" } else { "off" });
+    eprintln!("  MCP check: {}", if args.skip_mcp { "off" } else { "on" });
     eprintln!();
 
-    run_gate(&workspace, args.mcp, args.audit_timeout)?;
+    run_gate(&workspace, !args.skip_mcp, args.audit_timeout)?;
 
     eprintln!();
     eprintln!("Workspace is Perfect. Gate Open.");

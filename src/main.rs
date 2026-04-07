@@ -120,9 +120,9 @@ enum Commands {
     },
     /// The Perfect Code Gate: format, compile, clippy, test, audit, MCP ping.
     Gate {
-        /// Run without requiring MCP tool connectivity (skip the gitnexus-rs ping).
-        #[arg(long, default_value = "true")]
-        mcp: bool,
+        /// Skip the MCP connectivity check (useful when gitnexus-rs is not on PATH).
+        #[arg(long)]
+        skip_mcp: bool,
         /// Override the timeout for `cargo audit` in seconds.
         #[arg(long, default_value = "120")]
         audit_timeout: u64,
@@ -365,11 +365,11 @@ fn main() -> anyhow::Result<()> {
         Commands::Validate { routing, ci } => handle_validate(routing, ci),
         Commands::Refresh { embeddings } => handle_refresh(embeddings),
         Commands::Gate {
-            mcp,
+            skip_mcp,
             audit_timeout,
             workspace,
         } => handle_gate(&cmd::gate::GateArgs {
-            mcp,
+            skip_mcp,
             audit_timeout,
             workspace,
         }),
