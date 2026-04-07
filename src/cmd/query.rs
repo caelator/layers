@@ -7,6 +7,7 @@ use crate::config::{CONTEXT_PAYLOAD_SCHEMA_VERSION, memoryport_dir};
 use crate::graph;
 use crate::memory;
 use crate::plugins::telemetry::schema::fingerprint_query;
+use crate::feedback::{emit_failure, FailureKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind};
 use crate::router::{self, Confidence, Route};
 use crate::uc;
 use crate::util::{append_jsonl, iso_now};
@@ -47,12 +48,9 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
     let t0 = Instant::now();
     let route_result = router::classify(task);
 
-    // Low-confidence downgrades to neither (refusal bias)
-    let effective_route = if route_result.confidence == Confidence::Low {
-        Route::Neither
-    } else {
-        route_result.route
-    };
+    // Low confidence means the classifier couldn't decide — but we still try UC
+    // semantic retrieval as a best-effort fallback. Low confidence ≠ no retrieval.
+    let effective_route = route_result.route;
 
     let mut memory_items: Vec<RetrievalItem> = Vec::new();
     let mut graph_items: Vec<RetrievalItem> = Vec::new();
@@ -62,18 +60,24 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
     let mut graph_latency_ms: u64 = 0;
     let mut fallback_reason: Option<String> = None;
 
-    // Retrieve memory if routed — try uc (semantic) first, fall back to local JSONL
-    if matches!(effective_route, Route::MemoryOnly | Route::Both) {
+    // Always try UC semantic retrieval when routed OR when the classifier
+    // had low confidence (best-effort fallback — low confidence ≠ no retrieval).
+    let low_confidence_fallback = route_result.confidence == Confidence::Low;
+    if matches!(effective_route, Route::MemoryOnly | Route::Both) || low_confidence_fallback {
         let t0 = Instant::now();
         let uc_retriever = uc::UcRetriever::new(uc::UcOptions::default());
         let uc_result = uc_retriever.retrieve(task, MAX_MEMORY_RECORDS);
         let used_uc = uc::meets_threshold_with(&uc_result, uc_retriever.min_results());
 
         if used_uc {
-            memory_source = "uc".to_string();
+            memory_source = if low_confidence_fallback {
+                "uc-low-confidence-fallback".to_string()
+            } else {
+                "uc".to_string()
+            };
             for line in &uc_result.lines {
                 memory_items.push(RetrievalItem {
-                    source: "uc".to_string(),
+                    source: memory_source.clone(),
                     text: line.clone(),
                     timestamp: None,
                 });
@@ -84,11 +88,15 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
             fallback_reason = Some("uc returned too few results".into());
         }
 
-        // Fall back to local keyword retrieval
+        // Fall back to local keyword retrieval if UC didn't produce results
         if !used_uc {
             match memory::retrieve_relevant(task, MAX_MEMORY_RECORDS) {
                 Ok(records) if !records.is_empty() => {
-                    memory_source = "keyword".to_string();
+                    memory_source = if low_confidence_fallback {
+                        "keyword-low-confidence-fallback".to_string()
+                    } else {
+                        "keyword".to_string()
+                    };
                     for r in &records {
                         memory_items.push(RetrievalItem {
                             source: r.source.clone(),
@@ -102,10 +110,14 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
                     }
                 }
                 Ok(_) => {
-                    open_uncertainty.push("Memory retrieval returned no matching records.".into());
+                    if !low_confidence_fallback {
+                        open_uncertainty.push("Memory retrieval returned no matching records.".into());
+                    }
                 }
                 Err(e) => {
-                    open_uncertainty.push(format!("Memory retrieval failed: {e}"));
+                    if !low_confidence_fallback {
+                        open_uncertainty.push(format!("Memory retrieval failed: {e}"));
+                    }
                     fallback_reason.get_or_insert_with(|| format!("memory error: {e}"));
                 }
             }
@@ -167,6 +179,25 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
         fallback_reason: fallback_reason.clone(),
     };
 
+
+    // Route failure feedback — RFC 006 Stage 2.
+    // If low-confidence fallback retrieved nothing, emit a RouteFailure.
+    if low_confidence_fallback && memory_items.is_empty() && graph_items.is_empty() {
+        let failure = RouteFailure::new(
+            task.to_string(),
+            RouteId::Neither,
+            FailureKind::Soft {
+                error_kind: SoftErrorKind::InsufficientContext,
+                flagged_by: "layers-classifier".to_string(),
+                affected_stage: "query".to_string(),
+            },
+            RoutingSignals::default(),
+        );
+        if let Err(e) = emit_failure(&failure) {
+            eprintln!("[route-feedback] failed to emit failure record: {e}");
+        }
+    }
+
     // Audit log (skip if --no-audit)
     if !no_audit {
         let audit = json!({
@@ -197,6 +228,7 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
         let output = json!({
             "schema_version": CONTEXT_PAYLOAD_SCHEMA_VERSION,
             "route": effective_route.label(),
+            "low_confidence_fallback": low_confidence_fallback,
             "confidence": route_result.confidence.to_string(),
             "scores": route_result.scores,
             "why_retrieved": route_result.why,
@@ -207,11 +239,29 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
         });
         println!("{}", serde_json::to_string_pretty(&output)?);
     } else if matches!(effective_route, Route::Neither) {
-        println!("<layers_context>");
-        println!("Route: {}", effective_route.label());
-        println!("Why Not Retrieved: {}", route_result.why);
-        println!("No context injection — task does not warrant retrieval.");
-        println!("</layers_context>");
+        // Low-confidence fallback: if we retrieved anyway, show the evidence
+        if !memory_items.is_empty() || !graph_items.is_empty() {
+            println!("<layers_context>");
+            println!("Route: {} (low confidence — best-effort retrieval)", effective_route.label());
+            println!("Why Retrieved: Semantic retrieval found relevant context despite low classifier confidence.");
+            if !final_evidence.is_empty() {
+                println!("\nEvidence:");
+                println!("{final_evidence}");
+            }
+            if !open_uncertainty.is_empty() {
+                println!("\nOpen Uncertainty:");
+                for u in &open_uncertainty {
+                    println!("- {u}");
+                }
+            }
+            println!("</layers_context>");
+        } else {
+            println!("<layers_context>");
+            println!("Route: {}", effective_route.label());
+            println!("Why Not Retrieved: {}", route_result.why);
+            println!("No context injection — task does not warrant retrieval.");
+            println!("</layers_context>");
+        }
     } else {
         println!("<layers_context>");
         println!("Route: {}", effective_route.label());

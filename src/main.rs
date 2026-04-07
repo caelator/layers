@@ -38,6 +38,7 @@ mod types;
 mod util;
 
 mod plugins;
+mod feedback;
 mod router;
 mod technician;
 mod uc;
