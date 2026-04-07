@@ -15,10 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: caelator/substrate
-          path: ../substrate
+      - run: git clone --depth 1 https://github.com/caelator/substrate.git ../substrate
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -29,10 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: caelator/substrate
-          path: ../substrate
+      - run: git clone --depth 1 https://github.com/caelator/substrate.git ../substrate
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test
 
