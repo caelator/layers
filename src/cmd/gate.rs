@@ -327,9 +327,7 @@ fn advisory_db_cached() -> bool {
 }
 
 fn run_audit_check(workspace: &Path, timeout_secs: u64) -> Result<()> {
-    eprintln!(
-        "Running Audit check (cache-aware, timeout={timeout_secs}s)..."
-    );
+    eprintln!("Running Audit check (cache-aware, timeout={timeout_secs}s)...");
 
     let advisory_was_cached = advisory_db_cached();
     let deadline = Instant::now() + Duration::from_secs(timeout_secs);
@@ -422,9 +420,7 @@ fn run_audit_check(workspace: &Path, timeout_secs: u64) -> Result<()> {
 /// Ping the gitnexus-rs MCP server via JSON-RPC 2.0 initialize handshake.
 /// Sends an initialize request, waits for a valid JSON-RPC response.
 fn run_mcp_ping(timeout_secs: u64) -> Result<()> {
-    eprintln!(
-        "Running MCP:gitnexus-rs ping check (timeout={timeout_secs}s)..."
-    );
+    eprintln!("Running MCP:gitnexus-rs ping check (timeout={timeout_secs}s)...");
 
     let request = serde_json::json!({
         "jsonrpc": "2.0",
