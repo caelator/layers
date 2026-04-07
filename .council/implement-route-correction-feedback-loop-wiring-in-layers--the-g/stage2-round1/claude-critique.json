@@ -1,0 +1,14 @@
+{
+  "reviewer_role": "adversarial-reviewer/conceptual-risk",
+  "critiques": [
+    {
+      "issue": "Unstructured critique (model did not return valid JSON)",
+      "severity": "medium",
+      "why_it_matters": "Review manually",
+      "suggested_delta": "[claude produced no output]",
+      "evidence": ""
+    }
+  ],
+  "things_to_keep": [],
+  "schema_version": 1
+}
