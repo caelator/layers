@@ -101,8 +101,8 @@ fn log(msg: &str) {
 }
 
 fn update_state(state: &str) -> anyhow::Result<()> {
-    use substrate::StorageSafety;
     use substrate::DefaultStorage;
+    use substrate::StorageSafety;
     let path = state_file();
     let content = format!("workdir:{state}\n");
     if fs::read_to_string(&path)

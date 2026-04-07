@@ -48,6 +48,7 @@ use cmd::council::{
 };
 use cmd::curated::handle_curated_import;
 use cmd::feedback::handle_feedback;
+use cmd::gate::handle_gate;
 use cmd::infrastructure::{InfrastructureArgs, handle_infrastructure};
 use cmd::monitor::handle_monitor;
 use cmd::query::handle_query;
@@ -115,6 +116,18 @@ enum Commands {
         /// Also regenerate embeddings (passes --embeddings to gitnexus analyze).
         #[arg(long)]
         embeddings: bool,
+    },
+    /// The Perfect Code Gate: format, compile, clippy, test, audit, MCP ping.
+    Gate {
+        /// Run without requiring MCP tool connectivity (skip the gitnexus-rs ping).
+        #[arg(long, default_value = "true")]
+        mcp: bool,
+        /// Override the timeout for `cargo audit` in seconds.
+        #[arg(long, default_value = "120")]
+        audit_timeout: u64,
+        /// Path to the workspace to gate. Defaults to the current directory.
+        #[arg(long)]
+        workspace: Option<std::path::PathBuf>,
     },
     /// Record a route correction to improve future routing decisions.
     Feedback {
@@ -350,6 +363,15 @@ fn main() -> anyhow::Result<()> {
         ),
         Commands::Validate { routing, ci } => handle_validate(routing, ci),
         Commands::Refresh { embeddings } => handle_refresh(embeddings),
+        Commands::Gate {
+            mcp,
+            audit_timeout,
+            workspace,
+        } => handle_gate(&cmd::gate::GateArgs {
+            mcp,
+            audit_timeout,
+            workspace,
+        }),
         Commands::Feedback {
             task,
             predicted,

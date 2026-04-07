@@ -1,6 +1,7 @@
 pub mod council;
 pub mod curated;
 pub mod feedback;
+pub mod gate;
 pub mod infrastructure;
 pub mod monitor;
 pub mod query;
