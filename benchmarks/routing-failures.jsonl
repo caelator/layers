@@ -1,0 +1,18 @@
+# Routing failure benchmark cases.
+# Each entry describes a failure mode; the benchmark verifies Layers handles it gracefully.
+# Fields:
+#   query             — input query (drives routing classification)
+#   expected_route    — what route classify() should still decide (even if retrieval fails)
+#   failure_mode      — which failure to inject/simulate
+#   expected_fallback  — what the fallback_reason should contain
+#   note              — why this failure mode is important
+{"query": "hello", "expected_route": "neither", "failure_mode": "uc_timeout", "expected_fallback": "timeout", "note": "UC times out on a trivial query; should not affect routing decision"}
+{"query": "why did we previously decide that approach", "expected_route": "memory_only", "failure_mode": "uc_timeout", "expected_fallback": "timeout", "note": "UC times out on a memory-only query; must still route correctly and fall back to keyword"}
+{"query": "deploy the previously agreed service architecture to production", "expected_route": "both", "failure_mode": "uc_timeout", "expected_fallback": "timeout", "note": "UC times out on a both-route query; must still route correctly with local memory fallback"}
+{"query": "hello", "expected_route": "neither", "failure_mode": "uc_empty", "expected_fallback": "uc is unavailable", "note": "UC returns zero results (exit 0, empty stdout); fallback_reason should explain, route stays neither"}
+{"query": "why did we previously decide that approach", "expected_route": "memory_only", "failure_mode": "uc_empty", "expected_fallback": "uc returned too few results", "note": "UC returns empty; keyword fallback kicks in; route stays memory_only"}
+{"query": "which module imports this file", "expected_route": "graph_only", "failure_mode": "uc_empty", "expected_fallback": "uc returned too few results", "note": "UC returns empty; but graph_only doesn't need UC; fallback_reason may still be set"}
+{"query": "hello", "expected_route": "neither", "failure_mode": "uc_missing", "expected_fallback": "uc is unavailable", "note": "UC binary not on PATH; is_available() returns false; no crash, graceful degradation"}
+{"query": "why did we previously decide that approach", "expected_route": "memory_only", "failure_mode": "uc_missing", "expected_fallback": "uc is unavailable", "note": "UC missing; keyword retrieval should still run; route stays memory_only"}
+{"query": "show me the execution flow for the council run module in the codebase", "expected_route": "graph_only", "failure_mode": "gitnexus_missing", "expected_fallback": null, "note": "GitNexus missing; graph query fails; memory route still works; open_uncertainty set"}
+{"query": "implement the previously decided refactor of the module dependency architecture", "expected_route": "both", "failure_mode": "gitnexus_missing", "expected_fallback": null, "note": "GitNexus missing; memory route succeeds; graph route gracefully degraded; route stays both"}
