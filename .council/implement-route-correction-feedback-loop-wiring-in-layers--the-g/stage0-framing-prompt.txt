@@ -1,0 +1,42 @@
+You are the framing controller for an AI planning council.
+
+Given the task below, produce four sections as a single structured output.
+You MUST use the exact markdown headers shown below. Every section MUST contain
+at least 2-3 concrete, specific points (not vague generalities).
+
+## Problem Brief
+What specific problem are we solving? What does "done" look like in observable terms?
+
+## Constraints
+Hard constraints only — tech stack, time budget, scope limits, external dependencies.
+List each as a bullet point.
+
+## Success Criteria
+Measurable or testable criteria. Each criterion should be verifiable by a developer.
+
+## Out of Scope
+What we are explicitly NOT solving in this iteration. Be specific about boundaries.
+
+Do NOT include introductory text, disclaimers, or meta-commentary.
+Start directly with `## Problem Brief`.
+
+Task:
+Implement Route-Correction Feedback Loop Wiring in layers
+
+The goal: wire the feedback loop infrastructure (src/feedback.rs) into the execution path so failures actually get recorded and influence future routing.
+
+## What to Build
+
+1. Wire emit_failure() into HardError detection — find where Timeout and NonZeroExit occur in council execution, call emit_failure()
+2. Wire RouteFailure::Soft into query result evaluation — detect low-quality/empty results and emit Soft failures
+3. Route-correction reader — read route-corrections.jsonl on startup, update routing weights
+4. Integrate failure history into Router — route_correction() or new method should consult failure weights
+
+## Constraints
+- Do NOT break existing tests (117/117 must pass)
+- cargo fmt --all && cargo clippy must pass with zero warnings
+- Keep RouteFailure serialization backward compatible
+- All new public APIs need doc comments
+- Commit with descriptive message after implementation is complete and tested
+
+External Context (Retrieved by Layers):

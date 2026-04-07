@@ -1,0 +1,17 @@
+Implement Route-Correction Feedback Loop Wiring in layers
+
+The goal: wire the feedback loop infrastructure (src/feedback.rs) into the execution path so failures actually get recorded and influence future routing.
+
+## What to Build
+
+1. Wire emit_failure() into HardError detection — find where Timeout and NonZeroExit occur in council execution, call emit_failure()
+2. Wire RouteFailure::Soft into query result evaluation — detect low-quality/empty results and emit Soft failures
+3. Route-correction reader — read route-corrections.jsonl on startup, update routing weights
+4. Integrate failure history into Router — route_correction() or new method should consult failure weights
+
+## Constraints
+- Do NOT break existing tests (117/117 must pass)
+- cargo fmt --all && cargo clippy must pass with zero warnings
+- Keep RouteFailure serialization backward compatible
+- All new public APIs need doc comments
+- Commit with descriptive message after implementation is complete and tested
