@@ -28,7 +28,8 @@ use anyhow::{Context, Result};
 #[derive(Debug, Clone, clap::Parser)]
 pub struct GateArgs {
     /// Run without requiring MCP tool connectivity (skip the gitnexus-rs ping).
-    #[arg(long, default_value = "true")]
+    /// Enable MCP connectivity check (enabled by default; use --no-mcp to disable).
+    #[arg(long, default_value = "true", action = clap::ArgAction::Set)]
     pub mcp: bool,
 
     /// Override the timeout for `cargo audit` in seconds.
