@@ -1,0 +1,31 @@
+{
+  "reviewer_role": "adversarial-reviewer/implementation-risk",
+  "critiques": [
+    {
+      "issue": "The Router's in-memory cache is populated only at startup, so failures emitted during a run won't influence subsequent routing decisions in the same session.",
+      "severity": "medium",
+      "why_it_matters": "If the CLI performs multiple routing decisions in a single long-running session or multi-stage task, it will repeatedly choose the same failing route because the cache is stale until the next invocation.",
+      "suggested_delta": "Ensure the in-memory routing cache is updated synchronously alongside the JSONL disk write when `emit_failure` is called.",
+      "evidence": "Section 8: 'The application explicitly preloads route-corrections.jsonl... at startup' and 'Next Run: The feedback loop is closed...'"
+    },
+    {
+      "issue": "Passing `FeedbackContext` down through all execution boundaries introduces widespread signature churn.",
+      "severity": "medium",
+      "why_it_matters": "Altering core execution signatures (like `CouncilStage`, `CouncilRun`, and queries) violates localized wiring, increasing the risk of breaking existing tests and creating unnecessary coupling.",
+      "suggested_delta": "Instead of passing context down, bubble the specific failure reasons (Timeout, NonZeroExit, EmptyResult) up via existing `Result`/Error types to the orchestration layer where `task` and `route` are already in scope, and invoke `emit_failure` there.",
+      "evidence": "Section 4: 'Add a small internal FeedbackContext struct passed through execution/query boundaries'"
+    },
+    {
+      "issue": "Automatically emitting a `SoftErrorKind` for any empty query result may incorrectly penalize valid routes.",
+      "severity": "low",
+      "why_it_matters": "Some queries legitimately return no results (e.g., searching for a non-existent bug or symbol). Penalizing the route for this will poison the feedback loop and degrade routing accuracy over time.",
+      "suggested_delta": "Refine the heuristic for `SoftErrorKind::EmptyResult` to only emit if the route strongly predicted results would exist, or apply a significantly lower penalty weight for empty results compared to hard failures.",
+      "evidence": "Section 4: 'detect when the retrieved result lines are empty and call emit_failure with SoftErrorKind::EmptyResult'"
+    }
+  ],
+  "things_to_keep": [
+    "Using synchronous inline emission (Approach A) to avoid the complexity and test flakiness of an async MPSC listener.",
+    "Gracefully skipping malformed JSONL lines during startup instead of crashing.",
+    "Adding strict backward compatibility tests for `RouteFailure` deserialization."
+  ]
+}
