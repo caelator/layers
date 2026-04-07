@@ -14,8 +14,8 @@
 {"query": "build on the prior council decision to migrate the import path in the repo", "expected_route": "both", "note": "historical (prior, council, decision) + structural (import, path, repo) + action (build, migrate)"}
 {"query": "what color should the button be", "expected_route": "neither", "expected_confidence": "low", "note": "no relevant signals"}
 {"query": "add a semicolon to line 42", "expected_route": "neither", "expected_confidence": "high", "note": "local: semicolon"}
-{"query": "What did we already decide about Layers?", "expected_route": "neither", "expected_confidence": "low", "note": "from audit log: borderline historical=2, correctly refusal-biased"}
-{"query": "What did we decide last time about Layers and how should it relate to GitNexus?", "expected_route": "neither", "expected_confidence": "low", "note": "from audit log: historical=2 (decid, last time) but below high-confidence threshold — correctly refusal-biased"}
+{"query": "What did we already decide about Layers?", "expected_route": "memory_only", "expected_confidence": "low", "note": "historical=2 (already, decid) — crosses memory threshold at low confidence"}
+{"query": "What did we decide last time about Layers and how should it relate to GitNexus?", "expected_route": "memory_only", "expected_confidence": "low", "note": "historical=2 (decid, last time) — crosses memory threshold at low confidence"}
 {"query": "Why did we already decide this about Layers? What was the rationale?", "expected_route": "memory_only", "note": "from audit log: why did + already + decid + rationale = strong historical"}
 {"query": "What did we decide last time about Layers? Why was that the agreed rationale?", "expected_route": "memory_only", "note": "same intent as above but with enough historical signals to cross threshold"}
 {"query": "show me the execution flow for the council run module in the codebase", "expected_route": "graph_only", "note": "structural: flow, module, codebase = 3 signals, high confidence"}

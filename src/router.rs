@@ -605,4 +605,267 @@ mod tests {
         };
         assert_eq!(cache.get(&(Route::Neither, Route::MemoryOnly)), Some(&1));
     }
+
+    // ─── JSONL-driven benchmark tests ───────────────────────────────────────
+
+    fn parse_route(s: &str) -> Route {
+        match s {
+            "neither" => Route::Neither,
+            "memory_only" => Route::MemoryOnly,
+            "graph_only" => Route::GraphOnly,
+            "both" => Route::Both,
+            other => panic!("unknown route in answer key: {other}"),
+        }
+    }
+
+    fn parse_confidence(s: &str) -> Confidence {
+        match s {
+            "high" => Confidence::High,
+            "low" => Confidence::Low,
+            other => panic!("unknown confidence in answer key: {other}"),
+        }
+    }
+
+    /// Reads benchmarks/routing-answer-keys.jsonl and verifies classify()
+    /// matches every expected route (and confidence, when specified).
+    #[test]
+    fn benchmark_routing_answer_keys() {
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let path = std::path::Path::new(manifest_dir)
+            .join("benchmarks")
+            .join("routing-answer-keys.jsonl");
+        let content = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("failed to read {}: {e}", path.display()));
+
+        let mut passed = 0;
+        let mut failed = Vec::new();
+
+        for (i, line) in content.lines().enumerate() {
+            let v: serde_json::Value = match serde_json::from_str(line) {
+                Ok(v) => v,
+                Err(_) => continue, // skip comment lines
+            };
+
+            let query = v["query"].as_str().unwrap();
+            let expected_route = parse_route(v["expected_route"].as_str().unwrap());
+            let expected_confidence = v["expected_confidence"].as_str().map(parse_confidence);
+
+            let result = classify(query);
+
+            let route_ok = result.route == expected_route;
+            let confidence_ok = expected_confidence
+                .map_or(true, |c| result.confidence == c);
+
+            if route_ok && confidence_ok {
+                passed += 1;
+            } else {
+                failed.push(format!(
+                    "  line {}: query={:?}\n    expected route={:?} confidence={:?}\n    got      route={:?} confidence={:?}",
+                    i + 1, query, expected_route, expected_confidence,
+                    result.route, result.confidence,
+                ));
+            }
+        }
+
+        if !failed.is_empty() {
+            panic!(
+                "routing answer key benchmark: {}/{} passed, {} failed:\n{}",
+                passed,
+                passed + failed.len(),
+                failed.len(),
+                failed.join("\n"),
+            );
+        }
+    }
+
+    /// Reads benchmarks/routing-failures.jsonl and verifies that routing
+    /// decisions remain correct even when retrieval subsystems fail.
+    /// The router is a pure signal-scoring classifier — it should produce
+    /// the same route regardless of downstream failures.
+    #[test]
+    fn benchmark_routing_failures() {
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let path = std::path::Path::new(manifest_dir)
+            .join("benchmarks")
+            .join("routing-failures.jsonl");
+        let content = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("failed to read {}: {e}", path.display()));
+
+        let mut passed = 0;
+        let mut failed = Vec::new();
+
+        for (i, line) in content.lines().enumerate() {
+            let v: serde_json::Value = match serde_json::from_str(line) {
+                Ok(v) => v,
+                Err(_) => continue, // skip comment lines
+            };
+
+            let query = v["query"].as_str().unwrap();
+            let expected_route = parse_route(v["expected_route"].as_str().unwrap());
+            let failure_mode = v["failure_mode"].as_str().unwrap_or("unknown");
+
+            let result = classify(query);
+
+            if result.route == expected_route {
+                passed += 1;
+            } else {
+                failed.push(format!(
+                    "  line {}: failure_mode={}, query={:?}\n    expected route={:?}, got route={:?}",
+                    i + 1, failure_mode, query, expected_route, result.route,
+                ));
+            }
+        }
+
+        if !failed.is_empty() {
+            panic!(
+                "routing failure benchmark: {}/{} passed, {} failed:\n{}",
+                passed,
+                passed + failed.len(),
+                failed.len(),
+                failed.join("\n"),
+            );
+        }
+    }
+
+    // ─── Feedback loop integration tests ────────────────────────────────────
+
+    /// End-to-end test: record corrections → reload cache → verify routing
+    /// decisions shift toward the corrected route.
+    #[test]
+    fn feedback_loop_shifts_routing_after_corrections() {
+        let ws = crate::test_support::TestWorkspace::new("router-feedback-loop");
+        let _ = ws.root();
+
+        // Baseline: a query that routes to Neither with low confidence
+        let baseline = classify("hello world");
+        assert_eq!(baseline.route, Route::Neither);
+
+        // Record multiple corrections saying "Neither was wrong, MemoryOnly was right"
+        for _ in 0..4 {
+            let correction = RouteCorrection::new(
+                "hello world".to_string(),
+                Route::Neither,
+                Route::MemoryOnly,
+            );
+            record_correction(&correction).unwrap();
+        }
+        reload_corrections();
+
+        // After 4 corrections (Neither→MemoryOnly), the local signal should be
+        // demoted. The router applies 15% demotion per correction (capped at 60%).
+        // With 4 corrections: weight = min(4*0.15, 0.6) = 0.6
+        // Local score gets multiplied by 0.4, historical gets a small boost.
+        // For "hello world" (local=0, historical=0), the demotion has no effect
+        // on raw signals, but the correction cache IS populated — verify that.
+        let cache = match correction_cache().lock() {
+            Ok(cache) => cache.clone(),
+            Err(poisoned) => poisoned.into_inner().clone(),
+        };
+        assert_eq!(cache.get(&(Route::Neither, Route::MemoryOnly)), Some(&4));
+    }
+
+    /// Verify the feedback loop with a query that has non-zero signal scores,
+    /// demonstrating that corrections actually shift routing behavior.
+    /// Uses apply_correction_bias directly for deterministic testing.
+    #[test]
+    fn feedback_loop_demotes_incorrectly_predicted_route() {
+        let ws = crate::test_support::TestWorkspace::new("router-feedback-demote");
+        let _ = ws.root();
+
+        // Record corrections saying Neither was wrong, GraphOnly was right
+        for _ in 0..3 {
+            let correction = RouteCorrection::new(
+                "test".to_string(),
+                Route::Neither,
+                Route::GraphOnly,
+            );
+            record_correction(&correction).unwrap();
+        }
+        reload_corrections();
+
+        // Apply correction bias to a scores struct with local=5.
+        // 3 corrections: weight = min(3*0.15, 0.6) = 0.45
+        // local = round(5 * 0.55) = 3 (demoted from 5)
+        let mut scores = Scores {
+            historical: 0,
+            structural: 0,
+            local: 5,
+            action: 0,
+        };
+        apply_correction_bias(&mut scores);
+        assert!(
+            scores.local < 5,
+            "local score should be demoted after corrections: got {}",
+            scores.local,
+        );
+    }
+
+    /// Verify that the correction weight is capped at 60% demotion.
+    #[test]
+    fn feedback_loop_correction_weight_caps_at_60_percent() {
+        let ws = crate::test_support::TestWorkspace::new("router-feedback-cap");
+        let _ = ws.root();
+
+        // Record 10 corrections — well beyond the 4 needed to hit the 60% cap
+        for _ in 0..10 {
+            let correction = RouteCorrection::new(
+                "test".to_string(),
+                Route::Neither,
+                Route::MemoryOnly,
+            );
+            record_correction(&correction).unwrap();
+        }
+        reload_corrections();
+
+        let cache = match correction_cache().lock() {
+            Ok(cache) => cache.clone(),
+            Err(poisoned) => poisoned.into_inner().clone(),
+        };
+        assert_eq!(cache.get(&(Route::Neither, Route::MemoryOnly)), Some(&10));
+
+        // With 10 corrections, weight = min(10*0.15, 0.6) = 0.6 (capped)
+        // A local score of 5 would become round(5 * 0.4) = 2
+        let mut scores = Scores {
+            historical: 0,
+            structural: 0,
+            local: 5,
+            action: 0,
+        };
+        apply_correction_bias(&mut scores);
+        assert_eq!(scores.local, 2, "local=5 * 0.4 = 2 (60% demotion cap)");
+    }
+
+    /// Verify that corrections in both directions don't cancel each other —
+    /// they accumulate independently per (predicted, actual) pair.
+    #[test]
+    fn feedback_loop_independent_correction_pairs() {
+        let ws = crate::test_support::TestWorkspace::new("router-feedback-pairs");
+        let _ = ws.root();
+
+        // Correction: Neither → MemoryOnly (demotes local, boosts historical)
+        record_correction(&RouteCorrection::new(
+            "a".to_string(),
+            Route::Neither,
+            Route::MemoryOnly,
+        ))
+        .unwrap();
+
+        // Correction: MemoryOnly → GraphOnly (demotes historical, boosts structural)
+        record_correction(&RouteCorrection::new(
+            "b".to_string(),
+            Route::MemoryOnly,
+            Route::GraphOnly,
+        ))
+        .unwrap();
+
+        reload_corrections();
+
+        let cache = match correction_cache().lock() {
+            Ok(cache) => cache.clone(),
+            Err(poisoned) => poisoned.into_inner().clone(),
+        };
+        assert_eq!(cache.get(&(Route::Neither, Route::MemoryOnly)), Some(&1));
+        assert_eq!(cache.get(&(Route::MemoryOnly, Route::GraphOnly)), Some(&1));
+        assert_eq!(cache.len(), 2);
+    }
 }
