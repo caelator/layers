@@ -27,7 +27,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LAYERS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+LAYERS_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 OPENCLAW_PM_DIR="${OPENCLAW_PM_DIR:-$HOME/.openclaw/pm}"
 WORKSPACE="${LAYERS_ROOT}"
 
@@ -41,7 +41,8 @@ if [[ ! -f "$PM_BIN" ]]; then
     PM_BIN="openclaw-pm"  # fall back to PATH
 fi
 
-STATUS_JSON="$("$PM_BIN" --pm-dir "$OPENCLAW_PM_DIR" status --json 2>/dev/null)" || {
+# openclaw-pm accepts OPENCLAW_PM_DIR env var and --workspace flag
+STATUS_JSON="$(OPENCLAW_PM_DIR="$OPENCLAW_PM_DIR" "$PM_BIN" --workspace "$WORKSPACE" status --json 2>/dev/null)" || {
     echo "SKIP: openclaw-pm status failed (pm dir may be empty or binary not found)"
     exit 0
 }
