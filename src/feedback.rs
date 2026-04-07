@@ -19,6 +19,8 @@ use anyhow::Context;
 use chrono::{DateTime, Datelike, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::collections::HashMap;
+use std::path::Path;
 use substrate::DefaultStorage;
 use substrate::StorageSafety;
 use uuid::Uuid;
@@ -250,7 +252,7 @@ impl RouteFailure {
 
 /// The route-corrections.jsonl file path.
 /// Uses layers' standard data directory: ~/.layers/route-corrections.jsonl
-fn route_corrections_path() -> std::path::PathBuf {
+pub fn route_corrections_path() -> std::path::PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
     std::path::PathBuf::from(home)
         .join(".layers")
@@ -277,6 +279,70 @@ pub fn emit_failure(failure: &RouteFailure) -> anyhow::Result<()> {
     <DefaultStorage as StorageSafety>::atomic_write(&path, &data)?;
 
     Ok(())
+}
+
+// ─── Route-correction reader ─────────────────────────────────────────────────
+
+/// Read the last N `RouteFailure` records from a jsonl file.
+/// Returns the most-recent entries first (reverse-chronological order).
+pub fn read_recent_failures(path: &Path, limit: usize) -> Vec<RouteFailure> {
+    if limit == 0 {
+        return Vec::new();
+    }
+    let Some(content) = std::fs::read_to_string(path).ok() else {
+        return Vec::new();
+    };
+    let lines: Vec<&str> = content.lines().collect();
+    let start = lines.len().saturating_sub(limit);
+    lines[start..]
+        .iter()
+        .filter_map(|line| serde_json::from_str(line).ok())
+        .collect()
+}
+
+/// Derive per-route weight adjustments from a collection of failures.
+///
+/// Weight map:
+/// - Hard failures on a route → demote that route (negative weight)
+/// - Soft failures on a route → slight demotion (smaller negative weight)
+/// - Corrections (human overrode to a different route) → demote the wrong route,
+///   boost the human-chosen route
+///
+/// Weights are additive: multiple failures on the same route compound.
+pub fn load_route_weights(failures: &[RouteFailure]) -> HashMap<RouteId, f32> {
+    let mut weights: HashMap<RouteId, f32> = HashMap::new();
+
+    for failure in failures {
+        let delta = match &failure.failure {
+            // Hard failures carry the strongest penalty
+            FailureKind::Hard { .. } => -0.5_f32,
+            // Soft failures carry a moderate penalty
+            FailureKind::Soft { .. } => -0.2_f32,
+            // Corrections: demote the auto-chosen route, boost what the human picked
+            FailureKind::Correction { human_chose, .. } => {
+                // Demote the route layers chose (it was wrong)
+                *weights.entry(failure.route_chosen).or_insert(0.0) -= 0.3;
+                // Boost the human's correct choice
+                *weights.entry(*human_chose).or_insert(0.0) += 0.4;
+                continue;
+            }
+        };
+        *weights.entry(failure.route_chosen).or_insert(0.0) += delta;
+    }
+
+    weights
+}
+
+/// Convert a router `Route` to a `RouteId` for feedback recording.
+/// Used when the router's classification is the "route chosen" in a failure record.
+#[allow(dead_code)]
+pub fn router_route_to_feedback_id(route: crate::router::Route) -> RouteId {
+    match route {
+        crate::router::Route::Neither => RouteId::Neither,
+        crate::router::Route::MemoryOnly => RouteId::MemoryOnly,
+        crate::router::Route::GraphOnly => RouteId::GraphOnly,
+        crate::router::Route::Both => RouteId::Both,
+    }
 }
 
 #[cfg(test)]
@@ -395,5 +461,255 @@ mod tests {
         // time_of_day_secs should be non-zero (default is set from current time)
         assert!(sigs.time_of_day_secs > 0);
         assert!(sigs.day_of_week <= 6);
+    }
+
+    #[test]
+    fn read_recent_failures_empty_file() {
+        let tmp = tempfile::NamedTempFile::with_suffix(".jsonl").unwrap();
+        let path = tmp.path();
+        let failures = read_recent_failures(path, 10);
+        assert!(failures.is_empty());
+    }
+
+    #[test]
+    fn read_recent_failures_returns_last_n_in_order() {
+        let tmp = tempfile::NamedTempFile::with_suffix(".jsonl").unwrap();
+        let path = tmp.path();
+
+        let f1 = RouteFailure::new(
+            "query a".to_string(),
+            RouteId::Both,
+            FailureKind::Hard {
+                error_kind: HardErrorKind::Timeout,
+                error_code: Some(124),
+                tool_name: "gemini".into(),
+            },
+            RoutingSignals::default(),
+        );
+        let f2 = RouteFailure::new(
+            "query b".to_string(),
+            RouteId::Both,
+            FailureKind::Soft {
+                error_kind: SoftErrorKind::Hallucination,
+                flagged_by: "solution_scout".into(),
+                affected_stage: "deliberation".into(),
+            },
+            RoutingSignals::default(),
+        );
+        let f3 = RouteFailure::new(
+            "query c".to_string(),
+            RouteId::Both,
+            FailureKind::Correction {
+                human_chose: RouteId::MemoryOnly,
+                reason: "wrong route".into(),
+            },
+            RoutingSignals::default(),
+        );
+
+        // Write three separate lines to the jsonl file (each JSON object on its own line)
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .unwrap();
+        for f in &[&f1, &f2, &f3] {
+            use std::io::Write;
+            writeln!(file, "{}", serde_json::to_string(f).unwrap()).unwrap();
+        }
+
+        // Read last 2 — last 2 lines of the file are f2 and f3 (in that order)
+        let recent = read_recent_failures(path, 2);
+        assert_eq!(recent.len(), 2);
+        assert_eq!(recent[0].query_text, "query b"); // f2 is second-to-last
+        assert_eq!(recent[1].query_text, "query c"); // f3 is last
+
+        // Read last 5 (more than exist)
+        let recent = read_recent_failures(path, 5);
+        assert_eq!(recent.len(), 3);
+
+        // Read exactly 1 — returns the last line (f3)
+        let recent = read_recent_failures(path, 1);
+        assert_eq!(recent.len(), 1);
+        assert_eq!(recent[0].query_text, "query c");
+    }
+
+    #[test]
+    fn read_recent_failures_ignores_malformed_lines() {
+        let tmp = tempfile::NamedTempFile::with_suffix(".jsonl").unwrap();
+        let path = tmp.path();
+
+        let f1 = RouteFailure::new(
+            "good query".to_string(),
+            RouteId::Both,
+            FailureKind::Hard {
+                error_kind: HardErrorKind::Timeout,
+                error_code: Some(124),
+                tool_name: "gemini".into(),
+            },
+            RoutingSignals::default(),
+        );
+        let f2 = RouteFailure::new(
+            "also good".to_string(),
+            RouteId::Both,
+            FailureKind::Soft {
+                error_kind: SoftErrorKind::Hallucination,
+                flagged_by: "solution_scout".into(),
+                affected_stage: "deliberation".into(),
+            },
+            RoutingSignals::default(),
+        );
+
+        // Write properly: each entry on its own line, with some malformed lines mixed in
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .unwrap();
+        use std::io::Write;
+        // Malformed: valid JSON but not a RouteFailure
+        writeln!(file, "{{\"not_a_route_failure\": true}}").unwrap();
+        writeln!(file, "{}", serde_json::to_string(&f1).unwrap()).unwrap();
+        // Malformed: invalid JSON (missing closing brace)
+        writeln!(file, "{{\"incomplete json\"").unwrap();
+        writeln!(file, "{}", serde_json::to_string(&f2).unwrap()).unwrap();
+
+        let recent = read_recent_failures(path, 10);
+        assert_eq!(recent.len(), 2);
+        assert_eq!(recent[0].query_text, "good query");
+        assert_eq!(recent[1].query_text, "also good");
+    }
+
+    #[test]
+    fn load_route_weights_hard_failure_demotes() {
+        let failures = vec![
+            RouteFailure::new(
+                "task 1".to_string(),
+                RouteId::Both,
+                FailureKind::Hard {
+                    error_kind: HardErrorKind::Timeout,
+                    error_code: Some(124),
+                    tool_name: "gemini".into(),
+                },
+                RoutingSignals::default(),
+            ),
+            RouteFailure::new(
+                "task 2".to_string(),
+                RouteId::Both,
+                FailureKind::Hard {
+                    error_kind: HardErrorKind::NonZeroExit,
+                    error_code: Some(1),
+                    tool_name: "claude".into(),
+                },
+                RoutingSignals::default(),
+            ),
+        ];
+
+        let weights = load_route_weights(&failures);
+        // Two hard failures on Both = -0.5 * 2 = -1.0
+        assert_eq!(weights.get(&RouteId::Both), Some(&-1.0_f32));
+        // MemoryOnly never failed, so not in map
+        assert!(weights.get(&RouteId::MemoryOnly).is_none());
+    }
+
+    #[test]
+    fn load_route_weights_soft_failure_demotes_less_than_hard() {
+        let failures = vec![RouteFailure::new(
+            "task".to_string(),
+            RouteId::Both,
+            FailureKind::Soft {
+                error_kind: SoftErrorKind::Hallucination,
+                flagged_by: "solution_scout".into(),
+                affected_stage: "deliberation".into(),
+            },
+            RoutingSignals::default(),
+        )];
+
+        let weights = load_route_weights(&failures);
+        assert_eq!(weights.get(&RouteId::Both), Some(&-0.2_f32));
+    }
+
+    #[test]
+    fn load_route_weights_correction_demotes_wrong_boosts_correct() {
+        let failures = vec![RouteFailure::new(
+            "task".to_string(),
+            RouteId::Both,
+            FailureKind::Correction {
+                human_chose: RouteId::MemoryOnly,
+                reason: "chose wrong".into(),
+            },
+            RoutingSignals::default(),
+        )];
+
+        let weights = load_route_weights(&failures);
+        // Demote Both (the wrong choice)
+        assert_eq!(weights.get(&RouteId::Both), Some(&-0.3_f32));
+        // Boost MemoryOnly (the human's correct choice)
+        assert_eq!(weights.get(&RouteId::MemoryOnly), Some(&0.4_f32));
+    }
+
+    #[test]
+    fn load_route_weights_compounds_across_multiple_failures() {
+        let failures = vec![
+            RouteFailure::new(
+                "t1".to_string(),
+                RouteId::GraphOnly,
+                FailureKind::Hard {
+                    error_kind: HardErrorKind::Timeout,
+                    error_code: Some(124),
+                    tool_name: "gemini".into(),
+                },
+                RoutingSignals::default(),
+            ),
+            RouteFailure::new(
+                "t2".to_string(),
+                RouteId::GraphOnly,
+                FailureKind::Hard {
+                    error_kind: HardErrorKind::Timeout,
+                    error_code: Some(124),
+                    tool_name: "claude".into(),
+                },
+                RoutingSignals::default(),
+            ),
+            RouteFailure::new(
+                "t3".to_string(),
+                RouteId::Both,
+                FailureKind::Soft {
+                    error_kind: SoftErrorKind::Hallucination,
+                    flagged_by: "solution_scout".into(),
+                    affected_stage: "deliberation".into(),
+                },
+                RoutingSignals::default(),
+            ),
+        ];
+
+        let weights = load_route_weights(&failures);
+        // GraphOnly: two hard failures = -0.5 * 2 = -1.0
+        assert_eq!(weights.get(&RouteId::GraphOnly), Some(&-1.0_f32));
+        // Both: one soft = -0.2
+        assert_eq!(weights.get(&RouteId::Both), Some(&-0.2_f32));
+    }
+
+    #[test]
+    fn load_route_weights_empty_slice_returns_empty_map() {
+        let weights = load_route_weights(&[]);
+        assert!(weights.is_empty());
+    }
+
+    #[test]
+    fn router_route_to_feedback_id_roundtrips() {
+        use crate::router::Route;
+        assert_eq!(
+            router_route_to_feedback_id(Route::Neither),
+            RouteId::Neither
+        );
+        assert_eq!(
+            router_route_to_feedback_id(Route::MemoryOnly),
+            RouteId::MemoryOnly
+        );
+        assert_eq!(
+            router_route_to_feedback_id(Route::GraphOnly),
+            RouteId::GraphOnly
+        );
+        assert_eq!(router_route_to_feedback_id(Route::Both), RouteId::Both);
     }
 }

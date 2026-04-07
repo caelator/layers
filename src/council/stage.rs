@@ -6,6 +6,9 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use crate::config::workspace_root;
+use crate::feedback::{
+    FailureKind, HardErrorKind, RouteFailure, RouteId, RoutingSignals, emit_failure,
+};
 use crate::types::{CouncilRunRecord, CouncilStageAttempt};
 use crate::util::{compact, iso_now};
 
@@ -161,6 +164,35 @@ pub fn execute_stage(
     run.status_reason.clone_from(&terminal_reason);
     run.updated_at = iso_now();
     persist_run_state(artifacts_dir, run)?;
+
+    // Emit a RouteFailure for hard errors — RFC 006 Stage 2.
+    // Map the terminal reason to the appropriate HardErrorKind.
+    let hard_kind = match terminal_reason.as_str() {
+        "stage_timed_out" => HardErrorKind::Timeout,
+        _ => HardErrorKind::NonZeroExit,
+    };
+    let last_exit_code = run.stages[stage_index]
+        .attempts
+        .last()
+        .and_then(|a| a.exit_code)
+        .map(|x| x as u32);
+    let failure = RouteFailure::new(
+        run.task.clone(),
+        RouteId::CouncilOnly,
+        FailureKind::Hard {
+            error_kind: hard_kind,
+            error_code: last_exit_code,
+            tool_name: spec.stage.to_string(),
+        },
+        RoutingSignals::default(),
+    );
+    if let Err(e) = emit_failure(&failure) {
+        eprintln!(
+            "[route-feedback] failed to emit failure record for {}: {e}",
+            spec.stage
+        );
+    }
+
     Ok(StageOutcome::Failed {
         reason: terminal_reason,
     })

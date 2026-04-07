@@ -6,6 +6,7 @@ use crate::cmd::telemetry::PluginResult;
 use crate::config::{CONTEXT_PAYLOAD_SCHEMA_VERSION, memoryport_dir};
 use crate::feedback::{
     FailureKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind, emit_failure,
+    load_route_weights, read_recent_failures, route_corrections_path,
 };
 use crate::graph;
 use crate::memory;
@@ -46,7 +47,12 @@ pub struct RetrievalMeta {
     pub fallback_reason: Option<String>,
 }
 
-pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
+pub fn handle_query(
+    task: &str,
+    json_out: bool,
+    no_audit: bool,
+    uc_min_results: usize,
+) -> Result<()> {
     let t0 = Instant::now();
     let route_result = router::classify(task);
 
@@ -153,6 +159,44 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
             }
         }
         graph_latency_ms = u64::try_from(t0.elapsed().as_millis()).unwrap_or(u64::MAX);
+    }
+
+    // ── Route-correction feedback: soft-failure suppression ──────────────────
+    // Read recent failure records and adjust result confidence accordingly.
+    // RFC 006 Stage 2: prior soft failures on this route reduce result confidence.
+    let recent_failures = read_recent_failures(&route_corrections_path(), 20);
+    let route_weights = load_route_weights(&recent_failures);
+    let current_fbid = match effective_route {
+        Route::Neither => RouteId::Neither,
+        Route::MemoryOnly => RouteId::MemoryOnly,
+        Route::GraphOnly => RouteId::GraphOnly,
+        Route::Both => RouteId::Both,
+    };
+    let route_weight = route_weights.get(&current_fbid).copied().unwrap_or(0.0_f32);
+
+    // If prior soft failures have demoted this route significantly, flag the results.
+    // A route weight below -0.3 signals chronic quality issues on this route pattern.
+    if route_weight < -0.3 && (!memory_items.is_empty() || !graph_items.is_empty()) {
+        open_uncertainty.push(format!(
+            "Prior route failures on '{}' detected (weight={route_weight:?}). Results may be degraded — verify critical details.",
+            effective_route.label(),
+        ));
+    }
+
+    // ── uc_min_results threshold warning ─────────────────────────────────────
+    // Surface a warning when UC semantic retrieval returned fewer results than
+    // the configured minimum — the evidence budget may be under-filled.
+    if matches!(effective_route, Route::MemoryOnly | Route::Both) || low_confidence_fallback {
+        let uc_count = memory_items
+            .iter()
+            .filter(|item| item.source.starts_with("uc"))
+            .count();
+        if uc_count > 0 && uc_count < uc_min_results {
+            open_uncertainty.push(format!(
+                "UC semantic retrieval returned {uc_count} result{} (below --uc-min-results={uc_min_results}). Evidence may be thin.",
+                if uc_count == 1 { "" } else { "s" }
+            ));
+        }
     }
 
     // Route-weighted interleave: prioritize the dominant signal's results
@@ -464,6 +508,7 @@ mod tests {
             "recall the prior decided rationale from the council history",
             true,
             true,
+            3,
         );
         assert!(result.is_ok(), "handle_query failed: {:?}", result.err());
     }
@@ -474,7 +519,7 @@ mod tests {
         let _ws = TestWorkspace::new("query-neither");
 
         // "hello" has no historical/structural signal → routes to Neither
-        let result = handle_query("hello", true, true);
+        let result = handle_query("hello", true, true, 3);
         assert!(result.is_ok(), "handle_query failed: {:?}", result.err());
     }
 
@@ -494,7 +539,7 @@ mod tests {
         }
 
         // Run with audit enabled (no_audit = false)
-        let result = handle_query("hello", false, false);
+        let result = handle_query("hello", false, false, 3);
         assert!(result.is_ok(), "handle_query failed: {:?}", result.err());
 
         let audit_path = root.join("memoryport").join("layers-audit.jsonl");

@@ -28,6 +28,7 @@ sha2 = "0.10"
 
 [dev-dependencies]
 libc = "0.2"
+tempfile = "3"
 
 [lints.rust]
 unsafe_code = "deny"

@@ -79,6 +79,10 @@ enum Commands {
         /// Skip writing to the audit log.
         #[arg(long)]
         no_audit: bool,
+        /// Minimum number of UC semantic results before surfacing a warning.
+        /// If UC returns fewer than this, a warning appears in the output.
+        #[arg(long, default_value = "3")]
+        uc_min_results: usize,
     },
     /// Append a plan, learning, or trace record to the JSONL memory spine.
     Remember {
@@ -344,7 +348,8 @@ fn main() -> anyhow::Result<()> {
             task,
             json,
             no_audit,
-        } => handle_query(&task, json, no_audit),
+            uc_min_results,
+        } => handle_query(&task, json, no_audit, uc_min_results),
         Commands::Remember {
             kind,
             task,

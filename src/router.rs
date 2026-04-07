@@ -653,8 +653,7 @@ mod tests {
             let result = classify(query);
 
             let route_ok = result.route == expected_route;
-            let confidence_ok = expected_confidence
-                .map_or(true, |c| result.confidence == c);
+            let confidence_ok = expected_confidence.map_or(true, |c| result.confidence == c);
 
             if route_ok && confidence_ok {
                 passed += 1;
@@ -742,11 +741,8 @@ mod tests {
 
         // Record multiple corrections saying "Neither was wrong, MemoryOnly was right"
         for _ in 0..4 {
-            let correction = RouteCorrection::new(
-                "hello world".to_string(),
-                Route::Neither,
-                Route::MemoryOnly,
-            );
+            let correction =
+                RouteCorrection::new("hello world".to_string(), Route::Neither, Route::MemoryOnly);
             record_correction(&correction).unwrap();
         }
         reload_corrections();
@@ -774,11 +770,8 @@ mod tests {
 
         // Record corrections saying Neither was wrong, GraphOnly was right
         for _ in 0..3 {
-            let correction = RouteCorrection::new(
-                "test".to_string(),
-                Route::Neither,
-                Route::GraphOnly,
-            );
+            let correction =
+                RouteCorrection::new("test".to_string(), Route::Neither, Route::GraphOnly);
             record_correction(&correction).unwrap();
         }
         reload_corrections();
@@ -808,11 +801,8 @@ mod tests {
 
         // Record 10 corrections — well beyond the 4 needed to hit the 60% cap
         for _ in 0..10 {
-            let correction = RouteCorrection::new(
-                "test".to_string(),
-                Route::Neither,
-                Route::MemoryOnly,
-            );
+            let correction =
+                RouteCorrection::new("test".to_string(), Route::Neither, Route::MemoryOnly);
             record_correction(&correction).unwrap();
         }
         reload_corrections();
