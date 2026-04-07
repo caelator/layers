@@ -37,8 +37,8 @@ mod test_support;
 mod types;
 mod util;
 
-mod plugins;
 mod feedback;
+mod plugins;
 mod router;
 mod technician;
 mod uc;

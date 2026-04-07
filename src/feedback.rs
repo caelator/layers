@@ -163,9 +163,7 @@ impl Default for RoutingSignals {
             graph_symbol_count: 0,
             memory_hits: 0,
             council_load: 0.0,
-            time_of_day_secs: now.hour() * 3600
-                + now.minute() * 60
-                + now.second(),
+            time_of_day_secs: now.hour() * 3600 + now.minute() * 60 + now.second(),
             day_of_week: now.weekday().num_days_from_monday() as u8,
             uc_available: false,
             gitnexus_available: false,
@@ -268,13 +266,11 @@ pub fn emit_failure(failure: &RouteFailure) -> anyhow::Result<()> {
 
     // Ensure parent directory exists
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .context("failed to create .layers directory")?;
+        std::fs::create_dir_all(parent).context("failed to create .layers directory")?;
     }
 
     // Serialize the failure record as a JSON line
-    let line = serde_json::to_string(failure)
-        .context("failed to serialize RouteFailure")?;
+    let line = serde_json::to_string(failure).context("failed to serialize RouteFailure")?;
     let data = line.into_bytes();
 
     // Atomic write: StorageSafety handles rename + fsync

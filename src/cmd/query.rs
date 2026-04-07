@@ -4,10 +4,12 @@ use std::time::Instant;
 
 use crate::cmd::telemetry::PluginResult;
 use crate::config::{CONTEXT_PAYLOAD_SCHEMA_VERSION, memoryport_dir};
+use crate::feedback::{
+    FailureKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind, emit_failure,
+};
 use crate::graph;
 use crate::memory;
 use crate::plugins::telemetry::schema::fingerprint_query;
-use crate::feedback::{emit_failure, FailureKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind};
 use crate::router::{self, Confidence, Route};
 use crate::uc;
 use crate::util::{append_jsonl, iso_now};
@@ -111,7 +113,8 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
                 }
                 Ok(_) => {
                     if !low_confidence_fallback {
-                        open_uncertainty.push("Memory retrieval returned no matching records.".into());
+                        open_uncertainty
+                            .push("Memory retrieval returned no matching records.".into());
                     }
                 }
                 Err(e) => {
@@ -179,7 +182,6 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
         fallback_reason: fallback_reason.clone(),
     };
 
-
     // Route failure feedback — RFC 006 Stage 2.
     // If low-confidence fallback retrieved nothing, emit a RouteFailure.
     if low_confidence_fallback && memory_items.is_empty() && graph_items.is_empty() {
@@ -242,8 +244,13 @@ pub fn handle_query(task: &str, json_out: bool, no_audit: bool) -> Result<()> {
         // Low-confidence fallback: if we retrieved anyway, show the evidence
         if !memory_items.is_empty() || !graph_items.is_empty() {
             println!("<layers_context>");
-            println!("Route: {} (low confidence — best-effort retrieval)", effective_route.label());
-            println!("Why Retrieved: Semantic retrieval found relevant context despite low classifier confidence.");
+            println!(
+                "Route: {} (low confidence — best-effort retrieval)",
+                effective_route.label()
+            );
+            println!(
+                "Why Retrieved: Semantic retrieval found relevant context despite low classifier confidence."
+            );
             if !final_evidence.is_empty() {
                 println!("\nEvidence:");
                 println!("{final_evidence}");
