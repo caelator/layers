@@ -2,6 +2,7 @@
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use substrate::{DefaultStorage, StorageSafety};
 
 /// Schema version for all technician artifacts.
 pub const TECHNICIAN_SCHEMA_VERSION: u32 = 1;
@@ -109,19 +110,14 @@ impl TechnicianState {
         serde_json::from_reader(file).unwrap_or_default()
     }
 
-    pub fn persist(&self) -> std::io::Result<()> {
+    /// Persist the technician state to disk atomically.
+    ///
+    /// Uses rename+fsync so that either the old state or the new state is
+    /// always readable — never a partial write visible to other processes.
+    pub fn persist(&self) -> anyhow::Result<()> {
         let path = state_path();
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-        serde_json::to_writer(
-            std::fs::OpenOptions::new()
-                .create(true)
-                .write(true)
-                .truncate(true)
-                .open(&path)?,
-            self,
-        )?;
+        let data = serde_json::to_vec(self)?;
+        DefaultStorage::atomic_write(&path, &data)?;
         Ok(())
     }
 

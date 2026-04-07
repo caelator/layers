@@ -100,15 +100,18 @@ fn log(msg: &str) {
     eprintln!("[monitor {ts}] {msg}");
 }
 
-fn update_state(state: &str) {
-    let state_path = state_file();
+fn update_state(state: &str) -> anyhow::Result<()> {
+    use substrate::StorageSafety;
+    use substrate::DefaultStorage;
+    let path = state_file();
     let content = format!("workdir:{state}\n");
-    if fs::read_to_string(&state_path)
+    if fs::read_to_string(&path)
         .map(|c| c.replace("workdir:idle", &format!("workdir:{state}")))
         .is_ok()
     {
-        let _ = fs::write(&state_path, content);
+        DefaultStorage::atomic_write(&path, content.as_bytes())?;
     }
+    Ok(())
 }
 
 // ─── Findings ────────────────────────────────────────────────────────────────
@@ -204,7 +207,7 @@ fn push_if_dirty(dir: &PathBuf, name: &str) -> Result<()> {
     }
 
     log(&format!("Dirty: {name} - committing and pushing"));
-    update_state(&format!("committing:{name}"));
+    update_state(&format!("committing:{name}"))?;
 
     let status = Command::new("git")
         .args(["add", "-A"])
@@ -241,7 +244,7 @@ fn push_if_dirty(dir: &PathBuf, name: &str) -> Result<()> {
 }
 
 fn check_remote_sync(dir: &PathBuf, name: &str) -> Result<()> {
-    update_state(&format!("syncing:{name}"));
+    update_state(&format!("syncing:{name}"))?;
 
     // Fetch latest
     let fetch = Command::new("git")
@@ -274,7 +277,7 @@ fn check_remote_sync(dir: &PathBuf, name: &str) -> Result<()> {
 
     if local_sha != remote_sha && !remote_sha.is_empty() {
         log(&format!("{name} behind origin - rebasing"));
-        update_state(&format!("rebasing:{name}"));
+        update_state(&format!("rebasing:{name}"))?;
         let rebase = Command::new("git")
             .args(["pull", "--rebase", "origin", "main"])
             .current_dir(dir)
@@ -303,7 +306,7 @@ fn check_remote_sync(dir: &PathBuf, name: &str) -> Result<()> {
 // ─── Build / test checks ──────────────────────────────────────────────────────
 
 fn check_build_and_tests(dir: &PathBuf, name: &str) -> Result<()> {
-    update_state(&format!("building:{name}"));
+    update_state(&format!("building:{name}"))?;
     log(&format!("Running cargo build: {name}"));
 
     let build = Command::new("cargo")
@@ -340,7 +343,7 @@ fn check_build_and_tests(dir: &PathBuf, name: &str) -> Result<()> {
         return Ok(());
     }
 
-    update_state(&format!("testing:{name}"));
+    update_state(&format!("testing:{name}"))?;
     log(&format!("Running cargo test: {name}"));
 
     let test = Command::new("cargo")
@@ -458,7 +461,7 @@ fn check_ci_status(name: &str, dir: &Path) -> Result<()> {
         return Ok(());
     }
 
-    update_state(&format!("checking:ci:{name}"));
+    update_state(&format!("checking:ci:{name}"))?;
 
     let output = Command::new("gh")
         .args([
@@ -624,7 +627,7 @@ fn check_repo(name: &str) -> Result<()> {
     }
 
     log(&format!("Checking repo: {name}"));
-    update_state(&format!("checking:{name}"));
+    update_state(&format!("checking:{name}"))?;
 
     // 1. Push dirty repos
     push_if_dirty(&dir, name)?;
@@ -665,7 +668,7 @@ fn run_monitor_cycle(repos_override: Option<&String>) -> Result<()> {
         log(&format!("Error archiving council runs: {e}"));
     }
 
-    update_state("idle");
+    update_state("idle")?;
     log("=== Monitor cycle complete ===");
     Ok(())
 }
