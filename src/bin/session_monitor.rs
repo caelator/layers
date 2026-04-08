@@ -200,6 +200,25 @@ fn fetch_sessions() -> anyhow::Result<Vec<Session>> {
 // Session classification
 // ---------------------------------------------------------------------------
 
+/// Terminal / non-live statuses that should be excluded from liveness monitoring.
+/// Sessions in these states are historical and should never be flagged as quiet or stalled.
+const TERMINAL_STATUSES: &[&str] = &[
+    "done",
+    "failed",
+    "lost",
+    "cancelled",
+    "succeeded",
+    "timed_out",
+];
+
+/// Returns `true` if the session has a status that represents live/in-progress work
+/// and should be subject to liveness monitoring.
+#[must_use]
+pub fn is_live_session(session: &Session) -> bool {
+    let s = session.status.to_lowercase();
+    !TERMINAL_STATUSES.contains(&s.as_str())
+}
+
 /// Classify a session's state given the configured thresholds.
 fn classify(thresholds: &Thresholds, session: &Session) -> SessionState {
     let secs = session.seconds_since_update();
@@ -213,6 +232,7 @@ fn classify(thresholds: &Thresholds, session: &Session) -> SessionState {
 }
 
 /// Partition sessions into ok, quiet, and stalled buckets.
+/// Sessions with terminal statuses are excluded entirely — they are not live work.
 #[must_use]
 pub fn partition_sessions(
     thresholds: &Thresholds,
@@ -223,6 +243,9 @@ pub fn partition_sessions(
     let mut stalled = Vec::new();
 
     for session in sessions {
+        if !is_live_session(session) {
+            continue;
+        }
         match classify(thresholds, session) {
             SessionState::Ok => ok.push(session.clone()),
             SessionState::Quiet { .. } => quiet.push(session.clone()),
@@ -342,8 +365,10 @@ fn run() -> anyhow::Result<()> {
         }
     };
 
-    // 4. Partition by state.
-    let (_ok, quiet, stalled) = partition_sessions(&thresholds, &sessions);
+    // 4. Partition by state (non-live sessions are excluded).
+    let (ok, quiet, stalled) = partition_sessions(&thresholds, &sessions);
+    let live_count = ok.len() + quiet.len() + stalled.len();
+    let skipped = sessions.len() - live_count;
 
     // 5. Output per state.
     if !quiet.is_empty() {
@@ -361,10 +386,11 @@ fn run() -> anyhow::Result<()> {
     // 6. Log summary on any finding.
     if !quiet.is_empty() || !stalled.is_empty() {
         eprintln!(
-            "session-monitor: {} quiet, {} stalled out of {} total sessions",
+            "session-monitor: {} quiet, {} stalled out of {} live sessions ({} non-live skipped)",
             quiet.len(),
             stalled.len(),
-            sessions.len()
+            live_count,
+            skipped
         );
     }
 
@@ -538,6 +564,99 @@ mod tests {
             std::env::remove_var("QUIET_THRESHOLD_SECS");
             std::env::remove_var("STALLED_THRESHOLD_SECS");
         }
+    }
+
+    // ── is_live_session / status filtering ─────────────────────────────────
+
+    #[test]
+    fn live_session_running() {
+        let s = Session {
+            key: "k".into(),
+            label: "l".into(),
+            age_ms: 0,
+            status: "running".into(),
+        };
+        assert!(is_live_session(&s));
+    }
+
+    #[test]
+    fn live_session_empty_status() {
+        let s = Session {
+            key: "k".into(),
+            label: "l".into(),
+            age_ms: 0,
+            status: String::new(),
+        };
+        assert!(is_live_session(&s), "empty status should be treated as live");
+    }
+
+    #[test]
+    fn non_live_terminal_statuses() {
+        for status in &["done", "failed", "lost", "cancelled", "succeeded", "timed_out"] {
+            let s = Session {
+                key: "k".into(),
+                label: "l".into(),
+                age_ms: 999_999,
+                status: (*status).to_string(),
+            };
+            assert!(
+                !is_live_session(&s),
+                "status '{status}' should NOT be live"
+            );
+        }
+    }
+
+    #[test]
+    fn non_live_case_insensitive() {
+        let s = Session {
+            key: "k".into(),
+            label: "l".into(),
+            age_ms: 0,
+            status: "Failed".into(),
+        };
+        assert!(!is_live_session(&s), "case-insensitive match should work");
+    }
+
+    #[test]
+    fn partition_skips_terminal_sessions() {
+        let t = Thresholds {
+            quiet_secs: 180,
+            stalled_secs: 420,
+        };
+
+        let sessions = vec![
+            Session {
+                key: "active".into(),
+                label: "active-label".into(),
+                age_ms: 30_000,
+                status: "running".into(),
+            },
+            Session {
+                key: "done-old".into(),
+                label: "done-label".into(),
+                age_ms: 999_000,
+                status: "done".into(),
+            },
+            Session {
+                key: "failed-old".into(),
+                label: "failed-label".into(),
+                age_ms: 800_000,
+                status: "failed".into(),
+            },
+            Session {
+                key: "stalled-live".into(),
+                label: "stalled-label".into(),
+                age_ms: 500_000,
+                status: "running".into(),
+            },
+        ];
+
+        let (ok, quiet, stalled) = partition_sessions(&t, &sessions);
+        assert_eq!(ok.len(), 1, "only the active running session");
+        assert_eq!(ok[0].key, "active");
+        assert!(quiet.is_empty(), "no quiet sessions");
+        assert_eq!(stalled.len(), 1, "only the live stalled session");
+        assert_eq!(stalled[0].key, "stalled-live");
     }
 
     // ── JSON parsing ─────────────────────────────────────────────────────────
