@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 //! Route-correction feedback types — RFC 006.
 //!
 //! ## Failure Taxonomy
@@ -102,6 +100,7 @@ pub enum HardErrorKind {
 }
 
 impl HardErrorKind {
+    #[allow(dead_code)]
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Timeout => "timeout",
@@ -126,6 +125,7 @@ pub enum SoftErrorKind {
 }
 
 impl SoftErrorKind {
+    #[allow(dead_code)]
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Hallucination => "hallucination",
@@ -236,12 +236,14 @@ impl RouteFailure {
     }
 
     /// Set the routing decision ID.
+    #[allow(dead_code)]
     pub fn with_decision_id(mut self, id: String) -> Self {
         self.routing_decision_id = Some(id);
         self
     }
 
     /// Set an optional note.
+    #[allow(dead_code)]
     pub fn with_note(mut self, note: String) -> Self {
         self.notes = Some(note);
         self

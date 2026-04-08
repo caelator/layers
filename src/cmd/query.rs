@@ -5,8 +5,8 @@ use std::time::Instant;
 use crate::cmd::telemetry::PluginResult;
 use crate::config::{CONTEXT_PAYLOAD_SCHEMA_VERSION, memoryport_dir};
 use crate::feedback::{
-    FailureKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind, emit_failure,
-    load_route_weights, read_recent_failures, route_corrections_path,
+    FailureKind, HardErrorKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind,
+    emit_failure, load_route_weights, read_recent_failures, route_corrections_path,
 };
 use crate::graph;
 use crate::memory;
@@ -68,6 +68,14 @@ pub fn handle_query(
     let mut graph_latency_ms: u64 = 0;
     let mut fallback_reason: Option<String> = None;
 
+    // Map effective_route to feedback RouteId (needed for failure emission below)
+    let current_fbid = match effective_route {
+        Route::Neither => RouteId::Neither,
+        Route::MemoryOnly => RouteId::MemoryOnly,
+        Route::GraphOnly => RouteId::GraphOnly,
+        Route::Both => RouteId::Both,
+    };
+
     // Always try UC semantic retrieval when routed OR when the classifier
     // had low confidence (best-effort fallback — low confidence ≠ no retrieval).
     let low_confidence_fallback = route_result.confidence == Confidence::Low;
@@ -128,6 +136,20 @@ pub fn handle_query(
                         open_uncertainty.push(format!("Memory retrieval failed: {e}"));
                     }
                     fallback_reason.get_or_insert_with(|| format!("memory error: {e}"));
+                    // RFC 006: emit HardError when memory retrieval errors
+                    let failure = RouteFailure::new(
+                        task.to_string(),
+                        current_fbid,
+                        FailureKind::Hard {
+                            error_kind: HardErrorKind::NonZeroExit,
+                            error_code: None,
+                            tool_name: "memoryport".to_string(),
+                        },
+                        RoutingSignals::default(),
+                    );
+                    if let Err(fe) = emit_failure(&failure) {
+                        eprintln!("[route-feedback] failed to emit hard failure: {fe}");
+                    }
                 }
             }
         }
@@ -153,9 +175,37 @@ pub fn handle_query(
                     "GitNexus query returned no results. Run `layers refresh` to update the index."
                         .into(),
                 );
+                // RFC 006: emit SoftError when graph returns empty on a graph-routed query
+                let failure = RouteFailure::new(
+                    task.to_string(),
+                    current_fbid,
+                    FailureKind::Soft {
+                        error_kind: SoftErrorKind::InsufficientContext,
+                        flagged_by: "layers-query".to_string(),
+                        affected_stage: "graph-retrieval".to_string(),
+                    },
+                    RoutingSignals::default(),
+                );
+                if let Err(e) = emit_failure(&failure) {
+                    eprintln!("[route-feedback] failed to emit soft failure: {e}");
+                }
             }
             Err(e) => {
                 open_uncertainty.push(format!("GitNexus retrieval failed: {e}"));
+                // RFC 006: emit HardError when graph retrieval errors
+                let failure = RouteFailure::new(
+                    task.to_string(),
+                    current_fbid,
+                    FailureKind::Hard {
+                        error_kind: HardErrorKind::NonZeroExit,
+                        error_code: None,
+                        tool_name: "gitnexus".to_string(),
+                    },
+                    RoutingSignals::default(),
+                );
+                if let Err(e) = emit_failure(&failure) {
+                    eprintln!("[route-feedback] failed to emit hard failure: {e}");
+                }
             }
         }
         graph_latency_ms = u64::try_from(t0.elapsed().as_millis()).unwrap_or(u64::MAX);
@@ -166,12 +216,6 @@ pub fn handle_query(
     // RFC 006 Stage 2: prior soft failures on this route reduce result confidence.
     let recent_failures = read_recent_failures(&route_corrections_path(), 20);
     let route_weights = load_route_weights(&recent_failures);
-    let current_fbid = match effective_route {
-        Route::Neither => RouteId::Neither,
-        Route::MemoryOnly => RouteId::MemoryOnly,
-        Route::GraphOnly => RouteId::GraphOnly,
-        Route::Both => RouteId::Both,
-    };
     let route_weight = route_weights.get(&current_fbid).copied().unwrap_or(0.0_f32);
 
     // If prior soft failures have demoted this route significantly, flag the results.
