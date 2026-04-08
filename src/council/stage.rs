@@ -7,8 +7,7 @@ use std::time::{Duration, Instant};
 
 use crate::config::workspace_root;
 use crate::feedback::{
-    FailureKind, HardErrorKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind,
-    emit_failure,
+    FailureKind, HardErrorKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind, emit_failure,
 };
 use crate::types::{CouncilRunRecord, CouncilStageAttempt};
 use crate::util::{compact, iso_now};
@@ -211,7 +210,11 @@ pub fn execute_stage(
     if let Err(e) = emit_failure(&failure) {
         eprintln!(
             "[route-feedback] failed to emit {} failure record for {}: {e}",
-            if last_attempt_status == "stalled" { "soft" } else { "hard" },
+            if last_attempt_status == "stalled" {
+                "soft"
+            } else {
+                "hard"
+            },
             spec.stage
         );
     }

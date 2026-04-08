@@ -595,17 +595,19 @@ fn spawn_fix_subagent(label: &str, task: &str) -> Result<()> {
     // Local CLI help confirms `openclaw agent` is the supported non-interactive
     // entrypoint, while `openclaw sessions` only supports listing/cleanup.
     let session_id = format!("monitor-fix-{label}-{}", Utc::now().timestamp());
-    let child = Command::new(std::env::var("OPENCLAW_CLI").unwrap_or_else(|_| "/Users/bri/.local/bin/openclaw".into()))
-        .args([
-            "agent",
-            "--agent",
-            "main",
-            "--session-id",
-            &session_id,
-            "--message",
-            task,
-        ])
-        .spawn();
+    let child = Command::new(
+        std::env::var("OPENCLAW_CLI").unwrap_or_else(|_| "/Users/bri/.local/bin/openclaw".into()),
+    )
+    .args([
+        "agent",
+        "--agent",
+        "main",
+        "--session-id",
+        &session_id,
+        "--message",
+        task,
+    ])
+    .spawn();
 
     match child {
         Ok(_) => log(&format!(

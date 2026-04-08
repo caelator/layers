@@ -47,9 +47,7 @@ pub struct CouncilRunRequest {
 /// for routing.
 ///
 /// Returns the adjusted route string and the per-`RouteId` weight map.
-pub fn apply_route_corrections(
-    route: &str,
-) -> (String, std::collections::HashMap<RouteId, f32>) {
+pub fn apply_route_corrections(route: &str) -> (String, std::collections::HashMap<RouteId, f32>) {
     let reader = RouteCorrectionReader::new();
     let weights = reader.route_weights();
 

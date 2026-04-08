@@ -5,8 +5,8 @@ use std::time::Instant;
 use crate::cmd::telemetry::PluginResult;
 use crate::config::{CONTEXT_PAYLOAD_SCHEMA_VERSION, memoryport_dir};
 use crate::feedback::{
-    FailureKind, HardErrorKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind,
-    emit_failure, load_route_weights, read_recent_failures, route_corrections_path,
+    FailureKind, HardErrorKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind, emit_failure,
+    load_route_weights, read_recent_failures, route_corrections_path,
 };
 use crate::graph;
 use crate::memory;

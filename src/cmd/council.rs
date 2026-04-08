@@ -5,9 +5,9 @@ use std::path::PathBuf;
 use crate::cmd::query::{RetrievalMeta, build_context_payload};
 use crate::config::{canonical_curated_memory_path, workspace_root};
 use crate::council::{
-    apply_route_corrections, CouncilRunRequest, execute_council_run,
-    latest_incomplete_council_run, list_council_runs, load_council_checkpoint,
-    load_council_convergence_record, load_council_run_record, resume_council_run,
+    CouncilRunRequest, apply_route_corrections, execute_council_run, latest_incomplete_council_run,
+    list_council_runs, load_council_checkpoint, load_council_convergence_record,
+    load_council_run_record, resume_council_run,
 };
 use crate::graph;
 use crate::memory;

@@ -11,7 +11,9 @@
 //!
 //! Weights are additive across multiple failure records.
 
-use crate::feedback::{load_route_weights, read_recent_failures, route_corrections_path, RouteFailure, RouteId};
+use crate::feedback::{
+    RouteFailure, RouteId, load_route_weights, read_recent_failures, route_corrections_path,
+};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -20,11 +22,24 @@ use std::path::Path;
 #[derive(Debug, Clone)]
 pub enum RouteCorrection {
     /// Hard failure: subprocess error, timeout, parse error — strongest penalty.
-    Hard { route_id: RouteId, error_kind: String, tool_name: String, query: String },
+    Hard {
+        route_id: RouteId,
+        error_kind: String,
+        tool_name: String,
+        query: String,
+    },
     /// Soft failure: output was valid but wrong or insufficient — moderate penalty.
-    Soft { route_id: RouteId, error_kind: String, query: String },
+    Soft {
+        route_id: RouteId,
+        error_kind: String,
+        query: String,
+    },
     /// Human correction: human overrode the routing decision.
-    Correction { route_id: RouteId, correction: f32, query: String },
+    Correction {
+        route_id: RouteId,
+        correction: f32,
+        query: String,
+    },
 }
 
 #[allow(unused)]
@@ -33,7 +48,11 @@ impl RouteCorrection {
     fn from_failure(failure: &RouteFailure) -> Option<Self> {
         use crate::feedback::FailureKind;
         match &failure.failure {
-            FailureKind::Hard { error_kind, tool_name, .. } => Some(RouteCorrection::Hard {
+            FailureKind::Hard {
+                error_kind,
+                tool_name,
+                ..
+            } => Some(RouteCorrection::Hard {
                 route_id: failure.route_chosen,
                 error_kind: error_kind.as_str().to_string(),
                 tool_name: tool_name.clone(),
@@ -154,7 +173,9 @@ impl Default for RouteCorrectionReader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::feedback::{FailureKind, HardErrorKind, RouteFailure, RoutingSignals, SoftErrorKind};
+    use crate::feedback::{
+        FailureKind, HardErrorKind, RouteFailure, RoutingSignals, SoftErrorKind,
+    };
     use tempfile::TempDir;
 
     fn temp_failure_path() -> (TempDir, std::path::PathBuf) {
@@ -185,7 +206,8 @@ mod tests {
 
     #[test]
     fn reader_loads_from_nonexistent_path() {
-        let reader = RouteCorrectionReader::from_path(std::path::Path::new("/nonexistent/path.jsonl"));
+        let reader =
+            RouteCorrectionReader::from_path(std::path::Path::new("/nonexistent/path.jsonl"));
         assert!(reader.is_empty());
     }
 
@@ -209,7 +231,12 @@ mod tests {
         assert_eq!(corrections.len(), 1);
 
         match &corrections[0] {
-            RouteCorrection::Hard { route_id, error_kind, tool_name, query } => {
+            RouteCorrection::Hard {
+                route_id,
+                error_kind,
+                tool_name,
+                query,
+            } => {
                 assert_eq!(*route_id, RouteId::CouncilOnly);
                 assert_eq!(error_kind.as_str(), "timeout");
                 assert_eq!(tool_name.as_str(), "gemini");
@@ -239,7 +266,11 @@ mod tests {
         assert_eq!(corrections.len(), 1);
 
         match &corrections[0] {
-            RouteCorrection::Soft { route_id, error_kind, query } => {
+            RouteCorrection::Soft {
+                route_id,
+                error_kind,
+                query,
+            } => {
                 assert_eq!(*route_id, RouteId::Both);
                 assert_eq!(error_kind.as_str(), "hallucination");
                 assert!(query.contains("Deploy"));
@@ -267,7 +298,11 @@ mod tests {
         assert_eq!(corrections.len(), 1);
 
         match &corrections[0] {
-            RouteCorrection::Correction { route_id, correction, query } => {
+            RouteCorrection::Correction {
+                route_id,
+                correction,
+                query,
+            } => {
                 assert_eq!(*route_id, RouteId::CouncilOnly);
                 assert_eq!(*correction, -0.3);
                 assert!(query.contains("refactor"));

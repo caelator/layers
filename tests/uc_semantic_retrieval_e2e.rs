@@ -60,7 +60,10 @@ fn write_cargo_audit_wrapper(home: &Path) -> PathBuf {
 fn seed_openclaw_config(home: &Path) -> bool {
     let source = Path::new("/Users/bri/.openclaw/openclaw.json");
     if !source.exists() {
-        eprintln!("Skipping: openclaw config not found at {}", source.display());
+        eprintln!(
+            "Skipping: openclaw config not found at {}",
+            source.display()
+        );
         return false;
     }
     let config_dir = home.join(".openclaw");
