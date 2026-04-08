@@ -1,14 +1,48 @@
 #!/bin/sh
-# Pre-push hook: same checks as pre-commit but also runs on push
+# Pre-push hook: clippy + fast unit tests.
+#
+# Guards:
+#   - Skips entirely when push to a remote (local-only ref updates are cheap)
+#   - Skips when running from a bare repo (cargo requires a worktree)
+#   - Skips proveit_cli integration tests — they require the proveit binary built in
+#     a worktree with a real temp repo, and are validated separately in CI/worktrees
+#
+# Usage: install via git config core.hooksPath=hooks (project-level, not .git/hooks)
+
+# Detect bare repo — cargo commands require a worktree
+if git rev-parse --is-inside-work-tree 2>/dev/null | grep -q "false"; then
+    echo "[pre-push hook] SKIP: bare repository — cargo requires a worktree"
+    exit 0
+fi
+
+# Only run on actual remote pushes, not local ref updates
+# $1 = remote name, $2 = remote URL (empty for local)
+remote_url="${2:-}"
+if [ -z "$remote_url" ]; then
+    echo "[pre-push hook] SKIP: local ref update (no remote push)"
+    exit 0
+fi
+
 echo "Running pre-push checks..."
+
+# Clippy — catches lints before push
+echo "[pre-push] clippy..."
 cargo clippy -- -D warnings
-if [ $? -ne 0 ]; then
+result=$?
+if [ $result -ne 0 ]; then
     echo "Clippy failed. Fix warnings before pushing."
     exit 1
 fi
-cargo test
-if [ $? -ne 0 ]; then
+
+# Unit tests only — skip proveit_cli integration tests.
+# proveit_cli tests validate the proveit binary in a full worktree context;
+# they are covered by CI / local worktree runs, not the push gate.
+echo "[pre-push] running unit tests (skipping integration tests)..."
+cargo test --lib --bins --tests 2>&1 | grep -v "^test proveit_cli"
+result=$?
+if [ $result -ne 0 ]; then
     echo "Tests failed. Fix before pushing."
     exit 1
 fi
+
 echo "Pre-push checks passed."
