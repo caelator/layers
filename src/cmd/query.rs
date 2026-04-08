@@ -11,6 +11,7 @@ use crate::feedback::{
 use crate::graph;
 use crate::memory;
 use crate::plugins::telemetry::schema::fingerprint_query;
+use crate::quality;
 use crate::router::{self, Confidence, Route};
 use crate::uc;
 use crate::util::{append_jsonl, iso_now};
@@ -211,6 +212,56 @@ pub fn handle_query(
         graph_latency_ms = u64::try_from(t0.elapsed().as_millis()).unwrap_or(u64::MAX);
     }
 
+    // ── Result quality evaluation ─────────────────────────────────────────────
+    // Score returned results for relevance and specificity.
+    // Emit Soft failures when results exist but are poor quality.
+    let routing_signals = RoutingSignals {
+        query_length_chars: task.len(),
+        history_turns: 0,
+        intent_confidence: match route_result.confidence {
+            Confidence::High => 1.0,
+            Confidence::Low => 0.5,
+        },
+        graph_symbol_count: graph_items.len(),
+        memory_hits: memory_items.len(),
+        council_load: 0.0,
+        ..RoutingSignals::default()
+    };
+
+    if !memory_items.is_empty() {
+        let texts: Vec<&str> = memory_items.iter().map(|r| r.text.as_str()).collect();
+        let mq = quality::evaluate(task, &texts, MAX_MEMORY_RECORDS);
+        if !mq.acceptable {
+            if let Some(ref reason) = mq.reason {
+                open_uncertainty.push(format!("Memory quality: {reason}"));
+            }
+            quality::emit_if_poor(
+                &mq,
+                task,
+                current_fbid,
+                "memory-retrieval",
+                routing_signals.clone(),
+            );
+        }
+    }
+
+    if !graph_items.is_empty() {
+        let texts: Vec<&str> = graph_items.iter().map(|r| r.text.as_str()).collect();
+        let gq = quality::evaluate(task, &texts, MAX_GITNEXUS_FACTS);
+        if !gq.acceptable {
+            if let Some(ref reason) = gq.reason {
+                open_uncertainty.push(format!("Graph quality: {reason}"));
+            }
+            quality::emit_if_poor(
+                &gq,
+                task,
+                current_fbid,
+                "graph-retrieval",
+                routing_signals.clone(),
+            );
+        }
+    }
+
     // ── Route-correction feedback: soft-failure suppression ──────────────────
     // Read recent failure records and adjust result confidence accordingly.
     // RFC 006 Stage 2: prior soft failures on this route reduce result confidence.
@@ -281,7 +332,7 @@ pub fn handle_query(
                 flagged_by: "layers-classifier".to_string(),
                 affected_stage: "query".to_string(),
             },
-            RoutingSignals::default(),
+            routing_signals.clone(),
         );
         if let Err(e) = emit_failure(&failure) {
             eprintln!("[route-feedback] failed to emit failure record: {e}");

@@ -39,6 +39,7 @@ mod util;
 
 mod feedback;
 mod plugins;
+mod quality;
 mod router;
 mod technician;
 mod uc;
