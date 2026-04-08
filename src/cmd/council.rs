@@ -71,6 +71,7 @@ pub fn handle_council_run(
         artifacts_dir: artifacts_dir.map(PathBuf::from),
         trace_path_override: None,
         context_payload: Some(payload_value),
+        critical_path: crate::critical_path::is_critical_path(None, &route, false),
     })?;
 
     if json_out {
@@ -124,6 +125,7 @@ pub fn handle_council_resume(
         artifacts_dir: Some(artifacts_dir),
         trace_path_override: None,
         context_payload: None,
+        critical_path: false,
     })?;
 
     if json_out {

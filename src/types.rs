@@ -137,6 +137,10 @@ pub struct CouncilRunRecord {
     pub stages: Vec<CouncilStageRecord>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub convergence: Option<CouncilConvergenceRecord>,
+    /// Whether this run sits on the synchronous return path of a user prompt.
+    /// Defaults to `false` for backward compatibility with existing records.
+    #[serde(default)]
+    pub critical_path: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -177,6 +181,9 @@ pub struct CouncilRunCheckpoint {
     pub context_payload: Option<Value>,
     #[serde(default)]
     pub schema_version: u32,
+    /// Inherited critical-path flag for checkpoint resumption.
+    #[serde(default)]
+    pub critical_path: bool,
 }
 
 // ---------------------------------------------------------------------------

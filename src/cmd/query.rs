@@ -30,6 +30,9 @@ pub struct ContextPayload {
     pub memory_results: Vec<RetrievalItem>,
     pub graph_results: Vec<RetrievalItem>,
     pub retrieval_meta: RetrievalMeta,
+    /// Whether this context payload is on the critical path.
+    #[serde(default)]
+    pub critical_path: bool,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -571,6 +574,7 @@ pub fn build_context_payload(
         memory_results: memory_items,
         graph_results: graph_items,
         retrieval_meta,
+        critical_path: false,
     }
 }
 

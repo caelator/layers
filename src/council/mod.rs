@@ -38,6 +38,9 @@ pub struct CouncilRunRequest {
     pub trace_path_override: Option<PathBuf>,
     /// Structured context payload (schema-versioned) for the council handshake.
     pub context_payload: Option<serde_json::Value>,
+    /// Whether this run sits on the synchronous return path of a user prompt.
+    /// Defaults to `false` for backward compatibility.
+    pub critical_path: bool,
 }
 
 /// Apply route-correction weight adjustments to a route string.
@@ -216,6 +219,7 @@ fn initialize_run_record(
             ),
         ],
         convergence: None,
+        critical_path: request.critical_path,
     };
     persist_run_state(artifacts_dir, &run)?;
     Ok(run)
@@ -604,6 +608,7 @@ mod tests {
             artifacts_dir: Some(artifacts_dir.clone()),
             trace_path_override: Some(artifacts_dir.join("council-traces.jsonl")),
             context_payload: None,
+            critical_path: false,
         };
 
         let run = execute_council_run(request).unwrap();
@@ -651,6 +656,7 @@ mod tests {
             artifacts_dir: Some(artifacts_dir),
             trace_path_override: Some(counter.parent().unwrap().join("council-traces.jsonl")),
             context_payload: None,
+            critical_path: false,
         };
 
         let run = execute_council_run(request).unwrap();
@@ -679,6 +685,7 @@ mod tests {
             artifacts_dir: Some(artifacts_dir),
             trace_path_override: None,
             context_payload: None,
+            critical_path: false,
         };
 
         let run = execute_council_run(request).unwrap();
@@ -707,6 +714,7 @@ mod tests {
             artifacts_dir: Some(artifacts_dir),
             trace_path_override: None,
             context_payload: None,
+            critical_path: false,
         };
 
         let run = execute_council_run(request).unwrap();
@@ -756,6 +764,7 @@ mod tests {
             artifacts_dir: Some(artifacts_dir.clone()),
             trace_path_override: Some(artifacts_dir.join("council-traces.jsonl")),
             context_payload: Some(payload),
+            critical_path: false,
         };
 
         let run = execute_council_run(request).unwrap();
@@ -813,6 +822,7 @@ mod tests {
             artifacts_dir: Some(artifacts_dir),
             trace_path_override: None,
             context_payload: Some(bad_payload),
+            critical_path: false,
         };
 
         let result = execute_council_run(request);
@@ -843,6 +853,7 @@ mod tests {
             artifacts_dir: Some(artifacts_dir.clone()),
             trace_path_override: None,
             context_payload: None,
+            critical_path: false,
         };
 
         let run = execute_council_run(request).unwrap();
@@ -872,6 +883,7 @@ mod tests {
             artifacts_dir: Some(artifacts_dir.clone()),
             trace_path_override: None,
             context_payload: None,
+            critical_path: false,
         };
 
         let failed = execute_council_run(request).unwrap();
@@ -895,6 +907,7 @@ mod tests {
             artifacts_dir: Some(artifacts_dir.clone()),
             trace_path_override: None,
             context_payload: None,
+            critical_path: false,
         })
         .unwrap();
 
@@ -925,6 +938,7 @@ mod tests {
             artifacts_dir: Some(artifacts_dir),
             trace_path_override: None,
             context_payload: None,
+            critical_path: false,
         };
 
         let run = execute_council_run(request).unwrap();

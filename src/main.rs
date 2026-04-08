@@ -30,6 +30,8 @@ use clap::{Parser, Subcommand};
 mod cmd;
 mod config;
 mod council;
+#[allow(dead_code)]
+mod critical_path;
 mod graph;
 mod memory;
 #[cfg(test)]

@@ -87,6 +87,7 @@ pub fn build_checkpoint(
         status_reason: run.status_reason.clone(),
         context_payload,
         schema_version: CONTEXT_PAYLOAD_SCHEMA_VERSION,
+        critical_path: run.critical_path,
     })
 }
 
