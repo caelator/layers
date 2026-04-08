@@ -1,10 +1,6 @@
 #!/bin/sh
 # Pre-commit hook: clippy with strict warnings.
 #
-# Guards:
-#   - proveit_cli integration tests are skipped — they validate the proveit
-#     binary in a full worktree with temp repos; covered by CI / worktree runs.
-#
 # Usage: install via git config core.hooksPath=hooks
 
 echo "Running pre-commit clippy check..."
@@ -14,8 +10,8 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "Running unit tests (skipping proveit_cli integration tests)..."
-cargo test --lib --bins --tests 2>&1 | grep -v "^test proveit_cli"
+echo "Running unit tests..."
+cargo test --lib --bins --tests
 if [ $? -ne 0 ]; then
     echo "Tests failed. Fix before committing."
     exit 1

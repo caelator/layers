@@ -29,6 +29,18 @@ pub enum CommandKind {
     Report { feature: Option<String> },
     /// Run proofs for features impacted by the current worktree changes.
     VerifyImpacted,
+    /// Show cached verdict summary without running proofs.
+    Status {
+        /// Print actionable guidance for each feature.
+        #[arg(long)]
+        verbose: bool,
+        /// Emit JSON output (overrides table format).
+        #[arg(long)]
+        json: bool,
+        /// Print warnings but always exit 0 (for use in hooks).
+        #[arg(long)]
+        warn_only: bool,
+    },
 }
 
 /// Lower-case proof categories used for scoring.
@@ -115,7 +127,7 @@ pub struct ProofRecord {
 }
 
 /// One proof in a computed verdict.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProofOutcome {
     pub proof_id: String,
     pub category: ProofCategory,
@@ -132,7 +144,7 @@ pub struct ProofOutcome {
 }
 
 /// Computed verdict for one feature.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeatureVerdict {
     pub feature_id: String,
     pub title: Option<String>,
@@ -146,6 +158,7 @@ pub struct FeatureVerdict {
     /// present and passing) and is closable. Used by aggregate multi-feature
     /// commands (`report`, `verify-impacted`) to enforce a strict 5/5 gate: a
     /// full run is considered a failure unless every included feature is strict.
+    #[serde(default)]
     pub strict: bool,
     pub stale: bool,
     pub missing_categories: Vec<ProofCategory>,
@@ -156,7 +169,7 @@ pub struct FeatureVerdict {
 }
 
 /// Report payload for one or many features.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReportOutput {
     pub workspace_root: String,
     pub features: Vec<FeatureVerdict>,

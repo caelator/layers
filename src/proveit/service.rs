@@ -69,6 +69,13 @@ pub fn run(cli: Cli) -> Result<()> {
                 );
             }
         }
+        CommandKind::Status {
+            verbose,
+            json,
+            warn_only,
+        } => {
+            status_all(&workspace_root, &store, verbose, json || cli.json, warn_only)?;
+        }
     }
 
     Ok(())
@@ -112,6 +119,127 @@ fn report_all(workspace_root: &Path, store: &ArtifactStore) -> Result<Vec<Featur
         verdicts.push(verdict);
     }
     Ok(verdicts)
+}
+
+fn status_all(
+    workspace_root: &Path,
+    store: &ArtifactStore,
+    verbose: bool,
+    as_json: bool,
+    warn_only: bool,
+) -> Result<()> {
+    let verdicts_dir = workspace_root.join(".proveit").join("verdicts");
+    if !verdicts_dir.exists() {
+        if as_json {
+            println!("{}", serde_json::to_string_pretty(&json!({ "features": [] }))?);
+        } else {
+            println!("No cached verdicts found. Run `proveit verify <feature>` first.");
+        }
+        return Ok(());
+    }
+
+    let mut verdicts: Vec<FeatureVerdict> = Vec::new();
+    for entry in fs::read_dir(&verdicts_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+            continue;
+        }
+        let raw = fs::read_to_string(&path)
+            .with_context(|| format!("failed to read {}", path.display()))?;
+        match serde_json::from_str::<FeatureVerdict>(&raw) {
+            Ok(verdict) => verdicts.push(verdict),
+            Err(err) => {
+                eprintln!("warning: skipping {}: {err}", path.display());
+            }
+        }
+    }
+    verdicts.sort_by(|a, b| a.feature_id.cmp(&b.feature_id));
+
+    // Re-check staleness against current worktree state
+    let manifests = manifest::load_all_manifests(workspace_root).unwrap_or_default();
+    for verdict in &mut verdicts {
+        if let Some(m) = manifests.iter().find(|m| m.feature.id == verdict.feature_id) {
+            let refreshed = compute_verdict(workspace_root, store, m);
+            if let Ok(fresh) = refreshed {
+                verdict.stale = fresh.stale;
+                verdict.changed_files = fresh.changed_files;
+            }
+        }
+    }
+
+    if as_json {
+        let output = json!({
+            "features": verdicts.iter().map(|v| json!({
+                "feature_id": v.feature_id,
+                "score": v.score,
+                "max_score": v.max_score,
+                "stale": v.stale,
+                "strict": v.strict,
+                "may_close": v.may_close,
+                "owner": v.owner,
+                "missing_categories": v.missing_categories.iter().map(|c| c.as_str()).collect::<Vec<_>>(),
+                "changed_files": v.changed_files,
+            })).collect::<Vec<_>>()
+        });
+        println!("{}", serde_json::to_string_pretty(&output)?);
+    } else {
+        if verdicts.is_empty() {
+            println!("No cached verdicts found.");
+            return Ok(());
+        }
+        println!(
+            "{:<30} {:>5}  {:>5}  {:>6}  {:>6}",
+            "FEATURE", "SCORE", "MAX", "STALE", "STRICT"
+        );
+        println!("{}", "-".repeat(62));
+        for v in &verdicts {
+            let stale_marker = if v.stale { "YES" } else { "-" };
+            let strict_marker = if v.strict { "YES" } else { "-" };
+            println!(
+                "{:<30} {:>3}/{:<3}  {:>3}    {:<6}  {:<6}",
+                v.feature_id, v.score, v.max_score, v.max_score, stale_marker, strict_marker
+            );
+        }
+
+        let stale_count = verdicts.iter().filter(|v| v.stale).count();
+        let failing_count = verdicts.iter().filter(|v| !v.may_close).count();
+        if stale_count > 0 || failing_count > 0 {
+            eprintln!();
+            if stale_count > 0 {
+                eprintln!("warning: {stale_count} feature(s) have stale verdicts");
+            }
+            if failing_count > 0 {
+                eprintln!("warning: {failing_count} feature(s) do not meet their proof gate");
+            }
+        }
+
+        if verbose {
+            println!();
+            for v in &verdicts {
+                if v.stale || !v.may_close {
+                    println!("  {} — {}", v.feature_id, v.recommended_gate_command);
+                    if !v.missing_categories.is_empty() {
+                        let cats: Vec<&str> =
+                            v.missing_categories.iter().map(|c| c.as_str()).collect();
+                        println!("    missing: {}", cats.join(", "));
+                    }
+                    if !v.changed_files.is_empty() {
+                        println!("    changed: {}", v.changed_files.join(", "));
+                    }
+                }
+            }
+        }
+    }
+
+    if !warn_only {
+        let any_problems = verdicts.iter().any(|v| v.stale || !v.may_close);
+        if any_problems {
+            bail!("one or more features have stale or failing verdicts");
+        }
+    }
+
+    Ok(())
 }
 
 fn verify_impacted(workspace_root: &Path, store: &ArtifactStore) -> Result<Vec<FeatureVerdict>> {

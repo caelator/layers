@@ -28,6 +28,9 @@ sha2 = "0.10"
 globset = "0.4"
 toml = "0.8"
 
+[features]
+integration = []
+
 [dev-dependencies]
 libc = "0.2"
 tempfile = "3"
