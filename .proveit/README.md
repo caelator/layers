@@ -13,11 +13,11 @@ Typical commands:
 ```bash
 cargo run --bin proveit -- verify layers-critical-path-routing
 cargo run --bin proveit -- enforce layers-critical-path-routing
-cargo run --bin proveit -- report --json
+cargo run --bin proveit -- --json report
 ```
 
 Suggested `openclaw-pm` gate command:
 
 ```bash
-cargo run --manifest-path /Users/bri/Documents/GitHub/layers/Cargo.toml --bin proveit -- enforce <feature-id> --json
+cargo run --manifest-path /Users/bri/Documents/GitHub/layers/Cargo.toml --bin proveit -- --json enforce <feature-id>
 ```

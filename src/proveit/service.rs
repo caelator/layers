@@ -2,6 +2,7 @@ use std::collections::BTreeSet;
 use std::fs::{self, OpenOptions};
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
 use globset::{Glob, GlobSet, GlobSetBuilder};
@@ -343,7 +344,7 @@ fn all_categories() -> Vec<ProofCategory> {
 }
 
 fn recommended_gate_command(feature_id: &str) -> String {
-    format!("cargo run --bin proveit -- enforce {feature_id} --json")
+    format!("cargo run --bin proveit -- --json enforce {feature_id}")
 }
 
 struct ProofLock {
@@ -356,11 +357,31 @@ impl ProofLock {
         fs::create_dir_all(&directory)
             .with_context(|| format!("failed to create {}", directory.display()))?;
         let path = directory.join("proveit.lock");
-        let mut file = OpenOptions::new()
-            .create_new(true)
-            .write(true)
-            .open(&path)
-            .with_context(|| format!("failed to acquire {}", path.display()))?;
+        let deadline = Instant::now() + lock_wait_timeout();
+        let mut file = loop {
+            match OpenOptions::new().create_new(true).write(true).open(&path) {
+                Ok(file) => break file,
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                    if Instant::now() >= deadline {
+                        let holder = fs::read_to_string(&path)
+                            .ok()
+                            .filter(|text| !text.trim().is_empty())
+                            .unwrap_or_else(|| "<empty lock file>".to_string());
+                        bail!(
+                            "failed to acquire {} within {:?}; existing lock contents: {}",
+                            path.display(),
+                            lock_wait_timeout(),
+                            holder.trim()
+                        );
+                    }
+                    std::thread::sleep(Duration::from_millis(100));
+                }
+                Err(error) => {
+                    return Err(error)
+                        .with_context(|| format!("failed to acquire {}", path.display()));
+                }
+            }
+        };
         let payload = json!({
             "pid": std::process::id(),
             "timestamp": chrono::Utc::now(),
@@ -368,6 +389,14 @@ impl ProofLock {
         writeln!(file, "{payload}")?;
         Ok(Self { path })
     }
+}
+
+fn lock_wait_timeout() -> Duration {
+    let seconds = std::env::var("PROVEIT_LOCK_TIMEOUT_SECS")
+        .ok()
+        .and_then(|raw| raw.parse::<u64>().ok())
+        .unwrap_or(30);
+    Duration::from_secs(seconds)
 }
 
 impl Drop for ProofLock {

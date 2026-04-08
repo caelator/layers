@@ -1,6 +1,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::thread;
+use std::time::Duration;
 
 use tempfile::TempDir;
 
@@ -242,5 +244,52 @@ artifact_extract = "json"
             .join("artifacts")
             .join("feature-b")
             .exists()
+    );
+}
+
+#[test]
+fn verify_waits_for_existing_lock_to_clear() {
+    let repo = temp_repo();
+    write_manifest(
+        repo.path(),
+        "locked-feature",
+        "src/watched.txt",
+        r#"[[proofs]]
+id = "positive"
+category = "positive"
+description = "prints a success marker"
+command = "printf 'proof-ok\n'"
+timeout_secs = 30
+"#,
+    );
+
+    let lock_path = repo.path().join(".proveit").join("proveit.lock");
+    fs::write(&lock_path, "{\"pid\":999,\"timestamp\":\"stale-ish\"}\n").unwrap();
+
+    let lock_path_for_thread = lock_path.clone();
+    let releaser = thread::spawn(move || {
+        thread::sleep(Duration::from_millis(250));
+        fs::remove_file(lock_path_for_thread).unwrap();
+    });
+
+    let output = Command::new(proveit_bin())
+        .args(["--json", "verify", "locked-feature"])
+        .env("PROVEIT_LOCK_TIMEOUT_SECS", "2")
+        .current_dir(repo.path())
+        .output()
+        .expect("failed to run proveit verify");
+
+    releaser.join().unwrap();
+
+    assert!(
+        output.status.success(),
+        "verify should wait for the lock to clear: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(
+        json["features"][0]["feature_id"].as_str(),
+        Some("locked-feature")
     );
 }
