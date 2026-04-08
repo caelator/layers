@@ -30,6 +30,10 @@ sha2 = "0.10"
 libc = "0.2"
 tempfile = "3"
 
+[[bin]]
+name = "session-monitor"
+path = "src/bin/session_monitor.rs"
+
 [lints.rust]
 unsafe_code = "deny"
 
