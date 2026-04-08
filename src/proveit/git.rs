@@ -52,6 +52,13 @@ pub fn worktree_changed_files(workspace_root: &Path) -> Result<Vec<String>> {
     Ok(files.into_iter().collect())
 }
 
+pub fn parent_changed_files(workspace_root: &Path) -> Result<Vec<String>> {
+    match run_git(workspace_root, ["rev-parse", "HEAD~1"]) {
+        Ok(sha) => changed_files_since(workspace_root, sha.trim()),
+        Err(_) => Ok(Vec::new()),
+    }
+}
+
 pub fn current_changed_files(workspace_root: &Path, from_sha: &str) -> Result<Vec<String>> {
     let mut files = BTreeSet::new();
     for file in changed_files_since(workspace_root, from_sha)? {

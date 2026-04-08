@@ -36,15 +36,38 @@ pub fn run(cli: Cli) -> Result<()> {
         }
         CommandKind::Report { feature } => {
             let verdicts = if let Some(feature_id) = feature {
-                vec![report_feature(&workspace_root, &store, &feature_id)?]
+                let v = vec![report_feature(&workspace_root, &store, &feature_id)?];
+                emit_report(&workspace_root, cli.json, v)?;
+                return Ok(());
             } else {
-                report_all(&workspace_root, &store)?
+                let all_verdicts = report_all(&workspace_root, &store)?;
+                emit_report(&workspace_root, cli.json, all_verdicts.clone())?;
+                all_verdicts
             };
-            emit_report(&workspace_root, cli.json, verdicts)?;
+            // Full-run strict gate: every feature must be 5/5 and closable.
+            if let Some(failed) = verdicts.iter().find(|v| !v.strict) {
+                bail!(
+                    "strict gate failed: feature `{}` is not 5/5 (score {}/{} may_close={})",
+                    failed.feature_id,
+                    failed.score,
+                    failed.max_score,
+                    failed.may_close,
+                );
+            }
         }
         CommandKind::VerifyImpacted => {
             let verdicts = verify_impacted(&workspace_root, &store)?;
-            emit_report(&workspace_root, cli.json, verdicts)?;
+            emit_report(&workspace_root, cli.json, verdicts.clone())?;
+            // Every impacted feature must be strict (5/5 and closable).
+            if let Some(failed) = verdicts.iter().find(|v| !v.strict) {
+                bail!(
+                    "strict gate failed: feature `{}` is not 5/5 (score {}/{} may_close={})",
+                    failed.feature_id,
+                    failed.score,
+                    failed.max_score,
+                    failed.may_close,
+                );
+            }
         }
     }
 
@@ -93,7 +116,16 @@ fn report_all(workspace_root: &Path, store: &ArtifactStore) -> Result<Vec<Featur
 
 fn verify_impacted(workspace_root: &Path, store: &ArtifactStore) -> Result<Vec<FeatureVerdict>> {
     let manifests = manifest::load_all_manifests(workspace_root)?;
-    let changed_files = git::worktree_changed_files(workspace_root)?;
+    let worktree = git::worktree_changed_files(workspace_root)?;
+    let parent = git::parent_changed_files(workspace_root)?;
+    let mut changed_set = BTreeSet::new();
+    for f in worktree {
+        changed_set.insert(f);
+    }
+    for f in parent {
+        changed_set.insert(f);
+    }
+    let changed_files: Vec<String> = changed_set.into_iter().collect();
     if changed_files.is_empty() {
         return Ok(Vec::new());
     }
@@ -152,6 +184,10 @@ fn compute_verdict(
         .filter(|category| !categories.contains(category))
         .collect::<Vec<_>>();
     let stale = proofs.iter().any(|proof| proof.stale);
+    let may_close = verdict_score >= manifest.feature.required_score && !stale;
+    // strict = 5/5 AND closable: every category present, passing, and no stale proofs.
+    // This is the gate for aggregate multi-feature commands (report, verify-impacted).
+    let strict = verdict_score == max_score && may_close;
 
     Ok(FeatureVerdict {
         feature_id: manifest.feature.id.clone(),
@@ -161,7 +197,8 @@ fn compute_verdict(
         required_score: manifest.feature.required_score,
         score: verdict_score,
         max_score,
-        may_close: verdict_score >= manifest.feature.required_score && !stale,
+        may_close,
+        strict,
         stale,
         missing_categories,
         changed_files: changed_files.into_iter().collect(),
@@ -259,14 +296,15 @@ fn emit_report(workspace_root: &Path, as_json: bool, features: Vec<FeatureVerdic
 
     for feature in &report.features {
         println!(
-            "{} [{}] score {}/{} required {} may_close={} stale={}",
+            "{} [{}] score {}/{} required {} may_close={} stale={} strict={}",
             feature.feature_id,
             feature.owner,
             feature.score,
             feature.max_score,
             feature.required_score,
             feature.may_close,
-            feature.stale
+            feature.stale,
+            feature.strict
         );
         if !feature.changed_files.is_empty() {
             println!("  changed: {}", feature.changed_files.join(", "));

@@ -142,6 +142,11 @@ pub struct FeatureVerdict {
     pub score: u8,
     pub max_score: u8,
     pub may_close: bool,
+    /// True when the feature has achieved the maximum score (all 5 categories
+    /// present and passing) and is closable. Used by aggregate multi-feature
+    /// commands (`report`, `verify-impacted`) to enforce a strict 5/5 gate: a
+    /// full run is considered a failure unless every included feature is strict.
+    pub strict: bool,
     pub stale: bool,
     pub missing_categories: Vec<ProofCategory>,
     pub changed_files: Vec<String>,
