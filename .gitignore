@@ -13,6 +13,9 @@ memoryport/council-runs/
 *.tmp
 *.swp
 *.log
+.proveit/artifacts/
+.proveit/verdicts/
+.proveit/proveit.lock
 
 # Infrastructure credentials (secrets)
 infrastructure/infrastructure.json

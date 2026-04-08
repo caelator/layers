@@ -1,0 +1,45 @@
+[feature]
+id = "session-liveness-monitor"
+title = "Session liveness monitor"
+owner = "layers"
+pm_task_id = "session-liveness-monitor"
+watch_paths = [
+    "src/bin/session_monitor.rs",
+    "tests/prove_it_sprint.rs",
+]
+required_score = 5
+
+[[proofs]]
+id = "positive-live-session"
+category = "positive"
+description = "A quiet live session is flagged while healthy active work stays clean."
+command = "cargo test --test prove_it_sprint session_monitor_proofs::quiet_live_session_flagged -- --exact && cargo test --test prove_it_sprint session_monitor_proofs::healthy_active_session_not_flagged -- --exact"
+timeout_secs = 120
+
+[[proofs]]
+id = "counterfactual-terminal-sessions"
+category = "counterfactual"
+description = "Dead and done sessions are excluded from live-session findings."
+command = "cargo test --test prove_it_sprint session_monitor_proofs::dead_historical_session_ignored -- --exact && cargo test --test prove_it_sprint session_monitor_proofs::done_session_ignored_regardless_of_age -- --exact"
+timeout_secs = 120
+
+[[proofs]]
+id = "artifact-json-contract"
+category = "artifact"
+description = "Session JSON contract stays parseable and round-trippable."
+command = "cargo test --test prove_it_sprint session_monitor_proofs::session_json_contract -- --exact"
+timeout_secs = 120
+
+[[proofs]]
+id = "failure-stalled-live-session"
+category = "failure"
+description = "A stalled live session is detected without producing bogus history noise."
+command = "cargo test --test prove_it_sprint session_monitor_proofs::stalled_live_session_flagged -- --exact && cargo test --test prove_it_sprint session_monitor_proofs::no_bogus_stalled_for_dead_history -- --exact"
+timeout_secs = 120
+
+[[proofs]]
+id = "repeatability-terminal-casing"
+category = "repeatability"
+description = "Terminal-status classification stays stable across repeated casing variants."
+command = "for i in 1 2 3; do cargo test --test prove_it_sprint session_monitor_proofs::terminal_status_case_insensitive -- --exact >/dev/null || exit 1; done"
+timeout_secs = 240

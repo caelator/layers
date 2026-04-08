@@ -10,17 +10,16 @@
 //!
 //! ## Storage
 //!
-//! All records are appended to `~/.layers/route-corrections.jsonl` using
-//! `StorageSafety::atomic_write` — one JSON line per record.
+//! All records are appended to `~/.layers/route-corrections.jsonl` —
+//! one JSON line per record.
 
 use anyhow::Context;
 use chrono::{DateTime, Datelike, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
+use std::io::Write;
 use std::path::Path;
-use substrate::DefaultStorage;
-use substrate::StorageSafety;
 use uuid::Uuid;
 
 // ─── RouteId ────────────────────────────────────────────────────────────────
@@ -261,10 +260,12 @@ pub fn route_corrections_path() -> std::path::PathBuf {
         .join("route-corrections.jsonl")
 }
 
-/// Emit a single `RouteFailure` to the route-corrections.jsonl file atomically.
+/// Emit a single `RouteFailure` to the route-corrections.jsonl file.
 ///
-/// Uses `StorageSafety::atomic_write`: writes to a temp file then renames,
-/// ensuring either the old file or the new record is readable — never partial.
+/// Appends one JSON line to the JSONL file so that multiple failures compound
+/// over time.  Previous versions used `atomic_write` (rename-based), which
+/// **replaced** the file on every call — meaning only the most recent failure
+/// was ever stored and route weights could never compound.
 pub fn emit_failure(failure: &RouteFailure) -> anyhow::Result<()> {
     let path = route_corrections_path();
 
@@ -275,10 +276,16 @@ pub fn emit_failure(failure: &RouteFailure) -> anyhow::Result<()> {
 
     // Serialize the failure record as a JSON line
     let line = serde_json::to_string(failure).context("failed to serialize RouteFailure")?;
-    let data = line.into_bytes();
 
-    // Atomic write: StorageSafety handles rename + fsync
-    <DefaultStorage as StorageSafety>::atomic_write(&path, &data)?;
+    // Append (not replace) — JSONL files must accumulate records.
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .context("failed to open route-corrections.jsonl for append")?;
+    writeln!(file, "{line}").context("failed to write RouteFailure line")?;
+    file.flush()
+        .context("failed to flush route-corrections.jsonl")?;
 
     Ok(())
 }

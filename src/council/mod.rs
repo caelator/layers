@@ -74,12 +74,22 @@ pub fn apply_route_corrections(route: &str) -> (String, std::collections::HashMa
     // fallback that is less affected.  A weight below −0.3 signals chronic
     // quality issues on that route pattern.
     if weight < -0.3 {
-        // Find the route with the highest remaining weight as fallback.
-        let fallback = weights
+        // Consider ALL candidate routes, not just those with explicit weight
+        // entries.  Routes with no failures have an implicit weight of 0.0,
+        // which is a valid (and usually best) fallback target.
+        let all_routes = [
+            RouteId::CouncilOnly,
+            RouteId::CouncilWithMemory,
+            RouteId::CouncilWithGraph,
+            RouteId::Both,
+        ];
+        let fallback = all_routes
             .iter()
-            .filter(|(_, w)| **w > weight)
-            .max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal))
-            .map(|(&id, _)| id);
+            .filter(|&&id| id != route_id)
+            .map(|&id| (id, weights.get(&id).copied().unwrap_or(0.0_f32)))
+            .filter(|(_, w)| *w > weight)
+            .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|(id, _)| id);
 
         if let Some(fallback_id) = fallback {
             let adjusted_route = match fallback_id {
@@ -265,8 +275,11 @@ fn execute_council_run_from_state(
     if let Some((ref _item, ref event)) = slot {
         eprintln!(
             "[critical-path] acquired slot for {} (priority={}, wait_ms={}, critical_depth={}, standard_depth={})",
-            event.task_id, event.priority, event.wait_ms,
-            event.critical_depth_after, event.standard_depth_after
+            event.task_id,
+            event.priority,
+            event.wait_ms,
+            event.critical_depth_after,
+            event.standard_depth_after
         );
         log_dispatcher_event(artifacts_dir, event);
     }

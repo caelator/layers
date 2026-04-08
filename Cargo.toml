@@ -25,6 +25,8 @@ ureq = "2"  # HTTP client for Sentry API
 wait-timeout = "0.2"
 substrate = { path = "../substrate" }
 sha2 = "0.10"
+globset = "0.4"
+toml = "0.8"
 
 [dev-dependencies]
 libc = "0.2"
@@ -33,6 +35,10 @@ tempfile = "3"
 [[bin]]
 name = "session-monitor"
 path = "src/bin/session_monitor.rs"
+
+[[bin]]
+name = "proveit"
+path = "src/proveit_main.rs"
 
 [lints.rust]
 unsafe_code = "deny"

@@ -587,22 +587,29 @@ mod tests {
             age_ms: 0,
             status: String::new(),
         };
-        assert!(is_live_session(&s), "empty status should be treated as live");
+        assert!(
+            is_live_session(&s),
+            "empty status should be treated as live"
+        );
     }
 
     #[test]
     fn non_live_terminal_statuses() {
-        for status in &["done", "failed", "lost", "cancelled", "succeeded", "timed_out"] {
+        for status in &[
+            "done",
+            "failed",
+            "lost",
+            "cancelled",
+            "succeeded",
+            "timed_out",
+        ] {
             let s = Session {
                 key: "k".into(),
                 label: "l".into(),
                 age_ms: 999_999,
                 status: (*status).to_string(),
             };
-            assert!(
-                !is_live_session(&s),
-                "status '{status}' should NOT be live"
-            );
+            assert!(!is_live_session(&s), "status '{status}' should NOT be live");
         }
     }
 

@@ -44,11 +44,7 @@ const RESERVED_CRITICAL_SLOTS: usize = 1;
 /// The function inspects the envelope flag first (explicit caller intent),
 /// then falls back to heuristic detection based on the `route` string and
 /// whether there is a parent task flagged as critical.
-pub fn is_critical_path(
-    explicit_flag: Option<bool>,
-    route: &str,
-    parent_critical: bool,
-) -> bool {
+pub fn is_critical_path(explicit_flag: Option<bool>, route: &str, parent_critical: bool) -> bool {
     // 1. Explicit flag takes precedence (caller opted in/out).
     if let Some(flag) = explicit_flag {
         return flag;
@@ -60,7 +56,10 @@ pub fn is_critical_path(
     }
 
     // 3. Routes that sit on the synchronous user-reply path.
-    matches!(route, "direct" | "council_only" | "both" | "memory_only" | "graph_only")
+    matches!(
+        route,
+        "direct" | "council_only" | "both" | "memory_only" | "graph_only"
+    )
 }
 
 /// Determine whether a sub-task should inherit the critical-path flag.
@@ -68,11 +67,7 @@ pub fn is_critical_path(
 /// - Synchronous children: inherit `true` from a critical parent.
 /// - Async / background side-effects: always `false`.
 pub fn inherit_critical_path(parent_critical: bool, is_sync: bool) -> bool {
-    if is_sync {
-        parent_critical
-    } else {
-        false
-    }
+    if is_sync { parent_critical } else { false }
 }
 
 // ---------------------------------------------------------------------------
@@ -440,8 +435,10 @@ impl Dispatcher {
             acct.active_critical += 1;
         } else {
             // Standard work cannot use the reserved critical slot(s).
-            let available_for_standard =
-                self.config.total_workers.saturating_sub(self.config.reserved_critical_slots);
+            let available_for_standard = self
+                .config
+                .total_workers
+                .saturating_sub(self.config.reserved_critical_slots);
             if acct.active_standard >= available_for_standard {
                 // Re-enqueue: the only free slots are reserved.
                 let _ = self.queue.enqueue(item);
@@ -554,7 +551,13 @@ mod tests {
 
     #[test]
     fn sync_routes_are_critical_by_default() {
-        for route in &["direct", "council_only", "both", "memory_only", "graph_only"] {
+        for route in &[
+            "direct",
+            "council_only",
+            "both",
+            "memory_only",
+            "graph_only",
+        ] {
             assert!(
                 is_critical_path(None, route, false),
                 "route '{route}' should be critical"
@@ -638,8 +641,14 @@ mod tests {
                 standard_count += 1;
             }
         }
-        assert_eq!(critical_count, 8, "first 9 dequeues should yield 8 critical");
-        assert_eq!(standard_count, 1, "first 9 dequeues should yield 1 standard");
+        assert_eq!(
+            critical_count, 8,
+            "first 9 dequeues should yield 8 critical"
+        );
+        assert_eq!(
+            standard_count, 1,
+            "first 9 dequeues should yield 1 standard"
+        );
     }
 
     #[test]
@@ -689,15 +698,24 @@ mod tests {
     fn backpressure_rejects_when_critical_full() {
         let q = WeightedFairQueue::new(2);
 
-        assert_eq!(q.enqueue(TaskItem::new("c1", true)), EnqueueResult::Accepted);
-        assert_eq!(q.enqueue(TaskItem::new("c2", true)), EnqueueResult::Accepted);
+        assert_eq!(
+            q.enqueue(TaskItem::new("c1", true)),
+            EnqueueResult::Accepted
+        );
+        assert_eq!(
+            q.enqueue(TaskItem::new("c2", true)),
+            EnqueueResult::Accepted
+        );
         assert_eq!(
             q.enqueue(TaskItem::new("c3", true)),
             EnqueueResult::BackpressureCritical
         );
 
         // Standard items are unbounded
-        assert_eq!(q.enqueue(TaskItem::new("s1", false)), EnqueueResult::Accepted);
+        assert_eq!(
+            q.enqueue(TaskItem::new("s1", false)),
+            EnqueueResult::Accepted
+        );
     }
 
     #[test]
@@ -876,7 +894,10 @@ mod tests {
                 }
             }
         }
-        assert!(found, "standard item must be served even under heavy critical load");
+        assert!(
+            found,
+            "standard item must be served even under heavy critical load"
+        );
     }
 
     #[test]

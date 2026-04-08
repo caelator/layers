@@ -1,0 +1,45 @@
+[feature]
+id = "layers-critical-path-routing"
+title = "Layers critical-path routing"
+owner = "layers"
+pm_task_id = "layers-critical-path-routing"
+watch_paths = [
+    "src/critical_path.rs",
+    "tests/prove_it_sprint.rs",
+]
+required_score = 5
+
+[[proofs]]
+id = "positive-path"
+category = "positive"
+description = "Critical work is dequeued ahead of standard work in the mixed queue."
+command = "cargo test --test prove_it_sprint critical_path_proofs::positive_path_critical_dequeued_first_among_standard -- --exact"
+timeout_secs = 120
+
+[[proofs]]
+id = "counterfactual-path"
+category = "counterfactual"
+description = "Without critical routing, dequeue order falls back to FIFO."
+command = "cargo test --test prove_it_sprint critical_path_proofs::counterfactual_critical_reorders_vs_all_standard -- --exact"
+timeout_secs = 120
+
+[[proofs]]
+id = "artifact-trace"
+category = "artifact"
+description = "The queue trace remains JSON-serializable and structurally complete."
+command = "cargo test --test prove_it_sprint critical_path_proofs::artifact_dequeue_trace_is_complete_and_serializable -- --exact"
+timeout_secs = 120
+
+[[proofs]]
+id = "failure-flood"
+category = "failure"
+description = "Critical-path flood preserves bounded behavior and no deadlock."
+command = "cargo test --test prove_it_sprint critical_path_proofs::flood_concurrent_enqueue_dequeue_no_deadlock -- --exact"
+timeout_secs = 120
+
+[[proofs]]
+id = "repeatability-sweep"
+category = "repeatability"
+description = "Positive and counterfactual routing proofs pass repeatedly."
+command = "for i in 1 2 3; do cargo test --test prove_it_sprint critical_path_proofs::positive_path_critical_dequeued_first_among_standard -- --exact >/dev/null && cargo test --test prove_it_sprint critical_path_proofs::counterfactual_critical_reorders_vs_all_standard -- --exact >/dev/null || exit 1; done"
+timeout_secs = 600

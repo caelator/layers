@@ -73,7 +73,11 @@ pub fn handle_council_run(
         trace_path_override: None,
         context_payload: Some(payload_value),
         critical_path: crate::critical_path::is_critical_path(
-            if critical_path_override { Some(true) } else { None },
+            if critical_path_override {
+                Some(true)
+            } else {
+                None
+            },
             &route,
             false,
         ),

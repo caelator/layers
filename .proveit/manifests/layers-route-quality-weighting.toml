@@ -1,0 +1,31 @@
+[feature]
+id = "layers-route-quality-weighting"
+title = "Layers route-quality weighting"
+owner = "layers"
+pm_task_id = "layers-route-quality-weighting"
+watch_paths = [
+    "src/quality.rs",
+    "tests/prove_it_sprint.rs",
+]
+required_score = 5
+
+[[proofs]]
+id = "positive-quality-on"
+category = "positive"
+description = "Evaluator-on differentiates good results from bad results."
+command = "cargo test --test prove_it_sprint quality_evaluator_proofs::evaluator_on_distinguishes_good_from_bad_results -- --exact"
+timeout_secs = 120
+
+[[proofs]]
+id = "counterfactual-quality-off"
+category = "counterfactual"
+description = "Turning the evaluator off removes meaningful quality gating."
+command = "cargo test --test prove_it_sprint quality_evaluator_proofs::evaluator_off_no_quality_gating -- --exact"
+timeout_secs = 120
+
+[[proofs]]
+id = "repeatability-corpus"
+category = "repeatability"
+description = "Relevance ordering stays consistent across the proof corpus."
+command = "cargo test --test prove_it_sprint quality_evaluator_proofs::relevance_scores_consistent_across_corpus -- --exact"
+timeout_secs = 120
