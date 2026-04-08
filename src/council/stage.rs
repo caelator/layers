@@ -7,7 +7,8 @@ use std::time::{Duration, Instant};
 
 use crate::config::workspace_root;
 use crate::feedback::{
-    FailureKind, HardErrorKind, RouteFailure, RouteId, RoutingSignals, emit_failure,
+    FailureKind, HardErrorKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind,
+    emit_failure,
 };
 use crate::types::{CouncilRunRecord, CouncilStageAttempt};
 use crate::util::{compact, iso_now};
@@ -165,30 +166,52 @@ pub fn execute_stage(
     run.updated_at = iso_now();
     persist_run_state(artifacts_dir, run)?;
 
-    // Emit a RouteFailure for hard errors — RFC 006 Stage 2.
-    // Map the terminal reason to the appropriate HardErrorKind.
-    let hard_kind = match terminal_reason.as_str() {
-        "stage_timed_out" => HardErrorKind::Timeout,
-        _ => HardErrorKind::NonZeroExit,
-    };
-    let last_exit_code = run.stages[stage_index]
+    // Emit a RouteFailure — RFC 006 Stage 2.
+    // Determine whether this is a soft failure (quality/stalls) or hard failure (process error).
+    let last_attempt_status = run.stages[stage_index]
         .attempts
         .last()
-        .and_then(|a| a.exit_code)
-        .map(|x| x as u32);
-    let failure = RouteFailure::new(
-        run.task.clone(),
-        RouteId::CouncilOnly,
-        FailureKind::Hard {
-            error_kind: hard_kind,
-            error_code: last_exit_code,
-            tool_name: spec.stage.to_string(),
-        },
-        RoutingSignals::default(),
-    );
+        .map_or("failed", |a| a.status.as_str());
+
+    let failure = if last_attempt_status == "stalled" {
+        // Quality failure: process succeeded but output was insufficient.
+        // Emit Soft failure — route weight suppressed when < -0.3 (RFC 006).
+        RouteFailure::new(
+            run.task.clone(),
+            RouteId::CouncilOnly,
+            FailureKind::Soft {
+                error_kind: SoftErrorKind::InsufficientContext,
+                flagged_by: "council-stage".to_string(),
+                affected_stage: spec.stage.to_string(),
+            },
+            RoutingSignals::default(),
+        )
+    } else {
+        // Process failure: emit Hard failure.
+        let hard_kind = match terminal_reason.as_str() {
+            "stage_timed_out" => HardErrorKind::Timeout,
+            _ => HardErrorKind::NonZeroExit,
+        };
+        let last_exit_code = run.stages[stage_index]
+            .attempts
+            .last()
+            .and_then(|a| a.exit_code)
+            .map(|x| x as u32);
+        RouteFailure::new(
+            run.task.clone(),
+            RouteId::CouncilOnly,
+            FailureKind::Hard {
+                error_kind: hard_kind,
+                error_code: last_exit_code,
+                tool_name: spec.stage.to_string(),
+            },
+            RoutingSignals::default(),
+        )
+    };
     if let Err(e) = emit_failure(&failure) {
         eprintln!(
-            "[route-feedback] failed to emit failure record for {}: {e}",
+            "[route-feedback] failed to emit {} failure record for {}: {e}",
+            if last_attempt_status == "stalled" { "soft" } else { "hard" },
             spec.stage
         );
     }
