@@ -1,6 +1,7 @@
 mod artifacts;
 mod circuit_breaker;
 mod convergence;
+mod route_corrections;
 mod stage;
 
 use anyhow::{Context, Result};
@@ -8,6 +9,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::config::{CONTEXT_PAYLOAD_SCHEMA_VERSION, memoryport_dir, workspace_root};
+use crate::feedback::RouteId;
 use crate::types::{CouncilConvergenceRecord, CouncilRunRecord, ImpactSummary};
 use crate::util::iso_now;
 
@@ -17,6 +19,7 @@ use artifacts::{
 };
 use circuit_breaker::from_env;
 use convergence::{build_convergence_record, build_failure_convergence_record};
+use route_corrections::RouteCorrectionReader;
 use stage::{StageOutcome, StageSpec, execute_stage};
 
 pub struct CouncilRunRequest {
@@ -35,6 +38,61 @@ pub struct CouncilRunRequest {
     pub trace_path_override: Option<PathBuf>,
     /// Structured context payload (schema-versioned) for the council handshake.
     pub context_payload: Option<serde_json::Value>,
+}
+
+/// Apply route-correction weight adjustments to a route string.
+///
+/// Loads the [`RouteCorrectionReader`] and, for each `RouteId` that has a
+/// non-zero cumulative weight, applies a bonus or penalty to the score used
+/// for routing.
+///
+/// Returns the adjusted route string and the per-`RouteId` weight map.
+pub fn apply_route_corrections(
+    route: &str,
+) -> (String, std::collections::HashMap<RouteId, f32>) {
+    let reader = RouteCorrectionReader::new();
+    let weights = reader.route_weights();
+
+    // Map the input route string to a RouteId for weight lookup.
+    // "direct" (council-only, no retrieval) → RouteId::CouncilOnly
+    // "memory_only" → RouteId::CouncilWithMemory
+    // "graph_only"  → RouteId::CouncilWithGraph
+    // "both"        → RouteId::Both
+    #[allow(clippy::match_same_arms)]
+    let route_id = match route {
+        "direct" | "council_only" => RouteId::CouncilOnly,
+        "memory_only" | "memory" => RouteId::CouncilWithMemory,
+        "graph_only" | "graph" => RouteId::CouncilWithGraph,
+        "both" => RouteId::Both,
+        _ => RouteId::CouncilOnly,
+    };
+
+    let weight = weights.get(&route_id).copied().unwrap_or(0.0_f32);
+
+    // If the chosen route has been demoted below the threshold, switch to a
+    // fallback that is less affected.  A weight below −0.3 signals chronic
+    // quality issues on that route pattern.
+    if weight < -0.3 {
+        // Find the route with the highest remaining weight as fallback.
+        let fallback = weights
+            .iter()
+            .filter(|(_, w)| **w > weight)
+            .max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|(&id, _)| id);
+
+        if let Some(fallback_id) = fallback {
+            let adjusted_route = match fallback_id {
+                RouteId::CouncilOnly => "direct",
+                RouteId::CouncilWithMemory => "memory_only",
+                RouteId::CouncilWithGraph => "graph_only",
+                RouteId::Both => "both",
+                _ => route,
+            };
+            return (adjusted_route.to_string(), weights);
+        }
+    }
+
+    (route.to_string(), weights)
 }
 
 pub fn execute_council_run(request: CouncilRunRequest) -> Result<CouncilRunRecord> {

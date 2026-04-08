@@ -5,9 +5,9 @@ use std::path::PathBuf;
 use crate::cmd::query::{RetrievalMeta, build_context_payload};
 use crate::config::{canonical_curated_memory_path, workspace_root};
 use crate::council::{
-    CouncilRunRequest, execute_council_run, latest_incomplete_council_run, list_council_runs,
-    load_council_checkpoint, load_council_convergence_record, load_council_run_record,
-    resume_council_run,
+    apply_route_corrections, CouncilRunRequest, execute_council_run,
+    latest_incomplete_council_run, list_council_runs, load_council_checkpoint,
+    load_council_convergence_record, load_council_run_record, resume_council_run,
 };
 use crate::graph;
 use crate::memory;
@@ -51,11 +51,16 @@ pub fn handle_council_run(
     );
     let payload_value = serde_json::to_value(&context_payload)?;
 
+    // Apply route-correction weights before the final routing decision.
+    // Corrections may demote or boost a route based on past Hard/Soft failures
+    // or human corrections recorded in ~/.layers/route-corrections.jsonl.
+    let (route, _route_weights) = apply_route_corrections("direct");
+
     let run = execute_council_run(CouncilRunRequest {
         task: task.to_string(),
-        route: "direct".to_string(),
+        route: route.clone(),
         context_text,
-        context_json: json!({"route": "direct"}),
+        context_json: json!({"route": route}),
         graph_context,
         targets: target_symbols,
         gemini_cmd,
