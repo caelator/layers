@@ -275,6 +275,11 @@ enum CouncilCommands {
         /// Output full JSON instead of human summary.
         #[arg(long)]
         json: bool,
+        /// Mark this run as critical-path (latency-sensitive, gets priority
+        /// scheduling via the weighted fair queue and reserved worker slot).
+        /// Without this flag, the route heuristic decides automatically.
+        #[arg(long)]
+        critical_path: bool,
     },
     /// Resume a previously interrupted council run.
     Resume {
@@ -409,6 +414,7 @@ fn main() -> anyhow::Result<()> {
                 artifacts_dir,
                 targets,
                 json,
+                critical_path,
             } => handle_council_run(
                 &task,
                 gemini_cmd,
@@ -419,6 +425,7 @@ fn main() -> anyhow::Result<()> {
                 artifacts_dir,
                 targets,
                 json,
+                critical_path,
             ),
             CouncilCommands::Resume {
                 run_id,

@@ -14,7 +14,7 @@
 //! - Missing flags default to `false` for backward compatibility.
 
 use std::collections::VecDeque;
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::{Arc, Condvar, Mutex, OnceLock};
 use std::time::Instant;
 
 use serde::{Deserialize, Serialize};
@@ -493,6 +493,20 @@ impl Dispatcher {
     pub fn queue(&self) -> &WeightedFairQueue {
         &self.queue
     }
+}
+
+// ---------------------------------------------------------------------------
+// Process-level singleton
+// ---------------------------------------------------------------------------
+
+/// Process-wide dispatcher instance.  Lazily initialized with default config
+/// on first access so that all council runs (even concurrent ones) share the
+/// same worker-slot accounting and weighted fair queue.
+static GLOBAL_DISPATCHER: OnceLock<Dispatcher> = OnceLock::new();
+
+/// Return a reference to the process-wide [`Dispatcher`].
+pub fn global_dispatcher() -> &'static Dispatcher {
+    GLOBAL_DISPATCHER.get_or_init(Dispatcher::with_defaults)
 }
 
 // ---------------------------------------------------------------------------

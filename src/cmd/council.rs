@@ -25,6 +25,7 @@ pub fn handle_council_run(
     artifacts_dir: Option<String>,
     targets: Option<String>,
     json_out: bool,
+    critical_path_override: bool,
 ) -> Result<()> {
     let gemini_cmd = council_command("gemini", gemini_cmd)?;
     let claude_cmd = council_command("claude", claude_cmd)?;
@@ -71,7 +72,11 @@ pub fn handle_council_run(
         artifacts_dir: artifacts_dir.map(PathBuf::from),
         trace_path_override: None,
         context_payload: Some(payload_value),
-        critical_path: crate::critical_path::is_critical_path(None, &route, false),
+        critical_path: crate::critical_path::is_critical_path(
+            if critical_path_override { Some(true) } else { None },
+            &route,
+            false,
+        ),
     })?;
 
     if json_out {

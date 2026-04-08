@@ -120,6 +120,12 @@ pub fn resume_council_run(request: CouncilRunRequest) -> Result<CouncilRunRecord
         anyhow::bail!("run '{}' is corrupted and cannot be resumed", run.run_id);
     }
 
+    // Inherit critical_path from the persisted run record if the resume
+    // request doesn't explicitly set it.  This ensures a resumed critical
+    // run keeps its priority scheduling.
+    if request.critical_path {
+        run.critical_path = true;
+    }
     run.status = "running".to_string();
     run.status_reason = "resumed".to_string();
     run.retry_limit = request.retry_limit;
@@ -240,6 +246,34 @@ fn execute_council_run_from_state(
     let mut prior_outputs = load_prior_outputs(&run)?;
     let mut circuit_breaker = from_env();
 
+    // --- Critical-path routing: submit and acquire a worker slot -----------
+    let dispatcher = crate::critical_path::global_dispatcher();
+    let task_item = crate::critical_path::TaskItem::new(&run.run_id, run.critical_path);
+    let enqueue_result = dispatcher.submit(task_item);
+
+    if enqueue_result == crate::critical_path::EnqueueResult::BackpressureCritical {
+        eprintln!(
+            "[critical-path] back-pressure: critical queue full, run {} proceeding as standard",
+            run.run_id
+        );
+    }
+
+    // Try to acquire a worker slot.  If the pool is saturated the run
+    // proceeds anyway — the slot accounting is best-effort for a CLI tool
+    // where hard-blocking would be surprising.
+    let slot = dispatcher.acquire();
+    if let Some((ref _item, ref event)) = slot {
+        eprintln!(
+            "[critical-path] acquired slot for {} (priority={}, wait_ms={}, critical_depth={}, standard_depth={})",
+            event.task_id, event.priority, event.wait_ms,
+            event.critical_depth_after, event.standard_depth_after
+        );
+        log_dispatcher_event(artifacts_dir, event);
+    }
+    // Track whether we hold a slot so we can release it on all exit paths.
+    let held_critical = slot.as_ref().map(|(item, _)| item.critical_path);
+    // ----- end critical-path acquire --------------------------------------
+
     for (index, spec) in specs.iter().enumerate().skip(start_index) {
         let prompt = build_stage_prompt(
             spec.stage,
@@ -287,7 +321,25 @@ fn execute_council_run_from_state(
         }
     }
 
+    // --- Critical-path routing: release the worker slot -------------------
+    if let Some(was_critical) = held_critical {
+        dispatcher.release(was_critical);
+        let (active_crit, active_std) = dispatcher.active_workers();
+        eprintln!(
+            "[critical-path] released slot for {} (active: critical={}, standard={})",
+            run.run_id, active_crit, active_std
+        );
+    }
+
     finalize_council_run(artifacts_dir, run)
+}
+
+/// Append a dispatcher dequeue event to the run's artifacts for observability.
+fn log_dispatcher_event(artifacts_dir: &Path, event: &crate::critical_path::DequeueEvent) {
+    let path = artifacts_dir.join("dispatcher-events.jsonl");
+    if let Ok(value) = serde_json::to_value(event) {
+        let _ = crate::util::append_jsonl(&path, &value);
+    }
 }
 
 fn build_stage_specs(run: &CouncilRunRecord) -> [StageSpec<'static>; 3] {
