@@ -15,7 +15,6 @@ use std::fs;
 use std::io;
 use std::path::PathBuf;
 use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -38,17 +37,19 @@ const DEFAULT_STALLED_THRESHOLD_SECS: u64 = 420;
 // Domain types
 // ---------------------------------------------------------------------------
 
-/// A session returned by `openclaw sessions list`.
+/// A session returned by `openclaw sessions --active <minutes> --json`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Session {
     /// Unique session key.
     pub key: String,
     /// Human-readable label.
+    #[serde(default)]
     pub label: String,
-    /// Unix timestamp (milliseconds) of last activity.
-    #[serde(rename = "updatedAt")]
-    pub updated_at: u64,
+    /// Age in milliseconds since last output (already computed by the CLI).
+    #[serde(rename = "ageMs")]
+    pub age_ms: u64,
     /// Session status string.
+    #[serde(default)]
     pub status: String,
 }
 
@@ -56,15 +57,7 @@ impl Session {
     /// Returns the number of seconds since this session last emitted output.
     #[must_use]
     pub fn seconds_since_update(&self) -> u64 {
-        #[allow(clippy::cast_possible_truncation, clippy::missing_panics_doc)]
-        let now_ms = u64::try_from(
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .expect("system time before epoch")
-                .as_millis(),
-        )
-        .expect("milliseconds since epoch exceeds u64::MAX");
-        now_ms.saturating_sub(self.updated_at) / 1000
+        self.age_ms / 1000
     }
 }
 
@@ -179,22 +172,26 @@ fn release_lock() {
 // OpenClaw sessions API
 // ---------------------------------------------------------------------------
 
-/// Call `openclaw sessions list` and parse the JSON response.
+/// Response wrapper from `openclaw sessions --active --json`.
+#[derive(Deserialize)]
+struct Response { sessions: Vec<Session> }
+
+/// Call `openclaw sessions --active <minutes> --json` and parse the JSON response.
 fn fetch_sessions() -> anyhow::Result<Vec<Session>> {
     let output = Command::new("openclaw")
-        .args(["sessions", "list"])
+        .args(["sessions", "--active", "120", "--json"])
         .output()?;
 
     if !output.status.success() {
         anyhow::bail!(
-            "openclaw sessions list failed: {}",
+            "openclaw sessions failed: {}",
             String::from_utf8_lossy(&output.stderr)
         );
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let sessions: Vec<Session> = serde_json::from_str(&stdout)?;
-    Ok(sessions)
+    let resp: Response = serde_json::from_str(&stdout)?;
+    Ok(resp.sessions)
 }
 
 // ---------------------------------------------------------------------------
@@ -384,16 +381,12 @@ mod tests {
 
     #[test]
     fn seconds_since_update_computes_correct_delta() {
-        let now_ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("system time before epoch")
-            .as_millis() as u64;
 
         // Session updated 30 seconds ago.
         let s = Session {
             key: "test".into(),
             label: "test-label".into(),
-            updated_at: now_ms - 30_000,
+            age_ms: 30_000,
             status: "running".into(),
         };
 
@@ -406,36 +399,24 @@ mod tests {
     #[test]
     fn classify_ok_when_within_quiet_threshold() {
         let t = Thresholds { quiet_secs: 180, stalled_secs: 420 };
-        let now_ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("system time before epoch")
-            .as_millis() as u64;
 
-        let s = Session { key: "k".into(), label: "l".into(), updated_at: now_ms - 60_000, status: "running".into() };
+        let s = Session { key: "k".into(), label: "l".into(), age_ms: 60_000, status: "running".into() };
         assert_eq!(classify(&t, &s), SessionState::Ok);
     }
 
     #[test]
     fn classify_quiet_when_between_thresholds() {
         let t = Thresholds { quiet_secs: 180, stalled_secs: 420 };
-        let now_ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("system time before epoch")
-            .as_millis() as u64;
 
-        let s = Session { key: "k".into(), label: "l".into(), updated_at: now_ms - 200_000, status: "running".into() };
+        let s = Session { key: "k".into(), label: "l".into(), age_ms: 200_000, status: "running".into() };
         assert_eq!(classify(&t, &s), SessionState::Quiet { secs: 200 });
     }
 
     #[test]
     fn classify_stalled_when_past_stalled_threshold() {
         let t = Thresholds { quiet_secs: 180, stalled_secs: 420 };
-        let now_ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("system time before epoch")
-            .as_millis() as u64;
 
-        let s = Session { key: "k".into(), label: "l".into(), updated_at: now_ms - 500_000, status: "running".into() };
+        let s = Session { key: "k".into(), label: "l".into(), age_ms: 500_000, status: "running".into() };
         assert_eq!(classify(&t, &s), SessionState::Stalled { secs: 500 });
     }
 
@@ -451,16 +432,12 @@ mod tests {
     #[test]
     fn partition_mixed() {
         let t = Thresholds { quiet_secs: 180, stalled_secs: 420 };
-        let now_ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("system time before epoch")
-            .as_millis() as u64;
 
         let sessions = vec![
-            Session { key: "ok".into(),     label: "ok-label".into(),     updated_at: now_ms - 30_000,  status: "running".into() },
-            Session { key: "quiet".into(),  label: "quiet-label".into(),  updated_at: now_ms - 200_000, status: "running".into() },
-            Session { key: "stalled".into(),label: "stalled-label".into(),updated_at: now_ms - 500_000, status: "running".into() },
-            Session { key: "quiet2".into(), label: "quiet2-label".into(),updated_at: now_ms - 300_000, status: "running".into() },
+            Session { key: "ok".into(),     label: "ok-label".into(),     age_ms: 30_000,  status: "running".into() },
+            Session { key: "quiet".into(),  label: "quiet-label".into(),  age_ms: 200_000, status: "running".into() },
+            Session { key: "stalled".into(),label: "stalled-label".into(),age_ms: 500_000, status: "running".into() },
+            Session { key: "quiet2".into(), label: "quiet2-label".into(),age_ms: 300_000, status: "running".into() },
         ];
 
         let (ok, quiet, stalled) = partition_sessions(&t, &sessions);
@@ -508,15 +485,16 @@ mod tests {
     #[test]
     fn parse_sessions_json() {
         let json = r#"[
-          {"key": "abc123", "label": "subagent-1", "updatedAt": 1744128000000, "status": "running"},
-          {"key": "def456", "label": "subagent-2", "updatedAt": 1744128100000, "status": "idle"}
+          {"key": "abc123", "label": "subagent-1", "ageMs": 60000, "status": "running"},
+          {"key": "def456", "label": "subagent-2", "ageMs": 120000, "status": "idle"}
         ]"#;
 
         let sessions: Vec<Session> = serde_json::from_str(json).expect("should parse");
         assert_eq!(sessions.len(), 2);
         assert_eq!(sessions[0].key, "abc123");
         assert_eq!(sessions[0].label, "subagent-1");
-        assert_eq!(sessions[0].updated_at, 1_744_128_000_000);
+        assert_eq!(sessions[0].age_ms, 60000);
+        assert_eq!(sessions[0].seconds_since_update(), 60);
         assert_eq!(sessions[0].status, "running");
     }
 }
