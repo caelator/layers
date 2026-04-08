@@ -55,12 +55,19 @@ fn write_cargo_audit_wrapper(home: &Path) -> PathBuf {
     wrapper
 }
 
-fn seed_openclaw_config(home: &Path) {
+/// Seeds the openclaw config into the temp home. Returns false if the source
+/// config doesn't exist (e.g. in CI), signalling the caller to skip.
+fn seed_openclaw_config(home: &Path) -> bool {
+    let source = Path::new("/Users/bri/.openclaw/openclaw.json");
+    if !source.exists() {
+        eprintln!("Skipping: openclaw config not found at {}", source.display());
+        return false;
+    }
     let config_dir = home.join(".openclaw");
     std::fs::create_dir_all(&config_dir).expect("failed to create temp ~/.openclaw");
-    let source = Path::new("/Users/bri/.openclaw/openclaw.json");
     let target = config_dir.join("openclaw.json");
     std::fs::copy(source, target).expect("failed to seed openclaw config");
+    true
 }
 
 fn base_query_command(home: &Path) -> Command {
@@ -187,7 +194,10 @@ fn test_uc_min_results_warning() {
 fn test_layers_gate_against_openclaw_pm() {
     let openclaw_pm = Path::new("/Users/bri/Documents/GitHub/openclaw-pm");
     let home = make_home();
-    seed_openclaw_config(home.path());
+    if !seed_openclaw_config(home.path()) {
+        eprintln!("test_layers_gate_against_openclaw_pm: skipped (no local config)");
+        return;
+    }
     let cargo_wrapper = write_cargo_audit_wrapper(home.path());
     let cargo_target_dir = tempfile::tempdir().expect("failed to create cargo target dir");
     let original_path = std::env::var("PATH").unwrap_or_default();
