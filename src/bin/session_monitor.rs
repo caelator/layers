@@ -174,7 +174,9 @@ fn release_lock() {
 
 /// Response wrapper from `openclaw sessions --active --json`.
 #[derive(Deserialize)]
-struct Response { sessions: Vec<Session> }
+struct Response {
+    sessions: Vec<Session>,
+}
 
 /// Call `openclaw sessions --active <minutes> --json` and parse the JSON response.
 fn fetch_sessions() -> anyhow::Result<Vec<Session>> {
@@ -243,7 +245,10 @@ fn format_session(session: &Session, secs: u64) -> String {
     } else {
         format!("{secs}s")
     };
-    format!("  - [{}] {} (key={}, status={}, age={})", session.label, age, session.key, session.status, age)
+    format!(
+        "  - [{}] {} (key={}, status={}, age={})",
+        session.label, age, session.key, session.status, age
+    )
 }
 
 /// Write quiet session report to the log file.
@@ -287,7 +292,11 @@ fn write_stalled_critical(stalled_sessions: &[Session]) -> io::Result<()> {
     writeln!(file)?;
     for session in stalled_sessions {
         let secs = session.seconds_since_update();
-        writeln!(file, "- **{}** (key={}, status={}, age={}s)", session.label, session.key, session.status, secs)?;
+        writeln!(
+            file,
+            "- **{}** (key={}, status={}, age={}s)",
+            session.label, session.key, session.status, secs
+        )?;
     }
     writeln!(file)?;
 
@@ -311,7 +320,9 @@ fn main() {
 fn run() -> anyhow::Result<()> {
     // 1. Acquire lock — exit cleanly if another instance is running.
     if let Err(e) = acquire_lock() {
-        eprintln!("session-monitor: could not acquire lock ({e}) — another instance is likely running. Exiting.");
+        eprintln!(
+            "session-monitor: could not acquire lock ({e}) — another instance is likely running. Exiting."
+        );
         return Ok(()); // Not an error — just exit.
     }
 
@@ -381,7 +392,6 @@ mod tests {
 
     #[test]
     fn seconds_since_update_computes_correct_delta() {
-
         // Session updated 30 seconds ago.
         let s = Session {
             key: "test".into(),
@@ -398,25 +408,49 @@ mod tests {
 
     #[test]
     fn classify_ok_when_within_quiet_threshold() {
-        let t = Thresholds { quiet_secs: 180, stalled_secs: 420 };
+        let t = Thresholds {
+            quiet_secs: 180,
+            stalled_secs: 420,
+        };
 
-        let s = Session { key: "k".into(), label: "l".into(), age_ms: 60_000, status: "running".into() };
+        let s = Session {
+            key: "k".into(),
+            label: "l".into(),
+            age_ms: 60_000,
+            status: "running".into(),
+        };
         assert_eq!(classify(&t, &s), SessionState::Ok);
     }
 
     #[test]
     fn classify_quiet_when_between_thresholds() {
-        let t = Thresholds { quiet_secs: 180, stalled_secs: 420 };
+        let t = Thresholds {
+            quiet_secs: 180,
+            stalled_secs: 420,
+        };
 
-        let s = Session { key: "k".into(), label: "l".into(), age_ms: 200_000, status: "running".into() };
+        let s = Session {
+            key: "k".into(),
+            label: "l".into(),
+            age_ms: 200_000,
+            status: "running".into(),
+        };
         assert_eq!(classify(&t, &s), SessionState::Quiet { secs: 200 });
     }
 
     #[test]
     fn classify_stalled_when_past_stalled_threshold() {
-        let t = Thresholds { quiet_secs: 180, stalled_secs: 420 };
+        let t = Thresholds {
+            quiet_secs: 180,
+            stalled_secs: 420,
+        };
 
-        let s = Session { key: "k".into(), label: "l".into(), age_ms: 500_000, status: "running".into() };
+        let s = Session {
+            key: "k".into(),
+            label: "l".into(),
+            age_ms: 500_000,
+            status: "running".into(),
+        };
         assert_eq!(classify(&t, &s), SessionState::Stalled { secs: 500 });
     }
 
@@ -424,20 +458,46 @@ mod tests {
 
     #[test]
     fn partition_empty() {
-        let t = Thresholds { quiet_secs: 180, stalled_secs: 420 };
+        let t = Thresholds {
+            quiet_secs: 180,
+            stalled_secs: 420,
+        };
         let (ok, quiet, stalled) = partition_sessions(&t, &[]);
         assert!(ok.is_empty() && quiet.is_empty() && stalled.is_empty());
     }
 
     #[test]
     fn partition_mixed() {
-        let t = Thresholds { quiet_secs: 180, stalled_secs: 420 };
+        let t = Thresholds {
+            quiet_secs: 180,
+            stalled_secs: 420,
+        };
 
         let sessions = vec![
-            Session { key: "ok".into(),     label: "ok-label".into(),     age_ms: 30_000,  status: "running".into() },
-            Session { key: "quiet".into(),  label: "quiet-label".into(),  age_ms: 200_000, status: "running".into() },
-            Session { key: "stalled".into(),label: "stalled-label".into(),age_ms: 500_000, status: "running".into() },
-            Session { key: "quiet2".into(), label: "quiet2-label".into(),age_ms: 300_000, status: "running".into() },
+            Session {
+                key: "ok".into(),
+                label: "ok-label".into(),
+                age_ms: 30_000,
+                status: "running".into(),
+            },
+            Session {
+                key: "quiet".into(),
+                label: "quiet-label".into(),
+                age_ms: 200_000,
+                status: "running".into(),
+            },
+            Session {
+                key: "stalled".into(),
+                label: "stalled-label".into(),
+                age_ms: 500_000,
+                status: "running".into(),
+            },
+            Session {
+                key: "quiet2".into(),
+                label: "quiet2-label".into(),
+                age_ms: 300_000,
+                status: "running".into(),
+            },
         ];
 
         let (ok, quiet, stalled) = partition_sessions(&t, &sessions);

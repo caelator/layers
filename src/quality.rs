@@ -59,7 +59,10 @@ pub fn evaluate(query: &str, results: &[&str], requested: usize) -> ResultQualit
     } else {
         (results.len() as f64 / requested as f64).min(1.0)
     };
-    let avg_words = results.iter().map(|r| r.split_whitespace().count()).sum::<usize>() as f64
+    let avg_words = results
+        .iter()
+        .map(|r| r.split_whitespace().count())
+        .sum::<usize>() as f64
         / results.len() as f64;
 
     let mut reasons: Vec<&str> = Vec::new();
@@ -125,13 +128,12 @@ pub fn emit_if_poor(
 /// Extract meaningful terms from the query (lowercase, deduplicated, stopwords removed).
 fn query_terms(query: &str) -> Vec<String> {
     let stopwords: &[&str] = &[
-        "a", "an", "the", "is", "are", "was", "were", "be", "been", "being", "have", "has",
-        "had", "do", "does", "did", "will", "would", "could", "should", "may", "might", "shall",
-        "can", "to", "of", "in", "for", "on", "with", "at", "by", "from", "as", "into", "about",
-        "it", "its", "this", "that", "these", "those", "i", "we", "you", "he", "she", "they",
-        "me", "us", "him", "her", "them", "my", "our", "your", "his", "their", "and", "or",
-        "but", "not", "no", "if", "then", "so", "what", "how", "when", "where", "why", "which",
-        "who", "whom",
+        "a", "an", "the", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had",
+        "do", "does", "did", "will", "would", "could", "should", "may", "might", "shall", "can",
+        "to", "of", "in", "for", "on", "with", "at", "by", "from", "as", "into", "about", "it",
+        "its", "this", "that", "these", "those", "i", "we", "you", "he", "she", "they", "me", "us",
+        "him", "her", "them", "my", "our", "your", "his", "their", "and", "or", "but", "not", "no",
+        "if", "then", "so", "what", "how", "when", "where", "why", "which", "who", "whom",
     ];
 
     let mut seen = std::collections::HashSet::new();
@@ -152,13 +154,20 @@ fn compute_relevance(query: &str, results: &[&str]) -> f64 {
     }
 
     // Tokenize all results into a word set for whole-word matching
-    let combined: String = results.iter().map(|r| r.to_lowercase()).collect::<Vec<_>>().join(" ");
+    let combined: String = results
+        .iter()
+        .map(|r| r.to_lowercase())
+        .collect::<Vec<_>>()
+        .join(" ");
     let result_words: std::collections::HashSet<&str> = combined
         .split(|c: char| !c.is_alphanumeric())
         .filter(|w| !w.is_empty())
         .collect();
 
-    let hits = terms.iter().filter(|t| result_words.contains(t.as_str())).count();
+    let hits = terms
+        .iter()
+        .filter(|t| result_words.contains(t.as_str()))
+        .count();
     hits as f64 / terms.len() as f64
 }
 
