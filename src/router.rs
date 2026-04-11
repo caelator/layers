@@ -630,6 +630,7 @@ mod tests {
     /// matches every expected route (and confidence, when specified).
     #[test]
     fn benchmark_routing_answer_keys() {
+        let _ws = crate::test_support::TestWorkspace::new("benchmark-answer-keys");
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
         let path = std::path::Path::new(manifest_dir)
             .join("benchmarks")
@@ -683,6 +684,7 @@ mod tests {
     /// the same route regardless of downstream failures.
     #[test]
     fn benchmark_routing_failures() {
+        let _ws = crate::test_support::TestWorkspace::new("benchmark-routing-failures");
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
         let path = std::path::Path::new(manifest_dir)
             .join("benchmarks")
