@@ -15,6 +15,7 @@ use layers_core::{
 
 /// Predefined tool profile sets that control which tools are available.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Default)]
 pub enum ToolProfile {
     /// Read-only essentials: read, session_status, memory_get.
     Minimal,
@@ -28,11 +29,6 @@ pub enum ToolProfile {
     Custom(Vec<String>),
 }
 
-impl Default for ToolProfile {
-    fn default() -> Self {
-        Self::Full
-    }
-}
 
 impl ToolProfile {
     /// Returns the set of tool names allowed by this profile, or `None` for Full.

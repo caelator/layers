@@ -2,7 +2,6 @@
 //!
 //! Reads lines from stdin and writes responses to stdout.
 
-use std::sync::Arc;
 
 use async_trait::async_trait;
 use layers_core::{

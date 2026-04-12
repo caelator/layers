@@ -4,11 +4,10 @@
 //! and manages connected WebSocket clients for outbound delivery.
 
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use async_trait::async_trait;
 use layers_core::{
-    CancellationToken, ChannelAdapter, ChannelHealth, InboundMessage, LayersError, MediaAttachment,
+    CancellationToken, ChannelAdapter, ChannelHealth, InboundMessage, LayersError,
     OutboundMessage, PeerKind, Result, StreamingTarget,
 };
 use tokio::sync::{mpsc, Mutex, RwLock};
@@ -104,6 +103,7 @@ impl WebChatAdapter {
     }
 
     /// Send a raw string to a specific client.
+    #[allow(dead_code)]
     async fn send_to_client(&self, peer_id: &str, text: &str) -> Result<()> {
         let clients = self.clients.read().await;
         for client in clients.values() {
