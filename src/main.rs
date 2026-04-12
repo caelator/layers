@@ -30,6 +30,7 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 use layers_daemon::lifecycle::DaemonRunner;
 use layers_store::config::ConfigStore;
+use tracing_subscriber::EnvFilter;
 
 mod cmd;
 mod config;
@@ -72,6 +73,9 @@ use cmd::validate::handle_validate;
 #[derive(Parser)]
 #[command(name = "layers", version)]
 struct Cli {
+    /// Enable verbose tracing output (sets `RUST_LOG=layers=debug`).
+    #[arg(short, long, global = true)]
+    verbose: bool,
     #[command(subcommand)]
     command: Commands,
 }
@@ -375,6 +379,7 @@ enum CouncilCommands {
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
+    init_tracing(cli.verbose);
     match cli.command {
         Commands::Daemon { command } => match command {
             DaemonCommands::Run { config, pid_file } => handle_daemon_run(config, pid_file),
@@ -551,6 +556,28 @@ fn main() -> anyhow::Result<()> {
         Commands::Technician { command } => handle_technician(&command),
         Commands::Telemetry { command } => handle_telemetry(&command),
     }
+}
+
+/// Initialise the `tracing` subscriber.
+///
+/// * If `verbose` is true → `RUST_LOG=layers=debug` (unless the caller already
+///   set `RUST_LOG`).
+/// * Otherwise → respect `RUST_LOG` or default to `layers=warn`.
+///
+/// The subscriber is installed exactly once; subsequent calls are no-ops (the
+/// standard `tracing` guard pattern for tests).
+fn init_tracing(verbose: bool) {
+    let default = if verbose {
+        "layers=debug"
+    } else {
+        "layers=warn"
+    };
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(default));
+
+    tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_target(false)
+        .init();
 }
 
 fn handle_daemon_run(config: Option<PathBuf>, pid_file: Option<PathBuf>) -> anyhow::Result<()> {
