@@ -215,6 +215,8 @@ impl MultimodalPruner {
 #[derive(Debug, Clone, Default)]
 pub struct SystemPromptComposer {
     sections: Vec<PromptSection>,
+    /// Pre-composed full text (concatenation of all sections).
+    full_text: String,
 }
 
 /// A single section of the system prompt.
@@ -246,6 +248,20 @@ impl SystemPromptComposer {
             content: content.into(),
             priority,
         });
+        self.rebuild_full_text();
+    }
+
+    /// Return the full composed text (all sections, no budget trimming).
+    pub fn composed_text(&self) -> &str {
+        &self.full_text
+    }
+
+    fn rebuild_full_text(&mut self) {
+        self.full_text = self
+            .sections
+            .iter()
+            .map(|s| format!("## {}\n\n{}\n\n", s.label, s.content))
+            .collect();
     }
 
     /// Compose the final system prompt string, within an optional token budget.
@@ -345,6 +361,11 @@ impl ContextAssembler {
     pub fn with_media_pruner(mut self, pruner: MultimodalPruner) -> Self {
         self.media_pruner = pruner;
         self
+    }
+
+    /// Access the configured compaction strategy.
+    pub fn strategy_ref(&self) -> &CompactionStrategy {
+        &self.strategy
     }
 
     /// Assemble context messages within the token budget.

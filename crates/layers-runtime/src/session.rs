@@ -291,4 +291,9 @@ impl SessionManager {
     pub fn store(&self) -> &dyn SessionStore {
         &*self.store
     }
+
+    /// Get the DM scope mode.
+    pub fn dm_scope(&self) -> DmScopeMode {
+        self.dm_scope
+    }
 }

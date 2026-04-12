@@ -189,6 +189,11 @@ impl QueueManager {
             .clone()
     }
 
+    /// Register a pre-created queue for a session.
+    pub async fn register(&self, session_id: String, queue: Arc<SessionQueue>) {
+        self.queues.write().await.insert(session_id, queue);
+    }
+
     /// Remove a session queue (e.g., on session archival).
     pub async fn remove(&self, session_id: &str) {
         self.queues.write().await.remove(session_id);
