@@ -195,6 +195,13 @@ fn test_uc_min_results_warning() {
 /// against the openclaw-pm workspace.
 #[test]
 fn test_layers_gate_against_openclaw_pm() {
+    if std::env::var("LAYERS_RUN_OPENCLAW_PM_GATE_E2E").as_deref() != Ok("1") {
+        eprintln!(
+            "test_layers_gate_against_openclaw_pm: skipped (set LAYERS_RUN_OPENCLAW_PM_GATE_E2E=1 to enable)"
+        );
+        return;
+    }
+
     let openclaw_pm = Path::new("/Users/bri/Documents/GitHub/openclaw-pm");
     let home = make_home();
     if !seed_openclaw_config(home.path()) {
@@ -214,9 +221,20 @@ fn test_layers_gate_against_openclaw_pm() {
         openclaw_pm.display()
     );
 
+    let rustup_home = std::env::var("RUSTUP_HOME").unwrap_or_else(|_| {
+        let home_dir = std::env::var("HOME").expect("HOME should be set for test runner");
+        format!("{home_dir}/.rustup")
+    });
+    let cargo_home = std::env::var("CARGO_HOME").unwrap_or_else(|_| {
+        let home_dir = std::env::var("HOME").expect("HOME should be set for test runner");
+        format!("{home_dir}/.cargo")
+    });
+
     let output = Command::new(layers_bin())
         .current_dir(repo_root())
         .env("HOME", home.path())
+        .env("RUSTUP_HOME", rustup_home)
+        .env("CARGO_HOME", cargo_home)
         .env("PATH", format!("{}:{original_path}", wrapper_dir.display()))
         .env("CARGO_TARGET_DIR", cargo_target_dir.path())
         .args(["gate", "--skip-mcp", "--workspace"])
