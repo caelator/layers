@@ -25,7 +25,11 @@
 
 //! Layers — council orchestrator and memory spine for multi-model AI workflows.
 
+use std::path::PathBuf;
+
 use clap::{Parser, Subcommand};
+use layers_daemon::lifecycle::DaemonRunner;
+use layers_store::config::ConfigStore;
 
 mod cmd;
 mod config;
@@ -74,6 +78,11 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Run Layers as the single-daemon runtime.
+    Daemon {
+        #[command(subcommand)]
+        command: DaemonCommands,
+    },
     /// Retrieve context for a task using heuristic routing.
     Query {
         /// The task or question to retrieve context for.
@@ -188,6 +197,19 @@ enum CuratedCommands {
     Import {
         /// Path to the JSONL file to import.
         file: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum DaemonCommands {
+    /// Start the Layers daemon.
+    Run {
+        /// Path to `layers.toml`. Defaults to `<workspace>/layers.toml`.
+        #[arg(long)]
+        config: Option<PathBuf>,
+        /// Optional PID file path to write while the daemon is running.
+        #[arg(long)]
+        pid_file: Option<PathBuf>,
     },
 }
 
@@ -354,6 +376,9 @@ enum CouncilCommands {
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     match cli.command {
+        Commands::Daemon { command } => match command {
+            DaemonCommands::Run { config, pid_file } => handle_daemon_run(config, pid_file),
+        },
         Commands::Query {
             task,
             json,
@@ -526,4 +551,22 @@ fn main() -> anyhow::Result<()> {
         Commands::Technician { command } => handle_technician(&command),
         Commands::Telemetry { command } => handle_telemetry(&command),
     }
+}
+
+fn handle_daemon_run(config: Option<PathBuf>, pid_file: Option<PathBuf>) -> anyhow::Result<()> {
+    let config_path = config.unwrap_or_else(|| crate::config::workspace_root().join("layers.toml"));
+    let store = ConfigStore::new(&config_path);
+    let config = store.read()?;
+    ConfigStore::validate(&config)?;
+
+    let runtime = tokio::runtime::Runtime::new()?;
+    runtime.block_on(async move {
+        let (runner, _inbound_rx) = DaemonRunner::new(config.daemon.clone());
+        let runner = if let Some(pid_file) = pid_file {
+            runner.with_pid_file(pid_file)
+        } else {
+            runner
+        };
+        runner.run().await.map_err(anyhow::Error::from)
+    })
 }

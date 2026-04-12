@@ -36,7 +36,9 @@ chrono = { version = "0.4", features = ["serde"] }
 ureq = "2"
 lancedb = "0.27"
 rusqlite = { version = "0.32", features = ["bundled"] }
-tokio = { version = "1", features = ["rt"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
+layers-store = { path = "crates/layers-store" }
+layers-daemon = { path = "crates/layers-daemon" }
 arrow-array = "57"
 arrow-schema = "57"
 futures = "0.3"

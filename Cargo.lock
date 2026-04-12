@@ -3201,6 +3201,8 @@ dependencies = [
  "futures",
  "globset",
  "lancedb",
+ "layers-daemon",
+ "layers-store",
  "libc",
  "rand 0.8.5",
  "rusqlite",
