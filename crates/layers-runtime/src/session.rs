@@ -27,6 +27,7 @@ pub enum DmScopeMode {
     /// One session per peer across all channels.
     PerPeer,
     /// One session per (channel, peer) pair.
+    #[default]
     PerChannelPeer,
     /// One session per (account, channel, peer) tuple.
     PerAccountChannelPeer,

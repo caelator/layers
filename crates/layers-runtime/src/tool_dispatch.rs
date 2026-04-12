@@ -24,6 +24,7 @@ pub enum ToolProfile {
     /// Messaging: send messages, react, thread management.
     Messaging,
     /// Full: all registered tools.
+    #[default]
     Full,
     /// Custom allow-list.
     Custom(Vec<String>),

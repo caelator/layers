@@ -17,6 +17,7 @@ use layers_core::InboundMessage;
 #[derive(Default)]
 pub enum QueueMode {
     /// Coalesce queued messages into a follow-up turn after current run finishes.
+    #[default]
     Collect,
     /// Inject into current run at the next tool boundary.
     Steer,

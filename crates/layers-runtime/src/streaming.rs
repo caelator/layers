@@ -37,6 +37,7 @@ pub enum StreamEvent {
 #[derive(Default)]
 pub enum StreamingMode {
     /// No streaming — wait for full response.
+    #[default]
     Off,
     /// Emit partial text deltas only.
     Partial,

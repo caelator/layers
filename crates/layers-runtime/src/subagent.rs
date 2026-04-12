@@ -40,6 +40,7 @@ pub struct SubagentHandle {
 #[derive(Default)]
 pub enum CleanupPolicy {
     /// Archive the session (mark as archived, keep messages).
+    #[default]
     Archive,
     /// Keep the session as-is (can be resumed).
     Keep,
