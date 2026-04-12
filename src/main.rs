@@ -640,9 +640,7 @@ fn init_tracing(verbose: bool) {
 }
 
 fn handle_daemon_run(config: Option<PathBuf>, pid_file: Option<PathBuf>) -> anyhow::Result<()> {
-    let config_path = config.unwrap_or_else(|| crate::config::workspace_root().join("layers.toml"));
-    let store = ConfigStore::new(&config_path);
-    let config = store.read()?;
+    let config = crate::config::load_config_with_precedence(config.as_deref())?;
     ConfigStore::validate(&config)?;
 
     let runtime = tokio::runtime::Runtime::new()?;
