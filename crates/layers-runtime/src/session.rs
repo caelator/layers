@@ -20,6 +20,8 @@ use layers_core::{
 
 /// How DM sessions are scoped for an agent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)
+#[derive(Default)]
 pub enum DmScopeMode {
     /// One session per agent (global).
     Main,
@@ -31,11 +33,6 @@ pub enum DmScopeMode {
     PerAccountChannelPeer,
 }
 
-impl Default for DmScopeMode {
-    fn default() -> Self {
-        Self::PerChannelPeer
-    }
-}
 
 /// Inputs used to derive the session routing key.
 #[derive(Debug, Clone)]

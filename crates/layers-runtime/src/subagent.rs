@@ -37,6 +37,7 @@ pub struct SubagentHandle {
 
 /// What to do with a subagent session after completion.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum CleanupPolicy {
     /// Archive the session (mark as archived, keep messages).
     Archive,
@@ -46,11 +47,6 @@ pub enum CleanupPolicy {
     Delete,
 }
 
-impl Default for CleanupPolicy {
-    fn default() -> Self {
-        Self::Archive
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Subagent manager
@@ -86,6 +82,7 @@ impl SubagentManager {
     ///
     /// The subagent gets its own session, cancel token (child of `parent_cancel`),
     /// and runs the agent loop independently.
+    #[allow(clippy::too_many_arguments)]
     pub async fn spawn(
         &self,
         parent_session: &Session,

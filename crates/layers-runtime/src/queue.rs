@@ -14,6 +14,7 @@ use layers_core::InboundMessage;
 
 /// How queued messages are handled when a run is already active.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum QueueMode {
     /// Coalesce queued messages into a follow-up turn after current run finishes.
     Collect,
@@ -27,11 +28,6 @@ pub enum QueueMode {
     SteerBacklog,
 }
 
-impl Default for QueueMode {
-    fn default() -> Self {
-        Self::Collect
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Queued entry

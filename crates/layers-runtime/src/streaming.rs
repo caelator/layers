@@ -34,6 +34,7 @@ pub enum StreamEvent {
 
 /// How streaming is delivered to the caller.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum StreamingMode {
     /// No streaming — wait for full response.
     Off,
@@ -45,11 +46,6 @@ pub enum StreamingMode {
     Progress,
 }
 
-impl Default for StreamingMode {
-    fn default() -> Self {
-        Self::Off
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Stream sink trait

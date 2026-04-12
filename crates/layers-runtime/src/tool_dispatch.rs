@@ -15,6 +15,7 @@ use layers_core::{
 
 /// Predefined tool profile sets.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Default)]
 pub enum ToolProfile {
     /// Minimal: only essential tools.
     Minimal,
@@ -28,11 +29,6 @@ pub enum ToolProfile {
     Custom(Vec<String>),
 }
 
-impl Default for ToolProfile {
-    fn default() -> Self {
-        Self::Full
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Tool registry

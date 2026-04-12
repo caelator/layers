@@ -88,7 +88,7 @@ impl ContextAssembler {
         selected.reverse();
 
         // Ensure we don't start with a Tool message (models expect User or System first).
-        while selected.first().map_or(false, |m| m.role == MessageRole::Tool) {
+        while selected.first().is_some_and(|m| m.role == MessageRole::Tool) {
             selected.remove(0);
         }
 

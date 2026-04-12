@@ -136,6 +136,7 @@ impl ToolLoopDetector {
 /// Execute the main agent loop for a single inbound message within a session.
 ///
 /// Returns the list of assistant messages produced (for streaming/queue callers).
+#[allow(clippy::too_many_arguments)]
 pub async fn run_agent_loop(
     session: &Session,
     inbound: Message,
