@@ -1,14 +1,14 @@
-//! MemoryPort failure memory — query past resolutions on recurring failures.
+//! `MemoryPort` failure memory — query past resolutions on recurring failures.
 //!
 //! When the technician detects a recurring failure (same `DiagnosisKind` seen
-//! multiple times in 24h), this module queries MemoryPort/UC for past
+//! multiple times in 24h), this module queries `MemoryPort`/UC for past
 //! resolutions of the same failure class. The results are:
 //!
 //! 1. Included in `HealingRecord.diagnosis_context` for the repair audit trail
 //! 2. Included in `EscalationRecord.failure_memory` for fix agent prompts
 //! 3. Used by the verification step to check repair durability
 //!
-//! If MemoryPort is unavailable, the query degrades gracefully — the technician
+//! If `MemoryPort` is unavailable, the query degrades gracefully — the technician
 //! proceeds without historical context and logs the fallback reason.
 
 use std::collections::HashMap;
@@ -17,7 +17,7 @@ use crate::uc::{UcOptions, UcRetriever};
 
 use super::super::data::{DiagnosisKind, FailureMemory, HealingRecord, PastResolution};
 
-/// Query MemoryPort for past resolutions of a failure class.
+/// Query `MemoryPort` for past resolutions of a failure class.
 ///
 /// Builds a semantic query like `"failure_class: {kind} recurrence"` and
 /// parses the returned lines into `PastResolution` entries.

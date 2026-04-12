@@ -200,16 +200,16 @@ pub struct HealingRecord {
     pub verified: bool,
     /// Human-readable note from the verification step.
     pub verify_note: String,
-    /// Enriched context: MemoryPort past resolutions, GitNexus blast radius.
+    /// Enriched context: `MemoryPort` past resolutions, `GitNexus` blast radius.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub diagnosis_context: Option<serde_json::Value>,
 }
 
 // ---------------------------------------------------------------------------
-// FailureMemory — MemoryPort past resolution context
+// FailureMemory — `MemoryPort` past resolution context
 // ---------------------------------------------------------------------------
 
-/// Past resolution retrieved from MemoryPort for a recurring failure class.
+/// Past resolution retrieved from `MemoryPort` for a recurring failure class.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PastResolution {
     /// When this resolution was recorded.
@@ -222,14 +222,14 @@ pub struct PastResolution {
     pub durable: Option<bool>,
 }
 
-/// Aggregated failure memory for a diagnosis kind, retrieved from MemoryPort.
+/// Aggregated failure memory for a diagnosis kind, retrieved from `MemoryPort`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FailureMemory {
     /// The failure class queried (maps to `DiagnosisKind::name()`).
     pub failure_class: String,
-    /// Past resolutions found in MemoryPort, most recent first.
+    /// Past resolutions found in `MemoryPort`, most recent first.
     pub past_resolutions: Vec<PastResolution>,
-    /// Whether the MemoryPort query succeeded.
+    /// Whether the `MemoryPort` query succeeded.
     pub query_succeeded: bool,
     /// Reason if the query failed or returned no results.
     pub fallback_reason: Option<String>,
@@ -274,7 +274,7 @@ impl FailureMemory {
 /// Lifecycle state of an escalation.
 ///
 /// Pending → Dispatched (fix agent spawned) → Resolved | Failed
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum EscalationLifecycle {
     /// Written by technician, not yet acted on by monitor.
@@ -285,12 +285,6 @@ pub enum EscalationLifecycle {
     Resolved,
     /// The fix agent completed but the diagnosis persists.
     Failed,
-}
-
-impl Default for EscalationLifecycle {
-    fn default() -> Self {
-        Self::Pending
-    }
 }
 
 /// A condition that requires human attention.
@@ -315,7 +309,7 @@ pub struct EscalationRecord {
     /// Session ID of the fix agent, if dispatched.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fix_agent_session_id: Option<String>,
-    /// MemoryPort failure memory: past resolutions for this failure class.
+    /// `MemoryPort` failure memory: past resolutions for this failure class.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub failure_memory: Option<String>,
 }
@@ -347,7 +341,7 @@ impl EscalationRecord {
         }
     }
 
-    /// Attach MemoryPort failure memory summary to this escalation.
+    /// Attach `MemoryPort` failure memory summary to this escalation.
     pub fn with_failure_memory(mut self, memory: &FailureMemory) -> Self {
         if !memory.past_resolutions.is_empty() {
             self.failure_memory = Some(memory.summary());

@@ -822,6 +822,8 @@ fn check_repo(name: &str) -> Result<()> {
 /// them here, dispatching one fix agent per pending escalation (with budget and
 /// deduplication guards).
 fn process_technician_escalations() -> Result<()> {
+    const MAX_DISPATCHES_PER_CYCLE: usize = 3;
+
     let esc_path = crate::technician::data::escalations_path();
     if !esc_path.exists() {
         return Ok(());
@@ -851,9 +853,6 @@ fn process_technician_escalations() -> Result<()> {
         }
     }
 
-    // Budget: max 3 escalation dispatches per monitor cycle to avoid runaway
-    // agent spawning.
-    const MAX_DISPATCHES_PER_CYCLE: usize = 3;
     let mut dispatched_this_cycle = 0usize;
     let mut dirty = false;
 
@@ -953,12 +952,9 @@ fn process_technician_escalations() -> Result<()> {
 /// should complete quickly. Reaped sessions are logged and appended to the
 /// fix-queue with a "reaped" status.
 fn reap_stale_sessions() -> Result<()> {
-    let cli = match resolve_openclaw_cli() {
-        Ok(c) => c,
-        Err(_) => {
-            log("session reap: openclaw CLI not found, skipping");
-            return Ok(());
-        }
+    let Ok(cli) = resolve_openclaw_cli() else {
+        log("session reap: openclaw CLI not found, skipping");
+        return Ok(());
     };
 
     // List active sessions via openclaw
