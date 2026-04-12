@@ -13,7 +13,7 @@ use layers_core::{
 use layers_runtime::queue::QueueManager;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
 /// A record of a single cron job execution.
 #[derive(Debug, Clone, Serialize, Deserialize)]

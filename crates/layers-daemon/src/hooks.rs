@@ -4,7 +4,6 @@
 //! debounce and deduplication of interception hooks.
 
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use layers_core::{LayersError, Result, Session};
