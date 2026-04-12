@@ -6,6 +6,7 @@ rust-version = "1.85"
 
 [dependencies]
 layers-core = { path = "../layers-core" }
+layers-providers = { path = "../layers-providers" }
 layers-runtime = { path = "../layers-runtime" }
 layers-store = { path = "../layers-store" }
 layers-channels = { path = "../layers-channels" }

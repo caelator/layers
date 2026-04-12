@@ -5,7 +5,10 @@ use std::sync::Arc;
 
 use layers_channels::manager::ChannelManager;
 use layers_core::{CancellationToken, DaemonConfig, LayersError, Result};
+use layers_providers::factory;
+use layers_providers::registry::ProviderRegistry;
 use layers_runtime::queue::{QueueManager, QueueMode};
+use layers_store::sqlite::SqliteStore;
 use tokio::signal;
 use tracing::{error, info, warn};
 
@@ -41,6 +44,7 @@ pub struct DaemonRunner {
     hook_manager: Arc<HookManager>,
     cron_scheduler: Arc<CronScheduler>,
     log_rotation: Option<LogRotationConfig>,
+    provider_registry: Arc<tokio::sync::RwLock<ProviderRegistry>>,
 }
 
 impl DaemonRunner {
@@ -60,6 +64,7 @@ impl DaemonRunner {
             Arc::clone(&queue_manager),
             cancel.clone(),
         ));
+        let provider_registry = Arc::new(tokio::sync::RwLock::new(ProviderRegistry::new()));
 
         let runner = Self {
             config,
@@ -70,6 +75,7 @@ impl DaemonRunner {
             hook_manager,
             cron_scheduler,
             log_rotation: None,
+            provider_registry,
         };
 
         (runner, inbound_rx)
@@ -117,6 +123,48 @@ impl DaemonRunner {
     #[must_use]
     pub fn cancel_token(&self) -> CancellationToken {
         self.cancel.clone()
+    }
+
+    /// Access the provider registry.
+    #[must_use]
+    pub fn provider_registry(&self) -> &Arc<tokio::sync::RwLock<ProviderRegistry>> {
+        &self.provider_registry
+    }
+
+    /// Bootstrap providers from the auth-profile store, falling back to config.
+    ///
+    /// Opens the SQLite store at `db_path`, reads all auth profiles, and
+    /// registers their providers. If the store is empty or unavailable,
+    /// falls back to the `[providers]` section of `layers.toml`.
+    pub async fn bootstrap_providers(
+        &self,
+        db_path: impl AsRef<Path>,
+        config_providers: &[(String, layers_core::config::ProviderConfig)],
+    ) -> Result<usize> {
+        let mut registry = self.provider_registry.write().await;
+
+        // Try store-based bootstrap first.
+        match SqliteStore::open(db_path.as_ref()).await {
+            Ok(store) => {
+                let count = factory::bootstrap_from_store(&mut registry, &store).await?;
+                if count > 0 {
+                    info!(count, "bootstrapped providers from auth-profile store");
+                    return Ok(count);
+                }
+                info!("store is empty, falling back to config providers");
+            }
+            Err(e) => {
+                warn!(
+                    error = %e,
+                    "failed to open auth-profile store, falling back to config providers"
+                );
+            }
+        }
+
+        // Fallback: config-based bootstrap.
+        let count = factory::bootstrap_from_config(&mut registry, config_providers);
+        info!(count, "bootstrapped providers from config");
+        Ok(count)
     }
 
     /// Start the daemon and all subsystems. Blocks until shutdown.

@@ -3290,6 +3290,7 @@ dependencies = [
  "layers-channels",
  "layers-core",
  "layers-mcp",
+ "layers-providers",
  "layers-runtime",
  "layers-store",
  "layers-tools",

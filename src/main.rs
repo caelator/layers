@@ -643,6 +643,9 @@ fn handle_daemon_run(config: Option<PathBuf>, pid_file: Option<PathBuf>) -> anyh
     let config = crate::config::load_config_with_precedence(config.as_deref())?;
     ConfigStore::validate(&config)?;
 
+    let db_path = crate::config::workspace_root().join("layers.db");
+    let config_providers: Vec<_> = config.providers.clone().into_iter().collect();
+
     let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(async move {
         let (runner, _inbound_rx) = DaemonRunner::new(config.daemon.clone());
@@ -651,6 +654,8 @@ fn handle_daemon_run(config: Option<PathBuf>, pid_file: Option<PathBuf>) -> anyh
         } else {
             runner
         };
+
+        runner.bootstrap_providers(&db_path, &config_providers).await?;
         runner.run().await.map_err(anyhow::Error::from)
     })
 }
