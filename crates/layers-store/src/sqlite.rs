@@ -23,6 +23,7 @@ const CURRENT_SCHEMA_VERSION: i64 = 1;
 // Writer commands
 // ---------------------------------------------------------------------------
 
+#[allow(clippy::type_complexity)]
 enum DbCommand {
     PutSession {
         session: Session,
@@ -312,13 +313,13 @@ fn run_migrations(conn: &Connection) -> std::result::Result<(), Box<dyn std::err
 // ---------------------------------------------------------------------------
 
 fn map_rusqlite(e: rusqlite::Error) -> LayersError {
-    LayersError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+    LayersError::Io(std::io::Error::other(e.to_string()))
 }
 
 fn do_put_session(conn: &Connection, session: &Session) -> Result<()> {
     let metadata_json = serde_json::to_string(&session.metadata)?;
-    let dm_scope_json = session.dm_scope.as_ref().map(|d| serde_json::to_string(d)).transpose()?;
-    let thread_binding_json = session.thread_binding.as_ref().map(|t| serde_json::to_string(t)).transpose()?;
+    let dm_scope_json = session.dm_scope.as_ref().map(serde_json::to_string).transpose()?;
+    let thread_binding_json = session.thread_binding.as_ref().map(serde_json::to_string).transpose()?;
 
     conn.execute(
         "INSERT OR REPLACE INTO sessions
@@ -438,8 +439,8 @@ fn do_append_message(conn: &Connection, session_id: &str, message: &Message) -> 
 
     let role_str = serde_json::to_string(&message.role)?;
     let content_json = serde_json::to_string(&message.content)?;
-    let tool_calls_json = message.tool_calls.as_ref().map(|tc| serde_json::to_string(tc)).transpose()?;
-    let reasoning_json = message.reasoning.as_ref().map(|r| serde_json::to_string(r)).transpose()?;
+    let tool_calls_json = message.tool_calls.as_ref().map(serde_json::to_string).transpose()?;
+    let reasoning_json = message.reasoning.as_ref().map(serde_json::to_string).transpose()?;
     let timestamp = message
         .timestamp
         .unwrap_or_else(Utc::now)

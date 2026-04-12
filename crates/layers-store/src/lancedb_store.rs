@@ -75,7 +75,7 @@ impl LanceStore {
         let conn = connect(&path_str)
             .execute()
             .await
-            .map_err(|e| LayersError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+            .map_err(|e| LayersError::Io(std::io::Error::other(e.to_string())))?;
 
         let store = Self {
             conn,
@@ -136,7 +136,7 @@ impl LanceStore {
                 Arc::new(embeddings),
             ],
         )
-        .map_err(|e| LayersError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+        .map_err(|e| LayersError::Io(std::io::Error::other(e.to_string())))?;
 
         let reader: Box<dyn RecordBatchReader + Send> =
             Box::new(RecordBatchIterator::new(vec![Ok(batch)], schema));
@@ -146,7 +146,7 @@ impl LanceStore {
             .mode(CreateTableMode::exist_ok(|req| req))
             .execute()
             .await
-            .map_err(|e| LayersError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+            .map_err(|e| LayersError::Io(std::io::Error::other(e.to_string())))?;
 
         Ok(())
     }
@@ -157,7 +157,7 @@ impl LanceStore {
             .open_table(&self.table_name)
             .execute()
             .await
-            .map_err(|e| LayersError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))
+            .map_err(|e| LayersError::Io(std::io::Error::other(e.to_string())))
     }
 
     fn chunks_to_batch(&self, chunks: &[EmbeddingChunk]) -> Result<RecordBatch> {
@@ -192,7 +192,7 @@ impl LanceStore {
                 Arc::new(embeddings),
             ],
         )
-        .map_err(|e| LayersError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))
+        .map_err(|e| LayersError::Io(std::io::Error::other(e.to_string())))
     }
 
     /// Insert or update chunks in the vector store.
@@ -213,7 +213,7 @@ impl LanceStore {
             .add(reader)
             .execute()
             .await
-            .map_err(|e| LayersError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+            .map_err(|e| LayersError::Io(std::io::Error::other(e.to_string())))?;
 
         Ok(())
     }
@@ -226,7 +226,7 @@ impl LanceStore {
         table
             .delete(&format!("source_path = '{source_path}'"))
             .await
-            .map_err(|e| LayersError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+            .map_err(|e| LayersError::Io(std::io::Error::other(e.to_string())))?;
 
         Ok(())
     }
@@ -242,16 +242,16 @@ impl LanceStore {
 
         let results = table
             .vector_search(query_vec)
-            .map_err(|e| LayersError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?
+            .map_err(|e| LayersError::Io(std::io::Error::other(e.to_string())))?
             .limit(limit)
             .execute()
             .await
-            .map_err(|e| LayersError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+            .map_err(|e| LayersError::Io(std::io::Error::other(e.to_string())))?;
 
         let batches: Vec<RecordBatch> = results
             .try_collect()
             .await
-            .map_err(|e| LayersError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+            .map_err(|e| LayersError::Io(std::io::Error::other(e.to_string())))?;
 
         let mut search_results = Vec::new();
         for batch in &batches {
@@ -299,16 +299,16 @@ impl LanceStore {
 
         let results = table
             .query()
-            .only_if(filter.to_string())
+            .only_if(filter)
             .limit(limit)
             .execute()
             .await
-            .map_err(|e| LayersError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+            .map_err(|e| LayersError::Io(std::io::Error::other(e.to_string())))?;
 
         let batches: Vec<RecordBatch> = results
             .try_collect()
             .await
-            .map_err(|e| LayersError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+            .map_err(|e| LayersError::Io(std::io::Error::other(e.to_string())))?;
 
         let mut chunks = Vec::new();
         for batch in &batches {
