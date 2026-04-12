@@ -24,6 +24,7 @@ pub enum ToolProfile {
     /// Messaging tools: coding + sessions_send, sessions_history, cron.
     Messaging,
     /// All registered tools.
+    #[default]
     Full,
     /// Custom allow-list.
     Custom(Vec<String>),
