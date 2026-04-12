@@ -80,7 +80,7 @@ impl McpServer {
             let bytes_read = reader
                 .read_line(&mut line)
                 .await
-                .map_err(|e| layers_core::LayersError::Io(e))?;
+                .map_err(layers_core::LayersError::Io)?;
 
             if bytes_read == 0 {
                 debug!("MCP server: stdin closed, shutting down");
@@ -127,11 +127,11 @@ impl McpServer {
             stdout
                 .write_all(resp_line.as_bytes())
                 .await
-                .map_err(|e| layers_core::LayersError::Io(e))?;
+                .map_err(layers_core::LayersError::Io)?;
             stdout
                 .flush()
                 .await
-                .map_err(|e| layers_core::LayersError::Io(e))?;
+                .map_err(layers_core::LayersError::Io)?;
         }
 
         Ok(())

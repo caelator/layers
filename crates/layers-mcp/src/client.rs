@@ -229,7 +229,7 @@ impl McpClient {
         };
 
         let mut line = serde_json::to_string(&request)
-            .map_err(|e| LayersError::Serialization(e))?;
+            .map_err(LayersError::Serialization)?;
         line.push('\n');
 
         // Write to stdin.
@@ -445,7 +445,7 @@ impl McpManager {
 
     /// Shut down all connections.
     pub async fn shutdown_all(&self) {
-        for (_, client) in &self.clients {
+        for client in self.clients.values() {
             client.shutdown().await;
         }
     }
