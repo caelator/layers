@@ -11,6 +11,7 @@ use layers_core::error::{LayersError, Result};
 use layers_core::traits::{ModelProvider, Tokenizer};
 use layers_core::types::*;
 
+use crate::tokenizer_impl::tokenizer_for_family;
 use crate::types::*;
 
 // ---------------------------------------------------------------------------
@@ -172,7 +173,7 @@ impl ModelProvider for OpenAiProvider {
     }
 
     fn context_window(&self) -> usize {
-        128_000
+        128_000 // Default; use model_caps() for per-model lookup
     }
 
     fn max_tokens(&self) -> usize {
@@ -180,7 +181,9 @@ impl ModelProvider for OpenAiProvider {
     }
 
     fn tokenizer(&self) -> Option<Arc<dyn Tokenizer>> {
-        Some(Arc::new(ApproxTokenizer))
+        // Return o200k_base as the default; callers should use
+        // `tokenizer_for_model()` for model-specific tokenizers.
+        Some(tokenizer_for_family(crate::capabilities::TokenizerFamily::O200kBase))
     }
 }
 
@@ -291,32 +294,4 @@ fn convert_openai_response(oai: OpenAiChatResponse) -> Result<ModelResponse> {
     })
 }
 
-// ---------------------------------------------------------------------------
-// Approximate tokenizer
-// ---------------------------------------------------------------------------
-
-pub struct ApproxTokenizer;
-
-impl Tokenizer for ApproxTokenizer {
-    fn count_message_tokens(&self, messages: &[Message]) -> usize {
-        messages.iter().map(|m| {
-            let text_len = match &m.content {
-                MessageContent::Text(t) => t.len(),
-                MessageContent::Parts(_) => 100, // rough estimate
-            };
-            // ~4 chars per token + overhead per message
-            text_len / 4 + 4
-        }).sum()
-    }
-
-    fn count_tool_schema_tokens(&self, tools: &[ToolDefinition]) -> usize {
-        tools.iter().map(|t| {
-            let schema_str = serde_json::to_string(&t.function.parameters).unwrap_or_default();
-            (t.function.name.len() + t.function.description.len() + schema_str.len()) / 4
-        }).sum()
-    }
-
-    fn count_text_tokens(&self, text: &str) -> usize {
-        text.len() / 4
-    }
-}
+// Note: ApproxTokenizer removed. See tokenizer_impl.rs for proper implementations.

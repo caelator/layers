@@ -11,6 +11,7 @@ use layers_core::error::{LayersError, Result};
 use layers_core::traits::{ModelProvider, Tokenizer};
 use layers_core::types::*;
 
+use crate::tokenizer_impl::tokenizer_for_family;
 use crate::types::*;
 
 const ANTHROPIC_API_URL: &str = "https://api.anthropic.com/v1/messages";
@@ -190,7 +191,7 @@ impl ModelProvider for AnthropicProvider {
     }
 
     fn tokenizer(&self) -> Option<Arc<dyn Tokenizer>> {
-        Some(Arc::new(crate::openai::ApproxTokenizer))
+        Some(tokenizer_for_family(crate::capabilities::TokenizerFamily::Anthropic))
     }
 }
 

@@ -11,6 +11,7 @@ use layers_core::error::{LayersError, Result};
 use layers_core::traits::{ModelProvider, Tokenizer};
 use layers_core::types::*;
 
+use crate::tokenizer_impl::tokenizer_for_family;
 use crate::types::*;
 
 const GOOGLE_API_BASE: &str = "https://generativelanguage.googleapis.com/v1beta";
@@ -189,7 +190,7 @@ impl ModelProvider for GoogleProvider {
     }
 
     fn tokenizer(&self) -> Option<Arc<dyn Tokenizer>> {
-        Some(Arc::new(crate::openai::ApproxTokenizer))
+        Some(tokenizer_for_family(crate::capabilities::TokenizerFamily::Google))
     }
 }
 
