@@ -161,3 +161,117 @@ impl JsonlStore {
 fn hex_encode(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use layers_core::types::{Message, MessageContent, MessageRole};
+
+    fn make_message(role: MessageRole, text: &str) -> Message {
+        Message {
+            role,
+            content: MessageContent::Text(text.to_string()),
+            name: None,
+            tool_calls: None,
+            tool_call_id: None,
+            reasoning: None,
+            timestamp: Some(Utc::now()),
+        }
+    }
+
+    #[tokio::test]
+    async fn append_and_read_all() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = JsonlStore::new(dir.path());
+
+        let msg1 = make_message(MessageRole::User, "hello");
+        let msg2 = make_message(MessageRole::Assistant, "world");
+
+        store.append("sess-1", &msg1).await.unwrap();
+        store.append("sess-1", &msg2).await.unwrap();
+
+        let messages = store.read_all("sess-1").await.unwrap();
+        assert_eq!(messages.len(), 2);
+        assert_eq!(messages[0].role, MessageRole::User);
+        assert_eq!(messages[1].role, MessageRole::Assistant);
+    }
+
+    #[tokio::test]
+    async fn read_all_empty_when_no_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = JsonlStore::new(dir.path());
+        let messages = store.read_all("nonexistent").await.unwrap();
+        assert!(messages.is_empty());
+    }
+
+    #[tokio::test]
+    async fn different_sessions_are_isolated() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = JsonlStore::new(dir.path());
+
+        store.append("sess-a", &make_message(MessageRole::User, "a")).await.unwrap();
+        store.append("sess-b", &make_message(MessageRole::User, "b")).await.unwrap();
+
+        assert_eq!(store.read_all("sess-a").await.unwrap().len(), 1);
+        assert_eq!(store.read_all("sess-b").await.unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn rotation_renames_file() {
+        let dir = tempfile::tempdir().unwrap();
+        // Very small threshold to force rotation on second write.
+        let store = JsonlStore::new(dir.path()).with_max_file_size(1);
+
+        let msg = make_message(MessageRole::User, "first");
+        store.append("sess-rot", &msg).await.unwrap();
+
+        // The primary file should now exist.
+        let hash = JsonlStore::session_hash("sess-rot");
+        let primary = dir.path().join(format!("{hash}.jsonl"));
+        assert!(primary.exists());
+        let first_size = std::fs::metadata(&primary).unwrap().len();
+        assert!(first_size > 0);
+
+        // Sleep to ensure different timestamp in rotated filename.
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+
+        // Second append triggers rotation (file already > 1 byte).
+        let msg2 = make_message(MessageRole::User, "second");
+        store.append("sess-rot", &msg2).await.unwrap();
+
+        // There should now be a rotated file AND the primary file.
+        let all = store.read_all_with_rotated("sess-rot").await.unwrap();
+        assert_eq!(all.len(), 2, "expected 2 messages after rotation, got {}", all.len());
+    }
+
+    #[tokio::test]
+    async fn session_hash_is_deterministic() {
+        let h1 = JsonlStore::session_hash("test-session");
+        let h2 = JsonlStore::session_hash("test-session");
+        assert_eq!(h1, h2);
+        assert_eq!(h1.len(), 16);
+    }
+
+    #[tokio::test]
+    async fn session_hash_differs_for_different_ids() {
+        let h1 = JsonlStore::session_hash("session-a");
+        let h2 = JsonlStore::session_hash("session-b");
+        assert_ne!(h1, h2);
+    }
+
+    #[tokio::test]
+    async fn serialization_roundtrip_in_jsonl() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = JsonlStore::new(dir.path());
+
+        let mut msg = make_message(MessageRole::User, "test content");
+        msg.name = Some("alice".to_string());
+        msg.tool_call_id = Some("tc-123".to_string());
+
+        store.append("sess-rt", &msg).await.unwrap();
+        let read = store.read_all("sess-rt").await.unwrap();
+        assert_eq!(read.len(), 1);
+        assert_eq!(read[0].name.as_deref(), Some("alice"));
+        assert_eq!(read[0].tool_call_id.as_deref(), Some("tc-123"));
+    }
+}

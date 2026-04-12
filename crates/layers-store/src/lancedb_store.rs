@@ -342,3 +342,106 @@ impl LanceStore {
         Ok(chunks)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_chunk(id: &str, content: &str, session_id: &str, embedding: Vec<f32>) -> EmbeddingChunk {
+        EmbeddingChunk {
+            id: id.to_string(),
+            source_path: format!("/test/{id}.md"),
+            content: content.to_string(),
+            role: "user".to_string(),
+            session_id: session_id.to_string(),
+            timestamp: 1700000000,
+            embedding,
+        }
+    }
+
+    fn cosine_embedding(dim: i32, value: f32) -> Vec<f32> {
+        vec![value; dim as usize]
+    }
+
+    #[tokio::test]
+    async fn open_creates_store_and_table() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = LanceStore::open(dir.path(), "test_open").await.unwrap();
+        // Verify we can get the table handle.
+        assert!(store.table().await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn upsert_and_vector_search() {
+        let dir = tempfile::tempdir().unwrap();
+        let dim = 8;
+        let store = LanceStore::open_with_dim(dir.path(), "test_vs", dim).await.unwrap();
+
+        let chunk = make_chunk(
+            "c1",
+            "hello world",
+            "sess-1",
+            vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        );
+        store.upsert_chunks(&[chunk]).await.unwrap();
+
+        // Search with the same vector should find it.
+        let query = vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        let results = store.vector_search(&query, 10).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].chunk.id, "c1");
+        assert_eq!(results[0].chunk.content, "hello world");
+    }
+
+    #[tokio::test]
+    async fn vector_search_returns_closest_match() {
+        let dir = tempfile::tempdir().unwrap();
+        let dim = 4;
+        let store = LanceStore::open_with_dim(dir.path(), "test_nearest", dim).await.unwrap();
+
+        let c1 = make_chunk("near", "near doc", "s1", vec![1.0, 0.0, 0.0, 0.0]);
+        let c2 = make_chunk("far", "far doc", "s1", vec![0.0, 0.0, 0.0, 1.0]);
+        store.upsert_chunks(&[c1, c2]).await.unwrap();
+
+        let results = store.vector_search(&[1.0, 0.0, 0.0, 0.0], 1).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].chunk.id, "near");
+    }
+
+    #[tokio::test]
+    async fn keyword_search_filters_by_field() {
+        let dir = tempfile::tempdir().unwrap();
+        let dim = 4;
+        let store = LanceStore::open_with_dim(dir.path(), "test_kw", dim).await.unwrap();
+
+        let c1 = make_chunk("k1", "alpha content", "s1", vec![0.0; 4]);
+        let c2 = make_chunk("k2", "beta content", "s2", vec![0.0; 4]);
+        store.upsert_chunks(&[c1, c2]).await.unwrap();
+
+        let results = store.keyword_search("session_id = 's1'", 10).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].id, "k1");
+    }
+
+    #[tokio::test]
+    async fn delete_by_source_path_removes_chunks() {
+        let dir = tempfile::tempdir().unwrap();
+        let dim = 4;
+        let store = LanceStore::open_with_dim(dir.path(), "test_del", dim).await.unwrap();
+
+        let c1 = make_chunk("d1", "to delete", "s1", vec![1.0, 0.0, 0.0, 0.0]);
+        store.upsert_chunks(&[c1]).await.unwrap();
+
+        store.delete_by_source_path("/test/d1.md").await.unwrap();
+
+        let results = store.vector_search(&[1.0, 0.0, 0.0, 0.0], 10).await.unwrap();
+        assert!(results.is_empty());
+    }
+
+    #[tokio::test]
+    async fn upsert_empty_chunks_is_noop() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = LanceStore::open(dir.path(), "test_empty").await.unwrap();
+        store.upsert_chunks(&[]).await.unwrap();
+    }
+}

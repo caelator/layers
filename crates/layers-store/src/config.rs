@@ -119,3 +119,98 @@ impl ConfigStore {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use layers_core::config::ProviderConfig;
+
+    #[test]
+    fn read_missing_file_returns_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("nonexistent.toml");
+        let store = ConfigStore::new(&path);
+        let config = store.read().unwrap();
+        assert_eq!(config.daemon.port, 3000);
+    }
+
+    #[tokio::test]
+    async fn read_async_missing_file_returns_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("nonexistent.toml");
+        let store = ConfigStore::new(&path);
+        let config = store.read_async().await.unwrap();
+        assert_eq!(config.daemon.port, 3000);
+    }
+
+    #[test]
+    fn write_and_read_roundtrip() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("layers.toml");
+        let store = ConfigStore::new(&path);
+
+        let mut config = LayersConfig::default();
+        config.daemon.port = 9999;
+        config.daemon.bind_address = "0.0.0.0".to_string();
+
+        store.write(&config).unwrap();
+        assert!(path.exists());
+
+        let loaded = store.read().unwrap();
+        assert_eq!(loaded.daemon.port, 9999);
+        assert_eq!(loaded.daemon.bind_address, "0.0.0.0");
+    }
+
+    #[tokio::test]
+    async fn write_async_and_read_async_roundtrip() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("layers.toml");
+        let store = ConfigStore::new(&path);
+
+        let config = LayersConfig::default();
+        store.write_async(&config).await.unwrap();
+
+        let loaded = store.read_async().await.unwrap();
+        assert_eq!(loaded.daemon.port, config.daemon.port);
+    }
+
+    #[test]
+    fn validate_rejects_port_zero() {
+        let mut config = LayersConfig::default();
+        config.daemon.port = 0;
+        let err = ConfigStore::validate(&config).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("port cannot be 0"), "got: {msg}");
+    }
+
+    #[test]
+    fn validate_rejects_provider_with_key_but_no_models() {
+        let mut config = LayersConfig::default();
+        config.providers.insert(
+            "test".to_string(),
+            ProviderConfig {
+                api_key: Some("sk-test".to_string()),
+                api_base: None,
+                models: vec![],
+                extra: Default::default(),
+            },
+        );
+        let err = ConfigStore::validate(&config).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("no models"), "got: {msg}");
+    }
+
+    #[test]
+    fn validate_accepts_valid_config() {
+        let config = LayersConfig::default();
+        ConfigStore::validate(&config).unwrap();
+    }
+
+    #[test]
+    fn path_returns_configured_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("layers.toml");
+        let store = ConfigStore::new(&path);
+        assert_eq!(store.path(), path);
+    }
+}
