@@ -2,9 +2,11 @@
 //! Runtime engine: agent loop, context management, sessions, and queue.
 
 pub mod session;
+pub mod actor;
 pub mod agent_loop;
 pub mod context;
 pub mod system_prompt;
+pub mod engine;
 pub mod queue;
 pub mod tool_dispatch;
 pub mod streaming;
