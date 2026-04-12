@@ -9,10 +9,10 @@ use std::sync::Arc;
 use arrow_array::types::Float32Type;
 use arrow_array::{
     FixedSizeListArray, Float32Array, Int64Array, RecordBatch, RecordBatchIterator,
-    StringArray,
+    RecordBatchReader, StringArray,
 };
 use arrow_schema::{DataType, Field, Schema};
-use lancedb::connection::CreateTableMode;
+use lancedb::database::CreateTableMode;
 use lancedb::query::{ExecutableQuery, QueryBase};
 use lancedb::{connect, Connection, Table as LanceTable};
 
@@ -119,7 +119,6 @@ impl LanceStore {
         let session_ids = StringArray::from(Vec::<&str>::new());
         let timestamps = Int64Array::from(Vec::<i64>::new());
 
-        let embedding_field = Arc::new(Field::new("item", DataType::Float32, true));
         let embeddings = FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
             Vec::<Option<Vec<Option<f32>>>>::new(),
             self.embedding_dim,
@@ -139,11 +138,12 @@ impl LanceStore {
         )
         .map_err(|e| LayersError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
 
-        let batches = RecordBatchIterator::new(vec![Ok(batch)], schema);
+        let reader: Box<dyn RecordBatchReader + Send> =
+            Box::new(RecordBatchIterator::new(vec![Ok(batch)], schema));
 
         self.conn
-            .create_table(&self.table_name, Box::new(batches))
-            .mode(CreateTableMode::exist_ok(|_| {}))
+            .create_table(&self.table_name, reader)
+            .mode(CreateTableMode::exist_ok(|req| req))
             .execute()
             .await
             .map_err(|e| LayersError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
@@ -206,10 +206,11 @@ impl LanceStore {
         let table = self.table().await?;
         let batch = self.chunks_to_batch(chunks)?;
         let schema = self.schema();
-        let batches = RecordBatchIterator::new(vec![Ok(batch)], schema);
+        let reader: Box<dyn RecordBatchReader + Send> =
+            Box::new(RecordBatchIterator::new(vec![Ok(batch)], schema));
 
         table
-            .add(Box::new(batches))
+            .add(reader)
             .execute()
             .await
             .map_err(|e| LayersError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;

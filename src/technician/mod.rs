@@ -32,7 +32,7 @@ use std::fmt::Write;
 use chrono::Utc;
 
 use data::{
-    CycleReport, Diagnosis, HealingRecord, RepairBudget, RepairOutcome, TECHNICIAN_SCHEMA_VERSION,
+    CycleReport, Diagnosis, FailureMemory, HealingRecord, RepairBudget, RepairOutcome, TECHNICIAN_SCHEMA_VERSION,
     TechnicianState,
 };
 use detection::run_all_detections;

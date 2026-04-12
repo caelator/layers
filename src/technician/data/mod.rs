@@ -278,6 +278,7 @@ impl FailureMemory {
 #[serde(rename_all = "snake_case")]
 pub enum EscalationLifecycle {
     /// Written by technician, not yet acted on by monitor.
+    #[default]
     Pending,
     /// Monitor has spawned a fix agent for this escalation.
     Dispatched,

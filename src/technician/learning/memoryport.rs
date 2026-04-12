@@ -96,7 +96,7 @@ pub fn query_repair_durability(
     })
 }
 
-/// Enrich all diagnoses that are recurring (count_24h > 0) with `MemoryPort`
+/// Enrich all diagnoses that are recurring (`count_24h` > 0) with `MemoryPort`
 /// failure memory. Returns a map from diagnosis name to `FailureMemory`.
 ///
 /// Only queries for diagnoses that have appeared before in the rolling 24h

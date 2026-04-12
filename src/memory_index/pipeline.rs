@@ -28,8 +28,9 @@ pub fn chunk_id(source_path: &str, content_prefix: &str) -> String {
     hasher.update(source_path.as_bytes());
     hasher.update(content_prefix.as_bytes());
     let hash = hasher.finalize();
+    use std::fmt::Write;
     hash[..8].iter().fold(String::with_capacity(16), |mut s, b| {
-        s.push_str(&format!("{b:02x}"));
+        let _ = write!(s, "{b:02x}");
         s
     })
 }

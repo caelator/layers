@@ -4,15 +4,13 @@
 //! while readers can query through the async interface.
 
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
-
 use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, error, info};
 
 use layers_core::error::{LayersError, Result};
-use layers_core::traits::{SessionStore, SessionTransaction};
+use layers_core::traits::SessionStore;
 use layers_core::types::*;
 
 // ---------------------------------------------------------------------------
