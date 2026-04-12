@@ -15,6 +15,9 @@ pub enum LayersError {
     #[error("session not found: {0}")]
     SessionNotFound(String),
 
+    #[error("session actor closed: {0}")]
+    SessionClosed(String),
+
     #[error("tool error: {0}")]
     Tool(String),
 
@@ -35,6 +38,9 @@ pub enum LayersError {
 
     #[error("operation timed out after {0:?}")]
     Timeout(Duration),
+
+    #[error("session cancelled: {0}")]
+    SessionCancelled(String),
 
     #[error("operation cancelled")]
     Cancelled,

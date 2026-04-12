@@ -40,6 +40,23 @@ pub enum MessageContent {
     Parts(Vec<ContentPart>),
 }
 
+impl MessageContent {
+    /// Extract text content. For `Text` variant returns the string;
+    /// for `Parts`, concatenates all text parts.
+    pub fn as_text(&self) -> Option<&str> {
+        match self {
+            MessageContent::Text(s) => Some(s),
+            MessageContent::Parts(parts) => {
+                // Return first text part for simplicity.
+                parts.iter().find_map(|p| match p {
+                    ContentPart::Text { text } => Some(text.as_str()),
+                    _ => None,
+                })
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReasoningPart {
     pub text: String,
