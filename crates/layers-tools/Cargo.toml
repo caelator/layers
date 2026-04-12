@@ -7,3 +7,10 @@ rust-version = "1.85"
 [dependencies]
 layers-core = { path = "../layers-core" }
 layers-runtime = { path = "../layers-runtime" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "sync", "time", "macros", "process", "fs", "io-util"] }
+tracing = "0.1"
+async-trait = "0.1"
+uuid = { version = "1", features = ["v4"] }
