@@ -19,11 +19,9 @@
 
 //! `proveit` — executable proof gate for feature completion.
 
-mod proveit;
-
 use anyhow::Result;
 use clap::Parser;
-use proveit::{Cli, run};
+use layers_proveit::{Cli, run};
 
 fn main() -> Result<()> {
     let cli = Cli::parse();

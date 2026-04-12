@@ -3,8 +3,6 @@ mod circuit_breaker;
 mod convergence;
 mod route_corrections;
 mod stage;
-#[allow(dead_code)]
-pub mod topology;
 
 use anyhow::{Context, Result};
 use std::fs;
@@ -23,8 +21,6 @@ use circuit_breaker::from_env;
 use convergence::{build_convergence_record, build_failure_convergence_record};
 use route_corrections::RouteCorrectionReader;
 use stage::{StageOutcome, StageSpec, execute_stage};
-
-pub use topology::CouncilTopology;
 
 pub struct CouncilRunRequest {
     pub task: String,
@@ -117,9 +113,8 @@ pub fn execute_council_run(request: CouncilRunRequest) -> Result<CouncilRunRecor
         .artifacts_dir
         .clone()
         .unwrap_or_else(|| memoryport_dir().join("council-runs").join(&run_id));
-    let topology = topology::full_council();
-    let run = initialize_run_record(request, run_id, created_at, &artifacts_dir, &topology)?;
-    execute_council_run_from_state(run, &artifacts_dir, &topology)
+    let run = initialize_run_record(request, run_id, created_at, &artifacts_dir)?;
+    execute_council_run_from_state(run, &artifacts_dir)
 }
 
 pub fn resume_council_run(request: CouncilRunRequest) -> Result<CouncilRunRecord> {
@@ -157,9 +152,7 @@ pub fn resume_council_run(request: CouncilRunRequest) -> Result<CouncilRunRecord
         request.trace_path_override.as_deref(),
     )?;
 
-    // Use the topology stored on the run record if available, otherwise default.
-    let topology = topology::full_council();
-    execute_council_run_from_state(run, &artifacts_dir, &topology)
+    execute_council_run_from_state(run, &artifacts_dir)
 }
 
 fn initialize_run_record(
@@ -167,7 +160,6 @@ fn initialize_run_record(
     run_id: String,
     created_at: String,
     artifacts_dir: &Path,
-    topology: &CouncilTopology,
 ) -> Result<CouncilRunRecord> {
     let graph_context = request.graph_context.clone();
     fs::create_dir_all(artifacts_dir)?;
@@ -222,12 +214,26 @@ fn initialize_run_record(
         timeout_secs: request.timeout_secs,
         degraded_reasons: degraded_reasons(&request.context_json),
         artifact_errors: vec![],
-        stages: topology
-            .stages
-            .iter()
-            .map(|def| initial_stage_record(def.stage, def.model, def.role, artifacts_dir))
-            .collect(),
-        topology_name: topology.name.to_string(),
+        stages: vec![
+            initial_stage_record(
+                "gemini",
+                "Gemini",
+                "Generate options before convergence.",
+                artifacts_dir,
+            ),
+            initial_stage_record(
+                "claude",
+                "Claude",
+                "Critique Gemini's draft and surface risks.",
+                artifacts_dir,
+            ),
+            initial_stage_record(
+                "codex",
+                "Codex",
+                "Converge on the smallest reliable executable outcome.",
+                artifacts_dir,
+            ),
+        ],
         convergence: None,
         critical_path: request.critical_path,
     };
@@ -238,11 +244,10 @@ fn initialize_run_record(
 fn execute_council_run_from_state(
     mut run: CouncilRunRecord,
     artifacts_dir: &Path,
-    topology: &CouncilTopology,
 ) -> Result<CouncilRunRecord> {
     let context_text = fs::read_to_string(&run.context_text_path)
         .with_context(|| format!("failed to read {}", run.context_text_path))?;
-    let specs = build_stage_specs(&run, topology);
+    let specs = build_stage_specs(&run);
     let start_index = run
         .stages
         .iter()
@@ -350,20 +355,27 @@ fn log_dispatcher_event(artifacts_dir: &Path, event: &crate::critical_path::Dequ
     }
 }
 
-fn build_stage_specs(
-    run: &CouncilRunRecord,
-    topology: &CouncilTopology,
-) -> Vec<StageSpec<'static>> {
-    topology
-        .stages
-        .iter()
-        .map(|def| StageSpec {
-            stage: def.stage,
-            model: def.model,
-            role: def.role,
-            command: Box::leak(resolve_stage_command(run, def.stage).into_boxed_str()),
-        })
-        .collect()
+fn build_stage_specs(run: &CouncilRunRecord) -> [StageSpec<'static>; 3] {
+    [
+        StageSpec {
+            stage: "gemini",
+            model: "Gemini",
+            role: "Generate options before convergence.",
+            command: Box::leak(resolve_stage_command(run, "gemini").into_boxed_str()),
+        },
+        StageSpec {
+            stage: "claude",
+            model: "Claude",
+            role: "Critique Gemini's draft and surface risks.",
+            command: Box::leak(resolve_stage_command(run, "claude").into_boxed_str()),
+        },
+        StageSpec {
+            stage: "codex",
+            model: "Codex",
+            role: "Converge on the smallest reliable executable outcome.",
+            command: Box::leak(resolve_stage_command(run, "codex").into_boxed_str()),
+        },
+    ]
 }
 
 fn resolve_stage_command(run: &CouncilRunRecord, stage: &str) -> String {

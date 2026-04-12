@@ -141,9 +141,6 @@ pub struct CouncilRunRecord {
     /// Defaults to `false` for backward compatibility with existing records.
     #[serde(default)]
     pub critical_path: bool,
-    /// Which topology was used for this run (e.g. `"full_council"`, `"fast_path"`).
-    #[serde(default)]
-    pub topology_name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

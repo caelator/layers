@@ -1,12 +1,17 @@
 [package]
-name = "layers-core"
+name = "layers-plugins"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 
+[lib]
+doctest = false
+
 [dependencies]
 anyhow.workspace = true
 chrono.workspace = true
+rand.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-
+ureq.workspace = true
+layers-core = { path = "../layers-core" }

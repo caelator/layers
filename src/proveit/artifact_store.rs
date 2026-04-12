@@ -6,56 +6,6 @@ use chrono::SecondsFormat;
 
 use super::types::{FeatureVerdict, ProofRecord};
 
-/// Best-effort dual-write to blob store (`substrate::blob`).
-/// Failures are logged but never propagate — the primary write always succeeds.
-fn blob_dual_write(
-    content_type: &str,
-    key: &str,
-    data: &[u8],
-    preview: &str,
-    tags: &[(&str, &str)],
-) {
-    if let Err(e) = try_blob_put(content_type, key, data, preview, tags) {
-        eprintln!("warning: blob dual-write failed: {e}");
-    }
-}
-
-fn try_blob_put(
-    content_type: &str,
-    _key: &str,
-    data: &[u8],
-    preview: &str,
-    tags: &[(&str, &str)],
-) -> Result<(), String> {
-    let home = dirs::home_dir().ok_or_else(|| "could not determine home directory".to_string())?;
-    let root = home.join(".openclaw").join("blobs");
-
-    let mut store = substrate::blob::BlobStore::open(&root).map_err(|e| format!("{e}"))?;
-
-    let ct =
-        substrate::blob::ContentType::new(content_type.to_string()).map_err(|e| format!("{e}"))?;
-    let producer =
-        substrate::blob::ProducerId::new("maestro".to_string()).map_err(|e| format!("{e}"))?;
-    let timestamp = substrate::blob::now_timestamp_ms();
-
-    let mut extra = std::collections::BTreeMap::new();
-    for (k, v) in tags {
-        extra.insert(k.to_string(), v.to_string());
-    }
-
-    let envelope = substrate::blob::BlobEnvelope::new(
-        ct,
-        producer,
-        data.to_vec(),
-        Some(preview.to_string()),
-        extra,
-    );
-    store.put(&envelope).map_err(|e| format!("{e}"))?;
-
-    let _ = timestamp; // suppress unused warning
-    Ok(())
-}
-
 pub struct ArtifactStore {
     workspace_root: PathBuf,
 }
@@ -84,30 +34,7 @@ impl ArtifactStore {
         let short_sha: String = record.commit_sha.chars().take(12).collect();
         let path = directory.join(format!("{timestamp}_{short_sha}.json"));
         let payload = serde_json::to_string_pretty(record)?;
-        fs::write(&path, &payload)
-            .with_context(|| format!("failed to write {}", path.display()))?;
-
-        // Best-effort dual-write to blob store
-        let preview = format!(
-            "{}:{} {} ({})",
-            record.feature_id,
-            record.proof_id,
-            if record.passed { "PASS" } else { "FAIL" },
-            record.commit_sha.chars().take(8).collect::<String>(),
-        );
-        blob_dual_write(
-            "proveit/artifact",
-            &record.proof_id,
-            payload.as_bytes(),
-            &preview,
-            &[
-                ("feature_id", record.feature_id.as_str()),
-                ("proof_id", record.proof_id.as_str()),
-                ("passed", if record.passed { "true" } else { "false" }),
-                ("commit_sha", &record.commit_sha),
-            ],
-        );
-
+        fs::write(&path, payload).with_context(|| format!("failed to write {}", path.display()))?;
         Ok(path)
     }
 

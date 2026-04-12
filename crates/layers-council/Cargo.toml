@@ -1,0 +1,21 @@
+[package]
+name = "layers-council"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+
+[dependencies]
+anyhow.workspace = true
+chrono.workspace = true
+clap.workspace = true
+globset.workspace = true
+libc.workspace = true
+rand.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tempfile.workspace = true
+uuid.workspace = true
+wait-timeout.workspace = true
+layers-core = { path = "../layers-core" }
+layers-plugins = { path = "../layers-plugins" }

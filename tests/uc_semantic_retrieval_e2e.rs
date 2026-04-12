@@ -82,6 +82,17 @@ fn base_query_command(home: &Path) -> Command {
     cmd
 }
 
+fn repo_is_dirty(path: &Path) -> bool {
+    let output = Command::new("git")
+        .args(["status", "--porcelain"])
+        .current_dir(path)
+        .output();
+    match output {
+        Ok(result) => !result.stdout.is_empty(),
+        Err(_) => true,
+    }
+}
+
 /// End-to-end test: low-confidence retrieval falls back cleanly and tags
 /// the JSON response as keyword-based fallback when UC is unavailable.
 #[test]
@@ -196,6 +207,10 @@ fn test_uc_min_results_warning() {
 #[test]
 fn test_layers_gate_against_openclaw_pm() {
     let openclaw_pm = Path::new("/Users/bri/Documents/GitHub/openclaw-pm");
+    if !openclaw_pm.exists() {
+        eprintln!("test_layers_gate_against_openclaw_pm: skipped (openclaw-pm not found)");
+        return;
+    }
     let home = make_home();
     if !seed_openclaw_config(home.path()) {
         eprintln!("test_layers_gate_against_openclaw_pm: skipped (no local config)");
@@ -213,6 +228,10 @@ fn test_layers_gate_against_openclaw_pm() {
         "openclaw-pm workspace not found at {}",
         openclaw_pm.display()
     );
+    if repo_is_dirty(openclaw_pm) {
+        eprintln!("test_layers_gate_against_openclaw_pm: skipped (openclaw-pm is dirty)");
+        return;
+    }
 
     let output = Command::new(layers_bin())
         .current_dir(repo_root())

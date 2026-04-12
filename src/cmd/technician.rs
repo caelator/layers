@@ -8,11 +8,8 @@ use crate::technician::{format_cycle_report, run_technician_cycle};
 #[derive(Parser)]
 pub enum TechnicianArgs {
     /// Run one technician monitoring cycle.
-    ///
-    /// By default repairs are dry-run (detected but not applied).
-    /// Pass --apply to execute real file mutations.
     Run {
-        /// Actually apply repairs instead of dry-run reporting.
+        /// Apply repairs (default is dry-run: diagnose only).
         #[arg(long)]
         apply: bool,
     },
@@ -23,8 +20,11 @@ pub enum TechnicianArgs {
 pub fn handle_technician(args: &TechnicianArgs) -> Result<()> {
     match args {
         TechnicianArgs::Run { apply } => {
-            let report = run_technician_cycle(*apply)?;
+            let report = run_technician_cycle(!apply)?;
             println!("{}", format_cycle_report(&report));
+            if !apply {
+                println!("(dry-run: no repairs applied; use --apply to enable repairs)");
+            }
             if !report.escalations.is_empty() {
                 println!(
                     "\n{} escalation(s) written to ~/.layers/technician-escalations.jsonl",

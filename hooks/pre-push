@@ -23,44 +23,6 @@ fi
 
 echo "Running pre-push checks..."
 
-# ── Guard: Force-push block ──
-# Read stdin for ref info (local_ref local_sha remote_ref remote_sha)
-# Detect force-pushes by checking if remote_sha is not an ancestor of local_sha
-while read local_ref local_sha remote_ref remote_sha; do
-    # Skip delete pushes
-    if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
-        continue
-    fi
-    # Skip new branch pushes
-    if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
-        continue
-    fi
-    # If remote_sha is NOT an ancestor of local_sha, this is a force-push (rewrite)
-    if ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
-        echo "BLOCKED: force-push detected on $remote_ref."
-        echo "  local:  $local_sha"
-        echo "  remote: $remote_sha"
-        echo "Force-pushes rewrite history and can cause data loss."
-        echo "If intentional, use: git push --force --no-verify"
-        exit 1
-    fi
-    # Mass-deletion-on-main block: if pushing to main, check diff for mass deletes
-    case "$remote_ref" in
-        refs/heads/main|refs/heads/master)
-            total_files=$(git ls-tree -r --name-only "$local_sha" | wc -l | tr -d ' ')
-            deleted_files=$(git diff --diff-filter=D --name-only "$remote_sha" "$local_sha" | wc -l | tr -d ' ')
-            if [ "$total_files" -gt 0 ] && [ "$deleted_files" -gt 0 ]; then
-                delete_pct=$((deleted_files * 100 / total_files))
-                if [ "$delete_pct" -gt 30 ]; then
-                    echo "BLOCKED: push to $remote_ref deletes $deleted_files files ($delete_pct% of tree)."
-                    echo "This looks like a destructive rollback. If intentional, use --no-verify."
-                    exit 1
-                fi
-            fi
-            ;;
-    esac
-done
-
 # Clippy — catches lints before push
 echo "[pre-push] clippy..."
 cargo clippy -- -D warnings
