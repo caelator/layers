@@ -1,0 +1,9 @@
+[package]
+name = "layers-channels"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+
+[dependencies]
+layers-core = { path = "../layers-core" }
+layers-runtime = { path = "../layers-runtime" }

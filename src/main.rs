@@ -26,7 +26,27 @@
 //! Layers — council orchestrator and memory spine for multi-model AI workflows.
 
 use clap::{Parser, Subcommand};
-use layers_council::cmd;
+
+mod cmd;
+mod config;
+mod council;
+#[allow(dead_code)]
+mod critical_path;
+mod graph;
+mod memory;
+#[cfg(test)]
+mod test_support;
+mod types;
+mod util;
+
+mod feedback;
+mod plugins;
+mod quality;
+mod router;
+mod technician;
+mod uc;
+
+pub mod memory_index;
 
 use cmd::council::{
     handle_council_list, handle_council_promote, handle_council_resume, handle_council_resume_last,

@@ -626,21 +626,14 @@ mod tests {
         }
     }
 
-    fn benchmark_path(name: &str) -> std::path::PathBuf {
-        let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-        let direct = manifest_dir.join("benchmarks").join(name);
-        if direct.exists() {
-            return direct;
-        }
-        manifest_dir.join("..").join("..").join("benchmarks").join(name)
-    }
-
     /// Reads benchmarks/routing-answer-keys.jsonl and verifies classify()
     /// matches every expected route (and confidence, when specified).
     #[test]
     fn benchmark_routing_answer_keys() {
-        let _ws = crate::test_support::TestWorkspace::new("benchmark-answer-keys");
-        let path = benchmark_path("routing-answer-keys.jsonl");
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let path = std::path::Path::new(manifest_dir)
+            .join("benchmarks")
+            .join("routing-answer-keys.jsonl");
         let content = std::fs::read_to_string(&path)
             .unwrap_or_else(|e| panic!("failed to read {}: {e}", path.display()));
 
@@ -690,8 +683,10 @@ mod tests {
     /// the same route regardless of downstream failures.
     #[test]
     fn benchmark_routing_failures() {
-        let _ws = crate::test_support::TestWorkspace::new("benchmark-routing-failures");
-        let path = benchmark_path("routing-failures.jsonl");
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let path = std::path::Path::new(manifest_dir)
+            .join("benchmarks")
+            .join("routing-failures.jsonl");
         let content = std::fs::read_to_string(&path)
             .unwrap_or_else(|e| panic!("failed to read {}: {e}", path.display()));
 
