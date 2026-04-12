@@ -46,6 +46,8 @@ mod router;
 mod technician;
 mod uc;
 
+pub mod memory_index;
+
 use cmd::council::{
     handle_council_list, handle_council_promote, handle_council_resume, handle_council_resume_last,
     handle_council_run, handle_council_status,

@@ -1,7 +1,33 @@
 #!/bin/sh
-# Pre-commit hook: clippy with strict warnings.
+# Pre-commit hook: safety checks + clippy with strict warnings.
+#
+# Guards:
+#   1. Bare-repo detection — blocks commit if repo was accidentally set to bare
+#   2. Mass-deletion guard — blocks if >50% of tracked files are being deleted
+#   3. Clippy — lint quality gate
+#   4. Unit tests — fast test gate
 #
 # Usage: install via git config core.hooksPath=hooks
+
+# ── Guard 1: Bare-repo detection ──
+if git config --get core.bare 2>/dev/null | grep -qi "true"; then
+    echo "BLOCKED: core.bare=true — this repo should not be bare."
+    echo "Fix with: git config core.bare false"
+    exit 1
+fi
+
+# ── Guard 2: Mass-deletion check ──
+# If more than 50% of tracked files are staged for deletion, block.
+total_tracked=$(git ls-files | wc -l | tr -d ' ')
+staged_deletes=$(git diff --cached --diff-filter=D --name-only | wc -l | tr -d ' ')
+if [ "$total_tracked" -gt 0 ] && [ "$staged_deletes" -gt 0 ]; then
+    delete_pct=$((staged_deletes * 100 / total_tracked))
+    if [ "$delete_pct" -gt 50 ]; then
+        echo "BLOCKED: $staged_deletes of $total_tracked files staged for deletion ($delete_pct%)."
+        echo "This looks like an accidental mass-delete. If intentional, use --no-verify."
+        exit 1
+    fi
+fi
 
 echo "Running pre-commit clippy check..."
 cargo clippy -- -D warnings

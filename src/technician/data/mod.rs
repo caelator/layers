@@ -29,6 +29,10 @@ pub fn escalations_path() -> PathBuf {
     layers_root().join("technician-escalations.jsonl")
 }
 
+pub fn healing_path() -> PathBuf {
+    layers_root().join("technician-healing.jsonl")
+}
+
 #[allow(dead_code)]
 pub fn health_path() -> PathBuf {
     layers_root().join(".technician-health.jsonl")
@@ -165,18 +169,129 @@ pub struct RepairRecord {
     pub outcome: RepairOutcome,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RepairOutcome {
     Applied,
-    SkippedNoBudget,
     SkippedDryRun,
+    SkippedNoBudget,
     Failed,
+}
+
+// ---------------------------------------------------------------------------
+// HealingRecord
+// ---------------------------------------------------------------------------
+
+/// A repair action paired with its post-repair verification result.
+///
+/// Written to `technician-healing.jsonl` for every repair that reaches the
+/// execution phase (i.e. `dry_run == false`). The `verified` field records
+/// whether re-running the detector for the same fault came back clean.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HealingRecord {
+    pub schema_version: u32,
+    pub ts: String,
+    pub cycle_id: String,
+    pub diagnosis: String,
+    pub repair_action: String,
+    pub path: Option<String>,
+    pub outcome: RepairOutcome,
+    /// `true` if the post-repair verification found no recurrence.
+    pub verified: bool,
+    /// Human-readable note from the verification step.
+    pub verify_note: String,
+    /// Enriched context: MemoryPort past resolutions, GitNexus blast radius.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diagnosis_context: Option<serde_json::Value>,
+}
+
+// ---------------------------------------------------------------------------
+// FailureMemory — MemoryPort past resolution context
+// ---------------------------------------------------------------------------
+
+/// Past resolution retrieved from MemoryPort for a recurring failure class.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PastResolution {
+    /// When this resolution was recorded.
+    pub date: String,
+    /// The repair action that was applied.
+    pub repair_action: String,
+    /// Human-readable description of what was done.
+    pub details: String,
+    /// Whether the repair held (true) or regressed (false/unknown).
+    pub durable: Option<bool>,
+}
+
+/// Aggregated failure memory for a diagnosis kind, retrieved from MemoryPort.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FailureMemory {
+    /// The failure class queried (maps to `DiagnosisKind::name()`).
+    pub failure_class: String,
+    /// Past resolutions found in MemoryPort, most recent first.
+    pub past_resolutions: Vec<PastResolution>,
+    /// Whether the MemoryPort query succeeded.
+    pub query_succeeded: bool,
+    /// Reason if the query failed or returned no results.
+    pub fallback_reason: Option<String>,
+}
+
+impl FailureMemory {
+    /// Build a `serde_json::Value` suitable for embedding in `diagnosis_context`.
+    pub fn to_context_value(&self) -> serde_json::Value {
+        serde_json::json!({
+            "memoryport": {
+                "failure_class": self.failure_class,
+                "past_resolutions": self.past_resolutions,
+                "query_succeeded": self.query_succeeded,
+                "fallback_reason": self.fallback_reason,
+            }
+        })
+    }
+
+    /// One-line summary for inclusion in escalation messages.
+    pub fn summary(&self) -> String {
+        if self.past_resolutions.is_empty() {
+            return format!("No past resolutions found for {}", self.failure_class);
+        }
+        let latest = &self.past_resolutions[0];
+        let total = self.past_resolutions.len();
+        let durable_count = self
+            .past_resolutions
+            .iter()
+            .filter(|r| r.durable == Some(true))
+            .count();
+        format!(
+            "Last time this happened: {}. Resolution: {}. ({total} past resolution(s), {durable_count} durable)",
+            latest.date, latest.details
+        )
+    }
 }
 
 // ---------------------------------------------------------------------------
 // EscalationRecord
 // ---------------------------------------------------------------------------
+
+/// Lifecycle state of an escalation.
+///
+/// Pending → Dispatched (fix agent spawned) → Resolved | Failed
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EscalationLifecycle {
+    /// Written by technician, not yet acted on by monitor.
+    Pending,
+    /// Monitor has spawned a fix agent for this escalation.
+    Dispatched,
+    /// The underlying diagnosis cleared after the fix agent ran.
+    Resolved,
+    /// The fix agent completed but the diagnosis persists.
+    Failed,
+}
+
+impl Default for EscalationLifecycle {
+    fn default() -> Self {
+        Self::Pending
+    }
+}
 
 /// A condition that requires human attention.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -191,6 +306,18 @@ pub struct EscalationRecord {
     pub escalation_reason: String,
     /// How many times this diagnosis type has occurred in rolling 24h.
     pub diagnosis_count_24h: u32,
+    /// Lifecycle state — drives whether the monitor dispatches a fix agent.
+    #[serde(default)]
+    pub lifecycle: EscalationLifecycle,
+    /// When a fix agent was dispatched for this escalation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dispatched_at: Option<String>,
+    /// Session ID of the fix agent, if dispatched.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fix_agent_session_id: Option<String>,
+    /// MemoryPort failure memory: past resolutions for this failure class.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failure_memory: Option<String>,
 }
 
 impl EscalationRecord {
@@ -213,7 +340,19 @@ impl EscalationRecord {
             repair_outcome: repair_outcome.to_string(),
             escalation_reason: escalation_reason.to_string(),
             diagnosis_count_24h,
+            lifecycle: EscalationLifecycle::Pending,
+            dispatched_at: None,
+            fix_agent_session_id: None,
+            failure_memory: None,
         }
+    }
+
+    /// Attach MemoryPort failure memory summary to this escalation.
+    pub fn with_failure_memory(mut self, memory: &FailureMemory) -> Self {
+        if !memory.past_resolutions.is_empty() {
+            self.failure_memory = Some(memory.summary());
+        }
+        self
     }
 }
 
@@ -229,6 +368,7 @@ pub struct CycleReport {
     pub ts: String,
     pub diagnoses: Vec<Diagnosis>,
     pub repairs: Vec<RepairRecord>,
+    pub healings: Vec<HealingRecord>,
     pub escalations: Vec<EscalationRecord>,
     pub uc_available: bool,
     pub gitnexus_available: bool,
@@ -246,6 +386,7 @@ impl Default for CycleReport {
             ts: Utc::now().to_rfc3339(),
             diagnoses: Vec::new(),
             repairs: Vec::new(),
+            healings: Vec::new(),
             escalations: Vec::new(),
             uc_available: false,
             gitnexus_available: false,

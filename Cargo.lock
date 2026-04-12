@@ -3106,6 +3106,68 @@ dependencies = [
 ]
 
 [[package]]
+name = "layers-channels"
+version = "0.1.0"
+dependencies = [
+ "layers-core",
+ "layers-runtime",
+]
+
+[[package]]
+name = "layers-core"
+version = "0.1.0"
+
+[[package]]
+name = "layers-daemon"
+version = "0.1.0"
+dependencies = [
+ "layers-channels",
+ "layers-core",
+ "layers-mcp",
+ "layers-runtime",
+ "layers-tools",
+]
+
+[[package]]
+name = "layers-mcp"
+version = "0.1.0"
+dependencies = [
+ "layers-core",
+ "layers-tools",
+]
+
+[[package]]
+name = "layers-providers"
+version = "0.1.0"
+dependencies = [
+ "layers-core",
+]
+
+[[package]]
+name = "layers-runtime"
+version = "0.1.0"
+dependencies = [
+ "layers-core",
+ "layers-providers",
+ "layers-store",
+]
+
+[[package]]
+name = "layers-store"
+version = "0.1.0"
+dependencies = [
+ "layers-core",
+]
+
+[[package]]
+name = "layers-tools"
+version = "0.1.0"
+dependencies = [
+ "layers-core",
+ "layers-runtime",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

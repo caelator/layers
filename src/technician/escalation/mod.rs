@@ -7,7 +7,7 @@ use std::io::Write;
 
 use chrono::{Duration, Utc};
 
-use super::data::{CycleReport, DiagnosisKind, EscalationRecord, RepairRecord};
+use super::data::{CycleReport, DiagnosisKind, EscalationRecord, HealingRecord, RepairRecord};
 
 // ---------------------------------------------------------------------------
 // EscalationRecord persistence
@@ -116,6 +116,21 @@ pub fn evaluate_escalations(
 // ---------------------------------------------------------------------------
 // Repair record persistence
 // ---------------------------------------------------------------------------
+
+/// Append a healing record to the healing log.
+pub fn append_healing(record: &HealingRecord) -> std::io::Result<()> {
+    let path = super::data::healing_path();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let line = serde_json::to_string(record)?;
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)?;
+    writeln!(file, "{line}")?;
+    Ok(())
+}
 
 /// Append a repair record to the repairs log.
 pub fn append_repair(record: &RepairRecord) -> std::io::Result<()> {

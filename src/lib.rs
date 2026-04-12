@@ -28,9 +28,11 @@
     clippy::return_self_not_must_use
 )]
 
+pub mod blob;
 pub mod config;
 pub mod critical_path;
 pub mod feedback;
+pub mod provider;
 pub mod quality;
 pub mod router;
 pub mod util;

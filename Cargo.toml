@@ -1,3 +1,15 @@
+[workspace]
+members = [
+    "crates/layers-core",
+    "crates/layers-store",
+    "crates/layers-providers",
+    "crates/layers-runtime",
+    "crates/layers-tools",
+    "crates/layers-channels",
+    "crates/layers-mcp",
+    "crates/layers-daemon",
+]
+
 [package]
 name = "layers"
 version = "0.1.0"
