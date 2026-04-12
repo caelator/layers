@@ -38,6 +38,7 @@ ureq = "2"
 lancedb = "0.27"
 rusqlite = { version = "0.32", features = ["bundled"] }
 tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
+layers-core = { path = "crates/layers-core" }
 layers-store = { path = "crates/layers-store" }
 layers-daemon = { path = "crates/layers-daemon" }
 arrow-array = "57"

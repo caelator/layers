@@ -53,6 +53,8 @@ mod uc;
 
 pub mod memory_index;
 
+use cmd::chat::{ChatArgs, handle_chat};
+use cmd::config_cmd::{ConfigArgs, handle_config};
 use cmd::council::{
     handle_council_list, handle_council_promote, handle_council_resume, handle_council_resume_last,
     handle_council_run, handle_council_status,
@@ -60,6 +62,7 @@ use cmd::council::{
 use cmd::curated::handle_curated_import;
 use cmd::feedback::handle_feedback;
 use cmd::gate::handle_gate;
+use cmd::init::{InitArgs, handle_init};
 use cmd::infrastructure::{InfrastructureArgs, handle_infrastructure};
 use cmd::monitor::handle_monitor;
 use cmd::query::handle_query;
@@ -86,6 +89,35 @@ enum Commands {
     Daemon {
         #[command(subcommand)]
         command: DaemonCommands,
+    },
+    /// Bootstrap a new Layers workspace.
+    Init {
+        /// Force overwrite existing files.
+        #[arg(long)]
+        force: bool,
+        /// Path to initialize (defaults to current workspace).
+        #[arg(long)]
+        path: Option<std::path::PathBuf>,
+    },
+    /// Start an interactive chat loop.
+    Chat {
+        /// System prompt override.
+        #[arg(long)]
+        system_prompt: Option<String>,
+        /// Model override (e.g. "openai/gpt-4").
+        #[arg(long)]
+        model: Option<String>,
+        /// Maximum turns before exiting (0 = unlimited).
+        #[arg(long, default_value_t = 0)]
+        max_turns: usize,
+        /// Output as JSON.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Display and manage configuration.
+    Config {
+        #[command(subcommand)]
+        command: ConfigCommands,
     },
     /// Retrieve context for a task using heuristic routing.
     Query {
@@ -274,6 +306,16 @@ enum WebhookCommands {
 }
 
 #[derive(Subcommand)]
+enum ConfigCommands {
+    /// Display the resolved configuration (secrets masked).
+    Show,
+    /// Display config file paths.
+    Path,
+    /// Validate configuration.
+    Validate,
+}
+
+#[derive(Subcommand)]
 enum CouncilCommands {
     /// Run a Gemini → Claude → Codex council on a task.
     Run {
@@ -381,6 +423,23 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     init_tracing(cli.verbose);
     match cli.command {
+        Commands::Init { force, path } => handle_init(&InitArgs { force, path }),
+        Commands::Chat {
+            system_prompt,
+            model,
+            max_turns,
+            json,
+        } => handle_chat(&ChatArgs {
+            system_prompt,
+            model,
+            max_turns,
+            json,
+        }),
+        Commands::Config { command } => handle_config(&match command {
+            ConfigCommands::Show => ConfigArgs::Show,
+            ConfigCommands::Path => ConfigArgs::Path,
+            ConfigCommands::Validate => ConfigArgs::Validate,
+        }),
         Commands::Daemon { command } => match command {
             DaemonCommands::Run { config, pid_file } => handle_daemon_run(config, pid_file),
         },

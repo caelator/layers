@@ -1,8 +1,11 @@
+pub mod chat;
+pub mod config_cmd;
 pub mod council;
 pub mod curated;
 pub mod feedback;
 pub mod gate;
 pub mod infrastructure;
+pub mod init;
 pub mod monitor;
 pub mod query;
 pub mod refresh;
