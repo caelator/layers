@@ -584,6 +584,91 @@ pub struct AuthProfile {
 }
 
 // ---------------------------------------------------------------------------
+// CronRun type
+// ---------------------------------------------------------------------------
+
+/// A record of a single cron job execution.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CronRun {
+    pub id: String,
+    pub job_id: String,
+    pub started_at: DateTime<Utc>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub finished_at: Option<DateTime<Utc>>,
+    pub status: CronRunStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_message: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum CronRunStatus {
+    Running,
+    Success,
+    Failed,
+    Skipped,
+}
+
+// ---------------------------------------------------------------------------
+// Archive type
+// ---------------------------------------------------------------------------
+
+/// A snapshot of an archived session's messages.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Archive {
+    pub id: String,
+    pub session_id: String,
+    pub archived_at: DateTime<Utc>,
+    pub message_count: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
+// ProcessRun type
+// ---------------------------------------------------------------------------
+
+/// A record of a subagent / process execution.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcessRun {
+    pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_session_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
+    pub status: ProcessRunStatus,
+    pub started_at: DateTime<Utc>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub finished_at: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub result_summary: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ProcessRunStatus {
+    Running,
+    Completed,
+    Failed,
+    Cancelled,
+}
+
+// ---------------------------------------------------------------------------
+// EmbeddingIndexState type
+// ---------------------------------------------------------------------------
+
+/// Tracks the indexing state of an embedding corpus.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmbeddingIndexState {
+    pub corpus: String,
+    pub embedding_model: String,
+    pub last_indexed_at: DateTime<Utc>,
+    pub index_version: i64,
+    #[serde(default)]
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+// ---------------------------------------------------------------------------
 // Context engine types
 // ---------------------------------------------------------------------------
 

@@ -1,4 +1,6 @@
 use std::pin::Pin;
+
+use chrono::{DateTime, Utc};
 use std::sync::Arc;
 
 use futures::Stream;
@@ -94,6 +96,74 @@ pub trait AuthProfileStore: Send + Sync {
     /// Delete a profile by name.
     async fn delete_profile(&self, name: &str) -> Result<()>;
 }
+
+// ---------------------------------------------------------------------------
+// CronStore
+// ---------------------------------------------------------------------------
+
+/// Persistence interface for cron jobs and their runs.
+#[async_trait::async_trait]
+pub trait CronStore: Send + Sync {
+    async fn put_job(&self, job: CronJob) -> Result<()>;
+    async fn get_job(&self, id: &str) -> Result<CronJob>;
+    async fn list_jobs(&self) -> Result<Vec<CronJob>>;
+    async fn delete_job(&self, id: &str) -> Result<()>;
+    async fn put_run(&self, run: CronRun) -> Result<()>;
+    async fn get_run(&self, id: &str) -> Result<CronRun>;
+    async fn list_runs_for_job(&self, job_id: &str, limit: Option<usize>) -> Result<Vec<CronRun>>;
+    async fn update_run_status(
+        &self,
+        id: &str,
+        status: CronRunStatus,
+        finished_at: DateTime<Utc>,
+        error_message: Option<&str>,
+    ) -> Result<()>;
+}
+
+// ---------------------------------------------------------------------------
+// ArchiveStore
+// ---------------------------------------------------------------------------
+
+/// Persistence interface for session archives.
+#[async_trait::async_trait]
+pub trait ArchiveStore: Send + Sync {
+    async fn put(&self, archive: Archive) -> Result<()>;
+    async fn get(&self, id: &str) -> Result<Archive>;
+    async fn list_for_session(&self, session_id: &str) -> Result<Vec<Archive>>;
+    async fn delete(&self, id: &str) -> Result<()>;
+}
+
+// ---------------------------------------------------------------------------
+// ProcessRunStore
+// ---------------------------------------------------------------------------
+
+/// Persistence interface for process/subagent runs.
+#[async_trait::async_trait]
+pub trait ProcessRunStore: Send + Sync {
+    async fn put(&self, run: ProcessRun) -> Result<()>;
+    async fn get(&self, id: &str) -> Result<ProcessRun>;
+    async fn list_by_parent(&self, parent_session_id: &str) -> Result<Vec<ProcessRun>>;
+    async fn update_status(
+        &self,
+        id: &str,
+        status: ProcessRunStatus,
+        finished_at: DateTime<Utc>,
+        result_summary: Option<&str>,
+    ) -> Result<()>;
+}
+
+// ---------------------------------------------------------------------------
+// EmbeddingIndexStore
+// ---------------------------------------------------------------------------
+
+/// Persistence interface for embedding index state tracking.
+#[async_trait::async_trait]
+pub trait EmbeddingIndexStore: Send + Sync {
+    async fn put(&self, state: EmbeddingIndexState) -> Result<()>;
+    async fn get(&self, corpus: &str) -> Result<EmbeddingIndexState>;
+}
+
+
 
 // ---------------------------------------------------------------------------
 // ContextEngine
