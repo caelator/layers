@@ -79,6 +79,23 @@ pub trait Tool: Send + Sync {
 }
 
 // ---------------------------------------------------------------------------
+// AuthProfileStore
+// ---------------------------------------------------------------------------
+
+/// Persistence interface for auth profiles.
+#[async_trait::async_trait]
+pub trait AuthProfileStore: Send + Sync {
+    /// Insert or replace an auth profile.
+    async fn put_profile(&self, profile: AuthProfile) -> Result<()>;
+    /// Get a profile by name.
+    async fn get_profile(&self, name: &str) -> Result<AuthProfile>;
+    /// List all profiles, optionally filtered by provider.
+    async fn list_profiles(&self, provider: Option<&str>) -> Result<Vec<AuthProfile>>;
+    /// Delete a profile by name.
+    async fn delete_profile(&self, name: &str) -> Result<()>;
+}
+
+// ---------------------------------------------------------------------------
 // ContextEngine
 // ---------------------------------------------------------------------------
 

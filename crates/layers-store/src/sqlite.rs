@@ -10,7 +10,7 @@ use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, error, info};
 
 use layers_core::error::{LayersError, Result};
-use layers_core::traits::SessionStore;
+use layers_core::traits::{AuthProfileStore, SessionStore};
 use layers_core::types::*;
 
 // ---------------------------------------------------------------------------
@@ -54,6 +54,22 @@ enum DbCommand {
     UpdateModel {
         session_id: String,
         model: String,
+        reply: oneshot::Sender<Result<()>>,
+    },
+    PutAuthProfile {
+        profile: AuthProfile,
+        reply: oneshot::Sender<Result<()>>,
+    },
+    GetAuthProfile {
+        name: String,
+        reply: oneshot::Sender<Result<AuthProfile>>,
+    },
+    ListAuthProfiles {
+        provider: Option<String>,
+        reply: oneshot::Sender<Result<Vec<AuthProfile>>>,
+    },
+    DeleteAuthProfile {
+        name: String,
         reply: oneshot::Sender<Result<()>>,
     },
     BeginTx {
@@ -268,6 +284,18 @@ fn worker_loop_with_conn(
             }
             DbCommand::CommitTx { session_id, session, messages, reply } => {
                 let _ = reply.send(do_commit_tx(&conn, &session_id, session.as_ref(), &messages));
+            }
+            DbCommand::PutAuthProfile { profile, reply } => {
+                let _ = reply.send(do_put_auth_profile(&conn, &profile));
+            }
+            DbCommand::GetAuthProfile { name, reply } => {
+                let _ = reply.send(do_get_auth_profile(&conn, &name));
+            }
+            DbCommand::ListAuthProfiles { provider, reply } => {
+                let _ = reply.send(do_list_auth_profiles(&conn, provider.as_deref()));
+            }
+            DbCommand::DeleteAuthProfile { name, reply } => {
+                let _ = reply.send(do_delete_auth_profile(&conn, &name));
             }
         }
     }
@@ -563,9 +591,205 @@ fn do_commit_tx(
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// AuthProfileStore impl
+// ---------------------------------------------------------------------------
+
+#[async_trait::async_trait]
+impl AuthProfileStore for SqliteStore {
+    async fn put_profile(&self, profile: AuthProfile) -> Result<()> {
+        let p = profile;
+        self.send_cmd(|reply| DbCommand::PutAuthProfile { profile: p, reply }).await
+    }
+
+    async fn get_profile(&self, name: &str) -> Result<AuthProfile> {
+        let n = name.to_string();
+        self.send_cmd(|reply| DbCommand::GetAuthProfile { name: n, reply }).await
+    }
+
+    async fn list_profiles(&self, provider: Option<&str>) -> Result<Vec<AuthProfile>> {
+        let p = provider.map(String::from);
+        self.send_cmd(|reply| DbCommand::ListAuthProfiles { provider: p, reply }).await
+    }
+
+    async fn delete_profile(&self, name: &str) -> Result<()> {
+        let n = name.to_string();
+        self.send_cmd(|reply| DbCommand::DeleteAuthProfile { name: n, reply }).await
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Auth profile DB operations
+// ---------------------------------------------------------------------------
+
+fn do_put_auth_profile(conn: &Connection, profile: &AuthProfile) -> Result<()> {
+    let models_json = serde_json::to_string(&profile.models)?;
+    conn.execute(
+        "INSERT OR REPLACE INTO auth_profiles (name, provider, api_key_encrypted, api_base, models, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![
+            profile.name,
+            profile.provider,
+            profile.api_key,
+            profile.api_base,
+            models_json,
+            profile.created_at.to_rfc3339(),
+        ],
+    )
+    .map_err(map_rusqlite)?;
+    Ok(())
+}
+
+fn row_to_auth_profile(row: &rusqlite::Row) -> rusqlite::Result<AuthProfile> {
+    let name: String = row.get("name")?;
+    let provider: String = row.get("provider")?;
+    let api_key: Option<String> = row.get("api_key_encrypted")?;
+    let api_base: Option<String> = row.get("api_base")?;
+    let models_json: Option<String> = row.get("models")?;
+    let created_at_str: String = row.get("created_at")?;
+
+    let created_at = DateTime::parse_from_rfc3339(&created_at_str)
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap_or_else(|_| Utc::now());
+    let models: Vec<String> = models_json
+        .and_then(|j| serde_json::from_str(&j).ok())
+        .unwrap_or_default();
+
+    Ok(AuthProfile {
+        name,
+        provider,
+        api_key,
+        api_base,
+        models,
+        created_at,
+    })
+}
+
+fn do_get_auth_profile(conn: &Connection, name: &str) -> Result<AuthProfile> {
+    conn.query_row(
+        "SELECT * FROM auth_profiles WHERE name = ?1",
+        params![name],
+        row_to_auth_profile,
+    )
+    .optional()
+    .map_err(map_rusqlite)?
+    .ok_or_else(|| LayersError::Config(format!("auth profile not found: {name}")))
+}
+
+fn do_list_auth_profiles(conn: &Connection, provider: Option<&str>) -> Result<Vec<AuthProfile>> {
+    let sql = if provider.is_some() {
+        "SELECT * FROM auth_profiles WHERE provider = ?1 ORDER BY name"
+    } else {
+        "SELECT * FROM auth_profiles ORDER BY name"
+    };
+
+    let mut stmt = conn.prepare(sql).map_err(map_rusqlite)?;
+    let rows = if let Some(p) = provider {
+        stmt.query_map(params![p], row_to_auth_profile).map_err(map_rusqlite)?
+    } else {
+        stmt.query_map(params![], row_to_auth_profile).map_err(map_rusqlite)?
+    };
+
+    let mut profiles = Vec::new();
+    for row in rows {
+        profiles.push(row.map_err(map_rusqlite)?);
+    }
+    Ok(profiles)
+}
+
+fn do_delete_auth_profile(conn: &Connection, name: &str) -> Result<()> {
+    let changed = conn
+        .execute("DELETE FROM auth_profiles WHERE name = ?1", params![name])
+        .map_err(map_rusqlite)?;
+    if changed == 0 {
+        return Err(LayersError::Config(format!("auth profile not found: {name}")));
+    }
+    Ok(())
+}
+
 // Allow do_put_session / do_append_message to work with Transaction too,
 // since Transaction derefs to Connection.
 fn _assert_send_sync() {
     fn _assert<T: Send + Sync>() {}
     _assert::<SqliteStore>();
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use layers_core::traits::AuthProfileStore;
+    use layers_core::types::AuthProfile;
+    use chrono::Utc;
+
+    #[tokio::test]
+    async fn auth_profile_crud_roundtrip() {
+        let store = SqliteStore::open_in_memory().await.expect("open");
+
+        let profile = AuthProfile {
+            name: "openai-main".into(),
+            provider: "openai".into(),
+            api_key: Some("sk-test-key".into()),
+            api_base: Some("https://api.openai.com".into()),
+            models: vec!["gpt-4o".into(), "gpt-4o-mini".into()],
+            created_at: Utc::now(),
+        };
+
+        // Put
+        store.put_profile(profile.clone()).await.expect("put");
+
+        // Get
+        let fetched = store.get_profile("openai-main").await.expect("get");
+        assert_eq!(fetched.name, "openai-main");
+        assert_eq!(fetched.provider, "openai");
+        assert_eq!(fetched.api_key.as_deref(), Some("sk-test-key"));
+        assert_eq!(fetched.models.len(), 2);
+
+        // List all
+        let all = store.list_profiles(None).await.expect("list all");
+        assert_eq!(all.len(), 1);
+
+        // List by provider
+        let openai = store.list_profiles(Some("openai")).await.expect("list openai");
+        assert_eq!(openai.len(), 1);
+        let anthropic = store.list_profiles(Some("anthropic")).await.expect("list anthropic");
+        assert!(anthropic.is_empty());
+
+        // Delete
+        store.delete_profile("openai-main").await.expect("delete");
+        let err = store.get_profile("openai-main").await;
+        assert!(err.is_err());
+    }
+
+    #[tokio::test]
+    async fn auth_profile_upsert_replaces() {
+        let store = SqliteStore::open_in_memory().await.expect("open");
+
+        let p1 = AuthProfile {
+            name: "anthropic-main".into(),
+            provider: "anthropic".into(),
+            api_key: Some("key-v1".into()),
+            api_base: None,
+            models: vec![],
+            created_at: Utc::now(),
+        };
+        store.put_profile(p1).await.expect("put v1");
+
+        let p2 = AuthProfile {
+            name: "anthropic-main".into(),
+            provider: "anthropic".into(),
+            api_key: Some("key-v2".into()),
+            api_base: None,
+            models: vec!["claude-sonnet-4-6".into()],
+            created_at: Utc::now(),
+        };
+        store.put_profile(p2).await.expect("put v2");
+
+        let fetched = store.get_profile("anthropic-main").await.expect("get");
+        assert_eq!(fetched.api_key.as_deref(), Some("key-v2"));
+        assert_eq!(fetched.models.len(), 1);
+    }
 }

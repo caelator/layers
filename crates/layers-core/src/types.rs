@@ -555,6 +555,35 @@ pub struct ToolOutput {
 }
 
 // ---------------------------------------------------------------------------
+// Auth profile types
+// ---------------------------------------------------------------------------
+
+/// A named auth profile for a model provider.
+///
+/// Stores credentials and configuration for connecting to a specific
+/// provider (OpenAI, Anthropic, Google, etc.). Profiles are persisted
+/// in the SQLite `auth_profiles` table and used to construct provider
+/// instances at runtime.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthProfile {
+    /// Unique name for this profile (e.g. "openai-main", "anthropic-work").
+    pub name: String,
+    /// Provider identifier: "openai", "anthropic", "google", or a custom id.
+    pub provider: String,
+    /// API key (stored as-is; encryption is a future concern).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub api_key: Option<String>,
+    /// Optional custom API base URL (for OpenAI-compatible endpoints).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub api_base: Option<String>,
+    /// Optional list of model IDs this profile supports.
+    #[serde(default)]
+    pub models: Vec<String>,
+    /// When this profile was created.
+    pub created_at: DateTime<Utc>,
+}
+
+// ---------------------------------------------------------------------------
 // Context engine types
 // ---------------------------------------------------------------------------
 
