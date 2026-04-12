@@ -93,7 +93,7 @@ impl Gateway {
     /// Build the axum router with all routes and middleware.
     #[must_use]
     #[allow(clippy::double_must_use)]
-    pub fn router(    pub fn router(&self) -> Router {self) -> Router {
+    pub fn router(&self) -> Router {
         let state = AppState {
             channel_manager: Arc::clone(&self.channel_manager),
             bearer_token: self.config.bearer_token.clone(),
