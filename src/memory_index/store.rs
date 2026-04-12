@@ -1,4 +1,4 @@
-//! LanceDB vector storage and SQLite index state management.
+//! `LanceDB` vector storage and `SQLite` index state management.
 #![allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
 
 use std::collections::HashSet;
@@ -17,7 +17,7 @@ use crate::memory_index::types::{IndexState, MemoryChunk};
 
 const TABLE_NAME: &str = "memory_chunks";
 
-/// Vector storage (LanceDB) and index state (SQLite) manager.
+/// Vector storage (`LanceDB`) and index state (`SQLite`) manager.
 pub struct MemoryStore {
     sqlite: Connection,
     rt: tokio::runtime::Runtime,
@@ -280,8 +280,7 @@ fn chunks_to_batch(chunks: &[MemoryChunk], schema: &Arc<Schema>) -> Result<Recor
         .iter()
         .flat_map(|c| {
             c.embedding
-                .as_ref()
-                .cloned()
+                .clone()
                 .unwrap_or_else(|| vec![0.0; dims])
         })
         .collect();

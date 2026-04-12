@@ -171,7 +171,7 @@ pub fn run_technician_cycle(apply: bool) -> anyhow::Result<CycleReport> {
                 // Phase 3.3: Build diagnosis_context with failure memory
                 let diagnosis_context = failure_memories
                     .get(diagnosis_name)
-                    .map(|m| m.to_context_value());
+                    .map(FailureMemory::to_context_value);
 
                 let healing = HealingRecord {
                     schema_version: TECHNICIAN_SCHEMA_VERSION,

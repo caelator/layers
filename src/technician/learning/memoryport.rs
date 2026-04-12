@@ -51,7 +51,7 @@ pub fn query_failure_memory(kind: &DiagnosisKind) -> FailureMemory {
     }
 }
 
-/// Query MemoryPort for durability of past repairs of a given class.
+/// Query `MemoryPort` for durability of past repairs of a given class.
 ///
 /// Used during verification to check whether similar repairs in the past
 /// regressed, which informs confidence in the current repair.
@@ -75,7 +75,7 @@ pub fn query_repair_durability(
     for line in &result.lines {
         if let Ok(val) = serde_json::from_str::<serde_json::Value>(line) {
             total += 1;
-            match val.get("durable").and_then(|v| v.as_bool()) {
+            match val.get("durable").and_then(serde_json::Value::as_bool) {
                 Some(true) => durable += 1,
                 Some(false) => regressed += 1,
                 None => {}
@@ -96,11 +96,11 @@ pub fn query_repair_durability(
     })
 }
 
-/// Enrich all diagnoses that are recurring (count_24h > 0) with MemoryPort
+/// Enrich all diagnoses that are recurring (count_24h > 0) with `MemoryPort`
 /// failure memory. Returns a map from diagnosis name to `FailureMemory`.
 ///
 /// Only queries for diagnoses that have appeared before in the rolling 24h
-/// window to avoid unnecessary MemoryPort load.
+/// window to avoid unnecessary `MemoryPort` load.
 pub fn enrich_recurring_failures(
     diagnosis_counts_24h: &HashMap<String, u32>,
     current_diagnoses: &[DiagnosisKind],
@@ -122,7 +122,7 @@ pub fn enrich_recurring_failures(
 }
 
 /// Scan local healing records for past repairs of the same failure class
-/// to supplement MemoryPort results with local history.
+/// to supplement `MemoryPort` results with local history.
 pub fn scan_local_healing_history(failure_class: &str) -> Vec<PastResolution> {
     let path = super::super::data::healing_path();
     if !path.exists() {
@@ -157,7 +157,7 @@ pub fn scan_local_healing_history(failure_class: &str) -> Vec<PastResolution> {
     resolutions
 }
 
-/// Merge MemoryPort results with local healing history into a single
+/// Merge `MemoryPort` results with local healing history into a single
 /// `FailureMemory`, deduplicating by date+action.
 pub fn merge_failure_memory(
     mut uc_memory: FailureMemory,
@@ -250,7 +250,7 @@ fn parse_resolutions(lines: &[String]) -> Vec<PastResolution> {
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            let durable = val.get("durable").and_then(|v| v.as_bool());
+            let durable = val.get("durable").and_then(serde_json::Value::as_bool);
 
             resolutions.push(PastResolution {
                 date,

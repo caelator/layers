@@ -47,7 +47,7 @@ pub struct SearchResult {
 /// Embedding provider configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EmbeddingProvider {
-    /// OpenAI embedding API.
+    /// `OpenAI` embedding API.
     OpenAi {
         /// API key for authentication.
         api_key: String,

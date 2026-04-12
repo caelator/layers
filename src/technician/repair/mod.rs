@@ -220,7 +220,7 @@ fn resolve_jsonl_path(diagnosis: &Diagnosis) -> Option<String> {
         .get("file")
         .or_else(|| diagnosis.context.get("path"))
         .and_then(|v| v.as_str())
-        .map(|s| s.to_string())
+        .map(str::to_string)
 }
 
 fn repair_truncate_jsonl(
@@ -241,20 +241,17 @@ fn repair_truncate_jsonl(
         });
     }
 
-    let path_str = match resolve_jsonl_path(diagnosis) {
-        Some(p) => p,
-        None => {
-            return Some(RepairRecord {
-                schema_version: TECHNICIAN_SCHEMA_VERSION,
-                ts: crate::util::iso_now(),
-                cycle_id: cycle_id.to_string(),
-                diagnosis: diagnosis.kind.name().to_string(),
-                repair_action: "jsonl_truncate".to_string(),
-                path: None,
-                lines_removed: None,
-                outcome: RepairOutcome::Failed,
-            });
-        }
+    let Some(path_str) = resolve_jsonl_path(diagnosis) else {
+        return Some(RepairRecord {
+            schema_version: TECHNICIAN_SCHEMA_VERSION,
+            ts: crate::util::iso_now(),
+            cycle_id: cycle_id.to_string(),
+            diagnosis: diagnosis.kind.name().to_string(),
+            repair_action: "jsonl_truncate".to_string(),
+            path: None,
+            lines_removed: None,
+            outcome: RepairOutcome::Failed,
+        });
     };
 
     let path = Path::new(&path_str);
@@ -313,13 +310,13 @@ fn repair_uc_config_stub(
         let _ = fs::create_dir_all(parent);
     }
 
-    let stub_content = r#"# UC config stub created by layers technician
+    let stub_content = "# UC config stub created by layers technician
 # Edit this file to configure your UC retrieval settings.
 
 [retrieval]
 timeout_ms = 500
 min_results = 0
-"#;
+";
 
     match fs::write(&config_path, stub_content) {
         Ok(()) => {
@@ -398,20 +395,17 @@ fn repair_circuit_breaker_reset(
     }
 
     // Read, patch status → "reset", write back
-    let content = match fs::read_to_string(&run_json) {
-        Ok(c) => c,
-        Err(_) => {
-            return Some(RepairRecord {
-                schema_version: TECHNICIAN_SCHEMA_VERSION,
-                ts: crate::util::iso_now(),
-                cycle_id: cycle_id.to_string(),
-                diagnosis: diagnosis.kind.name().to_string(),
-                repair_action: "cb_reset".to_string(),
-                path: Some(run_json.display().to_string()),
-                lines_removed: None,
-                outcome: RepairOutcome::Failed,
-            });
-        }
+    let Ok(content) = fs::read_to_string(&run_json) else {
+        return Some(RepairRecord {
+            schema_version: TECHNICIAN_SCHEMA_VERSION,
+            ts: crate::util::iso_now(),
+            cycle_id: cycle_id.to_string(),
+            diagnosis: diagnosis.kind.name().to_string(),
+            repair_action: "cb_reset".to_string(),
+            path: Some(run_json.display().to_string()),
+            lines_removed: None,
+            outcome: RepairOutcome::Failed,
+        });
     };
 
     let mut value: serde_json::Value = match serde_json::from_str(&content) {
