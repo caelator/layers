@@ -63,6 +63,7 @@ fn run_technician(tmp: &Path, apply: bool) -> std::process::Output {
         cmd.arg("--apply");
     }
     cmd.env("HOME", tmp.to_str().unwrap());
+    cmd.env("LAYERS_WORKSPACE_ROOT", tmp.to_str().unwrap());
     cmd.output().expect("failed to run layers technician")
 }
 
@@ -78,8 +79,9 @@ fn dry_run_does_not_mutate_files() {
     setup_layers_home(tmp.path());
 
     // Create a corrupt JSONL file that the technician should detect
-    let layers_dir = tmp.path().join(".layers");
-    let traces_path = layers_dir.join("council-traces.jsonl");
+    let memoryport_dir = tmp.path().join("memoryport");
+    fs::create_dir_all(&memoryport_dir).unwrap();
+    let traces_path = memoryport_dir.join("council-traces.jsonl");
     let mut f = fs::File::create(&traces_path).unwrap();
     writeln!(f, r#"{{"valid": true}}"#).unwrap();
     writeln!(f, "THIS IS NOT JSON").unwrap(); // corrupt line
@@ -120,8 +122,9 @@ fn apply_truncates_corrupt_jsonl() {
     let tmp = TempDir::new().unwrap();
     setup_layers_home(tmp.path());
 
-    let layers_dir = tmp.path().join(".layers");
-    let traces_path = layers_dir.join("council-traces.jsonl");
+    let memoryport_dir = tmp.path().join("memoryport");
+    fs::create_dir_all(&memoryport_dir).unwrap();
+    let traces_path = memoryport_dir.join("council-traces.jsonl");
     let mut f = fs::File::create(&traces_path).unwrap();
     writeln!(f, r#"{{"valid": true}}"#).unwrap();
     writeln!(f, "CORRUPT LINE").unwrap();
@@ -142,6 +145,7 @@ fn apply_truncates_corrupt_jsonl() {
     );
 
     // A healing record should have been emitted
+    let layers_dir = tmp.path().join(".layers");
     let healing_path = layers_dir.join("technician-healing.jsonl");
     if healing_path.exists() {
         let healing = fs::read_to_string(&healing_path).unwrap();

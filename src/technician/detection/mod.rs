@@ -179,101 +179,97 @@ pub fn detect_council_artifacts() -> Vec<Diagnosis> {
     let mut diagnoses = Vec::new();
     let runs_dir = memoryport_dir().join("council-runs");
 
-    if !runs_dir.exists() {
-        return diagnoses;
-    }
+    if runs_dir.exists() {
+        if let Ok(entries) = fs::read_dir(&runs_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if !path.is_dir() {
+                    continue;
+                }
+                let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
 
-    let Ok(entries) = fs::read_dir(&runs_dir) else {
-        return diagnoses;
-    };
+                // Skip archived dirs
+                if name.starts_with("archived") {
+                    continue;
+                }
 
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
-        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-
-        // Skip archived dirs
-        if name.starts_with("archived") {
-            continue;
-        }
-
-        // Check run.json exists and is valid JSON
-        let run_json_path = path.join("run.json");
-        if !run_json_path.exists() {
-            // Only flag if this run is old enough to be considered settled
-            if let Ok(meta) = fs::metadata(&path) {
-                if let Ok(age) = meta.modified() {
-                    let age_dur = std::time::SystemTime::now()
-                        .duration_since(age)
-                        .unwrap_or_default();
-                    if age_dur.as_secs() > 3600 {
-                        // older than 1 hour
-                        diagnoses.push(Diagnosis::new(
-                            DiagnosisKind::CouncilRunArtifactsMissing,
-                            format!("run.json missing for council run {name}"),
-                            serde_json::json!({
-                                "run_id": name,
-                                "artifacts_dir": path.display().to_string()
-                            }),
-                        ));
+                // Check run.json exists and is valid JSON
+                let run_json_path = path.join("run.json");
+                if !run_json_path.exists() {
+                    // Only flag if this run is old enough to be considered settled
+                    if let Ok(meta) = fs::metadata(&path) {
+                        if let Ok(age) = meta.modified() {
+                            let age_dur = std::time::SystemTime::now()
+                                .duration_since(age)
+                                .unwrap_or_default();
+                            if age_dur.as_secs() > 3600 {
+                                // older than 1 hour
+                                diagnoses.push(Diagnosis::new(
+                                    DiagnosisKind::CouncilRunArtifactsMissing,
+                                    format!("run.json missing for council run {name}"),
+                                    serde_json::json!({
+                                        "run_id": name,
+                                        "artifacts_dir": path.display().to_string()
+                                    }),
+                                ));
+                            }
+                        }
                     }
+                    continue;
                 }
-            }
-            continue;
-        }
 
-        let Ok(run_json_content) = fs::read_to_string(&run_json_path) else {
-            diagnoses.push(Diagnosis::new(
-                DiagnosisKind::CouncilRunJsonCorrupt,
-                format!("run.json unreadable for council run {name}"),
-                serde_json::json!({ "run_id": name }),
-            ));
-            continue;
-        };
-
-        let Ok(record) = serde_json::from_str::<CouncilRunRecord>(&run_json_content) else {
-            diagnoses.push(Diagnosis::new(
-                DiagnosisKind::CouncilRunJsonCorrupt,
-                format!("run.json is not valid JSON for council run {name}"),
-                serde_json::json!({ "run_id": name }),
-            ));
-            continue;
-        };
-
-        // Check referenced files exist (stdout/stderr are on attempts, not stage)
-        for stage in &record.stages {
-            for attempt in &stage.attempts {
-                if !attempt.stdout_path.is_empty() && !Path::new(&attempt.stdout_path).exists() {
+                let Ok(run_json_content) = fs::read_to_string(&run_json_path) else {
                     diagnoses.push(Diagnosis::new(
-                        DiagnosisKind::CouncilRunArtifactsMissing,
-                        format!(
-                            "stage {} attempt {} stdout file missing for run {}",
-                            stage.stage, attempt.attempt, name
-                        ),
-                        serde_json::json!({
-                            "run_id": name,
-                            "stage": stage.stage,
-                            "attempt": attempt.attempt,
-                            "stdout_path": attempt.stdout_path
-                        }),
+                        DiagnosisKind::CouncilRunJsonCorrupt,
+                        format!("run.json unreadable for council run {name}"),
+                        serde_json::json!({ "run_id": name }),
                     ));
-                }
-                if !attempt.stderr_path.is_empty() && !Path::new(&attempt.stderr_path).exists() {
+                    continue;
+                };
+
+                let Ok(record) = serde_json::from_str::<CouncilRunRecord>(&run_json_content) else {
                     diagnoses.push(Diagnosis::new(
-                        DiagnosisKind::CouncilRunArtifactsMissing,
-                        format!(
-                            "stage {} attempt {} stderr file missing for run {}",
-                            stage.stage, attempt.attempt, name
-                        ),
-                        serde_json::json!({
-                            "run_id": name,
-                            "stage": stage.stage,
-                            "attempt": attempt.attempt,
-                            "stderr_path": attempt.stderr_path
-                        }),
+                        DiagnosisKind::CouncilRunJsonCorrupt,
+                        format!("run.json is not valid JSON for council run {name}"),
+                        serde_json::json!({ "run_id": name }),
                     ));
+                    continue;
+                };
+
+                // Check referenced files exist (stdout/stderr are on attempts, not stage)
+                for stage in &record.stages {
+                    for attempt in &stage.attempts {
+                        if !attempt.stdout_path.is_empty() && !Path::new(&attempt.stdout_path).exists() {
+                            diagnoses.push(Diagnosis::new(
+                                DiagnosisKind::CouncilRunArtifactsMissing,
+                                format!(
+                                    "stage {} attempt {} stdout file missing for run {}",
+                                    stage.stage, attempt.attempt, name
+                                ),
+                                serde_json::json!({
+                                    "run_id": name,
+                                    "stage": stage.stage,
+                                    "attempt": attempt.attempt,
+                                    "stdout_path": attempt.stdout_path
+                                }),
+                            ));
+                        }
+                        if !attempt.stderr_path.is_empty() && !Path::new(&attempt.stderr_path).exists() {
+                            diagnoses.push(Diagnosis::new(
+                                DiagnosisKind::CouncilRunArtifactsMissing,
+                                format!(
+                                    "stage {} attempt {} stderr file missing for run {}",
+                                    stage.stage, attempt.attempt, name
+                                ),
+                                serde_json::json!({
+                                    "run_id": name,
+                                    "stage": stage.stage,
+                                    "attempt": attempt.attempt,
+                                    "stderr_path": attempt.stderr_path
+                                }),
+                            ));
+                        }
+                    }
                 }
             }
         }
