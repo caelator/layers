@@ -55,7 +55,7 @@ impl GoogleProvider {
             .messages
             .iter()
             .filter(|m| m.role != MessageRole::System)
-            .map(|m| convert_message_to_google(m))
+            .map(convert_message_to_google)
             .collect();
 
         let tools = request.tools.as_ref().map(|ts| {

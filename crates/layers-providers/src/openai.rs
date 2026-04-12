@@ -42,7 +42,7 @@ impl OpenAiProvider {
         let messages = request
             .messages
             .iter()
-            .map(|m| convert_message_to_openai(m))
+            .map(convert_message_to_openai)
             .collect();
 
         let tools = request.tools.as_ref().map(|ts| {
