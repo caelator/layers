@@ -897,10 +897,10 @@ mod quality_evaluator_proofs {
 
 mod route_quality_e2e_loop {
     use layers::feedback::{
-        FailureKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind, load_route_weights,
-        read_recent_failures,
+        FailureKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind,
+        load_route_weights, read_recent_failures,
     };
-    use layers::quality::{emit_if_poor, evaluate};
+    use layers::quality::{evaluate, emit_if_poor};
     use std::io::Write;
     use tempfile::TempDir;
 
@@ -1033,7 +1033,8 @@ mod route_quality_e2e_loop {
         );
 
         // Step 5: Routing decision must CHANGE
-        let (adjusted_route, _) = apply_route_corrections_from("both", &corrections_path);
+        let (adjusted_route, _) =
+            apply_route_corrections_from("both", &corrections_path);
         assert_ne!(
             adjusted_route, "both",
             "route must change away from 'both' when weight < -0.3"
@@ -1048,7 +1049,8 @@ mod route_quality_e2e_loop {
         let corrections_path = dir.path().join("route-corrections.jsonl");
 
         // With evaluator OFF, no failures are emitted — file stays empty
-        let (route, weights) = apply_route_corrections_from("both", &corrections_path);
+        let (route, weights) =
+            apply_route_corrections_from("both", &corrections_path);
         assert_eq!(route, "both", "without failures, route must stay 'both'");
         assert!(weights.is_empty(), "no failures → no weights");
     }
@@ -1090,8 +1092,10 @@ mod route_quality_e2e_loop {
         // Evaluator OFF: no evaluation, no emissions — off_path stays empty
 
         // Compare routing decisions
-        let (route_on, weights_on) = apply_route_corrections_from("both", &on_path);
-        let (route_off, weights_off) = apply_route_corrections_from("both", &off_path);
+        let (route_on, weights_on) =
+            apply_route_corrections_from("both", &on_path);
+        let (route_off, weights_off) =
+            apply_route_corrections_from("both", &off_path);
 
         // Evaluator ON: 3 soft failures on "both" → weight = -0.6 → route changes
         let on_weight = weights_on.get(&RouteId::Both).copied().unwrap_or(0.0);
@@ -1105,7 +1109,10 @@ mod route_quality_e2e_loop {
         );
 
         // Evaluator OFF: no failures → route unchanged
-        assert_eq!(route_off, "both", "evaluator OFF: route must stay 'both'");
+        assert_eq!(
+            route_off, "both",
+            "evaluator OFF: route must stay 'both'"
+        );
         assert!(weights_off.is_empty());
 
         // The routes must differ — this is the proof
@@ -1135,7 +1142,8 @@ mod route_quality_e2e_loop {
         // Since quality.acceptable == true, emit_if_poor would return false.
 
         // No failures in file → route unchanged
-        let (route, _) = apply_route_corrections_from("both", &corrections_path);
+        let (route, _) =
+            apply_route_corrections_from("both", &corrections_path);
         assert_eq!(route, "both", "good results must not change route");
     }
 
@@ -1172,10 +1180,7 @@ mod route_quality_e2e_loop {
             "retrieval",
             RoutingSignals::default(),
         );
-        assert!(
-            !not_emitted,
-            "emit_if_poor must return false for good results"
-        );
+        assert!(!not_emitted, "emit_if_poor must return false for good results");
     }
 
     // ── D6. Compounding proof: single failure stays below threshold ──────────
@@ -1198,7 +1203,8 @@ mod route_quality_e2e_loop {
         );
         write_failure_to(&corrections_path, &failure);
 
-        let (route, weights) = apply_route_corrections_from("both", &corrections_path);
+        let (route, weights) =
+            apply_route_corrections_from("both", &corrections_path);
         let weight = weights.get(&RouteId::Both).copied().unwrap_or(0.0);
         assert_eq!(weight, -0.2, "single soft failure = -0.2");
         assert_eq!(route, "both", "single soft failure must NOT change route");
@@ -1237,14 +1243,12 @@ mod route_quality_e2e_loop {
         );
         write_failure_to(&corrections_path, &failure2);
 
-        let (route, weights) = apply_route_corrections_from("both", &corrections_path);
+        let (route, weights) =
+            apply_route_corrections_from("both", &corrections_path);
         let both_weight = weights.get(&RouteId::Both).copied().unwrap_or(0.0);
 
         // both: -0.3 (correction) + -0.2 (soft) = -0.5
-        assert!(
-            both_weight < -0.3,
-            "both weight {both_weight} must be < -0.3"
-        );
+        assert!(both_weight < -0.3, "both weight {both_weight} must be < -0.3");
 
         // Fallback should select memory_only (weight +0.4, the human's choice)
         assert_eq!(

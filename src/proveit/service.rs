@@ -74,13 +74,7 @@ pub fn run(cli: Cli) -> Result<()> {
             json,
             warn_only,
         } => {
-            status_all(
-                &workspace_root,
-                &store,
-                verbose,
-                json || cli.json,
-                warn_only,
-            )?;
+            status_all(&workspace_root, &store, verbose, json || cli.json, warn_only)?;
         }
     }
 
@@ -137,10 +131,7 @@ fn status_all(
     let verdicts_dir = workspace_root.join(".proveit").join("verdicts");
     if !verdicts_dir.exists() {
         if as_json {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&json!({ "features": [] }))?
-            );
+            println!("{}", serde_json::to_string_pretty(&json!({ "features": [] }))?);
         } else {
             println!("No cached verdicts found. Run `proveit verify <feature>` first.");
         }
@@ -168,10 +159,7 @@ fn status_all(
     // Re-check staleness against current worktree state
     let manifests = manifest::load_all_manifests(workspace_root).unwrap_or_default();
     for verdict in &mut verdicts {
-        if let Some(m) = manifests
-            .iter()
-            .find(|m| m.feature.id == verdict.feature_id)
-        {
+        if let Some(m) = manifests.iter().find(|m| m.feature.id == verdict.feature_id) {
             let refreshed = compute_verdict(workspace_root, store, m);
             if let Ok(fresh) = refreshed {
                 verdict.stale = fresh.stale;

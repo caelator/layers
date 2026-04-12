@@ -196,10 +196,6 @@ fn test_uc_min_results_warning() {
 #[test]
 fn test_layers_gate_against_openclaw_pm() {
     let openclaw_pm = Path::new("/Users/bri/Documents/GitHub/openclaw-pm");
-    if !openclaw_pm.exists() {
-        eprintln!("test_layers_gate_against_openclaw_pm: skipped (openclaw-pm not found)");
-        return;
-    }
     let home = make_home();
     if !seed_openclaw_config(home.path()) {
         eprintln!("test_layers_gate_against_openclaw_pm: skipped (no local config)");
