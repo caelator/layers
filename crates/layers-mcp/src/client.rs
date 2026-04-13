@@ -318,6 +318,20 @@ impl McpClient {
         }
         *child = None;
     }
+
+    /// Create a test stub that is not connected to any process.
+    /// Only useful for unit tests that need an `McpClient` reference.
+    #[cfg(test)]
+    pub(crate) fn new_test_stub(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            child: Mutex::new(None),
+            stdin: Mutex::new(None),
+            stdout: Mutex::new(None),
+            next_id: Mutex::new(1),
+            tools: Mutex::new(Vec::new()),
+        }
+    }
 }
 
 impl Drop for McpClient {
@@ -454,5 +468,87 @@ impl McpManager {
 impl Default for McpManager {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::{JsonRpcRequest, JsonRpcResponse};
+
+    #[test]
+    fn json_rpc_request_framing() {
+        // Verify requests serialize to single-line JSON terminated by newline.
+        let req = JsonRpcRequest::new(1, "tools/list", None);
+        let mut line = serde_json::to_string(&req).unwrap();
+        line.push('\n');
+
+        assert!(!line.contains('\r'));
+        assert!(line.ends_with('\n'));
+        assert_eq!(line.matches('\n').count(), 1);
+
+        // Parse back the line (minus trailing newline).
+        let parsed: JsonRpcRequest = serde_json::from_str(line.trim()).unwrap();
+        assert_eq!(parsed.id, 1);
+        assert_eq!(parsed.method, "tools/list");
+    }
+
+    #[test]
+    fn json_rpc_response_framing() {
+        // Simulate reading a single-line JSON-RPC response.
+        let resp_json = r#"{"jsonrpc":"2.0","id":1,"result":{"tools":[]}}"#;
+        let line = format!("{resp_json}\n");
+
+        let parsed: JsonRpcResponse = serde_json::from_str(line.trim()).unwrap();
+        assert_eq!(parsed.id, Some(1));
+        assert!(parsed.result.is_some());
+        assert!(parsed.error.is_none());
+    }
+
+    #[test]
+    fn json_rpc_error_response_framing() {
+        let resp_json = r#"{"jsonrpc":"2.0","id":2,"error":{"code":-32601,"message":"Method not found"}}"#;
+        let parsed: JsonRpcResponse = serde_json::from_str(resp_json).unwrap();
+        assert_eq!(parsed.id, Some(2));
+        assert!(parsed.result.is_none());
+        let err = parsed.error.unwrap();
+        assert_eq!(err.code, -32601);
+        assert_eq!(err.message, "Method not found");
+    }
+
+    #[test]
+    fn json_rpc_notification_no_id() {
+        let notification = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "notifications/initialized",
+            "params": {}
+        });
+        let line = serde_json::to_string(&notification).unwrap();
+        // Notifications have no id field — verify this parses as a valid message.
+        let val: serde_json::Value = serde_json::from_str(&line).unwrap();
+        assert!(val.get("id").is_none());
+    }
+
+    #[test]
+    fn mcp_manager_default() {
+        let manager = McpManager::new();
+        assert!(manager.get("nonexistent").is_none());
+    }
+
+    #[test]
+    fn mcp_remote_tool_accessors() {
+        let tool = McpRemoteTool {
+            server_name: "github".to_string(),
+            tool_name: "create_issue".to_string(),
+            tool_description: "Create an issue".to_string(),
+            tool_schema: serde_json::json!({"type": "object"}),
+        };
+        assert_eq!(tool.server_name(), "github");
+        assert_eq!(tool.name(), "create_issue");
+        assert_eq!(tool.description(), "Create an issue");
     }
 }
