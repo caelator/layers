@@ -14,8 +14,7 @@ use layers_core::{
 // ---------------------------------------------------------------------------
 
 /// Predefined tool profile sets that control which tools are available.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum ToolProfile {
     /// Read-only essentials: read, session_status, memory_get.
     Minimal,
@@ -30,7 +29,6 @@ pub enum ToolProfile {
     Custom(Vec<String>),
 }
 
-
 impl ToolProfile {
     /// Returns the set of tool names allowed by this profile, or `None` for Full.
     fn allowed_names(&self) -> Option<Vec<&str>> {
@@ -41,6 +39,7 @@ impl ToolProfile {
                 "session_status",
                 "memory_get",
                 "exec",
+                "process",
                 "write",
                 "edit",
             ]),
@@ -49,6 +48,7 @@ impl ToolProfile {
                 "session_status",
                 "memory_get",
                 "exec",
+                "process",
                 "write",
                 "edit",
                 "sessions_send",
@@ -172,9 +172,9 @@ impl ToolRegistry {
         params: serde_json::Value,
         ctx: ToolContext,
     ) -> Result<ToolOutput> {
-        let tool = self.get(name).ok_or_else(|| {
-            LayersError::Tool(format!("tool not found or not permitted: {name}"))
-        })?;
+        let tool = self
+            .get(name)
+            .ok_or_else(|| LayersError::Tool(format!("tool not found or not permitted: {name}")))?;
         debug!(tool = %name, "dispatching tool call");
         tool.execute(params, ctx).await
     }
@@ -231,9 +231,15 @@ mod tests {
 
     #[async_trait::async_trait]
     impl Tool for MockTool {
-        fn name(&self) -> &str { &self.name }
-        fn description(&self) -> &str { &self.desc }
-        fn schema(&self) -> serde_json::Value { self.schema.clone() }
+        fn name(&self) -> &str {
+            &self.name
+        }
+        fn description(&self) -> &str {
+            &self.desc
+        }
+        fn schema(&self) -> serde_json::Value {
+            self.schema.clone()
+        }
         async fn execute(&self, args: serde_json::Value, _ctx: ToolContext) -> Result<ToolOutput> {
             let input = args.get("input").and_then(|v| v.as_str()).unwrap_or("");
             Ok(ToolOutput::text(format!("echo: {input}")))
@@ -284,8 +290,7 @@ mod tests {
 
     #[test]
     fn deny_list_filters_tools() {
-        let mut reg = ToolRegistry::new()
-            .with_deny(vec!["exec".into()]);
+        let mut reg = ToolRegistry::new().with_deny(vec!["exec".into()]);
         reg.register(Arc::new(MockTool::new("read")));
         reg.register(Arc::new(MockTool::new("exec")));
 
@@ -296,8 +301,7 @@ mod tests {
 
     #[test]
     fn allow_list_filters_tools() {
-        let mut reg = ToolRegistry::new()
-            .with_allow(vec!["read".into()]);
+        let mut reg = ToolRegistry::new().with_allow(vec!["read".into()]);
         reg.register(Arc::new(MockTool::new("read")));
         reg.register(Arc::new(MockTool::new("write")));
 
@@ -327,12 +331,14 @@ mod tests {
         let mut reg = ToolRegistry::new().with_profile(ToolProfile::Coding);
         reg.register(Arc::new(MockTool::new("read")));
         reg.register(Arc::new(MockTool::new("exec")));
+        reg.register(Arc::new(MockTool::new("process")));
         reg.register(Arc::new(MockTool::new("write")));
         reg.register(Arc::new(MockTool::new("edit")));
         reg.register(Arc::new(MockTool::new("sessions_send")));
 
         assert!(reg.get("read").is_some());
         assert!(reg.get("exec").is_some());
+        assert!(reg.get("process").is_some());
         assert!(reg.get("write").is_some());
         assert!(reg.get("edit").is_some());
         assert!(reg.get("sessions_send").is_none());

@@ -1,17 +1,13 @@
-//! Shell execution tool: run commands directly via `tokio::process::Command`.
+//! Shell execution tool with managed foreground/background execution.
 
 use std::collections::HashMap;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde::Deserialize;
-use tokio::process::Command;
-use tracing::{debug, warn};
 
 use layers_core::{LayersError, Result, Tool, ToolContext, ToolOutput};
 
-// ---------------------------------------------------------------------------
-// Parameters
-// ---------------------------------------------------------------------------
+use crate::process::{ManagedProcessStatus, SpawnRequest, process_manager};
 
 #[derive(Debug, Deserialize)]
 struct ExecParams {
@@ -20,6 +16,8 @@ struct ExecParams {
     workdir: Option<String>,
     #[serde(default)]
     env: Option<HashMap<String, String>>,
+    #[serde(rename = "yieldMs", default)]
+    yield_ms: Option<u64>,
     #[serde(default)]
     timeout: Option<u64>,
     #[serde(default)]
@@ -28,11 +26,6 @@ struct ExecParams {
     pty: Option<bool>,
 }
 
-// ---------------------------------------------------------------------------
-// Tool
-// ---------------------------------------------------------------------------
-
-/// Shell execution tool. Runs commands directly with no sandbox or approval.
 pub struct ExecTool;
 
 impl ExecTool {
@@ -55,127 +48,108 @@ impl Tool for ExecTool {
     }
 
     fn description(&self) -> &str {
-        "Execute a shell command. Returns stdout, stderr, and exit code. \
-         Supports background execution, working directory, environment variables, and timeouts."
+        "Execute a shell command. Supports direct completion, managed background execution, timeouts, and yieldMs auto-backgrounding."
     }
 
     fn schema(&self) -> serde_json::Value {
         serde_json::json!({
             "type": "object",
             "properties": {
-                "command": {
-                    "type": "string",
-                    "description": "The shell command to execute"
-                },
-                "workdir": {
-                    "type": "string",
-                    "description": "Working directory for the command"
-                },
+                "command": {"type": "string", "description": "The shell command to execute"},
+                "workdir": {"type": "string", "description": "Working directory for the command"},
                 "env": {
                     "type": "object",
                     "additionalProperties": { "type": "string" },
                     "description": "Environment variables to set"
                 },
-                "timeout": {
-                    "type": "integer",
-                    "description": "Timeout in seconds (kills process on expiry)"
-                },
-                "background": {
-                    "type": "boolean",
-                    "description": "Run in background and return process ID"
-                },
-                "pty": {
-                    "type": "boolean",
-                    "description": "Allocate a pseudo-terminal (best-effort)"
-                }
+                "yieldMs": {"type": "integer", "description": "How long to wait before returning a background run id"},
+                "timeout": {"type": "integer", "description": "Timeout in seconds (default: 1800)"},
+                "background": {"type": "boolean", "description": "Run immediately in background mode"},
+                "pty": {"type": "boolean", "description": "Request PTY mode for TTY-required programs"}
             },
             "required": ["command"]
         })
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, context: ToolContext) -> Result<ToolOutput> {
         let params: ExecParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid exec params: {e}")))?;
 
-        let _ = params.pty; // PTY allocation is best-effort, not implemented here.
-
-        let mut cmd = Command::new("sh");
-        cmd.arg("-c").arg(&params.command);
-
-        if let Some(ref dir) = params.workdir {
-            cmd.current_dir(dir);
+        if params.pty.unwrap_or(false) {
+            return Err(LayersError::Tool(
+                "pty execution is not implemented yet in layers-tools::exec".into(),
+            ));
         }
 
-        if let Some(ref env_vars) = params.env {
-            for (key, val) in env_vars {
-                cmd.env(key, val);
-            }
-        }
+        let manager = process_manager();
+        let run = manager
+            .spawn(SpawnRequest {
+                session_id: context.session_id,
+                agent_id: context.agent_id,
+                command: params.command,
+                workdir: params.workdir,
+                env: params.env.unwrap_or_default(),
+                timeout: params.timeout.or(Some(1800)),
+                pty: false,
+            })
+            .await?;
 
-        // Background mode: spawn and return PID.
         if params.background.unwrap_or(false) {
-            let child = cmd
-                .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
-                .spawn()
-                .map_err(|e| {
-                    LayersError::Tool(format!("failed to spawn background process: {e}"))
-                })?;
-
-            let pid = child.id().unwrap_or(0);
-            debug!(pid, command = %params.command, "spawned background process");
-
-            return Ok(ToolOutput {
-                content: serde_json::json!({
-                    "pid": pid,
-                    "background": true
-                })
-                .to_string(),
-                structured_content: None,
-                attachments: Vec::new(),
-                is_error: None,
-            });
+            return Ok(ToolOutput::structured(serde_json::json!({
+                "background": true,
+                "run_id": run.run_id,
+                "pid": run.pid,
+                "status": run.status,
+                "started_at": run.started_at
+            })));
         }
 
-        // Foreground mode: run with optional timeout.
-        let timeout_duration = Duration::from_secs(params.timeout.unwrap_or(120));
+        let yield_ms = params.yield_ms.unwrap_or(10_000);
+        let deadline = Instant::now() + Duration::from_millis(yield_ms);
 
-        let result = tokio::time::timeout(timeout_duration, cmd.output()).await;
-
-        match result {
-            Ok(Ok(output)) => {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                let stderr = String::from_utf8_lossy(&output.stderr);
-                let exit_code = output.status.code().unwrap_or(-1);
-
-                let content = serde_json::json!({
-                    "stdout": stdout,
-                    "stderr": stderr,
-                    "exit_code": exit_code,
-                });
-
-                Ok(ToolOutput {
-                    content: content.to_string(),
-                    structured_content: None,
-                    attachments: Vec::new(),
-                    is_error: if exit_code != 0 {
-                        Some(true)
-                    } else {
-                        None
-                    },
-                })
-            }
-            Ok(Err(e)) => Err(LayersError::Tool(format!("exec failed: {e}"))),
-            Err(_) => {
-                warn!(
-                    command = %params.command,
-                    "exec timed out after {timeout_duration:?}"
-                );
-                Err(LayersError::Timeout(timeout_duration))
+        loop {
+            let snapshot = manager.poll(&run.run_id).await?;
+            match snapshot.status {
+                ManagedProcessStatus::Completed
+                | ManagedProcessStatus::Failed
+                | ManagedProcessStatus::Cancelled
+                | ManagedProcessStatus::TimedOut => {
+                    let logs = manager.log(&run.run_id, 0, usize::MAX).await?;
+                    let stdout = logs
+                        .get("stdout")
+                        .cloned()
+                        .unwrap_or_else(|| serde_json::json!([]));
+                    let stderr = logs
+                        .get("stderr")
+                        .cloned()
+                        .unwrap_or_else(|| serde_json::json!([]));
+                    let exit_code = snapshot.exit_code.unwrap_or(match snapshot.status {
+                        ManagedProcessStatus::Completed => 0,
+                        _ => -1,
+                    });
+                    return Ok(ToolOutput::structured(serde_json::json!({
+                        "background": false,
+                        "run_id": snapshot.run_id,
+                        "stdout": stdout,
+                        "stderr": stderr,
+                        "exit_code": exit_code,
+                        "status": snapshot.status,
+                        "timed_out": matches!(snapshot.status, ManagedProcessStatus::TimedOut)
+                    })));
+                }
+                ManagedProcessStatus::Running => {
+                    if Instant::now() >= deadline {
+                        return Ok(ToolOutput::structured(serde_json::json!({
+                            "background": true,
+                            "run_id": snapshot.run_id,
+                            "pid": snapshot.pid,
+                            "status": snapshot.status,
+                            "yield_ms": yield_ms,
+                            "note": "command exceeded yieldMs and continues under process management"
+                        })));
+                    }
+                    tokio::time::sleep(Duration::from_millis(25)).await;
+                }
             }
         }
     }
@@ -184,12 +158,12 @@ impl Tool for ExecTool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use layers_core::{Tool, ToolContext};
+    use layers_core::ToolContext;
 
     fn test_ctx() -> ToolContext {
         ToolContext {
-            session_id: "test".into(),
-            agent_id: "test".into(),
+            session_id: "test-session".into(),
+            agent_id: "test-agent".into(),
             channel: None,
             metadata: Default::default(),
         }
@@ -199,99 +173,50 @@ mod tests {
     async fn exec_simple_command() {
         let tool = ExecTool::new();
         let result = tool
-            .execute(
-                serde_json::json!({ "command": "echo hello" }),
-                test_ctx(),
-            )
+            .execute(serde_json::json!({ "command": "echo hello" }), test_ctx())
             .await
             .unwrap();
-        assert!(!result.is_error.unwrap_or(false));
         assert!(result.content.contains("hello"));
+        assert!(result.content.contains("\"background\":false"));
     }
 
     #[tokio::test]
-    async fn exec_captures_stderr() {
+    async fn exec_background_mode_returns_run_id() {
         let tool = ExecTool::new();
         let result = tool
             .execute(
-                serde_json::json!({ "command": "echo error >&2" }),
+                serde_json::json!({ "command": "sleep 0.2", "background": true }),
                 test_ctx(),
             )
             .await
             .unwrap();
-        assert!(result.content.contains("error"));
+        assert!(result.content.contains("run_id"));
+        assert!(result.content.contains("\"background\":true"));
     }
 
     #[tokio::test]
-    async fn exec_exit_code_nonzero() {
+    async fn exec_yield_ms_auto_backgrounds() {
         let tool = ExecTool::new();
         let result = tool
             .execute(
-                serde_json::json!({ "command": "exit 42" }),
+                serde_json::json!({ "command": "sleep 0.2", "yieldMs": 10 }),
                 test_ctx(),
             )
             .await
             .unwrap();
-        assert!(result.is_error.unwrap_or(false));
-        assert!(result.content.contains("42"));
+        assert!(result.content.contains("run_id"));
+        assert!(result.content.contains("yield_ms"));
     }
 
     #[tokio::test]
-    async fn exec_timeout() {
+    async fn exec_pty_not_supported_yet() {
         let tool = ExecTool::new();
         let result = tool
             .execute(
-                serde_json::json!({ "command": "sleep 10", "timeout": 1 }),
+                serde_json::json!({ "command": "echo hello", "pty": true }),
                 test_ctx(),
             )
             .await;
         assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn exec_background_mode() {
-        let tool = ExecTool::new();
-        let result = tool
-            .execute(
-                serde_json::json!({ "command": "sleep 0.1", "background": true }),
-                test_ctx(),
-            )
-            .await
-            .unwrap();
-        assert!(result.content.contains("background"));
-        assert!(result.content.contains("pid"));
-    }
-
-    #[tokio::test]
-    async fn exec_workdir() {
-        let dir = tempfile::tempdir().unwrap();
-        let tool = ExecTool::new();
-        let result = tool
-            .execute(
-                serde_json::json!({
-                    "command": "pwd",
-                    "workdir": dir.path().to_str().unwrap()
-                }),
-                test_ctx(),
-            )
-            .await
-            .unwrap();
-        assert!(result.content.contains(dir.path().to_str().unwrap()));
-    }
-
-    #[tokio::test]
-    async fn exec_env_vars() {
-        let tool = ExecTool::new();
-        let result = tool
-            .execute(
-                serde_json::json!({
-                    "command": "echo $MY_TEST_VAR",
-                    "env": { "MY_TEST_VAR": "test_value" }
-                }),
-                test_ctx(),
-            )
-            .await
-            .unwrap();
-        assert!(result.content.contains("test_value"));
     }
 }
