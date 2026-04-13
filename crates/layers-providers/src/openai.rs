@@ -295,3 +295,363 @@ fn convert_openai_response(oai: OpenAiChatResponse) -> Result<ModelResponse> {
 }
 
 // Note: ApproxTokenizer removed. See tokenizer_impl.rs for proper implementations.
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use layers_core::types::{
+        FunctionCall, Message, MessageContent, MessageRole, ModelRef, ModelRequest, ToolCall,
+        ToolDefinition, ToolFunction,
+    };
+
+    use crate::types::{
+        OpenAiChatResponse, OpenAiChoice, OpenAiFunctionCall, OpenAiResponseMessage, OpenAiToolCall,
+        OpenAiUsage,
+    };
+
+    // -- Helpers --------------------------------------------------------------
+
+    fn simple_request(model: &str) -> ModelRequest {
+        ModelRequest {
+            model: ModelRef {
+                provider: "openai".into(),
+                model: model.into(),
+            },
+            messages: vec![Message {
+                role: MessageRole::User,
+                content: MessageContent::Text("Hello".into()),
+                name: None,
+                tool_calls: None,
+                tool_call_id: None,
+                reasoning: None,
+                timestamp: None,
+            }],
+            system: None,
+            tools: None,
+            temperature: None,
+            max_tokens: None,
+            token_budget: None,
+            thinking: None,
+        }
+    }
+
+    fn request_with_system_and_tools() -> ModelRequest {
+        ModelRequest {
+            model: ModelRef {
+                provider: "openai".into(),
+                model: "gpt-4o".into(),
+            },
+            messages: vec![
+                Message {
+                    role: MessageRole::System,
+                    content: MessageContent::Text("You are helpful.".into()),
+                    name: None,
+                    tool_calls: None,
+                    tool_call_id: None,
+                    reasoning: None,
+                    timestamp: None,
+                },
+                Message {
+                    role: MessageRole::User,
+                    content: MessageContent::Text("What's the weather?".into()),
+                    name: None,
+                    tool_calls: None,
+                    tool_call_id: None,
+                    reasoning: None,
+                    timestamp: None,
+                },
+            ],
+            system: Some("System prompt".into()),
+            tools: Some(vec![ToolDefinition {
+                tool_type: "function".into(),
+                function: ToolFunction {
+                    name: "get_weather".into(),
+                    description: "Get weather for a city".into(),
+                    parameters: serde_json::json!({
+                        "type": "object",
+                        "properties": {
+                            "city": { "type": "string" }
+                        }
+                    }),
+                },
+            }]),
+            temperature: Some(0.7),
+            max_tokens: Some(1024),
+            token_budget: None,
+            thinking: None,
+        }
+    }
+
+    // -- Construction ---------------------------------------------------------
+
+    #[test]
+    fn provider_construction() {
+        let p = OpenAiProvider::new("openai", "https://api.openai.com", "sk-test");
+        assert_eq!(p.id(), "openai");
+        assert!(p.supports_tools());
+        assert!(p.supports_vision());
+        assert_eq!(p.context_window(), 128_000);
+        assert_eq!(p.max_tokens(), 16_384);
+    }
+
+    #[test]
+    fn endpoint_url() {
+        let p = OpenAiProvider::new("openai", "https://api.openai.com", "sk-test");
+        assert_eq!(p.endpoint(), "https://api.openai.com/v1/chat/completions");
+
+        let p2 = OpenAiProvider::new("openai", "https://api.openai.com/", "sk-test");
+        assert_eq!(p2.endpoint(), "https://api.openai.com/v1/chat/completions");
+    }
+
+    #[test]
+    fn tokenizer_is_available() {
+        let p = OpenAiProvider::new("openai", "https://api.openai.com", "sk-test");
+        assert!(p.tokenizer().is_some());
+    }
+
+    // -- Request serialization ------------------------------------------------
+
+    #[test]
+    fn build_wire_request_simple() {
+        let req = simple_request("gpt-4o");
+        let wire = OpenAiProvider::build_wire_request(&req, false);
+
+        assert_eq!(wire.model, "gpt-4o");
+        assert_eq!(wire.messages.len(), 1);
+        assert_eq!(wire.messages[0].role, "user");
+        assert!(wire.stream.is_none());
+        assert!(wire.tools.is_none());
+        assert!(wire.temperature.is_none());
+        assert!(wire.max_tokens.is_none());
+    }
+
+    #[test]
+    fn build_wire_request_streaming() {
+        let req = simple_request("gpt-4o");
+        let wire = OpenAiProvider::build_wire_request(&req, true);
+        assert_eq!(wire.stream, Some(true));
+    }
+
+    #[test]
+    fn build_wire_request_with_tools() {
+        let req = request_with_system_and_tools();
+        let wire = OpenAiProvider::build_wire_request(&req, false);
+
+        assert_eq!(wire.temperature, Some(0.7));
+        assert_eq!(wire.max_tokens, Some(1024));
+        assert_eq!(wire.messages.len(), 2);
+
+        let tools = wire.tools.as_ref().expect("tools present");
+        assert_eq!(tools.len(), 1);
+        assert_eq!(tools[0].function.name, "get_weather");
+        assert_eq!(tools[0].tool_type, "function");
+    }
+
+    #[test]
+    fn wire_request_serializes_to_json() {
+        let req = simple_request("gpt-4o");
+        let wire = OpenAiProvider::build_wire_request(&req, false);
+        let json = serde_json::to_value(&wire).expect("serialize wire request");
+
+        assert_eq!(json["model"], "gpt-4o");
+        assert!(json.get("stream").is_none());
+        assert_eq!(json["messages"][0]["role"], "user");
+        assert_eq!(json["messages"][0]["content"], "Hello");
+    }
+
+    // -- Message conversion ---------------------------------------------------
+
+    #[test]
+    fn convert_user_message() {
+        let msg = Message {
+            role: MessageRole::User,
+            content: MessageContent::Text("test".into()),
+            name: None,
+            tool_calls: None,
+            tool_call_id: None,
+            reasoning: None,
+            timestamp: None,
+        };
+        let oai = convert_message_to_openai(&msg);
+        assert_eq!(oai.role, "user");
+        assert_eq!(oai.content, Some(serde_json::Value::String("test".into())));
+        assert!(oai.tool_calls.is_none());
+        assert!(oai.tool_call_id.is_none());
+    }
+
+    #[test]
+    fn convert_assistant_message_with_tool_calls() {
+        let msg = Message {
+            role: MessageRole::Assistant,
+            content: MessageContent::Text("Let me check.".into()),
+            name: None,
+            tool_calls: Some(vec![ToolCall {
+                id: "call_123".into(),
+                call_type: "function".into(),
+                function: FunctionCall {
+                    name: "get_weather".into(),
+                    arguments: r#"{"city":"NYC"}"#.into(),
+                },
+            }]),
+            tool_call_id: None,
+            reasoning: None,
+            timestamp: None,
+        };
+        let oai = convert_message_to_openai(&msg);
+        assert_eq!(oai.role, "assistant");
+        let tcs = oai.tool_calls.expect("tool calls");
+        assert_eq!(tcs.len(), 1);
+        assert_eq!(tcs[0].id, Some("call_123".into()));
+        assert_eq!(
+            tcs[0].function.as_ref().unwrap().name,
+            Some("get_weather".into())
+        );
+    }
+
+    #[test]
+    fn convert_tool_result_message() {
+        let msg = Message {
+            role: MessageRole::Tool,
+            content: MessageContent::Text("72°F sunny".into()),
+            name: None,
+            tool_calls: None,
+            tool_call_id: Some("call_123".into()),
+            reasoning: None,
+            timestamp: None,
+        };
+        let oai = convert_message_to_openai(&msg);
+        assert_eq!(oai.role, "tool");
+        assert_eq!(oai.tool_call_id, Some("call_123".into()));
+    }
+
+    // -- Response parsing -----------------------------------------------------
+
+    #[test]
+    fn parse_simple_response() {
+        let oai_resp = OpenAiChatResponse {
+            id: "chatcmpl-123".into(),
+            choices: vec![OpenAiChoice {
+                message: Some(OpenAiResponseMessage {
+                    role: Some("assistant".into()),
+                    content: Some("Hello there!".into()),
+                    tool_calls: None,
+                }),
+                delta: None,
+                finish_reason: Some("stop".into()),
+                index: 0,
+            }],
+            usage: Some(OpenAiUsage {
+                prompt_tokens: 10,
+                completion_tokens: 5,
+                total_tokens: 15,
+            }),
+            model: Some("gpt-4o-2024-08-06".into()),
+        };
+
+        let resp = convert_openai_response(oai_resp).unwrap();
+        assert_eq!(resp.message.content.as_text().unwrap(), "Hello there!");
+        assert_eq!(resp.message.role, MessageRole::Assistant);
+        assert_eq!(resp.usage.prompt_tokens, 10);
+        assert_eq!(resp.usage.completion_tokens, 5);
+        assert_eq!(resp.finish_reason, Some("stop".into()));
+        assert_eq!(resp.model, Some("gpt-4o-2024-08-06".into()));
+    }
+
+    #[test]
+    fn parse_response_with_tool_calls() {
+        let oai_resp = OpenAiChatResponse {
+            id: "chatcmpl-456".into(),
+            choices: vec![OpenAiChoice {
+                message: Some(OpenAiResponseMessage {
+                    role: Some("assistant".into()),
+                    content: None,
+                    tool_calls: Some(vec![OpenAiToolCall {
+                        id: Some("call_abc".into()),
+                        call_type: Some("function".into()),
+                        function: Some(OpenAiFunctionCall {
+                            name: Some("get_weather".into()),
+                            arguments: Some(r#"{"city":"NYC"}"#.into()),
+                        }),
+                        index: None,
+                    }]),
+                }),
+                delta: None,
+                finish_reason: Some("tool_calls".into()),
+                index: 0,
+            }],
+            usage: None,
+            model: None,
+        };
+
+        let resp = convert_openai_response(oai_resp).unwrap();
+        let tcs = resp.message.tool_calls.as_ref().expect("tool calls");
+        assert_eq!(tcs.len(), 1);
+        assert_eq!(tcs[0].id, "call_abc");
+        assert_eq!(tcs[0].function.name, "get_weather");
+        assert_eq!(tcs[0].function.arguments, r#"{"city":"NYC"}"#);
+    }
+
+    #[test]
+    fn parse_empty_choices_is_error() {
+        let oai_resp = OpenAiChatResponse {
+            id: "chatcmpl-empty".into(),
+            choices: vec![],
+            usage: None,
+            model: None,
+        };
+
+        let err = convert_openai_response(oai_resp).unwrap_err();
+        match err {
+            LayersError::Provider(msg) => assert!(msg.contains("empty choices")),
+            other => panic!("expected Provider error, got: {other}"),
+        }
+    }
+
+    #[test]
+    fn parse_missing_message_is_error() {
+        let oai_resp = OpenAiChatResponse {
+            id: "chatcmpl-nomsg".into(),
+            choices: vec![OpenAiChoice {
+                message: None,
+                delta: None,
+                finish_reason: None,
+                index: 0,
+            }],
+            usage: None,
+            model: None,
+        };
+
+        let err = convert_openai_response(oai_resp).unwrap_err();
+        match err {
+            LayersError::Provider(msg) => assert!(msg.contains("missing message")),
+            other => panic!("expected Provider error, got: {other}"),
+        }
+    }
+
+    #[test]
+    fn parse_response_no_usage_defaults_to_zero() {
+        let oai_resp = OpenAiChatResponse {
+            id: "chatcmpl-nousage".into(),
+            choices: vec![OpenAiChoice {
+                message: Some(OpenAiResponseMessage {
+                    role: Some("assistant".into()),
+                    content: Some("Hi".into()),
+                    tool_calls: None,
+                }),
+                delta: None,
+                finish_reason: Some("stop".into()),
+                index: 0,
+            }],
+            usage: None,
+            model: None,
+        };
+
+        let resp = convert_openai_response(oai_resp).unwrap();
+        assert_eq!(resp.usage.prompt_tokens, 0);
+        assert_eq!(resp.usage.completion_tokens, 0);
+    }
+}
