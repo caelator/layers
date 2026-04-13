@@ -81,7 +81,8 @@ impl Tool for ImageTool {
             })
             .to_string(),
             attachments: Vec::new(),
-            is_error: None,
+            structured_content: None,
+                is_error: None,
         })
     }
 }
@@ -166,7 +167,8 @@ impl Tool for ImageGenerateTool {
             })
             .to_string(),
             attachments: Vec::new(),
-            is_error: None,
+            structured_content: None,
+                is_error: None,
         })
     }
 }
@@ -245,7 +247,8 @@ impl Tool for VideoGenerateTool {
             })
             .to_string(),
             attachments: Vec::new(),
-            is_error: None,
+            structured_content: None,
+                is_error: None,
         })
     }
 }

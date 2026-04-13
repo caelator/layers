@@ -88,7 +88,8 @@ impl Tool for MemorySearchTool {
             })
             .to_string(),
             attachments: Vec::new(),
-            is_error: None,
+            structured_content: None,
+                is_error: None,
         })
     }
 }
@@ -160,7 +161,8 @@ impl Tool for MemoryGetTool {
             })
             .to_string(),
             attachments: Vec::new(),
-            is_error: None,
+            structured_content: None,
+                is_error: None,
         })
     }
 }

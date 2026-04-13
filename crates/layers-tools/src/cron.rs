@@ -95,7 +95,8 @@ impl Tool for CronCreateTool {
             })
             .to_string(),
             attachments: Vec::new(),
-            is_error: None,
+            structured_content: None,
+                is_error: None,
         })
     }
 }
@@ -152,7 +153,8 @@ impl Tool for CronListTool {
             })
             .to_string(),
             attachments: Vec::new(),
-            is_error: None,
+            structured_content: None,
+                is_error: None,
         })
     }
 }
@@ -223,7 +225,8 @@ impl Tool for CronDeleteTool {
             })
             .to_string(),
             attachments: Vec::new(),
-            is_error: None,
+            structured_content: None,
+                is_error: None,
         })
     }
 }

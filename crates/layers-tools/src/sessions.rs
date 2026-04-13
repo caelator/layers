@@ -66,7 +66,8 @@ impl Tool for SessionsListTool {
             })
             .to_string(),
             attachments: Vec::new(),
-            is_error: None,
+            structured_content: None,
+                is_error: None,
         })
     }
 }
@@ -144,7 +145,8 @@ impl Tool for SessionsSendTool {
             })
             .to_string(),
             attachments: Vec::new(),
-            is_error: None,
+            structured_content: None,
+                is_error: None,
         })
     }
 }
@@ -230,7 +232,8 @@ impl Tool for SessionsSpawnTool {
             })
             .to_string(),
             attachments: Vec::new(),
-            is_error: None,
+            structured_content: None,
+                is_error: None,
         })
     }
 }
@@ -312,7 +315,8 @@ impl Tool for SessionsHistoryTool {
             })
             .to_string(),
             attachments: Vec::new(),
-            is_error: None,
+            structured_content: None,
+                is_error: None,
         })
     }
 }

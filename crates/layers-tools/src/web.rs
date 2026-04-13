@@ -79,7 +79,8 @@ impl Tool for WebSearchTool {
             })
             .to_string(),
             attachments: Vec::new(),
-            is_error: None,
+            structured_content: None,
+                is_error: None,
         })
     }
 }
@@ -160,7 +161,8 @@ impl Tool for WebFetchTool {
             })
             .to_string(),
             attachments: Vec::new(),
-            is_error: None,
+            structured_content: None,
+                is_error: None,
         })
     }
 }

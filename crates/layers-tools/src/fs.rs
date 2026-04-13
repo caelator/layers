@@ -123,7 +123,8 @@ impl Tool for ReadTool {
         Ok(ToolOutput {
             content: output,
             attachments: Vec::new(),
-            is_error: None,
+            structured_content: None,
+                is_error: None,
         })
     }
 }
@@ -207,7 +208,8 @@ impl Tool for WriteTool {
         Ok(ToolOutput {
             content: format!("Wrote {bytes} bytes to {}", params.path),
             attachments: Vec::new(),
-            is_error: None,
+            structured_content: None,
+                is_error: None,
         })
     }
 }
@@ -350,8 +352,204 @@ impl Tool for EditTool {
 
         Ok(ToolOutput {
             content: msg,
+            structured_content: None,
             attachments: Vec::new(),
             is_error: if errors.is_empty() { None } else { Some(true) },
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use layers_core::{Tool, ToolContext};
+    use std::path::PathBuf;
+
+    fn test_ctx() -> ToolContext {
+        ToolContext {
+            session_id: "test".into(),
+            agent_id: "test".into(),
+            channel: None,
+            metadata: Default::default(),
+        }
+    }
+
+    async fn write_test_file(dir: &tempfile::TempDir, name: &str, content: &str) -> PathBuf {
+        let path = dir.path().join(name);
+        if let Some(parent) = path.parent() {
+            tokio::fs::create_dir_all(parent).await.unwrap();
+        }
+        tokio::fs::write(&path, content).await.unwrap();
+        path
+    }
+
+    #[tokio::test]
+    async fn read_file_basic() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = write_test_file(&dir, "test.txt", "hello\nworld").await;
+
+        let tool = ReadTool::new();
+        let result = tool
+            .execute(
+                serde_json::json!({ "path": path.to_str().unwrap() }),
+                test_ctx(),
+            )
+            .await
+            .unwrap();
+        assert!(!result.is_error.unwrap_or(false));
+        assert!(result.content.contains("hello"));
+        assert!(result.content.contains("world"));
+    }
+
+    #[tokio::test]
+    async fn read_file_with_offset_limit() {
+        let dir = tempfile::tempdir().unwrap();
+        let content: Vec<String> = (1..=10).map(|i| format!("line {i}")).collect();
+        let path = write_test_file(&dir, "test.txt", &content.join("\n")).await;
+
+        let tool = ReadTool::new();
+        let result = tool
+            .execute(
+                serde_json::json!({ "path": path.to_str().unwrap(), "offset": 2, "limit": 3 }),
+                test_ctx(),
+            )
+            .await
+            .unwrap();
+        assert!(result.content.contains("line 3"));
+        assert!(result.content.contains("line 5"));
+        assert!(!result.content.contains("line 1"));
+        assert!(!result.content.contains("line 6"));
+    }
+
+    #[tokio::test]
+    async fn read_missing_file_errors() {
+        let tool = ReadTool::new();
+        let result = tool
+            .execute(
+                serde_json::json!({ "path": "/nonexistent/path/file.txt" }),
+                test_ctx(),
+            )
+            .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn write_file_creates_parents() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("a/b/c/test.txt");
+
+        let tool = WriteTool::new();
+        let result = tool
+            .execute(
+                serde_json::json!({ "path": path.to_str().unwrap(), "content": "hello" }),
+                test_ctx(),
+            )
+            .await
+            .unwrap();
+        assert!(!result.is_error.unwrap_or(false));
+        assert!(tokio::fs::read_to_string(&path).await.unwrap() == "hello");
+    }
+
+    #[tokio::test]
+    async fn write_file_overwrites() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = write_test_file(&dir, "test.txt", "old").await;
+
+        let tool = WriteTool::new();
+        tool.execute(
+            serde_json::json!({ "path": path.to_str().unwrap(), "content": "new" }),
+            test_ctx(),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(tokio::fs::read_to_string(&path).await.unwrap(), "new");
+    }
+
+    #[tokio::test]
+    async fn edit_file_single_replacement() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = write_test_file(&dir, "test.txt", "hello world").await;
+
+        let tool = EditTool::new();
+        let result = tool
+            .execute(
+                serde_json::json!({
+                    "path": path.to_str().unwrap(),
+                    "edits": [{ "old_text": "world", "new_text": "rust" }]
+                }),
+                test_ctx(),
+            )
+            .await
+            .unwrap();
+        assert!(!result.is_error.unwrap_or(false));
+        assert_eq!(tokio::fs::read_to_string(&path).await.unwrap(), "hello rust");
+    }
+
+    #[tokio::test]
+    async fn edit_file_multiple_non_overlapping() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = write_test_file(&dir, "test.txt", "aaa bbb ccc").await;
+
+        let tool = EditTool::new();
+        let result = tool
+            .execute(
+                serde_json::json!({
+                    "path": path.to_str().unwrap(),
+                    "edits": [
+                        { "old_text": "aaa", "new_text": "xxx" },
+                        { "old_text": "ccc", "new_text": "zzz" }
+                    ]
+                }),
+                test_ctx(),
+            )
+            .await
+            .unwrap();
+        assert!(!result.is_error.unwrap_or(false));
+        assert_eq!(
+            tokio::fs::read_to_string(&path).await.unwrap(),
+            "xxx bbb zzz"
+        );
+    }
+
+    #[tokio::test]
+    async fn edit_file_text_not_found() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = write_test_file(&dir, "test.txt", "hello").await;
+
+        let tool = EditTool::new();
+        let result = tool
+            .execute(
+                serde_json::json!({
+                    "path": path.to_str().unwrap(),
+                    "edits": [{ "old_text": "missing", "new_text": "x" }]
+                }),
+                test_ctx(),
+            )
+            .await
+            .unwrap();
+        assert!(result.is_error.unwrap_or(false));
+        // Original unchanged
+        assert_eq!(tokio::fs::read_to_string(&path).await.unwrap(), "hello");
+    }
+
+    #[tokio::test]
+    async fn edit_file_ambiguous_match() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = write_test_file(&dir, "test.txt", "aaa aaa").await;
+
+        let tool = EditTool::new();
+        let result = tool
+            .execute(
+                serde_json::json!({
+                    "path": path.to_str().unwrap(),
+                    "edits": [{ "old_text": "aaa", "new_text": "bbb" }]
+                }),
+                test_ctx(),
+            )
+            .await
+            .unwrap();
+        assert!(result.is_error.unwrap_or(false));
+        assert!(result.content.contains("found 2 times"));
     }
 }

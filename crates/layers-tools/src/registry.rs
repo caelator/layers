@@ -195,3 +195,186 @@ impl Default for ToolRegistry {
         Self::new()
     }
 }
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use layers_core::{Tool, ToolContext, ToolOutput};
+    use std::sync::Arc;
+
+    /// A simple mock tool for testing.
+    struct MockTool {
+        name: String,
+        desc: String,
+        schema: serde_json::Value,
+    }
+
+    impl MockTool {
+        fn new(name: &str) -> Self {
+            Self {
+                name: name.to_string(),
+                desc: format!("Mock tool: {name}"),
+                schema: serde_json::json!({
+                    "type": "object",
+                    "properties": {
+                        "input": { "type": "string" }
+                    },
+                    "required": ["input"]
+                }),
+            }
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl Tool for MockTool {
+        fn name(&self) -> &str { &self.name }
+        fn description(&self) -> &str { &self.desc }
+        fn schema(&self) -> serde_json::Value { self.schema.clone() }
+        async fn execute(&self, args: serde_json::Value, _ctx: ToolContext) -> Result<ToolOutput> {
+            let input = args.get("input").and_then(|v| v.as_str()).unwrap_or("");
+            Ok(ToolOutput::text(format!("echo: {input}")))
+        }
+    }
+
+    fn test_ctx() -> ToolContext {
+        ToolContext {
+            session_id: "test-session".into(),
+            agent_id: "test-agent".into(),
+            channel: None,
+            metadata: Default::default(),
+        }
+    }
+
+    #[tokio::test]
+    async fn register_and_lookup() {
+        let mut reg = ToolRegistry::new();
+        reg.register(Arc::new(MockTool::new("read")));
+        reg.register(Arc::new(MockTool::new("write")));
+
+        assert!(reg.get("read").is_some());
+        assert!(reg.get("write").is_some());
+        assert!(reg.get("nonexistent").is_none());
+        assert_eq!(reg.total_count(), 2);
+    }
+
+    #[tokio::test]
+    async fn dispatch_executes_tool() {
+        let mut reg = ToolRegistry::new();
+        reg.register(Arc::new(MockTool::new("echo")));
+
+        let result = reg
+            .dispatch("echo", serde_json::json!({ "input": "hello" }), test_ctx())
+            .await
+            .unwrap();
+        assert_eq!(result.content, "echo: hello");
+    }
+
+    #[tokio::test]
+    async fn dispatch_unknown_tool_errors() {
+        let reg = ToolRegistry::new();
+        let result = reg
+            .dispatch("nonexistent", serde_json::json!({}), test_ctx())
+            .await;
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn deny_list_filters_tools() {
+        let mut reg = ToolRegistry::new()
+            .with_deny(vec!["exec".into()]);
+        reg.register(Arc::new(MockTool::new("read")));
+        reg.register(Arc::new(MockTool::new("exec")));
+
+        assert!(reg.get("read").is_some());
+        assert!(reg.get("exec").is_none());
+        assert_eq!(reg.permitted_count(), 1);
+    }
+
+    #[test]
+    fn allow_list_filters_tools() {
+        let mut reg = ToolRegistry::new()
+            .with_allow(vec!["read".into()]);
+        reg.register(Arc::new(MockTool::new("read")));
+        reg.register(Arc::new(MockTool::new("write")));
+
+        assert!(reg.get("read").is_some());
+        assert!(reg.get("write").is_none());
+    }
+
+    #[test]
+    fn profile_minimal_filters() {
+        let mut reg = ToolRegistry::new().with_profile(ToolProfile::Minimal);
+        reg.register(Arc::new(MockTool::new("read")));
+        reg.register(Arc::new(MockTool::new("session_status")));
+        reg.register(Arc::new(MockTool::new("memory_get")));
+        reg.register(Arc::new(MockTool::new("exec")));
+        reg.register(Arc::new(MockTool::new("write")));
+
+        assert!(reg.get("read").is_some());
+        assert!(reg.get("session_status").is_some());
+        assert!(reg.get("memory_get").is_some());
+        assert!(reg.get("exec").is_none());
+        assert!(reg.get("write").is_none());
+        assert_eq!(reg.permitted_count(), 3);
+    }
+
+    #[test]
+    fn profile_coding_includes_exec_fs() {
+        let mut reg = ToolRegistry::new().with_profile(ToolProfile::Coding);
+        reg.register(Arc::new(MockTool::new("read")));
+        reg.register(Arc::new(MockTool::new("exec")));
+        reg.register(Arc::new(MockTool::new("write")));
+        reg.register(Arc::new(MockTool::new("edit")));
+        reg.register(Arc::new(MockTool::new("sessions_send")));
+
+        assert!(reg.get("read").is_some());
+        assert!(reg.get("exec").is_some());
+        assert!(reg.get("write").is_some());
+        assert!(reg.get("edit").is_some());
+        assert!(reg.get("sessions_send").is_none());
+    }
+
+    #[test]
+    fn profile_full_allows_all() {
+        let mut reg = ToolRegistry::new().with_profile(ToolProfile::Full);
+        reg.register(Arc::new(MockTool::new("anything")));
+        assert!(reg.get("anything").is_some());
+    }
+
+    #[test]
+    fn generate_schemas_returns_permitted_only() {
+        let mut reg = ToolRegistry::new().with_deny(vec!["secret".into()]);
+        reg.register(Arc::new(MockTool::new("read")));
+        reg.register(Arc::new(MockTool::new("secret")));
+
+        let schemas = reg.generate_schemas();
+        assert_eq!(schemas.len(), 1);
+        assert_eq!(schemas[0].function.name, "read");
+    }
+
+    #[test]
+    fn names_returns_permitted_sorted() {
+        let mut reg = ToolRegistry::new();
+        reg.register(Arc::new(MockTool::new("write")));
+        reg.register(Arc::new(MockTool::new("read")));
+
+        let names = reg.names();
+        assert!(names.contains(&"read"));
+        assert!(names.contains(&"write"));
+    }
+
+    #[test]
+    fn register_replaces_existing() {
+        let mut reg = ToolRegistry::new();
+        reg.register(Arc::new(MockTool::new("tool")));
+        assert_eq!(reg.total_count(), 1);
+
+        // Re-register should replace, not duplicate.
+        reg.register(Arc::new(MockTool::new("tool")));
+        assert_eq!(reg.total_count(), 1);
+    }
+}

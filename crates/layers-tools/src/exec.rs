@@ -122,7 +122,9 @@ impl Tool for ExecTool {
                 .stdout(std::process::Stdio::null())
                 .stderr(std::process::Stdio::null())
                 .spawn()
-                .map_err(|e| LayersError::Tool(format!("failed to spawn background process: {e}")))?;
+                .map_err(|e| {
+                    LayersError::Tool(format!("failed to spawn background process: {e}"))
+                })?;
 
             let pid = child.id().unwrap_or(0);
             debug!(pid, command = %params.command, "spawned background process");
@@ -133,6 +135,7 @@ impl Tool for ExecTool {
                     "background": true
                 })
                 .to_string(),
+                structured_content: None,
                 attachments: Vec::new(),
                 is_error: None,
             });
@@ -157,15 +160,138 @@ impl Tool for ExecTool {
 
                 Ok(ToolOutput {
                     content: content.to_string(),
+                    structured_content: None,
                     attachments: Vec::new(),
-                    is_error: if exit_code != 0 { Some(true) } else { None },
+                    is_error: if exit_code != 0 {
+                        Some(true)
+                    } else {
+                        None
+                    },
                 })
             }
             Ok(Err(e)) => Err(LayersError::Tool(format!("exec failed: {e}"))),
             Err(_) => {
-                warn!(command = %params.command, "exec timed out after {timeout_duration:?}");
+                warn!(
+                    command = %params.command,
+                    "exec timed out after {timeout_duration:?}"
+                );
                 Err(LayersError::Timeout(timeout_duration))
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use layers_core::{Tool, ToolContext};
+
+    fn test_ctx() -> ToolContext {
+        ToolContext {
+            session_id: "test".into(),
+            agent_id: "test".into(),
+            channel: None,
+            metadata: Default::default(),
+        }
+    }
+
+    #[tokio::test]
+    async fn exec_simple_command() {
+        let tool = ExecTool::new();
+        let result = tool
+            .execute(
+                serde_json::json!({ "command": "echo hello" }),
+                test_ctx(),
+            )
+            .await
+            .unwrap();
+        assert!(!result.is_error.unwrap_or(false));
+        assert!(result.content.contains("hello"));
+    }
+
+    #[tokio::test]
+    async fn exec_captures_stderr() {
+        let tool = ExecTool::new();
+        let result = tool
+            .execute(
+                serde_json::json!({ "command": "echo error >&2" }),
+                test_ctx(),
+            )
+            .await
+            .unwrap();
+        assert!(result.content.contains("error"));
+    }
+
+    #[tokio::test]
+    async fn exec_exit_code_nonzero() {
+        let tool = ExecTool::new();
+        let result = tool
+            .execute(
+                serde_json::json!({ "command": "exit 42" }),
+                test_ctx(),
+            )
+            .await
+            .unwrap();
+        assert!(result.is_error.unwrap_or(false));
+        assert!(result.content.contains("42"));
+    }
+
+    #[tokio::test]
+    async fn exec_timeout() {
+        let tool = ExecTool::new();
+        let result = tool
+            .execute(
+                serde_json::json!({ "command": "sleep 10", "timeout": 1 }),
+                test_ctx(),
+            )
+            .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn exec_background_mode() {
+        let tool = ExecTool::new();
+        let result = tool
+            .execute(
+                serde_json::json!({ "command": "sleep 0.1", "background": true }),
+                test_ctx(),
+            )
+            .await
+            .unwrap();
+        assert!(result.content.contains("background"));
+        assert!(result.content.contains("pid"));
+    }
+
+    #[tokio::test]
+    async fn exec_workdir() {
+        let dir = tempfile::tempdir().unwrap();
+        let tool = ExecTool::new();
+        let result = tool
+            .execute(
+                serde_json::json!({
+                    "command": "pwd",
+                    "workdir": dir.path().to_str().unwrap()
+                }),
+                test_ctx(),
+            )
+            .await
+            .unwrap();
+        assert!(result.content.contains(dir.path().to_str().unwrap()));
+    }
+
+    #[tokio::test]
+    async fn exec_env_vars() {
+        let tool = ExecTool::new();
+        let result = tool
+            .execute(
+                serde_json::json!({
+                    "command": "echo $MY_TEST_VAR",
+                    "env": { "MY_TEST_VAR": "test_value" }
+                }),
+                test_ctx(),
+            )
+            .await
+            .unwrap();
+        assert!(result.content.contains("test_value"));
     }
 }

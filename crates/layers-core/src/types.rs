@@ -123,12 +123,7 @@ pub struct ToolResult {
     pub is_error: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum ToolResultContent {
-    Text(String),
-    Parts(Vec<ContentPart>),
-}
+// ToolResultContent is defined below near ToolOutput.
 
 // ---------------------------------------------------------------------------
 // Session types
@@ -562,13 +557,119 @@ pub struct ToolContext {
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
+/// Structured content for tool results. Enables typed dispatch contracts
+/// between tools and the runtime.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind")]
+pub enum ToolResultContent {
+    /// Plain text result (backward compatible with string content).
+    #[serde(rename = "text")]
+    Text { text: String },
+    /// Structured JSON result.
+    #[serde(rename = "structured")]
+    Structured { value: serde_json::Value },
+    /// Multi-part result with mixed content types.
+    #[serde(rename = "multipart")]
+    MultiPart { parts: Vec<ContentPart> },
+}
+
+impl ToolResultContent {
+    /// Create a text content variant.
+    #[must_use]
+    pub fn text(s: impl Into<String>) -> Self {
+        Self::Text { text: s.into() }
+    }
+
+    /// Create a structured JSON content variant.
+    #[must_use]
+    pub fn structured(v: serde_json::Value) -> Self {
+        Self::Structured { value: v }
+    }
+
+    /// Get the text representation (for text variant) or JSON string (for structured).
+    #[must_use]
+    pub fn as_text(&self) -> String {
+        match self {
+            Self::Text { text } => text.clone(),
+            Self::Structured { value } => value.to_string(),
+            Self::MultiPart { parts } => {
+                parts
+                    .iter()
+                    .filter_map(|p| match p {
+                        ContentPart::Text { text } => Some(text.as_str()),
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolOutput {
+    /// Primary content. Defaults to string for backward compatibility.
+    /// When `structured_content` is `Some`, it takes precedence.
     pub content: String,
+    /// Structured content payload (optional, additive).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub structured_content: Option<ToolResultContent>,
     #[serde(default)]
     pub attachments: Vec<MediaAttachment>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_error: Option<bool>,
+}
+
+impl ToolOutput {
+    /// Create a text tool output.
+    #[must_use]
+    pub fn text(content: impl Into<String>) -> Self {
+        Self {
+            content: content.into(),
+            structured_content: None,
+            attachments: Vec::new(),
+            is_error: None,
+        }
+    }
+
+    /// Create a structured tool output.
+    #[must_use]
+    pub fn structured(value: serde_json::Value) -> Self {
+        let content = value.to_string();
+        Self {
+            content,
+            structured_content: Some(ToolResultContent::structured(value)),
+            attachments: Vec::new(),
+            is_error: None,
+        }
+    }
+
+    /// Create an error tool output.
+    #[must_use]
+    pub fn error(message: impl Into<String>) -> Self {
+        Self {
+            content: message.into(),
+            structured_content: None,
+            attachments: Vec::new(),
+            is_error: Some(true),
+        }
+    }
+
+    /// Mark this output as an error.
+    #[must_use]
+    pub fn with_error(mut self) -> Self {
+        self.is_error = Some(true);
+        self
+    }
+
+    /// Get the effective content (structured if present, otherwise string).
+    #[must_use]
+    pub fn effective_content(&self) -> &ToolResultContent {
+        static EMPTY: std::sync::OnceLock<ToolResultContent> = std::sync::OnceLock::new();
+        self.structured_content
+            .as_ref()
+            .unwrap_or_else(|| EMPTY.get_or_init(|| ToolResultContent::text(&self.content)))
+    }
 }
 
 // ---------------------------------------------------------------------------
