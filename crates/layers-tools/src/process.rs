@@ -13,9 +13,18 @@ use tracing::warn;
 
 use layers_core::{
     LayersError, ProcessRun, ProcessRunStatus, Result, Tool, ToolContext, ToolOutput,
+    traits::ProcessRunStore,
 };
 
+use portable_pty::{native_pty_system, CommandBuilder, PtySize};
+
 static PROCESS_MANAGER: OnceLock<Arc<ProcessManager>> = OnceLock::new();
+
+/// Initialise the global process manager with an optional persistence store.
+/// Must be called before `process_manager()` or the manager starts without persistence.
+pub fn init_process_manager(store: Option<Arc<dyn ProcessRunStore>>) {
+    let _ = PROCESS_MANAGER.set(Arc::new(ProcessManager::with_store(store)));
+}
 
 pub fn process_manager() -> Arc<ProcessManager> {
     PROCESS_MANAGER
@@ -23,7 +32,7 @@ pub fn process_manager() -> Arc<ProcessManager> {
         .clone()
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ManagedProcessStatus {
     Running,
@@ -58,13 +67,59 @@ pub struct ProcessSnapshot {
     pub stderr_lines: usize,
 }
 
+/// Wrapper abstracting over tokio Child and PTY child processes.
+enum ProcessChild {
+    Std(Child),
+    Pty {
+        child: std::sync::Mutex<Box<dyn portable_pty::Child + Send>>,
+        writer: std::sync::Mutex<Option<Box<dyn std::io::Write + Send>>>,
+    },
+}
+
+impl ProcessChild {
+    async fn kill(&mut self) -> std::io::Result<()> {
+        match self {
+            Self::Std(c) => c.kill().await,
+            Self::Pty { child, .. } => child.get_mut().unwrap().kill(),
+        }
+    }
+
+    fn try_wait(&mut self) -> std::io::Result<Option<std::process::ExitStatus>> {
+        match self {
+            Self::Std(c) => c.try_wait(),
+            Self::Pty { child, .. } => {
+                match child.get_mut().unwrap().try_wait() {
+                    Ok(Some(status)) => {
+                        let code = status.exit_code() as i32;
+                        #[cfg(unix)]
+                        {
+                            use std::os::unix::process::ExitStatusExt;
+                            Ok(Some(std::process::ExitStatus::from_raw(code)))
+                        }
+                    }
+                    Ok(None) => Ok(None),
+                    Err(e) => Err(e),
+                }
+            }
+        }
+    }
+
+    #[allow(dead_code)]
+    fn id(&self) -> Option<u32> {
+        match self {
+            Self::Std(c) => c.id(),
+            Self::Pty { child, .. } => child.lock().unwrap().process_id(),
+        }
+    }
+}
+
 struct ManagedProcess {
     run: ProcessRun,
     command: String,
     pid: Option<u32>,
     pty: bool,
     exit_code: Option<i32>,
-    child: Child,
+    child: ProcessChild,
     stdin: Option<ChildStdin>,
     stdout: Arc<Mutex<Vec<String>>>,
     stderr: Arc<Mutex<Vec<String>>>,
@@ -90,6 +145,7 @@ impl ManagedProcess {
 
 pub struct ProcessManager {
     processes: Mutex<HashMap<String, ManagedProcess>>,
+    store: Option<Arc<dyn ProcessRunStore>>,
 }
 
 impl Default for ProcessManager {
@@ -114,14 +170,34 @@ impl ProcessManager {
     pub fn new() -> Self {
         Self {
             processes: Mutex::new(HashMap::new()),
+            store: None,
+        }
+    }
+
+    #[must_use]
+    pub fn with_store(store: Option<Arc<dyn ProcessRunStore>>) -> Self {
+        Self {
+            processes: Mutex::new(HashMap::new()),
+            store,
+        }
+    }
+
+    /// Persist a status update to the backing store (if configured).
+    async fn persist_status(&self, id: &str, status: ProcessRunStatus, finished_at: chrono::DateTime<chrono::Utc>, summary: Option<&str>) {
+        if let Some(ref store) = self.store {
+            if let Err(e) = store.update_status(id, status, finished_at, summary).await {
+                warn!(run_id = %id, error = %e, "failed to persist process run status");
+            }
         }
     }
 
     pub async fn spawn(&self, request: SpawnRequest) -> Result<ProcessSnapshot> {
+        let run_id = uuid::Uuid::new_v4().to_string();
+        let stdout = Arc::new(Mutex::new(Vec::new()));
+        let stderr = Arc::new(Mutex::new(Vec::new()));
+
         if request.pty {
-            return Err(LayersError::Tool(
-                "pty execution is not implemented yet for managed background processes".into(),
-            ));
+            return self.spawn_pty(request, run_id, stdout, stderr).await;
         }
 
         let shell = std::env::var("SHELL")
@@ -148,30 +224,31 @@ impl ProcessManager {
             .spawn()
             .map_err(|e| LayersError::Tool(format!("failed to spawn background process: {e}")))?;
 
-        let run_id = uuid::Uuid::new_v4().to_string();
         let pid = child.id();
         let stdin = child.stdin.take();
-        let stdout = Arc::new(Mutex::new(Vec::new()));
-        let stderr = Arc::new(Mutex::new(Vec::new()));
 
-        if let Some(out) = child.stdout.take() {
-            let lines = stdout.clone();
-            tokio::spawn(async move {
-                let mut reader = BufReader::new(out).lines();
-                while let Ok(Some(line)) = reader.next_line().await {
-                    lines.lock().await.push(line);
-                }
-            });
-        }
+        let mut child = ProcessChild::Std(child);
 
-        if let Some(err) = child.stderr.take() {
-            let lines = stderr.clone();
-            tokio::spawn(async move {
-                let mut reader = BufReader::new(err).lines();
-                while let Ok(Some(line)) = reader.next_line().await {
-                    lines.lock().await.push(line);
-                }
-            });
+        if let ProcessChild::Std(ref mut c) = child {
+            if let Some(out) = c.stdout.take() {
+                let lines = stdout.clone();
+                tokio::spawn(async move {
+                    let mut reader = BufReader::new(out).lines();
+                    while let Ok(Some(line)) = reader.next_line().await {
+                        lines.lock().await.push(line);
+                    }
+                });
+            }
+
+            if let Some(err) = c.stderr.take() {
+                let lines = stderr.clone();
+                tokio::spawn(async move {
+                    let mut reader = BufReader::new(err).lines();
+                    while let Ok(Some(line)) = reader.next_line().await {
+                        lines.lock().await.push(line);
+                    }
+                });
+            }
         }
 
         let run = ProcessRun {
@@ -198,6 +275,130 @@ impl ProcessManager {
         };
 
         let snapshot = managed.snapshot().await;
+        // Persist initial Running state to store.
+        if let Some(ref store) = self.store {
+            if let Err(e) = store.put(managed.run.clone()).await {
+                warn!(run_id = %run_id, error = %e, "failed to persist process run on spawn");
+            }
+        }
+        self.processes.lock().await.insert(run_id.clone(), managed);
+
+        if let Some(timeout_secs) = request.timeout {
+            let manager = process_manager();
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_secs(timeout_secs)).await;
+                let _ = manager.timeout(&run_id).await;
+            });
+        }
+
+        Ok(snapshot)
+    }
+
+    /// Spawn a process inside a PTY, collecting merged stdout+stderr into the
+    /// shared `stdout` buffer (stderr remains empty for PTY processes since
+    /// the PTY merges both streams).
+    async fn spawn_pty(
+        &self,
+        request: SpawnRequest,
+        run_id: String,
+        stdout: Arc<Mutex<Vec<String>>>,
+        stderr: Arc<Mutex<Vec<String>>>,
+    ) -> Result<ProcessSnapshot> {
+        let pty_system = native_pty_system();
+        let pair = pty_system
+            .openpty(PtySize {
+                rows: 24,
+                cols: 80,
+                pixel_width: 0,
+                pixel_height: 0,
+            })
+            .map_err(|e| LayersError::Tool(format!("failed to open PTY: {e}")))?;
+
+        let shell = std::env::var("SHELL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "/bin/sh".to_string());
+
+        let mut cmd = CommandBuilder::new(shell);
+        cmd.arg("-lc");
+        cmd.arg(&request.command);
+        cmd.env("OPENCLAW_SHELL", "exec");
+
+        if let Some(dir) = &request.workdir {
+            cmd.cwd(dir);
+        }
+
+        for (key, value) in &request.env {
+            cmd.env(key.as_str(), value.as_str());
+        }
+
+        let child = pair
+            .slave
+            .spawn_command(cmd)
+            .map_err(|e| LayersError::Tool(format!("failed to spawn PTY child: {e}")))?;
+
+        let pid = child.process_id();
+
+        // Drop the slave side so the PTY closes when the child exits.
+        drop(pair.slave);
+
+        // Read from master in a background thread.
+        let reader = pair
+            .master
+            .try_clone_reader()
+            .map_err(|e| LayersError::Tool(format!("failed to clone PTY reader: {e}")))?;
+
+        let lines_clone = stdout.clone();
+        std::thread::spawn(move || {
+            use std::io::{BufRead, BufReader};
+            let buf_reader = BufReader::new(reader);
+            for line in buf_reader.lines() {
+                match line {
+                    Ok(l) => {
+                        let mut guard = lines_clone.blocking_lock();
+                        guard.push(l);
+                    }
+                    Err(_) => break,
+                }
+            }
+        });
+
+        let writer = pair
+            .master
+            .take_writer()
+            .map_err(|e| LayersError::Tool(format!("failed to get PTY writer: {e}")))?;
+
+        let writer = std::sync::Mutex::new(Some(writer));
+
+        let run = ProcessRun {
+            id: run_id.clone(),
+            parent_session_id: Some(request.session_id),
+            agent_id: Some(request.agent_id),
+            status: ProcessRunStatus::Running,
+            started_at: Utc::now(),
+            finished_at: None,
+            result_summary: None,
+        };
+
+        let managed = ManagedProcess {
+            run,
+            command: request.command,
+            pid,
+            pty: true,
+            exit_code: None,
+            child: ProcessChild::Pty { child: std::sync::Mutex::new(child), writer },
+            stdin: None, // PTY uses writer for stdin
+            stdout,
+            stderr,
+            status: ManagedProcessStatus::Running,
+        };
+
+        let snapshot = managed.snapshot().await;
+        if let Some(ref store) = self.store {
+            if let Err(e) = store.put(managed.run.clone()).await {
+                warn!(run_id = %run_id, error = %e, "failed to persist PTY process run on spawn");
+            }
+        }
         self.processes.lock().await.insert(run_id.clone(), managed);
 
         if let Some(timeout_secs) = request.timeout {
@@ -263,6 +464,12 @@ impl ProcessManager {
         process.run.status = ProcessRunStatus::Failed;
         process.run.finished_at = Some(Utc::now());
         process.run.result_summary = Some("timed out".into());
+        self.persist_status(
+            &process.run.id,
+            ProcessRunStatus::Failed,
+            process.run.finished_at.unwrap(),
+            process.run.result_summary.as_deref(),
+        ).await;
         Ok(())
     }
 
@@ -271,7 +478,17 @@ impl ProcessManager {
         let process = processes
             .get_mut(run_id)
             .ok_or_else(|| LayersError::Tool(format!("process not found: {run_id}")))?;
+        let prev_status = process.status.clone();
         Self::refresh_locked(process).await;
+        // Persist if status changed.
+        if process.status != prev_status {
+            self.persist_status(
+                &process.run.id,
+                process.run.status.clone(),
+                process.run.finished_at.unwrap_or_else(Utc::now),
+                process.run.result_summary.as_deref(),
+            ).await;
+        }
         process.snapshot().await.pipe(Ok)
     }
 
@@ -330,21 +547,35 @@ impl ProcessManager {
             )));
         }
 
-        let stdin = process
-            .stdin
-            .as_mut()
-            .ok_or_else(|| LayersError::Tool(format!("stdin unavailable for process: {run_id}")))?;
-        stdin
-            .write_all(data.as_bytes())
-            .await
-            .map_err(|e| LayersError::Tool(format!("stdin write failed: {e}")))?;
-        stdin
-            .flush()
-            .await
-            .map_err(|e| LayersError::Tool(format!("stdin flush failed: {e}")))?;
-
-        if eof {
-            process.stdin = None;
+        match &mut process.child {
+            ProcessChild::Pty { writer, .. } => {
+                let guard = writer.get_mut().unwrap();
+                let w = guard
+                    .as_mut()
+                    .ok_or_else(|| LayersError::Tool(format!("pty writer unavailable: {run_id}")))?;
+                use std::io::Write;
+                w.write_all(data.as_bytes())
+                    .map_err(|e| LayersError::Tool(format!("pty write failed: {e}")))?;
+                w.flush()
+                    .map_err(|e| LayersError::Tool(format!("pty flush failed: {e}")))?;
+                if eof {
+                    *guard = None;
+                }
+            }
+            ProcessChild::Std(_) => {
+                let stdin = process.stdin.as_mut().ok_or_else(|| {
+                    LayersError::Tool(format!("stdin unavailable: {run_id}"))
+                })?;
+                stdin.write_all(data.as_bytes()).await.map_err(|e| {
+                    LayersError::Tool(format!("stdin write failed: {e}"))
+                })?;
+                stdin.flush().await.map_err(|e| {
+                    LayersError::Tool(format!("stdin flush failed: {e}"))
+                })?;
+                if eof {
+                    process.stdin = None;
+                }
+            }
         }
 
         process.snapshot().await.pipe(Ok)
@@ -368,6 +599,12 @@ impl ProcessManager {
             process.run.status = ProcessRunStatus::Cancelled;
             process.run.finished_at = Some(Utc::now());
             process.run.result_summary = Some("killed".into());
+            self.persist_status(
+                &process.run.id,
+                ProcessRunStatus::Cancelled,
+                process.run.finished_at.unwrap(),
+                process.run.result_summary.as_deref(),
+            ).await;
         }
 
         process.snapshot().await.pipe(Ok)

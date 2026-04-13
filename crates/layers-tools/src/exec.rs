@@ -75,12 +75,6 @@ impl Tool for ExecTool {
         let params: ExecParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid exec params: {e}")))?;
 
-        if params.pty.unwrap_or(false) {
-            return Err(LayersError::Tool(
-                "pty execution is not implemented yet in layers-tools::exec".into(),
-            ));
-        }
-
         let manager = process_manager();
         let run = manager
             .spawn(SpawnRequest {
@@ -90,7 +84,7 @@ impl Tool for ExecTool {
                 workdir: params.workdir,
                 env: params.env.unwrap_or_default(),
                 timeout: params.timeout.or(Some(1800)),
-                pty: false,
+                pty: params.pty.unwrap_or(false),
             })
             .await?;
 
@@ -209,14 +203,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn exec_pty_not_supported_yet() {
+    async fn exec_pty_mode_works() {
         let tool = ExecTool::new();
         let result = tool
             .execute(
                 serde_json::json!({ "command": "echo hello", "pty": true }),
                 test_ctx(),
             )
-            .await;
-        assert!(result.is_err());
+            .await
+            .unwrap();
+        assert!(result.content.contains("hello"));
     }
 }
