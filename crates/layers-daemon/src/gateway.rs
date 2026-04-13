@@ -6,21 +6,25 @@ use std::sync::Arc;
 
 use axum::extract::ws::{Message as WsMessage, WebSocket, WebSocketUpgrade};
 use axum::extract::{Path, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
+use axum::middleware;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use layers_channels::manager::ChannelManager;
-use layers_core::{DaemonConfig, InboundMessage, PeerKind, TlsConfig};
+use layers_core::{DaemonConfig, InboundMessage, PeerKind, SessionFilter, SessionStore, TlsConfig};
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, info};
 
+use crate::auth::{require_bearer, BearerToken};
+
 /// Gateway server wrapping the axum router and configuration.
 pub struct Gateway {
     config: GatewayConfig,
     channel_manager: Arc<ChannelManager>,
+    session_store: Option<Arc<dyn SessionStore>>,
 }
 
 /// Gateway-specific configuration (extends `DaemonConfig`).
@@ -45,9 +49,9 @@ impl From<&DaemonConfig> for GatewayConfig {
 
 /// Shared state for axum handlers.
 #[derive(Clone)]
-struct AppState {
+pub(crate) struct AppState {
     channel_manager: Arc<ChannelManager>,
-    bearer_token: Option<String>,
+    session_store: Option<Arc<dyn SessionStore>>,
 }
 
 #[derive(Serialize)]
@@ -87,7 +91,15 @@ impl Gateway {
         Self {
             config,
             channel_manager,
+            session_store: None,
         }
+    }
+
+    /// Attach a session store for the `/api/sessions` endpoint.
+    #[must_use]
+    pub fn with_session_store(mut self, store: Arc<dyn SessionStore>) -> Self {
+        self.session_store = Some(store);
+        self
     }
 
     /// Build the axum router with all routes and middleware.
@@ -96,7 +108,7 @@ impl Gateway {
     pub fn router(&self) -> Router {
         let state = AppState {
             channel_manager: Arc::clone(&self.channel_manager),
-            bearer_token: self.config.bearer_token.clone(),
+            session_store: self.session_store.clone(),
         };
 
         let cors = CorsLayer::new()
@@ -104,13 +116,24 @@ impl Gateway {
             .allow_methods(Any)
             .allow_headers(Any);
 
-        Router::new()
-            .route("/health", get(health_handler))
+        let bearer = BearerToken(self.config.bearer_token.clone());
+
+        // Protected routes — require bearer auth when a token is configured.
+        // Layer order: outer layers process the request first.
+        // Extension must be outer so the token is available when require_bearer runs.
+        let protected = Router::new()
             .route("/ws", get(ws_handler))
             .route("/api/status", get(status_handler))
             .route("/api/sessions", get(sessions_handler))
             .route("/api/config", get(config_handler))
             .route("/webhook/{channel}", post(webhook_handler))
+            .layer(middleware::from_fn(require_bearer))
+            .layer(axum::Extension(bearer));
+
+        // Public routes — no auth required.
+        Router::new()
+            .route("/health", get(health_handler))
+            .merge(protected)
             .layer(cors)
             .with_state(state)
     }
@@ -210,9 +233,25 @@ async fn status_handler(State(state): State<AppState>) -> impl IntoResponse {
     })
 }
 
-async fn sessions_handler() -> impl IntoResponse {
-    // Placeholder — will be wired to session store.
-    Json(serde_json::json!({ "sessions": [] }))
+async fn sessions_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let Some(ref store) = state.session_store else {
+        return Json(serde_json::json!({ "sessions": [] }));
+    };
+
+    let filter = SessionFilter {
+        agent_id: None,
+        channel: None,
+        peer_id: None,
+        since: None,
+    };
+
+    match store.list(&filter).await {
+        Ok(sessions) => Json(serde_json::json!({ "sessions": sessions })),
+        Err(e) => {
+            error!(error = %e, "failed to list sessions");
+            Json(serde_json::json!({ "sessions": [], "error": e.to_string() }))
+        }
+    }
 }
 
 async fn config_handler() -> impl IntoResponse {
@@ -222,21 +261,9 @@ async fn config_handler() -> impl IntoResponse {
 
 async fn webhook_handler(
     Path(channel): Path<String>,
-    headers: HeaderMap,
     State(state): State<AppState>,
     Json(payload): Json<WebhookPayload>,
 ) -> impl IntoResponse {
-    // Bearer token auth check.
-    if let Some(ref expected) = state.bearer_token {
-        let provided = headers
-            .get("authorization")
-            .and_then(|v| v.to_str().ok())
-            .and_then(|v| v.strip_prefix("Bearer "));
-        if provided != Some(expected.as_str()) {
-            return StatusCode::UNAUTHORIZED;
-        }
-    }
-
     let text = match payload.text {
         Some(t) => t,
         None => return StatusCode::BAD_REQUEST,
