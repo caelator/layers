@@ -207,3 +207,240 @@ impl ChannelManager {
 
 // `Mutex` is held briefly and only across awaits for spawn cleanup — safe to send across threads.
 unsafe impl Sync for ChannelManager {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use async_trait::async_trait;
+    use layers_core::{ChannelHealth, OutboundMessage, StreamingTarget};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    /// Mock adapter for testing the manager's routing and registration logic.
+    struct MockAdapter {
+        adapter_name: String,
+        send_count: AtomicUsize,
+        streaming_count: AtomicUsize,
+        reaction_count: AtomicUsize,
+    }
+
+    impl MockAdapter {
+        fn new(name: &str) -> Self {
+            Self {
+                adapter_name: name.to_string(),
+                send_count: AtomicUsize::new(0),
+                streaming_count: AtomicUsize::new(0),
+                reaction_count: AtomicUsize::new(0),
+            }
+        }
+    }
+
+    #[async_trait]
+    impl ChannelAdapter for MockAdapter {
+        fn name(&self) -> &str {
+            &self.adapter_name
+        }
+
+        async fn start(&self, _cancel: CancellationToken) -> Result<()> {
+            Ok(())
+        }
+
+        async fn stop(&self) -> Result<()> {
+            Ok(())
+        }
+
+        async fn send(&self, _message: OutboundMessage) -> Result<()> {
+            self.send_count.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
+
+        async fn send_streaming(&self, _target: StreamingTarget, _chunk: String) -> Result<()> {
+            self.streaming_count.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
+
+        async fn send_reaction(
+            &self,
+            _channel: &str,
+            _message_id: &str,
+            _emoji: &str,
+        ) -> Result<()> {
+            self.reaction_count.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
+
+        async fn health(&self) -> ChannelHealth {
+            ChannelHealth::Connected
+        }
+    }
+
+    fn make_inbound(channel: &str, msg_id: &str) -> InboundMessage {
+        InboundMessage {
+            channel: channel.to_string(),
+            channel_message_id: msg_id.to_string(),
+            peer_id: "user1".to_string(),
+            peer_display_name: "Test User".to_string(),
+            peer_kind: layers_core::PeerKind::User,
+            text: "hello".to_string(),
+            attachments: Vec::new(),
+            thread_id: None,
+            reply_to_message_id: None,
+            channel_metadata: None,
+            timestamp: chrono::Utc::now(),
+        }
+    }
+
+    fn make_outbound(channel: &str) -> OutboundMessage {
+        OutboundMessage {
+            channel: channel.to_string(),
+            text: "reply".to_string(),
+            thread_id: None,
+            reply_to_message_id: None,
+            attachments: Vec::new(),
+            streaming: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn register_and_adapter_count() {
+        let (mgr, _rx) = ChannelManager::new(16, 500);
+        assert_eq!(mgr.adapter_count().await, 0);
+
+        mgr.register(Arc::new(MockAdapter::new("alpha"))).await;
+        assert_eq!(mgr.adapter_count().await, 1);
+
+        mgr.register(Arc::new(MockAdapter::new("beta"))).await;
+        assert_eq!(mgr.adapter_count().await, 2);
+    }
+
+    #[tokio::test]
+    async fn submit_inbound_dedup_drops_duplicate() {
+        let (mgr, mut rx) = ChannelManager::new(16, 5_000);
+
+        let msg1 = make_inbound("test-ch", "msg-42");
+        let msg2 = make_inbound("test-ch", "msg-42"); // same channel + id
+
+        mgr.submit_inbound(msg1).await.unwrap();
+        mgr.submit_inbound(msg2).await.unwrap(); // should be silently dropped
+
+        // Only one message should have been delivered.
+        let received = rx.try_recv();
+        assert!(received.is_ok());
+        let second = rx.try_recv();
+        assert!(second.is_err()); // nothing else
+    }
+
+    #[tokio::test]
+    async fn dispatch_outbound_routes_to_correct_adapter() {
+        let (mgr, _rx) = ChannelManager::new(16, 500);
+
+        let adapter_a = Arc::new(MockAdapter::new("chan-a"));
+        let adapter_b = Arc::new(MockAdapter::new("chan-b"));
+
+        mgr.register(adapter_a.clone()).await;
+        mgr.register(adapter_b.clone()).await;
+
+        // Send to chan-a
+        mgr.dispatch_outbound(make_outbound("chan-a")).await.unwrap();
+        assert_eq!(adapter_a.send_count.load(Ordering::SeqCst), 1);
+        assert_eq!(adapter_b.send_count.load(Ordering::SeqCst), 0);
+
+        // Send to chan-b
+        mgr.dispatch_outbound(make_outbound("chan-b")).await.unwrap();
+        assert_eq!(adapter_b.send_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn dispatch_outbound_unknown_channel_returns_error() {
+        let (mgr, _rx) = ChannelManager::new(16, 500);
+
+        let result = mgr.dispatch_outbound(make_outbound("nonexistent")).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn health_all_returns_registered_adapters() {
+        let (mgr, _rx) = ChannelManager::new(16, 500);
+
+        mgr.register(Arc::new(MockAdapter::new("foo"))).await;
+        mgr.register(Arc::new(MockAdapter::new("bar"))).await;
+
+        let handles = mgr.health_all().await;
+        assert_eq!(handles.len(), 2);
+
+        let names: Vec<&str> = handles.iter().map(|h| h.name.as_str()).collect();
+        assert!(names.contains(&"foo"));
+        assert!(names.contains(&"bar"));
+
+        // MockAdapter always returns Connected.
+        for h in &handles {
+            assert_eq!(h.health, ChannelHealth::Connected);
+        }
+    }
+
+    #[tokio::test]
+    async fn model_override_resolution() {
+        let (mgr, _rx) = ChannelManager::new(16, 500);
+
+        let mut account_overrides = std::collections::HashMap::new();
+        account_overrides.insert("vip-user".to_string(), "openai:gpt-4o".to_string());
+
+        mgr.set_model_overrides(vec![crate::types::ChannelModelOverride {
+            channel: "telegram".to_string(),
+            model: Some("anthropic:claude-3".to_string()),
+            account_overrides,
+        }])
+        .await;
+
+        // Channel-level default
+        let resolved = mgr.resolve_model_override("telegram", None).await;
+        assert_eq!(resolved, Some("anthropic:claude-3".to_string()));
+
+        // Per-peer override takes precedence
+        let resolved = mgr
+            .resolve_model_override("telegram", Some("vip-user"))
+            .await;
+        assert_eq!(resolved, Some("openai:gpt-4o".to_string()));
+
+        // Unknown peer falls back to channel default
+        let resolved = mgr
+            .resolve_model_override("telegram", Some("regular-user"))
+            .await;
+        assert_eq!(resolved, Some("anthropic:claude-3".to_string()));
+
+        // Unknown channel returns None
+        let resolved = mgr.resolve_model_override("unknown", None).await;
+        assert_eq!(resolved, None);
+    }
+
+    #[tokio::test]
+    async fn dispatch_streaming_routes_correctly() {
+        let (mgr, _rx) = ChannelManager::new(16, 500);
+
+        let adapter = Arc::new(MockAdapter::new("stream-ch"));
+        mgr.register(adapter.clone()).await;
+
+        let target = StreamingTarget {
+            channel: "stream-ch".to_string(),
+            thread_id: None,
+            message_id: None,
+        };
+
+        mgr.dispatch_streaming(target, "chunk1".to_string())
+            .await
+            .unwrap();
+        assert_eq!(adapter.streaming_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn unregister_removes_adapter() {
+        let (mgr, _rx) = ChannelManager::new(16, 500);
+
+        mgr.register(Arc::new(MockAdapter::new("temp"))).await;
+        assert_eq!(mgr.adapter_count().await, 1);
+
+        let removed = mgr.unregister("temp").await;
+        assert!(removed.is_some());
+        assert_eq!(mgr.adapter_count().await, 0);
+    }
+}
