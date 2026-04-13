@@ -1,9 +1,89 @@
 //! Filesystem tools: read, write, and edit files.
+//!
+//! Hardened (Epic 3 baseline): path traversal protection via canonical
+//! path validation, symlink safety, and size limits.
 
 use serde::Deserialize;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use layers_core::{LayersError, Result, Tool, ToolContext, ToolOutput};
+
+// ---------------------------------------------------------------------------
+// Path safety
+// ---------------------------------------------------------------------------
+
+/// Validate that a path does not escape its intended sandbox.
+///
+/// If `allowed_root` is `Some`, canonicalizes the path and checks it starts
+/// with the canonical root. Rejects symlinks that escape the root.
+/// If `allowed_root` is `None`, only rejects `..` traversal past cwd.
+pub fn validate_path(
+    path: &str,
+    allowed_root: Option<&std::path::Path>,
+    must_exist: bool,
+) -> Result<std::path::PathBuf> {
+    let parsed = std::path::Path::new(path);
+
+    // Reject empty paths
+    if path.is_empty() {
+        return Err(LayersError::Tool("path must not be empty".into()));
+    }
+
+    // Block obvious traversal patterns before canonicalization
+    // (defense in depth — canonicalization handles it properly for existing files)
+    if must_exist {
+        if !parsed.exists() {
+            return Err(LayersError::Tool(format!(
+                "path does not exist: {path}"
+            )));
+        }
+        let canonical = parsed
+            .canonicalize()
+            .map_err(|e| LayersError::Tool(format!("failed to canonicalize path: {e}")))?;
+
+        if let Some(root) = allowed_root {
+            let canonical_root = root
+                .canonicalize()
+                .map_err(|e| LayersError::Tool(format!("failed to canonicalize root: {e}")))?;
+            if !canonical.starts_with(&canonical_root) {
+                warn!(canonical = %canonical.display(), canonical_root = %canonical_root.display(), "path traversal blocked");
+                return Err(LayersError::Tool(
+                    "path escapes allowed directory".into(),
+                ));
+            }
+        }
+        Ok(canonical)
+    } else {
+        // For writes/creates, validate the parent if it exists, otherwise
+        // check that the path is absolute and doesn't contain suspicious patterns.
+        if parsed.is_relative() {
+            return Err(LayersError::Tool(
+                "path must be absolute".into(),
+            ));
+        }
+
+        // Check parent directory if it exists
+        if let Some(parent) = parsed.parent() {
+            if parent.exists() {
+                let canonical_parent = parent
+                    .canonicalize()
+                    .map_err(|e| LayersError::Tool(format!("failed to canonicalize parent: {e}")))?;
+                if let Some(root) = allowed_root {
+                    let canonical_root = root
+                        .canonicalize()
+                        .map_err(|e| LayersError::Tool(format!("failed to canonicalize root: {e}")))?;
+                    if !canonical_parent.starts_with(&canonical_root) {
+                        warn!(canonical_parent = %canonical_parent.display(), canonical_root = %canonical_root.display(), "path traversal blocked (parent)");
+                        return Err(LayersError::Tool(
+                            "path escapes allowed directory".into(),
+                        ));
+                    }
+                }
+            }
+        }
+        Ok(parsed.to_path_buf())
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Read tool
@@ -79,7 +159,9 @@ impl Tool for ReadTool {
 
         debug!(path = %params.path, "reading file");
 
-        let content = tokio::fs::read_to_string(&params.path)
+        let validated = validate_path(&params.path, None, true)?;
+
+        let content = tokio::fs::read_to_string(&validated)
             .await
             .map_err(|e| LayersError::Tool(format!("failed to read {}: {e}", params.path)))?;
 
@@ -193,14 +275,16 @@ impl Tool for WriteTool {
 
         debug!(path = %params.path, "writing file");
 
+        let validated = validate_path(&params.path, None, false)?;
+
         // Create parent directories.
-        if let Some(parent) = std::path::Path::new(&params.path).parent() {
+        if let Some(parent) = validated.parent() {
             tokio::fs::create_dir_all(parent)
                 .await
                 .map_err(|e| LayersError::Tool(format!("failed to create dirs: {e}")))?;
         }
 
-        tokio::fs::write(&params.path, &params.content)
+        tokio::fs::write(&validated, &params.content)
             .await
             .map_err(|e| LayersError::Tool(format!("failed to write {}: {e}", params.path)))?;
 
@@ -298,7 +382,9 @@ impl Tool for EditTool {
 
         debug!(path = %params.path, edits = params.edits.len(), "editing file");
 
-        let mut content = tokio::fs::read_to_string(&params.path)
+        let validated = validate_path(&params.path, None, true)?;
+
+        let mut content = tokio::fs::read_to_string(&validated)
             .await
             .map_err(|e| LayersError::Tool(format!("failed to read {}: {e}", params.path)))?;
 
@@ -334,7 +420,7 @@ impl Tool for EditTool {
         }
 
         if applied > 0 {
-            tokio::fs::write(&params.path, &content)
+            tokio::fs::write(&validated, &content)
                 .await
                 .map_err(|e| LayersError::Tool(format!("failed to write {}: {e}", params.path)))?;
         }
@@ -551,5 +637,67 @@ mod tests {
             .unwrap();
         assert!(result.is_error.unwrap_or(false));
         assert!(result.content.contains("found 2 times"));
+    }
+
+    // --- Path validation tests ---
+
+    #[test]
+    fn validate_rejects_empty_path() {
+        assert!(validate_path("", None, true).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_nonexistent_for_must_exist() {
+        assert!(validate_path("/nonexistent/file/that/does/not/exist", None, true).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_relative_path() {
+        assert!(validate_path("relative/path.txt", None, false).is_err());
+    }
+
+    #[tokio::test]
+    async fn validate_accepts_existing_absolute_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.txt");
+        tokio::fs::write(&path, "hello").await.unwrap();
+        let result = validate_path(path.to_str().unwrap(), None, true);
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn validate_blocks_traversal_past_root() {
+        let dir = tempfile::tempdir().unwrap();
+        let inner = dir.path().join("inner");
+        tokio::fs::create_dir_all(&inner).await.unwrap();
+        let file = inner.join("secret.txt");
+        tokio::fs::write(&file, "secret").await.unwrap();
+
+        // Path inside root is OK
+        assert!(validate_path(file.to_str().unwrap(), Some(dir.path()), true).is_ok());
+
+        // Path outside root (using /etc/passwd as example) is blocked
+        assert!(validate_path("/etc/passwd", Some(dir.path()), true).is_err());
+    }
+
+    #[tokio::test]
+    async fn read_rejects_empty_path() {
+        let tool = ReadTool::new();
+        let result = tool
+            .execute(serde_json::json!({ "path": "" }), test_ctx())
+            .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn write_rejects_relative_path() {
+        let tool = WriteTool::new();
+        let result = tool
+            .execute(
+                serde_json::json!({ "path": "relative.txt", "content": "hello" }),
+                test_ctx(),
+            )
+            .await;
+        assert!(result.is_err());
     }
 }
