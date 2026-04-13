@@ -104,6 +104,20 @@ pub fn reload_corrections() {
     }
 }
 
+/// Clear the correction cache and return the previous contents so they can be
+/// restored after a test.  This prevents benchmark tests from reading the
+/// user's real `~/.layers/route-corrections.jsonl`.
+#[cfg(test)]
+fn swap_correction_cache(
+    replacement: HashMap<(Route, Route), usize>,
+) -> HashMap<(Route, Route), usize> {
+    let mut guard = match correction_cache().lock() {
+        Ok(g) => g,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    std::mem::replace(&mut *guard, replacement)
+}
+
 /// Heuristic routing algorithm for Layers query.
 ///
 /// Classifies a task into one of four routes based on keyword signal scoring:
@@ -630,6 +644,9 @@ mod tests {
     /// matches every expected route (and confidence, when specified).
     #[test]
     fn benchmark_routing_answer_keys() {
+        // Isolate from user's real correction history so results are deterministic.
+        let saved = swap_correction_cache(HashMap::new());
+
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
         let path = std::path::Path::new(manifest_dir)
             .join("benchmarks")
@@ -666,6 +683,9 @@ mod tests {
             }
         }
 
+        // Restore the original correction cache.
+        swap_correction_cache(saved);
+
         if !failed.is_empty() {
             panic!(
                 "routing answer key benchmark: {}/{} passed, {} failed:\n{}",
@@ -683,6 +703,9 @@ mod tests {
     /// the same route regardless of downstream failures.
     #[test]
     fn benchmark_routing_failures() {
+        // Isolate from user's real correction history so results are deterministic.
+        let saved = swap_correction_cache(HashMap::new());
+
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
         let path = std::path::Path::new(manifest_dir)
             .join("benchmarks")
@@ -714,6 +737,9 @@ mod tests {
                 ));
             }
         }
+
+        // Restore the original correction cache.
+        swap_correction_cache(saved);
 
         if !failed.is_empty() {
             panic!(

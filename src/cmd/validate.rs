@@ -7,7 +7,8 @@ use crate::config::{canonical_curated_memory_path, council_files, uc_config_path
 use crate::router::{self, Confidence, Route};
 use crate::util::{load_jsonl, which};
 
-pub fn handle_validate(routing_benchmarks: Option<String>, ci: bool) -> Result<()> {
+/// Build the validation payload without printing or running benchmarks.
+fn build_validate_payload() -> Value {
     // Check council commands — configured if env var set OR binary found on PATH
     fn council_cmd_available(stage: &str) -> bool {
         let env_key = match stage {
@@ -61,14 +62,7 @@ pub fn handle_validate(routing_benchmarks: Option<String>, ci: bool) -> Result<(
 
     let ok = has_uc || has_gitnexus; // at least one retrieval source
 
-    // Run routing benchmarks if requested
-    let benchmark_result = if let Some(ref bench_file) = routing_benchmarks {
-        Some(run_routing_benchmarks(bench_file)?)
-    } else {
-        None
-    };
-
-    let mut payload = json!({
+    json!({
         "ok": ok,
         "memory_spine": spine_files,
         "curated_memory": {
@@ -89,7 +83,18 @@ pub fn handle_validate(routing_benchmarks: Option<String>, ci: bool) -> Result<(
             "gitnexus": "Layers expects GitNexus via local CLI and optionally MCP-backed runtimes/skills."
         },
         "workspace": workspace_root(),
-    });
+    })
+}
+
+pub fn handle_validate(routing_benchmarks: Option<String>, ci: bool) -> Result<()> {
+    let mut payload = build_validate_payload();
+
+    // Run routing benchmarks if requested
+    let benchmark_result = if let Some(ref bench_file) = routing_benchmarks {
+        Some(run_routing_benchmarks(bench_file)?)
+    } else {
+        None
+    };
 
     let benchmarks_pass = benchmark_result
         .as_ref()
@@ -279,5 +284,119 @@ mod tests {
         let _ws = TestWorkspace::new("validate-bench-missing");
         let result = handle_validate(Some("/nonexistent/file.jsonl".to_string()), false);
         assert!(result.is_err());
+    }
+
+    /// Helper: run `build_validate_payload` with PATH set to `path_val` and
+    /// council env vars cleared.
+    #[allow(unsafe_code)]
+    fn payload_with_path(ws_name: &str, path_val: &str) -> (TestWorkspace, Value) {
+        let ws = TestWorkspace::new(ws_name);
+        let orig_path = std::env::var("PATH").unwrap_or_default();
+        // Clear council env vars so detection relies solely on PATH
+        let council_vars = [
+            "LAYERS_COUNCIL_GEMINI_CMD",
+            "LAYERS_COUNCIL_CLAUDE_CMD",
+            "LAYERS_COUNCIL_CODEX_CMD",
+        ];
+        let orig_council: Vec<_> = council_vars
+            .iter()
+            .map(|&k| (k, std::env::var_os(k)))
+            .collect();
+        unsafe {
+            std::env::set_var("PATH", path_val);
+            for &k in &council_vars {
+                std::env::remove_var(k);
+            }
+        }
+        let payload = build_validate_payload();
+        unsafe {
+            std::env::set_var("PATH", &orig_path);
+            for (k, v) in &orig_council {
+                match v {
+                    Some(val) => std::env::set_var(k, val),
+                    None => std::env::remove_var(k),
+                }
+            }
+        }
+        (ws, payload)
+    }
+
+    #[test]
+    fn validate_reports_degraded_when_no_retrieval_tools() {
+        // Empty PATH: neither uc nor gitnexus will be found
+        let (_ws, payload) = payload_with_path("validate-no-retrieval", "");
+        assert_eq!(payload["ok"], json!(false), "ok must be false when no retrieval tools available");
+        assert_eq!(payload["tools"]["uc"], json!(false));
+        assert_eq!(payload["tools"]["gitnexus"], json!(false));
+    }
+
+    #[test]
+    fn validate_reports_partial_when_only_one_tool() {
+        let ws_name = "validate-partial-tool";
+        let ws = TestWorkspace::new(ws_name);
+        let bin_dir = ws.root().join("bin");
+        fs::create_dir_all(&bin_dir).unwrap();
+
+        // Create a fake gitnexus binary on a custom PATH
+        let fake_gitnexus = bin_dir.join("gitnexus");
+        fs::write(&fake_gitnexus, "#!/bin/sh\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&fake_gitnexus, fs::Permissions::from_mode(0o755)).unwrap();
+        }
+
+        let orig_path = std::env::var("PATH").unwrap_or_default();
+        let council_vars = [
+            "LAYERS_COUNCIL_GEMINI_CMD",
+            "LAYERS_COUNCIL_CLAUDE_CMD",
+            "LAYERS_COUNCIL_CODEX_CMD",
+        ];
+        let orig_council: Vec<_> = council_vars
+            .iter()
+            .map(|&k| (k, std::env::var_os(k)))
+            .collect();
+        #[allow(unsafe_code)]
+        unsafe {
+            std::env::set_var("PATH", bin_dir.to_str().unwrap());
+            for &k in &council_vars {
+                std::env::remove_var(k);
+            }
+        }
+        let payload = build_validate_payload();
+        #[allow(unsafe_code)]
+        unsafe {
+            std::env::set_var("PATH", &orig_path);
+            for (k, v) in &orig_council {
+                match v {
+                    Some(val) => std::env::set_var(k, val),
+                    None => std::env::remove_var(k),
+                }
+            }
+        }
+
+        // gitnexus present, uc absent → ok is true but uc is false
+        assert_eq!(payload["ok"], json!(true), "ok should be true with at least one tool");
+        assert_eq!(payload["tools"]["gitnexus"], json!(true));
+        assert_eq!(payload["tools"]["uc"], json!(false), "uc should be reported as missing");
+    }
+
+    #[test]
+    fn validate_reports_missing_council_commands() {
+        // Empty PATH means no council CLIs will be found
+        let (_ws, payload) = payload_with_path("validate-no-council", "");
+        assert_eq!(
+            payload["council"]["commands_configured"],
+            json!(false),
+            "council.commands_configured must be false when no CLIs on PATH"
+        );
+    }
+
+    #[test]
+    fn validate_handles_missing_curated_memory_gracefully() {
+        // TestWorkspace creates memoryport/ but not curated-memory.jsonl
+        let (_ws, payload) = payload_with_path("validate-no-curated", "");
+        assert_eq!(payload["curated_memory"]["exists"], json!(false));
+        assert_eq!(payload["curated_memory"]["records"], json!(0));
     }
 }
