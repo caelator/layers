@@ -1,9 +1,12 @@
 //! Memory tools: hybrid vector+keyword search and chunk retrieval.
 
+use std::sync::Arc;
+
 use serde::Deserialize;
 use tracing::debug;
 
 use layers_core::{LayersError, Result, Tool, ToolContext, ToolOutput};
+use layers_store::embedding_pipeline::RealEmbeddingPipeline;
 
 // ---------------------------------------------------------------------------
 // Memory search
@@ -20,12 +23,22 @@ struct MemorySearchParams {
 }
 
 /// Hybrid vector+keyword search over memory using Reciprocal Rank Fusion.
-pub struct MemorySearchTool;
+pub struct MemorySearchTool {
+    pipeline: Option<Arc<RealEmbeddingPipeline>>,
+}
 
 impl MemorySearchTool {
     #[must_use]
     pub fn new() -> Self {
-        Self
+        Self { pipeline: None }
+    }
+
+    /// Create with a configured embedding pipeline for real search.
+    #[must_use]
+    pub fn with_pipeline(pipeline: Arc<RealEmbeddingPipeline>) -> Self {
+        Self {
+            pipeline: Some(pipeline),
+        }
     }
 }
 
@@ -78,18 +91,51 @@ impl Tool for MemorySearchTool {
         let limit = params.limit.unwrap_or(10);
         debug!(query = %params.query, limit, "memory search");
 
-        // Stub: requires layers-store LanceDB/vector search integration.
+        let Some(pipeline) = &self.pipeline else {
+            return Ok(ToolOutput {
+                content: serde_json::json!({
+                    "query": params.query,
+                    "results": [],
+                    "total": 0,
+                    "note": "memory search requires configured vector store"
+                })
+                .to_string(),
+                attachments: Vec::new(),
+                structured_content: None,
+                is_error: None,
+            });
+        };
+
+        let results = pipeline
+            .search_text(&params.query, limit)
+            .await
+            .map_err(|e| LayersError::Tool(format!("memory search failed: {e}")))?;
+
+        let result_json: Vec<serde_json::Value> = results
+            .iter()
+            .map(|r| {
+                serde_json::json!({
+                    "id": r.chunk.id,
+                    "source_path": r.chunk.source_path,
+                    "content": r.chunk.content,
+                    "role": r.chunk.role,
+                    "session_id": r.chunk.session_id,
+                    "score": r.score,
+                })
+            })
+            .collect();
+
+        let total = result_json.len();
         Ok(ToolOutput {
             content: serde_json::json!({
                 "query": params.query,
-                "results": [],
-                "total": 0,
-                "note": "memory search requires configured vector store"
+                "results": result_json,
+                "total": total,
             })
             .to_string(),
             attachments: Vec::new(),
             structured_content: None,
-                is_error: None,
+            is_error: None,
         })
     }
 }
@@ -104,12 +150,22 @@ struct MemoryGetParams {
 }
 
 /// Get a specific memory chunk by path.
-pub struct MemoryGetTool;
+pub struct MemoryGetTool {
+    pipeline: Option<Arc<RealEmbeddingPipeline>>,
+}
 
 impl MemoryGetTool {
     #[must_use]
     pub fn new() -> Self {
-        Self
+        Self { pipeline: None }
+    }
+
+    /// Create with a configured embedding pipeline for real retrieval.
+    #[must_use]
+    pub fn with_pipeline(pipeline: Arc<RealEmbeddingPipeline>) -> Self {
+        Self {
+            pipeline: Some(pipeline),
+        }
     }
 }
 
@@ -152,17 +208,50 @@ impl Tool for MemoryGetTool {
 
         debug!(path = %params.path, "memory get");
 
-        // Stub: requires layers-store memory backend.
-        Ok(ToolOutput {
-            content: serde_json::json!({
-                "path": params.path,
-                "content": null,
-                "note": "memory get requires configured memory store"
-            })
-            .to_string(),
-            attachments: Vec::new(),
-            structured_content: None,
+        let Some(pipeline) = &self.pipeline else {
+            return Ok(ToolOutput {
+                content: serde_json::json!({
+                    "path": params.path,
+                    "content": null,
+                    "note": "memory get requires configured memory store"
+                })
+                .to_string(),
+                attachments: Vec::new(),
+                structured_content: None,
                 is_error: None,
-        })
+            });
+        };
+
+        let results = pipeline
+            .search_text(&params.path, 1)
+            .await
+            .map_err(|e| LayersError::Tool(format!("memory get failed: {e}")))?;
+
+        if let Some(result) = results.first() {
+            Ok(ToolOutput {
+                content: serde_json::json!({
+                    "path": result.chunk.source_path,
+                    "content": result.chunk.content,
+                    "role": result.chunk.role,
+                    "session_id": result.chunk.session_id,
+                })
+                .to_string(),
+                attachments: Vec::new(),
+                structured_content: None,
+                is_error: None,
+            })
+        } else {
+            Ok(ToolOutput {
+                content: serde_json::json!({
+                    "path": params.path,
+                    "content": null,
+                    "note": "chunk not found"
+                })
+                .to_string(),
+                attachments: Vec::new(),
+                structured_content: None,
+                is_error: None,
+            })
+        }
     }
 }
