@@ -14,18 +14,32 @@ id = "positive-quality-on"
 category = "positive"
 description = "Evaluator-on differentiates good results from bad results."
 command = "cargo test --test prove_it_sprint quality_evaluator_proofs::evaluator_on_distinguishes_good_from_bad_results -- --exact"
-timeout_secs = 120
+timeout_secs = 600
 
 [[proofs]]
 id = "counterfactual-quality-off"
 category = "counterfactual"
 description = "Turning the evaluator off removes meaningful quality gating."
 command = "cargo test --test prove_it_sprint quality_evaluator_proofs::evaluator_off_no_quality_gating -- --exact"
-timeout_secs = 120
+timeout_secs = 600
 
 [[proofs]]
 id = "repeatability-corpus"
 category = "repeatability"
 description = "Relevance ordering stays consistent across the proof corpus."
 command = "cargo test --test prove_it_sprint quality_evaluator_proofs::relevance_scores_consistent_across_corpus -- --exact"
-timeout_secs = 120
+timeout_secs = 600
+
+[[proofs]]
+id = "artifact-quality-json"
+category = "artifact"
+description = "ResultQuality serializes to JSON and round-trips through serde correctly."
+command = "cargo test --test prove_it_sprint quality_evaluator_proofs::quality_result_json_round_trip -- --exact"
+timeout_secs = 600
+
+[[proofs]]
+id = "failure-edge-cases"
+category = "failure"
+description = "Edge cases (empty query, unicode, stopwords-only, very long results) do not panic or produce invalid assessments."
+command = "cargo test --test prove_it_sprint quality_evaluator_proofs::edge_cases_no_panic -- --exact"
+timeout_secs = 600

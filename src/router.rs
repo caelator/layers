@@ -104,19 +104,19 @@ pub fn reload_corrections() {
     }
 }
 
-/// Clear the correction cache and return the previous contents so they can be
-/// restored after a test.  This prevents benchmark tests from reading the
-/// user's real `~/.layers/route-corrections.jsonl`.
+// Thread-local flag to bypass correction bias in tests.
+// Set by benchmark tests to isolate from the user's real correction file.
 #[cfg(test)]
-fn swap_correction_cache(
-    replacement: HashMap<(Route, Route), usize>,
-) -> HashMap<(Route, Route), usize> {
-    let mut guard = match correction_cache().lock() {
-        Ok(g) => g,
-        Err(poisoned) => poisoned.into_inner(),
-    };
-    std::mem::replace(&mut *guard, replacement)
+std::thread_local! {
+    static BYPASS_CORRECTIONS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
+
+/// Check if the current thread should bypass correction bias.
+#[cfg(test)]
+fn should_bypass_corrections() -> bool {
+    BYPASS_CORRECTIONS.with(|f| f.get())
+}
+
 
 /// Heuristic routing algorithm for Layers query.
 ///
@@ -345,6 +345,13 @@ pub fn classify(task: &str) -> RouteResult {
 /// This has the effect of gradually adjusting route decisions when the same
 /// pattern keeps getting corrected.
 fn apply_correction_bias(scores: &mut Scores) {
+    // In tests, benchmark tests set a thread-local to bypass corrections
+    // so results are deterministic regardless of the user's correction history.
+    #[cfg(test)]
+    if should_bypass_corrections() {
+        return;
+    }
+
     let correction_counts = match correction_cache().lock() {
         Ok(cache) => cache.clone(),
         Err(poisoned) => poisoned.into_inner().clone(),
@@ -642,10 +649,12 @@ mod tests {
 
     /// Reads benchmarks/routing-answer-keys.jsonl and verifies classify()
     /// matches every expected route (and confidence, when specified).
+    ///
+    /// Uses a thread-local bypass flag to isolate from the user's real
+    /// correction history, avoiding deadlock with the shared cache lock.
     #[test]
     fn benchmark_routing_answer_keys() {
-        // Isolate from user's real correction history so results are deterministic.
-        let saved = swap_correction_cache(HashMap::new());
+        BYPASS_CORRECTIONS.with(|f| f.set(true));
 
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
         let path = std::path::Path::new(manifest_dir)
@@ -683,8 +692,8 @@ mod tests {
             }
         }
 
-        // Restore the original correction cache.
-        swap_correction_cache(saved);
+        // Reset the bypass flag.
+        BYPASS_CORRECTIONS.with(|f| f.set(false));
 
         if !failed.is_empty() {
             panic!(
@@ -703,8 +712,7 @@ mod tests {
     /// the same route regardless of downstream failures.
     #[test]
     fn benchmark_routing_failures() {
-        // Isolate from user's real correction history so results are deterministic.
-        let saved = swap_correction_cache(HashMap::new());
+        BYPASS_CORRECTIONS.with(|f| f.set(true));
 
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
         let path = std::path::Path::new(manifest_dir)
@@ -738,8 +746,8 @@ mod tests {
             }
         }
 
-        // Restore the original correction cache.
-        swap_correction_cache(saved);
+        // Reset the bypass flag.
+        BYPASS_CORRECTIONS.with(|f| f.set(false));
 
         if !failed.is_empty() {
             panic!(

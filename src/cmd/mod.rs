@@ -6,6 +6,7 @@ pub mod feedback;
 pub mod gate;
 pub mod infrastructure;
 pub mod init;
+pub mod migrate;
 pub mod monitor;
 pub mod query;
 pub mod refresh;

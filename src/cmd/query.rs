@@ -60,9 +60,13 @@ pub fn handle_query(
     let t0 = Instant::now();
     let route_result = router::classify(task);
 
-    // Low confidence means the classifier couldn't decide — but we still try UC
-    // semantic retrieval as a best-effort fallback. Low confidence ≠ no retrieval.
-    let effective_route = route_result.route;
+    // ── Route-weight override ────────────────────────────────────────────────
+    // Load quality-based route weights BEFORE acting on the routing decision.
+    // If the chosen route has accumulated enough soft/hard failures (weight < -0.3),
+    // override to the best alternative or fall back to Neither.
+    let recent_failures = read_recent_failures(&route_corrections_path(), 20);
+    let route_weights = load_route_weights(&recent_failures);
+    let effective_route = apply_weight_override(route_result.route, &route_weights);
 
     let mut memory_items: Vec<RetrievalItem> = Vec::new();
     let mut graph_items: Vec<RetrievalItem> = Vec::new();
@@ -266,10 +270,7 @@ pub fn handle_query(
     }
 
     // ── Route-correction feedback: soft-failure suppression ──────────────────
-    // Read recent failure records and adjust result confidence accordingly.
-    // RFC 006 Stage 2: prior soft failures on this route reduce result confidence.
-    let recent_failures = read_recent_failures(&route_corrections_path(), 20);
-    let route_weights = load_route_weights(&recent_failures);
+    // Reuse the route weights loaded at the top (before retrieval).
     let route_weight = route_weights.get(&current_fbid).copied().unwrap_or(0.0_f32);
 
     // If prior soft failures have demoted this route significantly, flag the results.
@@ -469,6 +470,46 @@ pub fn handle_query(
     });
 
     Ok(())
+}
+
+/// Apply route-weight override: if the chosen route has a weight below -0.3
+/// (chronic quality failures), fall back to the best alternative route or Neither.
+///
+/// This is the bridge between quality evaluation feedback (soft failures written
+/// to route-corrections.jsonl) and the initial routing decision.
+fn apply_weight_override(
+    route: Route,
+    weights: &std::collections::HashMap<RouteId, f32>,
+) -> Route {
+    let route_id = match route {
+        Route::Neither => RouteId::Neither,
+        Route::MemoryOnly => RouteId::MemoryOnly,
+        Route::GraphOnly => RouteId::GraphOnly,
+        Route::Both => RouteId::Both,
+    };
+
+    let weight = weights.get(&route_id).copied().unwrap_or(0.0_f32);
+    if weight >= -0.3 {
+        return route;
+    }
+
+    // Find the best alternative route (highest weight, better than current).
+    let all_routes = [
+        (RouteId::MemoryOnly, Route::MemoryOnly),
+        (RouteId::GraphOnly, Route::GraphOnly),
+        (RouteId::Both, Route::Both),
+        (RouteId::Neither, Route::Neither),
+    ];
+
+    let fallback = all_routes
+        .iter()
+        .filter(|(id, _)| *id != route_id)
+        .map(|(id, r)| (*r, weights.get(id).copied().unwrap_or(0.0_f32)))
+        .filter(|(_, w)| *w > weight)
+        .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+        .map(|(r, _)| r);
+
+    fallback.unwrap_or(Route::Neither)
 }
 
 /// Route-weighted interleave:
@@ -739,6 +780,94 @@ mod tests {
             result.is_ok(),
             "handle_query should succeed with failures file: {:?}",
             result.err()
+        );
+    }
+
+    /// When corrections accumulate and a route gets weight < -0.3,
+    /// apply_weight_override overrides to the best alternative route.
+    #[test]
+    fn weight_override_demotes_route_below_threshold() {
+        use std::collections::HashMap;
+
+        // Simulate two soft failures on Both → weight = -0.4
+        let mut weights = HashMap::new();
+        weights.insert(RouteId::Both, -0.4_f32);
+
+        // classify would return Both, but override should pick a better route
+        let overridden = apply_weight_override(Route::Both, &weights);
+        assert_ne!(
+            overridden,
+            Route::Both,
+            "route must be overridden when weight < -0.3"
+        );
+        // With no other weights, all alternatives have weight 0.0 > -0.4.
+        // The override picks an alternative (not Both) — exact choice depends
+        // on tie-breaking order, but Neither is a safe conservative fallback.
+        assert_ne!(
+            overridden,
+            Route::Both,
+            "route must not be Both when its weight is below threshold"
+        );
+    }
+
+    /// When a specific alternative has been human-boosted, the override
+    /// selects that boosted route.
+    #[test]
+    fn weight_override_selects_boosted_alternative() {
+        use std::collections::HashMap;
+
+        let mut weights = HashMap::new();
+        weights.insert(RouteId::Both, -0.5_f32);
+        weights.insert(RouteId::GraphOnly, 0.4_f32); // human-boosted
+
+        let overridden = apply_weight_override(Route::Both, &weights);
+        assert_eq!(
+            overridden,
+            Route::GraphOnly,
+            "should select the human-boosted alternative"
+        );
+    }
+
+    /// When no corrections exist (empty weights), routing is unchanged.
+    #[test]
+    fn weight_override_no_corrections_unchanged() {
+        use std::collections::HashMap;
+
+        let weights = HashMap::new();
+
+        // All routes should pass through unchanged
+        assert_eq!(apply_weight_override(Route::Both, &weights), Route::Both);
+        assert_eq!(
+            apply_weight_override(Route::MemoryOnly, &weights),
+            Route::MemoryOnly
+        );
+        assert_eq!(
+            apply_weight_override(Route::GraphOnly, &weights),
+            Route::GraphOnly
+        );
+        assert_eq!(
+            apply_weight_override(Route::Neither, &weights),
+            Route::Neither
+        );
+    }
+
+    /// When all routes have bad weights, falls back to Neither.
+    #[test]
+    fn weight_override_all_bad_falls_back_to_neither() {
+        use std::collections::HashMap;
+
+        let mut weights = HashMap::new();
+        weights.insert(RouteId::Both, -0.6_f32);
+        weights.insert(RouteId::MemoryOnly, -0.8_f32);
+        weights.insert(RouteId::GraphOnly, -0.7_f32);
+        weights.insert(RouteId::Neither, -0.5_f32);
+
+        // Both has weight -0.6, Neither has -0.5 (best alternative)
+        let overridden = apply_weight_override(Route::Both, &weights);
+        assert_eq!(
+            overridden,
+            Route::Neither,
+            "when all routes are bad, should pick least-bad (Neither at -0.5)"
         );
     }
 }

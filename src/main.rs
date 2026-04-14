@@ -64,6 +64,7 @@ use cmd::feedback::handle_feedback;
 use cmd::gate::handle_gate;
 use cmd::init::{InitArgs, handle_init};
 use cmd::infrastructure::{InfrastructureArgs, handle_infrastructure};
+use cmd::migrate::handle_migrate;
 use cmd::monitor::handle_monitor;
 use cmd::query::handle_query;
 use cmd::refresh::handle_refresh;
@@ -209,6 +210,12 @@ enum Commands {
     Infrastructure {
         #[command(subcommand)]
         command: InfrastructureCommands,
+    },
+    /// Migrate legacy project-records into canonical curated memory.
+    Migrate {
+        /// Preview what would be migrated without writing.
+        #[arg(long)]
+        dry_run: bool,
     },
     /// Autonomous repo monitor: git sync, build/test checks, CI watching, fix subagents.
     Monitor {
@@ -611,6 +618,7 @@ fn main() -> anyhow::Result<()> {
             };
             handle_infrastructure(&args)
         }
+        Commands::Migrate { dry_run } => handle_migrate(dry_run),
         Commands::Monitor { command } => handle_monitor(&command),
         Commands::Technician { command } => handle_technician(&command),
         Commands::Telemetry { command } => handle_telemetry(&command),

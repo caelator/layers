@@ -20,7 +20,7 @@ const SPECIFICITY_MIN_WORDS: usize = 8;
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 /// Quality dimensions for a set of retrieved results.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[allow(dead_code)]
 pub struct ResultQuality {
     /// Fraction of query terms found in at least one result (0.0–1.0).

@@ -881,6 +881,91 @@ mod quality_evaluator_proofs {
             );
         }
     }
+
+    // ── C4. ResultQuality round-trips through JSON serde ──────────────────
+
+    #[test]
+    fn quality_result_json_round_trip() {
+        use layers::quality::ResultQuality;
+
+        let original = ResultQuality {
+            relevance: 0.75,
+            coverage: 0.6,
+            avg_words: 12.5,
+            acceptable: true,
+            reason: None,
+        };
+
+        let json = serde_json::to_string(&original).expect("serialize to JSON");
+        let restored: ResultQuality =
+            serde_json::from_str(&json).expect("deserialize from JSON");
+
+        assert!(
+            (restored.relevance - original.relevance).abs() < f64::EPSILON,
+            "relevance mismatch"
+        );
+        assert!(
+            (restored.coverage - original.coverage).abs() < f64::EPSILON,
+            "coverage mismatch"
+        );
+        assert!(
+            (restored.avg_words - original.avg_words).abs() < f64::EPSILON,
+            "avg_words mismatch"
+        );
+        assert_eq!(restored.acceptable, original.acceptable);
+        assert_eq!(restored.reason, original.reason);
+
+        // Also test with a reason present
+        let with_reason = ResultQuality {
+            relevance: 0.1,
+            coverage: 0.5,
+            avg_words: 3.0,
+            acceptable: false,
+            reason: Some("low relevance — query terms rarely appear in results".into()),
+        };
+        let json2 = serde_json::to_string(&with_reason).expect("serialize with reason");
+        let restored2: ResultQuality =
+            serde_json::from_str(&json2).expect("deserialize with reason");
+        assert_eq!(restored2.reason, with_reason.reason);
+        assert!(!restored2.acceptable);
+    }
+
+    // ── C5. Edge cases do not panic or produce invalid assessments ────────
+
+    #[test]
+    fn edge_cases_no_panic() {
+        // Empty query
+        let q = evaluate("", &["some result with enough words for check"], 1);
+        assert!(q.relevance >= 0.0 && q.relevance <= 1.0);
+
+        // Unicode query
+        let q = evaluate(
+            "日本語のクエリ résumé café",
+            &["日本語のクエリ text with enough words to pass specificity"],
+            3,
+        );
+        assert!(q.relevance >= 0.0 && q.relevance <= 1.0);
+
+        // All-stopword query (should get full relevance since no meaningful terms)
+        let q = evaluate(
+            "the is a an to of in for on with",
+            &["any result with enough words for the specificity threshold"],
+            1,
+        );
+        assert_eq!(q.relevance, 1.0, "all-stopword query should yield 1.0 relevance");
+
+        // Very long results
+        let long_result = "word ".repeat(10_000);
+        let results = &[long_result.as_str()];
+        let q = evaluate("word", results, 1);
+        assert!(q.acceptable);
+
+        // Single-character results
+        let q = evaluate("x", &["x", "y", "z"], 3);
+        assert!(q.relevance >= 0.0 && q.relevance <= 1.0);
+        // Single chars are very short — should fail specificity
+        assert!(!q.acceptable);
+    }
 }
 
 // ============================================================================
