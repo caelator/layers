@@ -24,6 +24,8 @@ pub struct LayersConfig {
     pub agents: HashMap<String, AgentConfigEntry>,
     #[serde(default)]
     pub bindings: Vec<BindingConfig>,
+    #[serde(default)]
+    pub brains: HashMap<String, BrainConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -52,6 +54,27 @@ fn default_bind_address() -> String {
 
 fn default_port() -> u16 {
     3000
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BrainConfig {
+    pub cli: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default = "default_brain_output")]
+    pub output: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_arg: Option<String>,
+    #[serde(default)]
+    pub needs_pty: bool,
+    #[serde(default)]
+    pub read_stderr: bool,
+    #[serde(default)]
+    pub pipe_stdin: bool,
+}
+
+fn default_brain_output() -> String {
+    "text".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

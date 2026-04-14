@@ -61,6 +61,8 @@ fn app_with_auth(token: &str) -> axum::Router {
         port: 0,
         tls: None,
         bearer_token: Some(token.to_string()),
+        portal_dir: None,
+        upload_dir: None,
     };
     Gateway::new(config, Arc::new(cm))
         .with_session_store(Arc::new(MockSessionStore))
@@ -75,6 +77,8 @@ fn app_no_auth() -> axum::Router {
         port: 0,
         tls: None,
         bearer_token: None,
+        portal_dir: None,
+        upload_dir: None,
     };
     Gateway::new(config, Arc::new(cm))
         .with_session_store(Arc::new(MockSessionStore))

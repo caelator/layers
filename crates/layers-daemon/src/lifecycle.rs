@@ -1,5 +1,6 @@
 //! Daemon lifecycle — startup, shutdown, signal handling, PID file management.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -45,6 +46,8 @@ pub struct DaemonRunner {
     cron_scheduler: Arc<CronScheduler>,
     log_rotation: Option<LogRotationConfig>,
     provider_registry: Arc<tokio::sync::RwLock<ProviderRegistry>>,
+    brains: HashMap<String, layers_core::config::BrainConfig>,
+    workdir: Option<String>,
 }
 
 impl DaemonRunner {
@@ -76,6 +79,8 @@ impl DaemonRunner {
             cron_scheduler,
             log_rotation: None,
             provider_registry,
+            brains: HashMap::new(),
+            workdir: None,
         };
 
         (runner, inbound_rx)
@@ -85,6 +90,14 @@ impl DaemonRunner {
     #[must_use]
     pub fn with_pid_file(mut self, path: PathBuf) -> Self {
         self.pid_file = Some(path);
+        self
+    }
+
+    /// Set brain configs for CLI agent dispatch.
+    #[must_use]
+    pub fn with_brains(mut self, brains: HashMap<String, layers_core::config::BrainConfig>, workdir: String) -> Self {
+        self.brains = brains;
+        self.workdir = Some(workdir);
         self
     }
 
@@ -186,7 +199,18 @@ impl DaemonRunner {
 
         // Build and spawn the gateway.
         let gateway_config = GatewayConfig::from(&self.config);
-        let gateway = Gateway::new(gateway_config, Arc::clone(&self.channel_manager));
+        let mut gateway = Gateway::new(gateway_config, Arc::clone(&self.channel_manager));
+
+        // Attach brain dispatcher if brains are configured
+        if !self.brains.is_empty() {
+            let workdir = self.workdir.clone().unwrap_or_else(|| ".".to_string());
+            let dispatcher = Arc::new(layers_runtime::brain::BrainDispatcher::new(
+                self.brains.clone(),
+                workdir,
+            ));
+            info!(brain_count = self.brains.len(), "attaching brain dispatcher to gateway");
+            gateway = gateway.with_brain_dispatcher(dispatcher);
+        }
 
         let gateway_cancel = self.cancel.clone();
         let gateway_handle = tokio::spawn(async move {

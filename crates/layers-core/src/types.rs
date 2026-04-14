@@ -817,3 +817,15 @@ pub trait SessionTransaction: Send + Sync {
     async fn update_session(&mut self, session: Session) -> crate::error::Result<()>;
     async fn commit(self: Box<Self>) -> crate::error::Result<()>;
 }
+
+/// Events emitted by a brain (CLI agent) during execution.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum BrainEvent {
+    #[serde(rename = "token")]
+    Token { content: String },
+    #[serde(rename = "done")]
+    Done { session_id: Option<String> },
+    #[serde(rename = "error")]
+    Error { message: String },
+}

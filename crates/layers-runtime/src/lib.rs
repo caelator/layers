@@ -12,3 +12,4 @@ pub mod tool_dispatch;
 pub mod streaming;
 pub mod failover;
 pub mod subagent;
+pub mod brain;
