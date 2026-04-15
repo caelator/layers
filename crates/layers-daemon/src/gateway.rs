@@ -109,11 +109,13 @@ struct ChatRequest {
     #[serde(default)]
     model: Option<String>,
     #[serde(default)]
+    #[allow(dead_code)]
     attachments: Vec<ChatAttachment>,
 }
 
 #[derive(Debug, Deserialize)]
 struct ChatAttachment {
+    #[allow(dead_code)]
     file_id: String,
 }
 
@@ -572,70 +574,70 @@ async fn upload_handler(
     State(state): State<AppState>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
-    while let Ok(Some(field)) = multipart.next_field().await {
-        let file_name = field
-            .file_name()
-            .and_then(|name| {
-                std::path::Path::new(name)
-                    .file_name()
-                    .map(|file_name| file_name.to_string_lossy().to_string())
-            })
-            .unwrap_or_else(|| "upload".to_string());
-        let file_id = uuid::Uuid::new_v4().to_string();
-        let content_type = field
-            .content_type()
-            .unwrap_or("application/octet-stream")
-            .to_string();
-        let ext = file_name
-            .rsplit('.')
-            .next()
-            .unwrap_or("bin");
-        let stored_name = format!("{file_id}.{ext}");
-        let path = state.upload_dir.join(&stored_name);
+    let Ok(Some(field)) = multipart.next_field().await else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({ "error": "no file provided" })),
+        );
+    };
 
-        match field.bytes().await {
-            Ok(data) => {
-                if let Err(e) = tokio::fs::create_dir_all(&state.upload_dir).await {
-                    error!(error = %e, "failed to create upload directory");
-                    return (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(serde_json::json!({ "error": "upload directory unavailable" })),
-                    );
-                }
+    let file_name = field
+        .file_name()
+        .and_then(|name| {
+            std::path::Path::new(name)
+                .file_name()
+                .map(|file_name| file_name.to_string_lossy().to_string())
+        })
+        .unwrap_or_else(|| "upload".to_string());
+    let file_id = uuid::Uuid::new_v4().to_string();
+    let content_type = field
+        .content_type()
+        .unwrap_or("application/octet-stream")
+        .to_string();
+    let ext = file_name
+        .rsplit('.')
+        .next()
+        .unwrap_or("bin");
+    let stored_name = format!("{file_id}.{ext}");
+    let path = state.upload_dir.join(&stored_name);
 
-                if let Err(e) = tokio::fs::write(&path, &data).await {
-                    error!(error = %e, "failed to write upload");
-                    return (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(serde_json::json!({ "error": "write failed" })),
-                    );
-                }
-
+    match field.bytes().await {
+        Ok(data) => {
+            if let Err(e) = tokio::fs::create_dir_all(&state.upload_dir).await {
+                error!(error = %e, "failed to create upload directory");
                 return (
-                    StatusCode::OK,
-                    Json(serde_json::json!({
-                        "file_id": file_id,
-                        "url": format!("/api/uploads/{stored_name}"),
-                        "filename": file_name,
-                        "size": data.len(),
-                        "content_type": content_type,
-                    })),
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({ "error": "upload directory unavailable" })),
                 );
             }
-            Err(e) => {
-                error!(error = %e, "failed to read upload");
+
+            if let Err(e) = tokio::fs::write(&path, &data).await {
+                error!(error = %e, "failed to write upload");
                 return (
-                    StatusCode::BAD_REQUEST,
-                    Json(serde_json::json!({ "error": "read failed" })),
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({ "error": "write failed" })),
                 );
             }
+
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "file_id": file_id,
+                    "url": format!("/api/uploads/{stored_name}"),
+                    "filename": file_name,
+                    "size": data.len(),
+                    "content_type": content_type,
+                })),
+            )
+        }
+        Err(e) => {
+            error!(error = %e, "failed to read upload");
+            (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({ "error": "read failed" })),
+            )
         }
     }
-
-    (
-        StatusCode::BAD_REQUEST,
-        Json(serde_json::json!({ "error": "no file provided" })),
-    )
 }
 
 async fn api_not_found_handler() -> impl IntoResponse {

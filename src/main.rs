@@ -662,12 +662,12 @@ fn handle_daemon_run(config: Option<PathBuf>, pid_file: Option<PathBuf>) -> anyh
         } else {
             runner
         };
-        let runner = if !config.brains.is_empty() {
+        let runner = if config.brains.is_empty() {
+            runner
+        } else {
             let workdir = config.agent.workspace.clone()
                 .unwrap_or_else(|| ".".to_string());
             runner.with_brains(config.brains.clone(), workdir)
-        } else {
-            runner
         };
 
         runner.bootstrap_providers(&db_path, &config_providers).await?;
