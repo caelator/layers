@@ -1,131 +1,233 @@
 # Layers
 
-A local-first Rust CLI that assembles grounded working context from structured memory and codebase analysis before you (or an agent) make changes to a repository.
+Layers is the local-first context compiler for coding agents.
 
-Layers routes questions through two external local systems:
+It turns repository structure, Git history, code graph intelligence, project memory, prior agent sessions, decisions, constraints, failures, and plans into bounded, cited, reproducible context packets that agents can consume before they edit.
 
-- **[MemoryPort](https://github.com/caelator/memoryport)** for durable memory and semantic retrieval, primarily via the local `uc` CLI and `~/.memoryport/uc.toml`
-- **[GitNexus](https://github.com/caelator/gitnexus)** for codebase structure: call graphs, impact analysis, execution flows
+Layers is not trying to be another Hermes, OpenClaw, DeerFlow, Letta, mem0, Graphiti, or Cognee. Those systems are execution layers, agent platforms, or memory backends. Layers is the context spine they can consult.
 
-Important integration note:
+## The Problem
 
-- **GitNexus** is a real MCP-capable tool surface and can also be reached through OpenClaw GitNexus skills.
-- **MemoryPort** in this workflow is **not** assumed to be an MCP tool surface. The existing `codex-memoryport-bridge` is an OpenAI Responses-style memory injection proxy, not a generic MCP server. Layers therefore treats MemoryPort as a local CLI/service integration (`uc`, curated JSONL, optional proxy), not as a raw MCP tool provider.
+AI coding agents are good at acting. They are still bad at reliably knowing what local context matters before they act.
 
-The result is a **context packet** — a structured bundle of relevant memory and structural information — delivered as plain text or JSON.
+They forget:
 
-## Why Layers Exists
+- previous failed attempts
+- active project constraints
+- architecture decisions
+- fragile files and tests
+- Git history and branch-local facts
+- prior sessions from other agents
+- why code is shaped the way it is
 
-AI coding agents and human developers both make better changes when they have the right context *before* they start editing. Layers exists to answer the question: **"What do I need to know before touching this code?"**
+Layers answers:
 
-It is not a code editor, a hosted service, or a workflow platform. It is a small CLI that reads local data, shells out to local tools, and prints context.
+> What does this agent need to know before touching this code?
 
-## Status
+## What Layers Produces
 
-Early software. Usable for local evaluation today.
+The core artifact is a context packet.
 
-| Category | State |
-|----------|-------|
-| `query`, `curated import`, `validate` | Stable enough for daily use |
-| `refresh`, `remember`, `council run`, `council promote` | Useful but depends on external tool setup |
-| Provider contracts, council ergonomics | Experimental |
+A context packet includes:
 
-If an external dependency is missing, Layers degrades gracefully — it uses whatever local data it can still read rather than failing outright.
+- relevant memories
+- active decisions and constraints
+- known failures and pitfalls
+- relevant files, symbols, and execution flows
+- GitNexus-backed impact analysis when available
+- suggested validation commands
+- source citations
+- selection reasons
+- warnings when context is degraded, stale, conflicting, or incomplete
+
+The packet can be emitted as JSON, Markdown, or an agent-ready prompt.
+
+## What Layers Is
+
+Layers is:
+
+- a local-first Rust CLI
+- a deterministic context packet generator
+- an explicit project memory ledger
+- a Git/code-graph adapter around GitNexus
+- a MemoryPort/uc integration surface
+- an importer/distiller for prior agent sessions
+- an MCP/CLI surface for Hermes, Claude Code, Codex, OpenClaw, DeerFlow, and other agents
+
+## What Layers Is Not
+
+Layers is not:
+
+- a personal assistant
+- a hosted service
+- a chat-first product
+- a general agent runtime
+- a messaging gateway
+- a generic model-provider platform
+- a replacement for mature agent frameworks
+- a replacement for generic memory systems
+
+Non-essential runtime surfaces still exist in the repository, but they are deprecated as product direction unless they directly support context packet generation.
+
+See [docs/NORTH_STAR.md](docs/NORTH_STAR.md) for the binding product direction.
+
+## Stable Core
+
+These commands define the intended product surface:
+
+| Command | Status | Purpose |
+|---------|--------|---------|
+| `layers query <text>` | Stable core | Assemble a context packet for a task |
+| `layers remember <kind>` | Stable core | Add explicit project memory |
+| `layers curated import <file>` | Stable core | Import canonical JSONL records |
+| `layers validate` | Stable core | Check local readiness and degraded modes |
+| `layers refresh` | Stable core | Refresh GitNexus/MemoryPort derived context |
+| `layers config` | Stable core | Inspect local configuration |
+| `layers gate` | Support | Run repo quality checks |
+
+Near-term v0.2 additions:
+
+| Command | Status | Purpose |
+|---------|--------|---------|
+| `layers memory ...` | Planned stable | List/search/show/retire/audit memory |
+| `layers impact <target>` | Planned stable | Produce Git-aware blast-radius context |
+| `layers import-session ...` | Planned stable | Normalize agent sessions into a local ledger |
+| `layers distill-session <id>` | Planned stable | Draft memories from sessions |
+| `layers mcp serve` | Planned stable | Expose context/memory/impact tools to agents |
+
+## Deprecated as Core Direction
+
+These commands/features are not removed, but they are no longer core product direction:
+
+| Surface | Status | Reason |
+|---------|--------|--------|
+| `layers chat` | Deprecated / experimental | Duplicates mature agent chat runtimes |
+| `layers daemon` | Deprecated / experimental | Should not be the primary product surface |
+| web portal | Deprecated / experimental | Duplicates agent UIs; useful only for demos/inspection |
+| generic provider runtime | Deprecated / experimental | Duplicates Hermes/OpenClaw/DeerFlow/Letta |
+| generic tool runtime | Deprecated / experimental | Duplicates existing agent frameworks |
+| subagent orchestration | Deprecated / experimental | Duplicates DeerFlow/Hermes/OpenClaw |
+| messaging channels | Deprecated / experimental | Duplicates OpenClaw/Hermes gateways |
+| infrastructure credential manager | Deprecated / experimental | Outside the context-compiler thesis |
+| autonomous monitor/fixer | Deprecated / experimental | Useful only if scoped to context health |
 
 ## Quick Start
 
 ```bash
-# Build from source (requires Rust 1.85+)
+# Build from source. Requires Rust 1.85+.
 cargo build
 
-# Install to your PATH
-cargo install --path . --locked
+# Check local readiness.
+cargo run -- validate
 
-# Run the health check
-layers validate
+# Ask for context before work.
+cargo run -- query "What constraints apply before changing the auth module?"
 
-# Ask a question
-layers query "What constraints apply to the auth module?"
-
-# Get JSON output
-layers query "What did we decide about the data model?" --json
+# Emit JSON for tooling.
+cargo run -- query "What did we decide about model routing?" --json
 ```
 
-See [docs/walkthrough.md](docs/walkthrough.md) for a full getting-started guide.
+## Bootstrap Reality
 
-## Commands
+Layers currently has a local path dependency on `../substrate` in `Cargo.toml`.
 
-| Command | Purpose |
-|---------|---------|
-| `layers query <text>` | Route a question and return assembled context |
-| `layers validate` | Health check across routing, providers, and records |
-| `layers curated import <file>` | Import JSONL records into canonical memory |
-| `layers refresh` | Re-index the repo via GitNexus |
-| `layers remember <kind>` | Append workflow memory (plan, learning, trace) |
-| `layers council run <task>` | Run a three-stage council workflow |
-| `layers council promote <run_id>` | Promote a converged council run to canonical memory |
+If a fresh clone fails with:
 
-Full command reference: [docs/cli.md](docs/cli.md)
-
-For repeatable benchmark checks, run:
-
-```bash
-layers validate --routing benchmarks/routing-answer-keys.jsonl --ci
+```text
+failed to read ../substrate/Cargo.toml
 ```
+
+then clone or place the expected `substrate` crate next to `layers`, or update the dependency once it is published/moved into this workspace. This is a known bootstrap issue and should be resolved before v0.2 is considered release-ready.
 
 ## External Dependencies
 
-Layers is intentionally small and shells out to local tools:
+Layers is intentionally useful in degraded mode.
 
-| Dependency | Required for | Install |
-|------------|-------------|---------|
-| **Rust 1.85+** | Building from source | [rustup.rs](https://rustup.rs) |
-| **gitnexus** | Graph queries, impact analysis, `refresh` | `npm install -g gitnexus` |
-| **uc** + `~/.memoryport/uc.toml` | Semantic memory retrieval and direct MemoryPort store/query operations | See MemoryPort docs |
-| **codex-memoryport-bridge** (optional) | OpenAI/Codex Responses proxy with automatic memory injection | Local custom integration; not required for Layers CLI |
-| **gemini**, **claude**, **codex** CLIs | Council workflow stages | Optional; configurable per-command |
+| Dependency | Required for | Degraded behavior when missing |
+|------------|--------------|--------------------------------|
+| Rust 1.85+ | Building | Required |
+| GitNexus | Code graph, impact analysis, execution flows | Graph sections empty; packet warns |
+| `uc` + `~/.memoryport/uc.toml` | MemoryPort semantic retrieval | Structured local memory still works |
+| MemoryPort proxy/bridge | Optional model-traffic memory injection | Not required by Layers |
+| Claude/Codex/Gemini CLIs | Council experiments | Stable context commands still work |
 
-**Without gitnexus:** `layers refresh` fails; graph-backed query results are empty. Everything else works.
+## Core Workflow
 
-**Without uc:** Semantic recall is unavailable. Layers still searches canonical structured records and local fallback files.
+### 1. Before editing
 
-**Without codex-memoryport-bridge:** Nothing breaks in Layers itself. That bridge is for model-traffic augmentation, not for Layers retrieval.
+```bash
+layers query "Fix DeepSeek provider 404 in Hermes" --json
+```
 
-**Without model CLIs:** `layers council run` fails. All other commands work normally.
+Agent uses the context packet to see:
 
-## What Layers Is Not
+- prior decisions
+- known provider gotchas
+- relevant files
+- suggested tests
+- risks
 
-- **Not a hosted service.** Everything runs locally, reads local files, and writes local files.
-- **Not a stable provider API.** The interfaces between Layers and its external tools may change.
-- **Not a workflow platform.** The council feature is a fixed three-stage pipeline, not a general orchestration engine.
-- **Not a vector database.** Canonical data is structured JSONL. Embeddings are a retrieval optimization, not the source of truth.
+### 2. Preserve the learning
+
+```bash
+layers remember failure \
+  --summary "DeepSeek native API rejects non-native model IDs like deepseek-v4-pro" \
+  --targets normalize_model_for_provider
+```
+
+### 3. Refresh derived context
+
+```bash
+layers refresh
+```
+
+### 4. Hand context to another agent
+
+Near-term v0.2 target:
+
+```bash
+layers query "Continue DeepSeek provider work" --agent-prompt
+```
 
 ## Data Model
 
-Canonical memory lives in one file: `memoryport/curated-memory.jsonl`
+Canonical curated memory currently lives at:
 
-Semantic retrieval is an optimization layered on top of canonical records via `uc`/MemoryPort; it is not the canonical store. Likewise, the local `codex-memoryport-bridge` can inject retrieved context into OpenAI/Codex Responses traffic, but it is not itself a canonical data store or MCP tool registry.
+```text
+memoryport/curated-memory.jsonl
+```
 
-This is an append-friendly JSONL file containing typed records such as decisions, constraints, next steps, and postmortems. Each record has a standard envelope with an ID, entity type, timestamp, and payload.
+It is an explicit, reviewable, append-friendly JSONL memory spine. Generated operational files under `memoryport/` are useful for debugging but should not be treated as canonical memory unless promoted.
 
-Everything else under `memoryport/` (audit logs, council traces, council run directories) is generated local output — useful for debugging but not the source of truth.
+See [docs/data-model.md](docs/data-model.md).
 
-Full data model documentation: [docs/data-model.md](docs/data-model.md)
+## Roadmap
+
+The v0.2 roadmap is a scope reset around the context-compiler thesis:
+
+1. truthful bootstrap and degraded-mode diagnostics
+2. ContextPacket v1
+3. explicit memory inspection/audit commands
+4. Git-aware `layers impact`
+5. session import/distillation
+6. MCP tools for other agents
+7. context-quality benchmarks
+8. integration docs for Hermes/Claude/Codex/OpenClaw
+
+See [docs/ROADMAP_v0.2.md](docs/ROADMAP_v0.2.md).
 
 ## Documentation
 
 | Document | Contents |
 |----------|----------|
-| [Walkthrough](docs/walkthrough.md) | Prerequisites through first workflow, step by step |
-| [CLI Reference](docs/cli.md) | Every command, flag, and option |
-| [FAQ](docs/faq.md) | Common questions and sharp edges |
-| [Data Model](docs/data-model.md) | Canonical vs. generated files, record shapes |
-| [Development](docs/development.md) | Build, test, validate, contribution workflow |
-| [Release Readiness](docs/release-readiness.md) | What is ready, what is experimental, known gaps |
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for scope, development loop, and validation expectations.
+| [North Star](docs/NORTH_STAR.md) | Product direction and non-goals |
+| [v0.2 Roadmap](docs/ROADMAP_v0.2.md) | Detailed plan to make Layers useful |
+| [Production Readiness + Dogfood Plan](docs/PRODUCTION_READINESS_DOGFOOD_PLAN.md) | Release gates and dogfood workflow |
+| [CLI Reference](docs/cli.md) | Command reference and stability labels |
+| [Walkthrough](docs/walkthrough.md) | Getting started workflow |
+| [Data Model](docs/data-model.md) | Canonical and generated memory files |
+| [Development](docs/development.md) | Build/test/development loop |
+| [Release Readiness](docs/release-readiness.md) | Current maturity notes |
 
 ## License
 

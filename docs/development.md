@@ -4,7 +4,17 @@
 
 - Rust 1.85 or newer
 - `gitnexus` on `PATH` for graph-backed workflows
-- `uc` and `~/.memoryport/uc.toml` for Memoryport semantic retrieval
+- `uc` and `~/.memoryport/uc.toml` for MemoryPort semantic retrieval
+
+## Bootstrap Known Issue
+
+The current root `Cargo.toml` depends on a sibling path crate:
+
+```toml
+substrate = { path = "../substrate" }
+```
+
+A fresh clone without `../substrate/Cargo.toml` will not build or test. Before v0.2 release readiness, this must be resolved by moving the crate into the workspace, switching to a git/crates.io dependency, or adding an explicit bootstrap script that clones the expected sibling repository.
 
 ## Common Commands
 

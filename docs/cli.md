@@ -1,57 +1,134 @@
 # CLI Reference
 
-Complete reference for every Layers command, subcommand, and option.
+Complete reference for the Layers command surface.
+
+Layers is being narrowed around its North Star: a local-first context compiler for coding agents. Commands are labeled by stability so contributors know which surfaces are core and which are deprecated/experimental.
+
+Status labels:
+
+- **Stable core** — part of the intended v0.2 product surface.
+- **Support** — useful developer/maintenance command, but not the product itself.
+- **Beta** — useful if it feeds context or memory, but subject to change.
+- **Deprecated / experimental** — not removed, but not core product direction. Do not expand without explicit justification against `docs/NORTH_STAR.md`.
+- **Planned** — target for v0.2; may not exist yet.
 
 ---
+
+## Stable Core Commands
 
 ## `layers query <text>`
 
-Route a question through configured providers and print the assembled context packet.
+Status: **Stable core**
 
-**Arguments:**
+Route a question through configured context providers and print an assembled context packet.
 
-- `<text>` — the query string (required)
+Arguments:
 
-**Options:**
+- `<text>` — the query/task string.
+
+Options:
 
 | Flag | Description |
 |------|-------------|
-| `--json` | Emit structured JSON instead of plain text |
-| `--no-audit` | Skip appending an audit event to the audit log |
+| `--json` | Emit structured JSON instead of human-readable text |
+| `--no-audit` | Skip appending an audit event |
+| `--uc-min-results <n>` | Warn if semantic MemoryPort recall returns fewer than N results |
 
-**Examples:**
+Examples:
 
 ```bash
-layers query "What constraints apply to the auth module?"
-layers query "What did we decide about caching?" --json
-layers query "Show me the call graph for handle_query" --no-audit
+layers query "What constraints apply before changing the auth module?"
+layers query "What did we decide about provider routing?" --json
+layers query "Show context for normalize_model_for_provider" --no-audit
 ```
 
-**Behavior:**
+Intended v0.2 behavior:
+
+1. Build a `ContextPacket`.
+2. Include relevant memory, graph context, failures, decisions, constraints, and suggested validation commands.
+3. Include source citations and selection reasons.
+4. Warn clearly when GitNexus, MemoryPort, or other providers are unavailable.
+
+Current behavior:
 
 1. Pattern-matches the query to determine a routing mode: `memory_only`, `graph_only`, `both`, or `neither`.
-2. Retrieves results from applicable providers (curated records, semantic search via `uc`, GitNexus graph).
-3. Assembles and prints a context packet.
-4. Appends an audit event to `memoryport/layers-audit.jsonl` (unless `--no-audit`).
+2. Retrieves results from applicable providers: curated records, semantic search via `uc`, and GitNexus graph when available.
+3. Assembles and prints a context packet-like response.
+4. Appends an audit event to `memoryport/layers-audit.jsonl` unless `--no-audit` is used.
 
-**Integration note:** GitNexus is expected to be reachable as a local CLI/MCP-backed system. MemoryPort is expected to be reachable through `uc` and local canonical files. The existing `codex-memoryport-bridge` is a model proxy, not a generic MCP tool surface.
+## `layers remember <kind>`
 
----
+Status: **Stable core**
+
+Append explicit workflow memory to dedicated JSONL storage files.
+
+Kinds:
+
+- `plan`
+- `learning`
+- `trace`
+
+Options:
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--task <name>` | Required for plan/trace unless summary supplied | Task identifier |
+| `--summary <text>` | Required for learning or trace without task | Human-readable summary |
+| `--file <path>` | Required for plan | Path to markdown plan file |
+| `--task-type <type>` | No | Type classification |
+| `--artifacts-dir <dir>` | No | Related artifacts directory |
+| `--targets <symbols>` | No | Comma-separated GitNexus target symbols |
+
+Examples:
+
+```bash
+layers remember learning \
+  --summary "DeepSeek native API rejects non-native model IDs" \
+  --targets normalize_model_for_provider
+
+layers remember plan \
+  --task "ContextPacket v1" \
+  --file docs/ROADMAP_v0.2.md
+```
+
+v0.2 target:
+
+Replace stringly `kind` handling with typed memory commands for decisions, constraints, failures, plans, test commands, status notes, architecture notes, handoffs, and open questions.
+
+## `layers curated import <file>`
+
+Status: **Stable core**
+
+Import JSONL records from an external file into the canonical curated memory store.
+
+Arguments:
+
+- `<file>` — path to JSONL records in the standard envelope format.
+
+Behavior:
+
+Records are merged into `memoryport/curated-memory.jsonl`. See `docs/data-model.md` for the expected record format.
+
+Example:
+
+```bash
+layers curated import ./exported-records.jsonl
+```
 
 ## `layers validate`
 
+Status: **Stable core**
+
 Run a health check across routing, provider reachability, memory workflows, graph workflows, and record shape validation.
 
-**Options:**
+Options:
 
 | Flag | Description |
 |------|-------------|
 | `--routing <file>` | Run answer-key routing benchmarks from a JSONL file |
 | `--ci` | Exit non-zero if validation or routing benchmarks fail |
 
-**Output:** Pass/fail summary for each check, plus an overall status.
-
-**Note:** `validate` can report overall success when semantic embedding access is unavailable, as long as typed-memory and fallback paths satisfy the current checks. This is intentional — it validates what you have, not what you could have.
+Examples:
 
 ```bash
 layers validate
@@ -59,184 +136,277 @@ layers validate --routing benchmarks/routing-answer-keys.jsonl
 layers validate --routing benchmarks/routing-answer-keys.jsonl --ci
 ```
 
-## `layers curated import <file>`
+Note:
 
-Import JSONL records from an external file into the canonical curated memory store.
-
-**Arguments:**
-
-- `<file>` — path to a JSONL file containing records in the standard envelope format
-
-**Behavior:** Records are merged into `memoryport/curated-memory.jsonl`. See [data-model.md](data-model.md) for the expected record format.
-
-```bash
-layers curated import ./exported-records.jsonl
-```
-
----
+`validate` can currently pass with degraded providers when typed-memory and fallback paths satisfy checks. v0.2 should make this more explicit through `layers doctor` or improved validate output.
 
 ## `layers refresh`
 
-Re-index the current repository using GitNexus.
+Status: **Stable core**
 
-**Behavior:**
+Refresh derived context sources.
+
+Behavior:
 
 - Runs `gitnexus analyze` on the workspace root.
-- If `.gitnexus/` already exists with embeddings configured, preserves that setting by passing `--embeddings`.
+- Preserves `.gitnexus` embeddings mode when possible.
 - Flushes/checks MemoryPort through `uc` when available.
 - Outputs JSON status on completion.
 
-**Requires:** `gitnexus` on `PATH`.
+Requires:
+
+- `gitnexus` on `PATH` for graph refresh.
+
+Example:
 
 ```bash
 layers refresh
 ```
 
----
+## `layers config`
 
-## `layers remember <kind>`
+Status: **Stable core**
 
-Append explicit workflow memory to dedicated JSONL storage files.
+Inspect local configuration.
 
-**Kinds:**
+Subcommands:
 
-### `layers remember plan`
+- `show`
+- `path`
+- `validate`
 
-Store a plan artifact.
+## Planned Stable Commands
 
-| Flag | Required | Description |
-|------|----------|-------------|
-| `--task <name>` | Yes | Task identifier |
-| `--file <path>` | Yes | Path to the plan file |
-| `--task-type <type>` | No | Type classification |
-| `--artifacts-dir <dir>` | No | Directory for related artifacts |
-| `--targets <symbols>` | No | Comma-separated GitNexus target symbols |
+These are the next commands Layers should add or stabilize for v0.2.
 
-### `layers remember learning`
+## `layers memory ...`
 
-Store a learning.
+Status: **Planned stable**
 
-| Flag | Required | Description |
-|------|----------|-------------|
-| `--summary <text>` | Yes | Summary of the learning |
-| `--task-type <type>` | No | Type classification |
-| `--artifacts-dir <dir>` | No | Directory for related artifacts |
-| `--targets <symbols>` | No | Comma-separated GitNexus target symbols |
+Inspect and maintain explicit project memory.
 
-### `layers remember trace`
-
-Store a workflow trace.
-
-| Flag | Required | Description |
-|------|----------|-------------|
-| `--task <name>` | Conditional | Task identifier (required if no `--summary`) |
-| `--summary <text>` | Conditional | Trace summary (required if no `--task`) |
-| `--task-type <type>` | No | Type classification |
-| `--artifacts-dir <dir>` | No | Directory for related artifacts |
-| `--targets <symbols>` | No | Comma-separated GitNexus target symbols |
-
-**Storage:** Plans, learnings, and traces are written to `memoryport/council-{plans,learnings,traces}.jsonl` respectively.
-
----
-
-## `layers council run <task>`
-
-Execute a three-stage council workflow.
-
-**Arguments:**
-
-- `<task>` — description of the task to evaluate
-
-**Stages:**
-
-1. **Gemini** generates options or proposals
-2. **Claude** critiques those proposals
-3. **Codex** synthesizes a converged recommendation
-
-**Options:**
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--gemini-cmd <cmd>` | `gemini` | Command to invoke the Gemini CLI |
-| `--claude-cmd <cmd>` | `claude` | Command to invoke the Claude CLI |
-| `--codex-cmd <cmd>` | `codex` | Command to invoke the Codex CLI |
-| `--timeout-secs <n>` | — | Per-stage timeout in seconds |
-| `--retry-limit <n>` | — | Maximum retries per stage |
-| `--artifacts-dir <dir>` | `memoryport/council-runs` | Output directory for run artifacts |
-| `--targets <symbols>` | — | Comma-separated GitNexus symbols for structural context |
-| `--json` | — | Emit JSON output |
-
-**Artifacts:** Written to `<artifacts-dir>/<run_id>/`:
-
-- `context.txt`, `context.json` — input context packet
-- Per-stage prompt and output files
-- `run.json` — run metadata (stages, timing, exit codes)
-- `convergence.json` — convergence assessment
-
-**Example:**
+Planned subcommands:
 
 ```bash
-layers council run "Design error handling strategy" \
-  --gemini-cmd gemini \
-  --claude-cmd claude \
-  --codex-cmd codex \
-  --targets handle_query,build_context \
-  --timeout-secs 120
+layers memory list
+layers memory search <query>
+layers memory show <id>
+layers memory retire <id>
+layers memory audit
 ```
+
+## `layers impact <target>`
+
+Status: **Planned stable**
+
+Produce Git-aware blast-radius context for a symbol, file, or task.
+
+Expected output:
+
+- direct callers/dependents
+- affected execution flows
+- likely tests/commands
+- related files
+- recent commits touching target
+- linked decisions/failures/constraints
+- risk level
+
+## `layers import-session ...`
+
+Status: **Planned stable**
+
+Normalize prior agent sessions into an append-only local session ledger.
+
+Initial importers:
+
+- Hermes
+- Claude Code
+- Codex
+- generic JSONL
+
+## `layers distill-session <id>`
+
+Status: **Planned stable**
+
+Draft memory records from a normalized session. Drafts require explicit promotion before they become canonical memory.
+
+## `layers mcp serve`
+
+Status: **Planned stable**
+
+Expose the stable context/memory/impact surface to other agents.
+
+Planned MCP tools:
+
+- `layers_context_packet`
+- `layers_remember`
+- `layers_impact`
+- `layers_memory_search`
+- `layers_promote`
+- `layers_doctor`
 
 ---
 
-## `layers council promote <run_id>`
+## Support Commands
 
-Promote a completed, converged council run into canonical curated memory.
+## `layers gate`
 
-**Arguments:**
+Status: **Support**
 
-- `<run_id>` — the run identifier (directory name under the artifacts dir)
+Run the repo quality gate: format, compile, clippy, test, audit, and MCP ping.
 
-**Options:**
+Options:
 
 | Flag | Description |
 |------|-------------|
-| `--project <slug>` | Target project slug for the promoted record metadata |
-| `--artifacts-dir <dir>` | Override the artifacts directory (default: `memoryport/council-runs`) |
-| `--dry-run` | Print the record that would be written without writing it |
+| `--skip-mcp` | Skip MCP connectivity check |
+| `--audit-timeout <secs>` | Override `cargo audit` timeout |
+| `--workspace <path>` | Workspace to gate |
 
-**Promotion fails if:**
+## `layers feedback`
 
-- The run did not complete
-- Convergence did not succeed
-- The run was already promoted
+Status: **Support**
 
-**Example:**
+Record a route correction to improve future routing decisions.
 
-```bash
-# Preview first
-layers council promote 20260401T120000Z_design-caching --project layers --dry-run
+This is useful for improving `layers query`, so it remains support/core-adjacent.
 
-# Then promote
-layers council promote 20260401T120000Z_design-caching --project layers
-```
+## `layers migrate`
+
+Status: **Support**
+
+Migrate legacy project records into canonical curated memory.
+
+Options:
+
+| Flag | Description |
+|------|-------------|
+| `--dry-run` | Preview without writing |
+
+## `layers init`
+
+Status: **Support**
+
+Bootstrap a Layers workspace.
+
+This command is useful only if it initializes the stable context/memory surfaces. It should not bootstrap deprecated runtime surfaces by default.
 
 ---
 
-## Environment Variables
+## Beta Commands
 
-| Variable | Purpose |
-|----------|---------|
-| `LAYERS_WORKSPACE_ROOT` | Override workspace root detection (default: nearest `.git` directory or cwd) |
+## `layers council run <task>`
 
-## Configuration Files
+Status: **Beta**
 
-| Path | Purpose |
-|------|---------|
-| `~/.memoryport/uc.toml` | MemoryPort semantic retrieval configuration (used by `uc`) |
-| `.gitnexus/meta.json` | GitNexus index metadata (generated, not hand-edited) |
+Execute a fixed three-stage council workflow:
+
+1. Gemini generates proposals.
+2. Claude critiques those proposals.
+3. Codex synthesizes a converged recommendation.
+
+This remains valuable when council outputs can be promoted into explicit project memory. It should not become a general orchestration framework.
+
+## `layers council promote <run_id>`
+
+Status: **Beta**
+
+Promote a completed, converged council run into canonical curated memory.
+
+This is aligned with the North Star because it converts deliberation into durable project memory.
+
+## Other `layers council` subcommands
+
+Status: **Beta**
+
+- `resume`
+- `resume-last`
+- `status`
+- `list`
+
+These support the council memory-production workflow, but are not the core product.
+
+---
+
+## Deprecated / Experimental Commands
+
+The commands below are not removed, but they are deprecated as core product direction. They duplicate mature agent frameworks or sit outside the context-compiler thesis.
+
+## `layers chat`
+
+Status: **Deprecated / experimental**
+
+Reason:
+
+General chat loops are already handled better by Hermes, Claude Code, Codex, OpenClaw, DeerFlow, Letta, and similar systems.
+
+Allowed future work:
+
+Only maintain enough to dogfood context packets or demonstrate integrations.
+
+## `layers daemon`
+
+Status: **Deprecated / experimental**
+
+Reason:
+
+A daemon-first runtime competes with mature agent gateways and makes Layers harder to understand.
+
+Allowed future work:
+
+Only expose stable context/memory/impact APIs if needed by MCP or local integrations.
+
+## `layers monitor`
+
+Status: **Deprecated / experimental**
+
+Reason:
+
+Autonomous repo monitoring/fixing is agent-runtime behavior. It should not drive Layers architecture.
+
+Allowed future work:
+
+Only monitor context dependency health if folded into `doctor`/`validate`.
+
+## `layers technician`
+
+Status: **Deprecated / experimental**
+
+Reason:
+
+Self-healing integration logic is useful but broad. It should be scoped to context dependency health, not general repair automation.
+
+## `layers infrastructure`
+
+Status: **Deprecated / experimental**
+
+Reason:
+
+Infrastructure credential management is outside the context compiler thesis.
+
+## `layers telemetry`
+
+Status: **Deprecated / experimental**
+
+Reason:
+
+Telemetry is useful for diagnostics, but should not become a standalone product axis.
 
 ## Integration Reality
 
 Layers currently assumes:
 
-- **GitNexus** is a code-intelligence system reachable via the local `gitnexus` CLI and optionally MCP-backed runtimes.
-- **MemoryPort** is a memory system reachable via `uc` and local canonical files.
-- **codex-memoryport-bridge** is an optional OpenAI/Codex Responses proxy for memory injection, not a first-class Layers provider and not a raw MCP tool server.
+- GitNexus is reachable via local CLI and/or MCP-backed systems.
+- MemoryPort is reachable via `uc` and local canonical files.
+- `codex-memoryport-bridge` is optional model-traffic augmentation, not a generic MCP provider.
+- Model CLIs are optional and only required for council/experimental runtime features.
+
+## Bootstrap Known Issue
+
+The current root `Cargo.toml` depends on:
+
+```toml
+substrate = { path = "../substrate" }
+```
+
+A fresh clone without a sibling `../substrate` will not build. This must be fixed or explicitly bootstrapped before v0.2 release readiness.

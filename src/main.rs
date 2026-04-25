@@ -86,12 +86,12 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Run Layers as the single-daemon runtime.
+    /// [deprecated/experimental] Run the non-core daemon runtime.
     Daemon {
         #[command(subcommand)]
         command: DaemonCommands,
     },
-    /// Bootstrap a new Layers workspace.
+    /// [support] Bootstrap a new Layers workspace.
     Init {
         /// Force overwrite existing files.
         #[arg(long)]
@@ -100,7 +100,7 @@ enum Commands {
         #[arg(long)]
         path: Option<std::path::PathBuf>,
     },
-    /// Start an interactive chat loop.
+    /// [deprecated/experimental] Start the non-core interactive chat loop.
     Chat {
         /// System prompt override.
         #[arg(long)]
@@ -115,12 +115,12 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
-    /// Display and manage configuration.
+    /// [stable core] Display and manage configuration.
     Config {
         #[command(subcommand)]
         command: ConfigCommands,
     },
-    /// Retrieve context for a task using heuristic routing.
+    /// [stable core] Retrieve context for a task.
     Query {
         /// The task or question to retrieve context for.
         task: String,
@@ -135,7 +135,7 @@ enum Commands {
         #[arg(long, default_value = "3")]
         uc_min_results: usize,
     },
-    /// Append a plan, learning, or trace record to the JSONL memory spine.
+    /// [stable core] Append explicit memory to the JSONL spine.
     Remember {
         /// Record kind: plan, learning, or trace.
         kind: String,
@@ -158,7 +158,7 @@ enum Commands {
         #[arg(long)]
         targets: Option<String>,
     },
-    /// Run a self-test to verify council config and JSONL stores.
+    /// [stable core] Verify local readiness and degraded modes.
     Validate {
         /// Run routing benchmarks from an answer-key JSONL file.
         #[arg(long)]
@@ -167,13 +167,13 @@ enum Commands {
         #[arg(long)]
         ci: bool,
     },
-    /// Refresh `GitNexus` index and verify `MemoryPort` readiness.
+    /// [stable core] Refresh GitNexus/MemoryPort derived context.
     Refresh {
         /// Also regenerate embeddings (passes --embeddings to gitnexus analyze).
         #[arg(long)]
         embeddings: bool,
     },
-    /// The Perfect Code Gate: format, compile, clippy, test, audit, MCP ping.
+    /// [support] Run format, compile, clippy, test, audit, and MCP checks.
     Gate {
         /// Skip the MCP connectivity check (useful when gitnexus-rs is not on PATH).
         #[arg(long)]
@@ -185,7 +185,7 @@ enum Commands {
         #[arg(long)]
         workspace: Option<std::path::PathBuf>,
     },
-    /// Record a route correction to improve future routing decisions.
+    /// [support] Record a route correction for context selection.
     Feedback {
         /// The task text that was originally classified.
         task: String,
@@ -196,38 +196,38 @@ enum Commands {
         #[arg(long)]
         actual: String,
     },
-    /// Import or manage curated memory records.
+    /// [stable core] Import or manage curated memory records.
     Curated {
         #[command(subcommand)]
         command: CuratedCommands,
     },
-    /// Orchestrate multi-model council workflows.
+    /// [beta] Run/promote council workflows as memory producers.
     Council {
         #[command(subcommand)]
         command: CouncilCommands,
     },
-    /// Manage cloud and infrastructure credentials (SSH, Fly.io, Vercel, Cloudflare, Hetzner, Render, Railway, GitHub, Webhook relay).
+    /// [deprecated/experimental] Manage infrastructure credentials.
     Infrastructure {
         #[command(subcommand)]
         command: InfrastructureCommands,
     },
-    /// Migrate legacy project-records into canonical curated memory.
+    /// [support] Migrate legacy project records into curated memory.
     Migrate {
         /// Preview what would be migrated without writing.
         #[arg(long)]
         dry_run: bool,
     },
-    /// Autonomous repo monitor: git sync, build/test checks, CI watching, fix subagents.
+    /// [deprecated/experimental] Run the non-core autonomous repo monitor.
     Monitor {
         #[command(subcommand)]
         command: cmd::monitor::MonitorArgs,
     },
-    /// Self-healing technician: plugin wiring verification and integration health.
+    /// [deprecated/experimental] Run non-core self-healing integration checks.
     Technician {
         #[command(subcommand)]
         command: cmd::technician::TechnicianArgs,
     },
-    /// View integration telemetry and health reports.
+    /// [deprecated/experimental] View integration telemetry and health reports.
     Telemetry {
         #[command(subcommand)]
         command: TelemetryCommands,
