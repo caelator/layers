@@ -32,8 +32,8 @@ use std::fmt::Write;
 use chrono::Utc;
 
 use data::{
-    CycleReport, Diagnosis, FailureMemory, HealingRecord, RepairBudget, RepairOutcome, TECHNICIAN_SCHEMA_VERSION,
-    TechnicianState,
+    CycleReport, Diagnosis, FailureMemory, HealingRecord, RepairBudget, RepairOutcome,
+    TECHNICIAN_SCHEMA_VERSION, TechnicianState,
 };
 use detection::run_all_detections;
 use escalation::{

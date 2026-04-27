@@ -1,3 +1,4 @@
+pub mod autoresearch;
 pub mod chat;
 pub mod config_cmd;
 pub mod council;
@@ -8,6 +9,7 @@ pub mod infrastructure;
 pub mod init;
 pub mod migrate;
 pub mod monitor;
+pub mod preflight;
 pub mod query;
 pub mod refresh;
 pub mod remember;

@@ -1,0 +1,16 @@
+{
+  "id": "af0132e7-ab3d-4a2f-98da-0c9f278e0c98",
+  "name": "Profile Two",
+  "keywords": [
+    "research"
+  ],
+  "negative_keywords": [],
+  "sources": [],
+  "scoring_prompt": null,
+  "score_threshold": 0.5,
+  "max_llm_calls": 10,
+  "revision": 1,
+  "last_seen_at": null,
+  "archived_at": null,
+  "created_at": "2026-04-26T00:26:50.561270Z"
+}

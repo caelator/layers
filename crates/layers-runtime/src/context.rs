@@ -17,8 +17,8 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 
 use layers_core::{
-    CompactionResult, ContentPart, Message, MessageContent, MessageRole,
-    Result, SessionStore, TokenBudget, Tokenizer,
+    CompactionResult, ContentPart, Message, MessageContent, MessageRole, Result, SessionStore,
+    TokenBudget, Tokenizer,
 };
 
 // ---------------------------------------------------------------------------
@@ -415,7 +415,10 @@ impl ContextAssembler {
 
         selected.reverse();
 
-        while selected.first().is_some_and(|m| m.role == MessageRole::Tool) {
+        while selected
+            .first()
+            .is_some_and(|m| m.role == MessageRole::Tool)
+        {
             selected.remove(0);
         }
 
@@ -527,7 +530,10 @@ impl ContextAssembler {
 
         selected.reverse();
 
-        while selected.first().is_some_and(|m| m.role == MessageRole::Tool) {
+        while selected
+            .first()
+            .is_some_and(|m| m.role == MessageRole::Tool)
+        {
             let removed = selected.remove(0);
             excluded.push(ExcludedMessage {
                 index: removed.index,
@@ -683,12 +689,13 @@ fn estimate_messages_tokens(messages: &[Message]) -> usize {
         .iter()
         .map(|m| match &m.content {
             MessageContent::Text(t) => t.len() / 4,
-            MessageContent::Parts(parts) => {
-                parts.iter().map(|p| match p {
+            MessageContent::Parts(parts) => parts
+                .iter()
+                .map(|p| match p {
                     ContentPart::Text { text } => text.len() / 4,
                     _ => 25,
-                }).sum()
-            }
+                })
+                .sum(),
         })
         .sum()
 }
@@ -780,7 +787,7 @@ mod tests {
     fn composer_trims_low_priority() {
         let mut composer = SystemPromptComposer::new();
         composer.add_section("identity", "short", 10);
-        composer.add_section("padding", &"x".repeat(500), 1);
+        composer.add_section("padding", "x".repeat(500), 1);
         let prompt = composer.compose(None, Some(50));
         assert!(prompt.contains("identity"));
         assert!(!prompt.contains("padding"));

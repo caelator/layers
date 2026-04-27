@@ -3,15 +3,17 @@
 //! A single writer thread processes mutations via an mpsc channel,
 //! while readers can query through the async interface.
 
+use chrono::{DateTime, Utc};
+use rusqlite::{Connection, OptionalExtension, params};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use chrono::{DateTime, Utc};
-use rusqlite::{params, Connection, OptionalExtension};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, error, info};
 
 use layers_core::error::{LayersError, Result};
-use layers_core::traits::{AuthProfileStore, CronStore, ArchiveStore, ProcessRunStore, EmbeddingIndexStore, SessionStore};
+use layers_core::traits::{
+    ArchiveStore, AuthProfileStore, CronStore, EmbeddingIndexStore, ProcessRunStore, SessionStore,
+};
 use layers_core::types::*;
 
 // ---------------------------------------------------------------------------
@@ -218,59 +220,103 @@ impl SqliteStore {
         })
     }
 
-    async fn send_cmd<T>(&self, build: impl FnOnce(oneshot::Sender<Result<T>>) -> DbCommand) -> Result<T> {
+    async fn send_cmd<T>(
+        &self,
+        build: impl FnOnce(oneshot::Sender<Result<T>>) -> DbCommand,
+    ) -> Result<T> {
         let (tx, rx) = oneshot::channel();
         self.cmd_tx
             .send(build(tx))
             .await
-            .map_err(|_| LayersError::Io(std::io::Error::new(std::io::ErrorKind::BrokenPipe, "db worker gone")))?;
-        rx.await
-            .map_err(|_| LayersError::Io(std::io::Error::new(std::io::ErrorKind::BrokenPipe, "db worker dropped reply")))?
+            .map_err(|_| db_worker_gone())?;
+        rx.await.map_err(|_| db_worker_dropped_reply())?
     }
+}
+
+fn db_worker_gone() -> LayersError {
+    LayersError::Io(std::io::Error::new(
+        std::io::ErrorKind::BrokenPipe,
+        "db worker gone",
+    ))
+}
+
+fn db_worker_dropped_reply() -> LayersError {
+    LayersError::Io(std::io::Error::new(
+        std::io::ErrorKind::BrokenPipe,
+        "db worker dropped reply",
+    ))
 }
 
 #[async_trait::async_trait]
 impl SessionStore for SqliteStore {
     async fn get(&self, session_id: &str) -> Result<Session> {
         let id = session_id.to_string();
-        self.send_cmd(|reply| DbCommand::GetSession { session_id: id, reply }).await
+        self.send_cmd(|reply| DbCommand::GetSession {
+            session_id: id,
+            reply,
+        })
+        .await
     }
 
     async fn put(&self, session: &Session) -> Result<()> {
         let s = session.clone();
-        self.send_cmd(|reply| DbCommand::PutSession { session: s, reply }).await
+        self.send_cmd(|reply| DbCommand::PutSession { session: s, reply })
+            .await
     }
 
     async fn list(&self, filter: &SessionFilter) -> Result<Vec<Session>> {
         let f = filter.clone();
-        self.send_cmd(|reply| DbCommand::ListSessions { filter: f, reply }).await
+        self.send_cmd(|reply| DbCommand::ListSessions { filter: f, reply })
+            .await
     }
 
     async fn delete(&self, session_id: &str) -> Result<()> {
         let id = session_id.to_string();
-        self.send_cmd(|reply| DbCommand::DeleteSession { session_id: id, reply }).await
+        self.send_cmd(|reply| DbCommand::DeleteSession {
+            session_id: id,
+            reply,
+        })
+        .await
     }
 
     async fn append_message(&self, session_id: &str, message: Message) -> Result<()> {
         let id = session_id.to_string();
-        self.send_cmd(|reply| DbCommand::AppendMessage { session_id: id, message, reply }).await
+        self.send_cmd(|reply| DbCommand::AppendMessage {
+            session_id: id,
+            message,
+            reply,
+        })
+        .await
     }
 
     async fn get_messages(&self, session_id: &str, limit: Option<usize>) -> Result<Vec<Message>> {
         let id = session_id.to_string();
-        self.send_cmd(|reply| DbCommand::GetMessages { session_id: id, limit, reply }).await
+        self.send_cmd(|reply| DbCommand::GetMessages {
+            session_id: id,
+            limit,
+            reply,
+        })
+        .await
     }
 
     async fn update_model(&self, session_id: &str, model: &str) -> Result<()> {
         let id = session_id.to_string();
         let m = model.to_string();
-        self.send_cmd(|reply| DbCommand::UpdateModel { session_id: id, model: m, reply }).await
+        self.send_cmd(|reply| DbCommand::UpdateModel {
+            session_id: id,
+            model: m,
+            reply,
+        })
+        .await
     }
 
     async fn begin_session_tx(&self, session_id: &str) -> Result<Box<dyn SessionTransaction>> {
         let id = session_id.to_string();
         let _snapshot = self
-            .send_cmd(|reply| DbCommand::BeginTx { session_id: id.clone(), reply })
+            .send_cmd(|reply| DbCommand::BeginTx {
+                session_id: id.clone(),
+                reply,
+            })
             .await?;
         Ok(Box::new(SqliteTx {
             session_id: id,
@@ -314,9 +360,8 @@ impl SessionTransaction for SqliteTx {
                 reply: tx,
             })
             .await
-            .map_err(|_| LayersError::Io(std::io::Error::new(std::io::ErrorKind::BrokenPipe, "db worker gone")))?;
-        rx.await
-            .map_err(|_| LayersError::Io(std::io::Error::new(std::io::ErrorKind::BrokenPipe, "db worker dropped reply")))?
+            .map_err(|_| db_worker_gone())?;
+        rx.await.map_err(|_| db_worker_dropped_reply())?
     }
 }
 
@@ -324,7 +369,10 @@ impl SessionTransaction for SqliteTx {
 // Worker loop
 // ---------------------------------------------------------------------------
 
-fn worker_loop(path: PathBuf, cmd_rx: mpsc::Receiver<DbCommand>) -> std::result::Result<(), Box<dyn std::error::Error>> {
+fn worker_loop(
+    path: PathBuf,
+    cmd_rx: mpsc::Receiver<DbCommand>,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -353,20 +401,42 @@ fn worker_loop_with_conn(
             DbCommand::DeleteSession { session_id, reply } => {
                 let _ = reply.send(do_delete_session(&conn, &session_id));
             }
-            DbCommand::AppendMessage { session_id, message, reply } => {
+            DbCommand::AppendMessage {
+                session_id,
+                message,
+                reply,
+            } => {
                 let _ = reply.send(do_append_message(&conn, &session_id, &message));
             }
-            DbCommand::GetMessages { session_id, limit, reply } => {
+            DbCommand::GetMessages {
+                session_id,
+                limit,
+                reply,
+            } => {
                 let _ = reply.send(do_get_messages(&conn, &session_id, limit));
             }
-            DbCommand::UpdateModel { session_id, model, reply } => {
+            DbCommand::UpdateModel {
+                session_id,
+                model,
+                reply,
+            } => {
                 let _ = reply.send(do_update_model(&conn, &session_id, &model));
             }
             DbCommand::BeginTx { session_id, reply } => {
                 let _ = reply.send(do_begin_tx(&conn, &session_id));
             }
-            DbCommand::CommitTx { session_id, session, messages, reply } => {
-                let _ = reply.send(do_commit_tx(&conn, &session_id, session.as_ref(), &messages));
+            DbCommand::CommitTx {
+                session_id,
+                session,
+                messages,
+                reply,
+            } => {
+                let _ = reply.send(do_commit_tx(
+                    &conn,
+                    &session_id,
+                    session.as_ref(),
+                    &messages,
+                ));
             }
             DbCommand::PutAuthProfile { profile, reply } => {
                 let _ = reply.send(do_put_auth_profile(&conn, &profile));
@@ -399,11 +469,27 @@ fn worker_loop_with_conn(
             DbCommand::GetCronRun { id, reply } => {
                 let _ = reply.send(do_get_cron_run(&conn, &id));
             }
-            DbCommand::ListCronRunsForJob { job_id, limit, reply } => {
+            DbCommand::ListCronRunsForJob {
+                job_id,
+                limit,
+                reply,
+            } => {
                 let _ = reply.send(do_list_cron_runs_for_job(&conn, &job_id, limit));
             }
-            DbCommand::UpdateCronRunStatus { id, status, finished_at, error_message, reply } => {
-                let _ = reply.send(do_update_cron_run_status(&conn, &id, &status, &finished_at, error_message.as_deref()));
+            DbCommand::UpdateCronRunStatus {
+                id,
+                status,
+                finished_at,
+                error_message,
+                reply,
+            } => {
+                let _ = reply.send(do_update_cron_run_status(
+                    &conn,
+                    &id,
+                    &status,
+                    &finished_at,
+                    error_message.as_deref(),
+                ));
             }
             // Archive
             DbCommand::PutArchive { archive, reply } => {
@@ -425,11 +511,26 @@ fn worker_loop_with_conn(
             DbCommand::GetProcessRun { id, reply } => {
                 let _ = reply.send(do_get_process_run(&conn, &id));
             }
-            DbCommand::ListProcessRunsByParent { parent_session_id, reply } => {
+            DbCommand::ListProcessRunsByParent {
+                parent_session_id,
+                reply,
+            } => {
                 let _ = reply.send(do_list_process_runs_by_parent(&conn, &parent_session_id));
             }
-            DbCommand::UpdateProcessRunStatus { id, status, finished_at, result_summary, reply } => {
-                let _ = reply.send(do_update_process_run_status(&conn, &id, &status, &finished_at, result_summary.as_deref()));
+            DbCommand::UpdateProcessRunStatus {
+                id,
+                status,
+                finished_at,
+                result_summary,
+                reply,
+            } => {
+                let _ = reply.send(do_update_process_run_status(
+                    &conn,
+                    &id,
+                    &status,
+                    &finished_at,
+                    result_summary.as_deref(),
+                ));
             }
             // EmbeddingIndexState
             DbCommand::PutEmbeddingIndexState { state, reply } => {
@@ -454,7 +555,7 @@ fn run_migrations(conn: &Connection) -> std::result::Result<(), Box<dyn std::err
         "CREATE TABLE IF NOT EXISTS _meta (
             key   TEXT PRIMARY KEY,
             value TEXT NOT NULL
-        )"
+        )",
     )?;
 
     let version: i64 = conn
@@ -487,8 +588,16 @@ fn map_rusqlite(e: rusqlite::Error) -> LayersError {
 
 fn do_put_session(conn: &Connection, session: &Session) -> Result<()> {
     let metadata_json = serde_json::to_string(&session.metadata)?;
-    let dm_scope_json = session.dm_scope.as_ref().map(serde_json::to_string).transpose()?;
-    let thread_binding_json = session.thread_binding.as_ref().map(serde_json::to_string).transpose()?;
+    let dm_scope_json = session
+        .dm_scope
+        .as_ref()
+        .map(serde_json::to_string)
+        .transpose()?;
+    let thread_binding_json = session
+        .thread_binding
+        .as_ref()
+        .map(serde_json::to_string)
+        .transpose()?;
 
     conn.execute(
         "INSERT OR REPLACE INTO sessions
@@ -575,7 +684,8 @@ fn do_list_sessions(conn: &Connection, filter: &SessionFilter) -> Result<Vec<Ses
 
     sql.push_str(" ORDER BY last_active DESC");
 
-    let params_refs: Vec<&dyn rusqlite::types::ToSql> = param_values.iter().map(|p| p.as_ref()).collect();
+    let params_refs: Vec<&dyn rusqlite::types::ToSql> =
+        param_values.iter().map(|p| p.as_ref()).collect();
 
     let mut stmt = conn.prepare(&sql).map_err(map_rusqlite)?;
     let rows = stmt
@@ -590,8 +700,11 @@ fn do_list_sessions(conn: &Connection, filter: &SessionFilter) -> Result<Vec<Ses
 }
 
 fn do_delete_session(conn: &Connection, session_id: &str) -> Result<()> {
-    conn.execute("DELETE FROM messages WHERE session_key = ?1", params![session_id])
-        .map_err(map_rusqlite)?;
+    conn.execute(
+        "DELETE FROM messages WHERE session_key = ?1",
+        params![session_id],
+    )
+    .map_err(map_rusqlite)?;
     conn.execute("DELETE FROM sessions WHERE key = ?1", params![session_id])
         .map_err(map_rusqlite)?;
     Ok(())
@@ -608,12 +721,17 @@ fn do_append_message(conn: &Connection, session_id: &str, message: &Message) -> 
 
     let role_str = serde_json::to_string(&message.role)?;
     let content_json = serde_json::to_string(&message.content)?;
-    let tool_calls_json = message.tool_calls.as_ref().map(serde_json::to_string).transpose()?;
-    let reasoning_json = message.reasoning.as_ref().map(serde_json::to_string).transpose()?;
-    let timestamp = message
-        .timestamp
-        .unwrap_or_else(Utc::now)
-        .to_rfc3339();
+    let tool_calls_json = message
+        .tool_calls
+        .as_ref()
+        .map(serde_json::to_string)
+        .transpose()?;
+    let reasoning_json = message
+        .reasoning
+        .as_ref()
+        .map(serde_json::to_string)
+        .transpose()?;
+    let timestamp = message.timestamp.unwrap_or_else(Utc::now).to_rfc3339();
 
     conn.execute(
         "INSERT INTO messages
@@ -653,8 +771,8 @@ fn row_to_message(row: &rusqlite::Row) -> rusqlite::Result<Message> {
     let timestamp_str: Option<String> = row.get("timestamp")?;
 
     let role: MessageRole = serde_json::from_str(&role_str).unwrap_or(MessageRole::User);
-    let content: MessageContent = serde_json::from_str(&content_json)
-        .unwrap_or(MessageContent::Text(String::new()));
+    let content: MessageContent =
+        serde_json::from_str(&content_json).unwrap_or(MessageContent::Text(String::new()));
     let tool_calls = tool_calls_json.and_then(|j| serde_json::from_str(&j).ok());
     let reasoning = reasoning_json.and_then(|j| serde_json::from_str(&j).ok());
     let timestamp = timestamp_str.and_then(|s| {
@@ -674,7 +792,11 @@ fn row_to_message(row: &rusqlite::Row) -> rusqlite::Result<Message> {
     })
 }
 
-fn do_get_messages(conn: &Connection, session_id: &str, limit: Option<usize>) -> Result<Vec<Message>> {
+fn do_get_messages(
+    conn: &Connection,
+    session_id: &str,
+    limit: Option<usize>,
+) -> Result<Vec<Message>> {
     let sql = if let Some(n) = limit {
         format!(
             "SELECT * FROM (SELECT * FROM messages WHERE session_key = ?1 ORDER BY seq DESC LIMIT {n}) ORDER BY seq ASC"
@@ -684,7 +806,9 @@ fn do_get_messages(conn: &Connection, session_id: &str, limit: Option<usize>) ->
     };
 
     let mut stmt = conn.prepare(&sql).map_err(map_rusqlite)?;
-    let rows = stmt.query_map(params![session_id], row_to_message).map_err(map_rusqlite)?;
+    let rows = stmt
+        .query_map(params![session_id], row_to_message)
+        .map_err(map_rusqlite)?;
 
     let mut messages = Vec::new();
     for row in rows {
@@ -740,22 +864,26 @@ fn do_commit_tx(
 impl AuthProfileStore for SqliteStore {
     async fn put_profile(&self, profile: AuthProfile) -> Result<()> {
         let p = profile;
-        self.send_cmd(|reply| DbCommand::PutAuthProfile { profile: p, reply }).await
+        self.send_cmd(|reply| DbCommand::PutAuthProfile { profile: p, reply })
+            .await
     }
 
     async fn get_profile(&self, name: &str) -> Result<AuthProfile> {
         let n = name.to_string();
-        self.send_cmd(|reply| DbCommand::GetAuthProfile { name: n, reply }).await
+        self.send_cmd(|reply| DbCommand::GetAuthProfile { name: n, reply })
+            .await
     }
 
     async fn list_profiles(&self, provider: Option<&str>) -> Result<Vec<AuthProfile>> {
         let p = provider.map(String::from);
-        self.send_cmd(|reply| DbCommand::ListAuthProfiles { provider: p, reply }).await
+        self.send_cmd(|reply| DbCommand::ListAuthProfiles { provider: p, reply })
+            .await
     }
 
     async fn delete_profile(&self, name: &str) -> Result<()> {
         let n = name.to_string();
-        self.send_cmd(|reply| DbCommand::DeleteAuthProfile { name: n, reply }).await
+        self.send_cmd(|reply| DbCommand::DeleteAuthProfile { name: n, reply })
+            .await
     }
 }
 
@@ -766,35 +894,59 @@ impl AuthProfileStore for SqliteStore {
 #[async_trait::async_trait]
 impl CronStore for SqliteStore {
     async fn put_job(&self, job: CronJob) -> Result<()> {
-        self.send_cmd(|reply| DbCommand::PutCronJob { job, reply }).await
+        self.send_cmd(|reply| DbCommand::PutCronJob { job, reply })
+            .await
     }
     async fn get_job(&self, id: &str) -> Result<CronJob> {
         let id = id.to_string();
-        self.send_cmd(|reply| DbCommand::GetCronJob { id, reply }).await
+        self.send_cmd(|reply| DbCommand::GetCronJob { id, reply })
+            .await
     }
     async fn list_jobs(&self) -> Result<Vec<CronJob>> {
-        self.send_cmd(|reply| DbCommand::ListCronJobs { reply }).await
+        self.send_cmd(|reply| DbCommand::ListCronJobs { reply })
+            .await
     }
     async fn delete_job(&self, id: &str) -> Result<()> {
         let id = id.to_string();
-        self.send_cmd(|reply| DbCommand::DeleteCronJob { id, reply }).await
+        self.send_cmd(|reply| DbCommand::DeleteCronJob { id, reply })
+            .await
     }
     async fn put_run(&self, run: CronRun) -> Result<()> {
-        self.send_cmd(|reply| DbCommand::PutCronRun { run, reply }).await
+        self.send_cmd(|reply| DbCommand::PutCronRun { run, reply })
+            .await
     }
     async fn get_run(&self, id: &str) -> Result<CronRun> {
         let id = id.to_string();
-        self.send_cmd(|reply| DbCommand::GetCronRun { id, reply }).await
+        self.send_cmd(|reply| DbCommand::GetCronRun { id, reply })
+            .await
     }
     async fn list_runs_for_job(&self, job_id: &str, limit: Option<usize>) -> Result<Vec<CronRun>> {
         let job_id = job_id.to_string();
-        self.send_cmd(|reply| DbCommand::ListCronRunsForJob { job_id, limit, reply }).await
+        self.send_cmd(|reply| DbCommand::ListCronRunsForJob {
+            job_id,
+            limit,
+            reply,
+        })
+        .await
     }
-    async fn update_run_status(&self, id: &str, status: CronRunStatus, finished_at: DateTime<Utc>, error_message: Option<&str>) -> Result<()> {
+    async fn update_run_status(
+        &self,
+        id: &str,
+        status: CronRunStatus,
+        finished_at: DateTime<Utc>,
+        error_message: Option<&str>,
+    ) -> Result<()> {
         let id = id.to_string();
         let finished_at = finished_at.to_rfc3339();
         let error_message = error_message.map(String::from);
-        self.send_cmd(|reply| DbCommand::UpdateCronRunStatus { id, status, finished_at, error_message, reply }).await
+        self.send_cmd(|reply| DbCommand::UpdateCronRunStatus {
+            id,
+            status,
+            finished_at,
+            error_message,
+            reply,
+        })
+        .await
     }
 }
 
@@ -805,19 +957,23 @@ impl CronStore for SqliteStore {
 #[async_trait::async_trait]
 impl ArchiveStore for SqliteStore {
     async fn put(&self, archive: Archive) -> Result<()> {
-        self.send_cmd(|reply| DbCommand::PutArchive { archive, reply }).await
+        self.send_cmd(|reply| DbCommand::PutArchive { archive, reply })
+            .await
     }
     async fn get(&self, id: &str) -> Result<Archive> {
         let id = id.to_string();
-        self.send_cmd(|reply| DbCommand::GetArchive { id, reply }).await
+        self.send_cmd(|reply| DbCommand::GetArchive { id, reply })
+            .await
     }
     async fn list_for_session(&self, session_id: &str) -> Result<Vec<Archive>> {
         let session_id = session_id.to_string();
-        self.send_cmd(|reply| DbCommand::ListArchivesForSession { session_id, reply }).await
+        self.send_cmd(|reply| DbCommand::ListArchivesForSession { session_id, reply })
+            .await
     }
     async fn delete(&self, id: &str) -> Result<()> {
         let id = id.to_string();
-        self.send_cmd(|reply| DbCommand::DeleteArchive { id, reply }).await
+        self.send_cmd(|reply| DbCommand::DeleteArchive { id, reply })
+            .await
     }
 }
 
@@ -828,21 +984,40 @@ impl ArchiveStore for SqliteStore {
 #[async_trait::async_trait]
 impl ProcessRunStore for SqliteStore {
     async fn put(&self, run: ProcessRun) -> Result<()> {
-        self.send_cmd(|reply| DbCommand::PutProcessRun { run, reply }).await
+        self.send_cmd(|reply| DbCommand::PutProcessRun { run, reply })
+            .await
     }
     async fn get(&self, id: &str) -> Result<ProcessRun> {
         let id = id.to_string();
-        self.send_cmd(|reply| DbCommand::GetProcessRun { id, reply }).await
+        self.send_cmd(|reply| DbCommand::GetProcessRun { id, reply })
+            .await
     }
     async fn list_by_parent(&self, parent_session_id: &str) -> Result<Vec<ProcessRun>> {
         let parent_session_id = parent_session_id.to_string();
-        self.send_cmd(|reply| DbCommand::ListProcessRunsByParent { parent_session_id, reply }).await
+        self.send_cmd(|reply| DbCommand::ListProcessRunsByParent {
+            parent_session_id,
+            reply,
+        })
+        .await
     }
-    async fn update_status(&self, id: &str, status: ProcessRunStatus, finished_at: DateTime<Utc>, result_summary: Option<&str>) -> Result<()> {
+    async fn update_status(
+        &self,
+        id: &str,
+        status: ProcessRunStatus,
+        finished_at: DateTime<Utc>,
+        result_summary: Option<&str>,
+    ) -> Result<()> {
         let id = id.to_string();
         let finished_at = finished_at.to_rfc3339();
         let result_summary = result_summary.map(String::from);
-        self.send_cmd(|reply| DbCommand::UpdateProcessRunStatus { id, status, finished_at, result_summary, reply }).await
+        self.send_cmd(|reply| DbCommand::UpdateProcessRunStatus {
+            id,
+            status,
+            finished_at,
+            result_summary,
+            reply,
+        })
+        .await
     }
 }
 
@@ -853,11 +1028,13 @@ impl ProcessRunStore for SqliteStore {
 #[async_trait::async_trait]
 impl EmbeddingIndexStore for SqliteStore {
     async fn put(&self, state: EmbeddingIndexState) -> Result<()> {
-        self.send_cmd(|reply| DbCommand::PutEmbeddingIndexState { state, reply }).await
+        self.send_cmd(|reply| DbCommand::PutEmbeddingIndexState { state, reply })
+            .await
     }
     async fn get(&self, corpus: &str) -> Result<EmbeddingIndexState> {
         let corpus = corpus.to_string();
-        self.send_cmd(|reply| DbCommand::GetEmbeddingIndexState { corpus, reply }).await
+        self.send_cmd(|reply| DbCommand::GetEmbeddingIndexState { corpus, reply })
+            .await
     }
 }
 
@@ -928,9 +1105,11 @@ fn do_list_auth_profiles(conn: &Connection, provider: Option<&str>) -> Result<Ve
 
     let mut stmt = conn.prepare(sql).map_err(map_rusqlite)?;
     let rows = if let Some(p) = provider {
-        stmt.query_map(params![p], row_to_auth_profile).map_err(map_rusqlite)?
+        stmt.query_map(params![p], row_to_auth_profile)
+            .map_err(map_rusqlite)?
     } else {
-        stmt.query_map(params![], row_to_auth_profile).map_err(map_rusqlite)?
+        stmt.query_map(params![], row_to_auth_profile)
+            .map_err(map_rusqlite)?
     };
 
     let mut profiles = Vec::new();
@@ -945,7 +1124,9 @@ fn do_delete_auth_profile(conn: &Connection, name: &str) -> Result<()> {
         .execute("DELETE FROM auth_profiles WHERE name = ?1", params![name])
         .map_err(map_rusqlite)?;
     if changed == 0 {
-        return Err(LayersError::Config(format!("auth profile not found: {name}")));
+        return Err(LayersError::Config(format!(
+            "auth profile not found: {name}"
+        )));
     }
     Ok(())
 }
@@ -957,17 +1138,31 @@ fn do_delete_auth_profile(conn: &Connection, name: &str) -> Result<()> {
 fn do_put_cron_job(conn: &Connection, job: &CronJob) -> Result<()> {
     let schedule_json = serde_json::to_string(&job.schedule)?;
     let payload_json = serde_json::to_string(&job.payload)?;
-    let session_target_json = job.session_target.as_ref().map(serde_json::to_string).transpose()?;
-    let delivery_json = job.delivery.as_ref().map(serde_json::to_string).transpose()?;
+    let session_target_json = job
+        .session_target
+        .as_ref()
+        .map(serde_json::to_string)
+        .transpose()?;
+    let delivery_json = job
+        .delivery
+        .as_ref()
+        .map(serde_json::to_string)
+        .transpose()?;
     let name = job.schedule.cron.clone(); // use cron expression as a readable name fallback
 
     // Extract fields from delivery for the table columns
-    let (misfire_policy, agent_id, failure_alert_json, delete_after_run) = 
+    let (misfire_policy, agent_id, failure_alert_json, delete_after_run) =
         if let Some(ref d) = job.delivery {
-            (d.misfire_policy.as_ref().map(|p| serde_json::to_string(p).unwrap_or_default()),
-             None as Option<String>,
-             d.failure_alert.as_ref().map(|f| serde_json::to_string(f).unwrap_or_default()),
-             false)
+            (
+                d.misfire_policy
+                    .as_ref()
+                    .map(|p| serde_json::to_string(p).unwrap_or_default()),
+                None as Option<String>,
+                d.failure_alert
+                    .as_ref()
+                    .map(|f| serde_json::to_string(f).unwrap_or_default()),
+                false,
+            )
         } else {
             (None, None, None, false)
         };
@@ -1020,21 +1215,31 @@ fn do_get_cron_job(conn: &Connection, id: &str) -> Result<CronJob> {
         "SELECT * FROM cron_jobs WHERE id = ?1",
         params![id],
         row_to_cron_job,
-    ).optional().map_err(map_rusqlite)?
+    )
+    .optional()
+    .map_err(map_rusqlite)?
     .ok_or_else(|| LayersError::Config(format!("cron job not found: {id}")))
 }
 
 fn do_list_cron_jobs(conn: &Connection) -> Result<Vec<CronJob>> {
-    let mut stmt = conn.prepare("SELECT * FROM cron_jobs ORDER BY id").map_err(map_rusqlite)?;
+    let mut stmt = conn
+        .prepare("SELECT * FROM cron_jobs ORDER BY id")
+        .map_err(map_rusqlite)?;
     let rows = stmt.query_map([], row_to_cron_job).map_err(map_rusqlite)?;
     let mut jobs = Vec::new();
-    for row in rows { jobs.push(row.map_err(map_rusqlite)?); }
+    for row in rows {
+        jobs.push(row.map_err(map_rusqlite)?);
+    }
     Ok(jobs)
 }
 
 fn do_delete_cron_job(conn: &Connection, id: &str) -> Result<()> {
-    let changed = conn.execute("DELETE FROM cron_jobs WHERE id = ?1", params![id]).map_err(map_rusqlite)?;
-    if changed == 0 { return Err(LayersError::Config(format!("cron job not found: {id}"))); }
+    let changed = conn
+        .execute("DELETE FROM cron_jobs WHERE id = ?1", params![id])
+        .map_err(map_rusqlite)?;
+    if changed == 0 {
+        return Err(LayersError::Config(format!("cron job not found: {id}")));
+    }
     Ok(())
 }
 
@@ -1063,20 +1268,42 @@ fn row_to_cron_run(row: &rusqlite::Row) -> rusqlite::Result<CronRun> {
     let status_str: String = row.get("status")?;
     let error_message: Option<String> = row.get("error_message")?;
 
-    let started_at = DateTime::parse_from_rfc3339(&started_at_str).map(|dt| dt.with_timezone(&Utc)).unwrap();
-    let finished_at = finished_at_str.and_then(|s| DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Utc)));
+    let started_at = DateTime::parse_from_rfc3339(&started_at_str)
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap();
+    let finished_at = finished_at_str.and_then(|s| {
+        DateTime::parse_from_rfc3339(&s)
+            .ok()
+            .map(|dt| dt.with_timezone(&Utc))
+    });
     let status: CronRunStatus = serde_json::from_str(&status_str).unwrap_or(CronRunStatus::Failed);
 
-    Ok(CronRun { id, job_id, started_at, finished_at, status, error_message })
+    Ok(CronRun {
+        id,
+        job_id,
+        started_at,
+        finished_at,
+        status,
+        error_message,
+    })
 }
 
 fn do_get_cron_run(conn: &Connection, id: &str) -> Result<CronRun> {
-    conn.query_row("SELECT * FROM cron_runs WHERE id = ?1", params![id], row_to_cron_run)
-        .optional().map_err(map_rusqlite)?
-        .ok_or_else(|| LayersError::Config(format!("cron run not found: {id}")))
+    conn.query_row(
+        "SELECT * FROM cron_runs WHERE id = ?1",
+        params![id],
+        row_to_cron_run,
+    )
+    .optional()
+    .map_err(map_rusqlite)?
+    .ok_or_else(|| LayersError::Config(format!("cron run not found: {id}")))
 }
 
-fn do_list_cron_runs_for_job(conn: &Connection, job_id: &str, limit: Option<usize>) -> Result<Vec<CronRun>> {
+fn do_list_cron_runs_for_job(
+    conn: &Connection,
+    job_id: &str,
+    limit: Option<usize>,
+) -> Result<Vec<CronRun>> {
     let sql = if limit.is_some() {
         "SELECT * FROM cron_runs WHERE job_id = ?1 ORDER BY started_at DESC LIMIT ?2"
     } else {
@@ -1084,24 +1311,38 @@ fn do_list_cron_runs_for_job(conn: &Connection, job_id: &str, limit: Option<usiz
     };
     let mut stmt = conn.prepare(sql).map_err(map_rusqlite)?;
     let rows = if let Some(n) = limit {
-        stmt.query_map(params![job_id, n as i64], row_to_cron_run).map_err(map_rusqlite)?
+        stmt.query_map(params![job_id, n as i64], row_to_cron_run)
+            .map_err(map_rusqlite)?
     } else {
-        stmt.query_map(params![job_id], row_to_cron_run).map_err(map_rusqlite)?
+        stmt.query_map(params![job_id], row_to_cron_run)
+            .map_err(map_rusqlite)?
     };
     let mut runs = Vec::new();
-    for row in rows { runs.push(row.map_err(map_rusqlite)?); }
+    for row in rows {
+        runs.push(row.map_err(map_rusqlite)?);
+    }
     // Reverse to get chronological order
     runs.reverse();
     Ok(runs)
 }
 
-fn do_update_cron_run_status(conn: &Connection, id: &str, status: &CronRunStatus, finished_at: &str, error_message: Option<&str>) -> Result<()> {
+fn do_update_cron_run_status(
+    conn: &Connection,
+    id: &str,
+    status: &CronRunStatus,
+    finished_at: &str,
+    error_message: Option<&str>,
+) -> Result<()> {
     let status_str = serde_json::to_string(status)?;
-    let changed = conn.execute(
-        "UPDATE cron_runs SET status = ?2, finished_at = ?3, error_message = ?4 WHERE id = ?1",
-        params![id, status_str, finished_at, error_message],
-    ).map_err(map_rusqlite)?;
-    if changed == 0 { return Err(LayersError::Config(format!("cron run not found: {id}"))); }
+    let changed = conn
+        .execute(
+            "UPDATE cron_runs SET status = ?2, finished_at = ?3, error_message = ?4 WHERE id = ?1",
+            params![id, status_str, finished_at, error_message],
+        )
+        .map_err(map_rusqlite)?;
+    if changed == 0 {
+        return Err(LayersError::Config(format!("cron run not found: {id}")));
+    }
     Ok(())
 }
 
@@ -1120,7 +1361,8 @@ fn do_put_archive(conn: &Connection, archive: &Archive) -> Result<()> {
             archive.message_count as i64,
             archive.summary,
         ],
-    ).map_err(map_rusqlite)?;
+    )
+    .map_err(map_rusqlite)?;
     Ok(())
 }
 
@@ -1131,7 +1373,9 @@ fn row_to_archive(row: &rusqlite::Row) -> rusqlite::Result<Archive> {
     let message_count: i64 = row.get("message_count")?;
     let summary: Option<String> = row.get("summary")?;
 
-    let archived_at = DateTime::parse_from_rfc3339(&archived_at_str).map(|dt| dt.with_timezone(&Utc)).unwrap();
+    let archived_at = DateTime::parse_from_rfc3339(&archived_at_str)
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap();
 
     Ok(Archive {
         id,
@@ -1143,22 +1387,37 @@ fn row_to_archive(row: &rusqlite::Row) -> rusqlite::Result<Archive> {
 }
 
 fn do_get_archive(conn: &Connection, id: &str) -> Result<Archive> {
-    conn.query_row("SELECT * FROM archives WHERE id = ?1", params![id], row_to_archive)
-        .optional().map_err(map_rusqlite)?
-        .ok_or_else(|| LayersError::Config(format!("archive not found: {id}")))
+    conn.query_row(
+        "SELECT * FROM archives WHERE id = ?1",
+        params![id],
+        row_to_archive,
+    )
+    .optional()
+    .map_err(map_rusqlite)?
+    .ok_or_else(|| LayersError::Config(format!("archive not found: {id}")))
 }
 
 fn do_list_archives_for_session(conn: &Connection, session_id: &str) -> Result<Vec<Archive>> {
-    let mut stmt = conn.prepare("SELECT * FROM archives WHERE session_key = ?1 ORDER BY archived_at DESC").map_err(map_rusqlite)?;
-    let rows = stmt.query_map(params![session_id], row_to_archive).map_err(map_rusqlite)?;
+    let mut stmt = conn
+        .prepare("SELECT * FROM archives WHERE session_key = ?1 ORDER BY archived_at DESC")
+        .map_err(map_rusqlite)?;
+    let rows = stmt
+        .query_map(params![session_id], row_to_archive)
+        .map_err(map_rusqlite)?;
     let mut archives = Vec::new();
-    for row in rows { archives.push(row.map_err(map_rusqlite)?); }
+    for row in rows {
+        archives.push(row.map_err(map_rusqlite)?);
+    }
     Ok(archives)
 }
 
 fn do_delete_archive(conn: &Connection, id: &str) -> Result<()> {
-    let changed = conn.execute("DELETE FROM archives WHERE id = ?1", params![id]).map_err(map_rusqlite)?;
-    if changed == 0 { return Err(LayersError::Config(format!("archive not found: {id}"))); }
+    let changed = conn
+        .execute("DELETE FROM archives WHERE id = ?1", params![id])
+        .map_err(map_rusqlite)?;
+    if changed == 0 {
+        return Err(LayersError::Config(format!("archive not found: {id}")));
+    }
     Ok(())
 }
 
@@ -1193,34 +1452,73 @@ fn row_to_process_run(row: &rusqlite::Row) -> rusqlite::Result<ProcessRun> {
     let finished_at_str: Option<String> = row.get("finished_at")?;
     let result_summary: Option<String> = row.get("result_summary")?;
 
-    let started_at = DateTime::parse_from_rfc3339(&started_at_str).map(|dt| dt.with_timezone(&Utc)).unwrap();
-    let finished_at = finished_at_str.and_then(|s| DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Utc)));
-    let status: ProcessRunStatus = serde_json::from_str(&status_str).unwrap_or(ProcessRunStatus::Failed);
+    let started_at = DateTime::parse_from_rfc3339(&started_at_str)
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap();
+    let finished_at = finished_at_str.and_then(|s| {
+        DateTime::parse_from_rfc3339(&s)
+            .ok()
+            .map(|dt| dt.with_timezone(&Utc))
+    });
+    let status: ProcessRunStatus =
+        serde_json::from_str(&status_str).unwrap_or(ProcessRunStatus::Failed);
 
-    Ok(ProcessRun { id, parent_session_id, agent_id, status, started_at, finished_at, result_summary })
+    Ok(ProcessRun {
+        id,
+        parent_session_id,
+        agent_id,
+        status,
+        started_at,
+        finished_at,
+        result_summary,
+    })
 }
 
 fn do_get_process_run(conn: &Connection, id: &str) -> Result<ProcessRun> {
-    conn.query_row("SELECT * FROM process_runs WHERE id = ?1", params![id], row_to_process_run)
-        .optional().map_err(map_rusqlite)?
-        .ok_or_else(|| LayersError::Config(format!("process run not found: {id}")))
+    conn.query_row(
+        "SELECT * FROM process_runs WHERE id = ?1",
+        params![id],
+        row_to_process_run,
+    )
+    .optional()
+    .map_err(map_rusqlite)?
+    .ok_or_else(|| LayersError::Config(format!("process run not found: {id}")))
 }
 
-fn do_list_process_runs_by_parent(conn: &Connection, parent_session_id: &str) -> Result<Vec<ProcessRun>> {
-    let mut stmt = conn.prepare("SELECT * FROM process_runs WHERE parent_session_key = ?1 ORDER BY started_at DESC").map_err(map_rusqlite)?;
-    let rows = stmt.query_map(params![parent_session_id], row_to_process_run).map_err(map_rusqlite)?;
+fn do_list_process_runs_by_parent(
+    conn: &Connection,
+    parent_session_id: &str,
+) -> Result<Vec<ProcessRun>> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT * FROM process_runs WHERE parent_session_key = ?1 ORDER BY started_at DESC",
+        )
+        .map_err(map_rusqlite)?;
+    let rows = stmt
+        .query_map(params![parent_session_id], row_to_process_run)
+        .map_err(map_rusqlite)?;
     let mut runs = Vec::new();
-    for row in rows { runs.push(row.map_err(map_rusqlite)?); }
+    for row in rows {
+        runs.push(row.map_err(map_rusqlite)?);
+    }
     Ok(runs)
 }
 
-fn do_update_process_run_status(conn: &Connection, id: &str, status: &ProcessRunStatus, finished_at: &str, result_summary: Option<&str>) -> Result<()> {
+fn do_update_process_run_status(
+    conn: &Connection,
+    id: &str,
+    status: &ProcessRunStatus,
+    finished_at: &str,
+    result_summary: Option<&str>,
+) -> Result<()> {
     let status_str = serde_json::to_string(status)?;
     let changed = conn.execute(
         "UPDATE process_runs SET status = ?2, finished_at = ?3, result_summary = ?4 WHERE id = ?1",
         params![id, status_str, finished_at, result_summary],
     ).map_err(map_rusqlite)?;
-    if changed == 0 { return Err(LayersError::Config(format!("process run not found: {id}"))); }
+    if changed == 0 {
+        return Err(LayersError::Config(format!("process run not found: {id}")));
+    }
     Ok(())
 }
 
@@ -1251,16 +1549,31 @@ fn row_to_embedding_index_state(row: &rusqlite::Row) -> rusqlite::Result<Embeddi
     let index_version: i64 = row.get("index_version")?;
     let metadata_json: Option<String> = row.get("metadata")?;
 
-    let last_indexed_at = DateTime::parse_from_rfc3339(&last_indexed_at_str).map(|dt| dt.with_timezone(&Utc)).unwrap();
-    let metadata: HashMap<String, serde_json::Value> = metadata_json.and_then(|j| serde_json::from_str(&j).ok()).unwrap_or_default();
+    let last_indexed_at = DateTime::parse_from_rfc3339(&last_indexed_at_str)
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap();
+    let metadata: HashMap<String, serde_json::Value> = metadata_json
+        .and_then(|j| serde_json::from_str(&j).ok())
+        .unwrap_or_default();
 
-    Ok(EmbeddingIndexState { corpus, embedding_model, last_indexed_at, index_version, metadata })
+    Ok(EmbeddingIndexState {
+        corpus,
+        embedding_model,
+        last_indexed_at,
+        index_version,
+        metadata,
+    })
 }
 
 fn do_get_embedding_index_state(conn: &Connection, corpus: &str) -> Result<EmbeddingIndexState> {
-    conn.query_row("SELECT * FROM embedding_index_state WHERE corpus = ?1", params![corpus], row_to_embedding_index_state)
-        .optional().map_err(map_rusqlite)?
-        .ok_or_else(|| LayersError::Config(format!("embedding index state not found: {corpus}")))
+    conn.query_row(
+        "SELECT * FROM embedding_index_state WHERE corpus = ?1",
+        params![corpus],
+        row_to_embedding_index_state,
+    )
+    .optional()
+    .map_err(map_rusqlite)?
+    .ok_or_else(|| LayersError::Config(format!("embedding index state not found: {corpus}")))
 }
 
 // Allow do_put_session / do_append_message to work with Transaction too,
@@ -1277,8 +1590,11 @@ fn _assert_send_sync() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use layers_core::traits::{AuthProfileStore, CronStore, ArchiveStore, ProcessRunStore, EmbeddingIndexStore, SessionStore};
     use chrono::Utc;
+    use layers_core::traits::{
+        ArchiveStore, AuthProfileStore, CronStore, EmbeddingIndexStore, ProcessRunStore,
+        SessionStore,
+    };
     use std::collections::HashMap;
 
     #[tokio::test]
@@ -1309,9 +1625,15 @@ mod tests {
         assert_eq!(all.len(), 1);
 
         // List by provider
-        let openai = store.list_profiles(Some("openai")).await.expect("list openai");
+        let openai = store
+            .list_profiles(Some("openai"))
+            .await
+            .expect("list openai");
         assert_eq!(openai.len(), 1);
-        let anthropic = store.list_profiles(Some("anthropic")).await.expect("list anthropic");
+        let anthropic = store
+            .list_profiles(Some("anthropic"))
+            .await
+            .expect("list anthropic");
         assert!(anthropic.is_empty());
 
         // Delete
@@ -1359,8 +1681,15 @@ mod tests {
 
         let job = CronJob {
             id: "morning-digest".into(),
-            schedule: CronSchedule { cron: "0 9 * * *".into(), timezone: None },
-            payload: CronPayload { prompt: "Summarize news".into(), system: None, metadata: Default::default() },
+            schedule: CronSchedule {
+                cron: "0 9 * * *".into(),
+                timezone: None,
+            },
+            payload: CronPayload {
+                prompt: "Summarize news".into(),
+                system: None,
+                metadata: Default::default(),
+            },
             session_target: None,
             delivery: None,
             enabled: true,
@@ -1386,8 +1715,15 @@ mod tests {
         // Need a job first (FK)
         let job = CronJob {
             id: "test-job".into(),
-            schedule: CronSchedule { cron: "* * * * *".into(), timezone: None },
-            payload: CronPayload { prompt: "test".into(), system: None, metadata: Default::default() },
+            schedule: CronSchedule {
+                cron: "* * * * *".into(),
+                timezone: None,
+            },
+            payload: CronPayload {
+                prompt: "test".into(),
+                system: None,
+                metadata: Default::default(),
+            },
             session_target: None,
             delivery: None,
             enabled: true,
@@ -1407,14 +1743,20 @@ mod tests {
 
         // Update to success
         let finished = Utc::now();
-        store.update_run_status("run-1", CronRunStatus::Success, finished, None).await.expect("update");
+        store
+            .update_run_status("run-1", CronRunStatus::Success, finished, None)
+            .await
+            .expect("update");
 
         let fetched = store.get_run("run-1").await.expect("get");
         assert_eq!(fetched.status, CronRunStatus::Success);
         assert!(fetched.finished_at.is_some());
 
         // List runs for job
-        let runs = store.list_runs_for_job("test-job", None).await.expect("list");
+        let runs = store
+            .list_runs_for_job("test-job", None)
+            .await
+            .expect("list");
         assert_eq!(runs.len(), 1);
     }
 
@@ -1439,7 +1781,9 @@ mod tests {
             message_count: 5,
             token_count: 100,
         };
-        SessionStore::put(&store, &session).await.expect("put session");
+        SessionStore::put(&store, &session)
+            .await
+            .expect("put session");
 
         let archive = Archive {
             id: "arch-1".into(),
@@ -1448,17 +1792,24 @@ mod tests {
             message_count: 5,
             summary: Some("A conversation about testing".into()),
         };
-        ArchiveStore::put(&store, archive.clone()).await.expect("put archive");
+        ArchiveStore::put(&store, archive.clone())
+            .await
+            .expect("put archive");
 
         let fetched = ArchiveStore::get(&store, "arch-1").await.expect("get");
         assert_eq!(fetched.session_id, "sess-1");
         assert_eq!(fetched.message_count, 5);
-        assert_eq!(fetched.summary.as_deref(), Some("A conversation about testing"));
+        assert_eq!(
+            fetched.summary.as_deref(),
+            Some("A conversation about testing")
+        );
 
         let list = store.list_for_session("sess-1").await.expect("list");
         assert_eq!(list.len(), 1);
 
-        ArchiveStore::delete(&store, "arch-1").await.expect("delete");
+        ArchiveStore::delete(&store, "arch-1")
+            .await
+            .expect("delete");
         assert!(ArchiveStore::get(&store, "arch-1").await.is_err());
     }
 
@@ -1479,7 +1830,9 @@ mod tests {
             finished_at: None,
             result_summary: None,
         };
-        ProcessRunStore::put(&store, run.clone()).await.expect("put");
+        ProcessRunStore::put(&store, run.clone())
+            .await
+            .expect("put");
 
         let fetched = ProcessRunStore::get(&store, "proc-1").await.expect("get");
         assert_eq!(fetched.status, ProcessRunStatus::Running);
@@ -1487,9 +1840,19 @@ mod tests {
 
         // Update to completed
         let finished = Utc::now();
-        store.update_status("proc-1", ProcessRunStatus::Completed, finished, Some("All done")).await.expect("update");
+        store
+            .update_status(
+                "proc-1",
+                ProcessRunStatus::Completed,
+                finished,
+                Some("All done"),
+            )
+            .await
+            .expect("update");
 
-        let updated = ProcessRunStore::get(&store, "proc-1").await.expect("get updated");
+        let updated = ProcessRunStore::get(&store, "proc-1")
+            .await
+            .expect("get updated");
         assert_eq!(updated.status, ProcessRunStatus::Completed);
         assert_eq!(updated.result_summary.as_deref(), Some("All done"));
         assert!(updated.finished_at.is_some());
@@ -1518,20 +1881,31 @@ mod tests {
                 m
             },
         };
-        EmbeddingIndexStore::put(&store, state.clone()).await.expect("put");
+        EmbeddingIndexStore::put(&store, state.clone())
+            .await
+            .expect("put");
 
-        let fetched = EmbeddingIndexStore::get(&store, "memory").await.expect("get");
+        let fetched = EmbeddingIndexStore::get(&store, "memory")
+            .await
+            .expect("get");
         assert_eq!(fetched.embedding_model, "text-embedding-3-small");
         assert_eq!(fetched.index_version, 3);
-        assert_eq!(fetched.metadata.get("chunk_count").unwrap(), &serde_json::json!(42));
+        assert_eq!(
+            fetched.metadata.get("chunk_count").unwrap(),
+            &serde_json::json!(42)
+        );
 
         // Upsert
         let state_v2 = EmbeddingIndexState {
             index_version: 4,
             ..state
         };
-        EmbeddingIndexStore::put(&store, state_v2).await.expect("put v2");
-        let fetched_v2 = EmbeddingIndexStore::get(&store, "memory").await.expect("get v2");
+        EmbeddingIndexStore::put(&store, state_v2)
+            .await
+            .expect("put v2");
+        let fetched_v2 = EmbeddingIndexStore::get(&store, "memory")
+            .await
+            .expect("get v2");
         assert_eq!(fetched_v2.index_version, 4);
     }
 }

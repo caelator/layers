@@ -138,40 +138,42 @@ impl ModelProvider for AnthropicProvider {
         let api_key = self.api_key.clone();
         let client = self.client.clone();
 
-        Box::pin(stream::once(async move {
-            let resp = client
-                .post(ANTHROPIC_API_URL)
-                .header("x-api-key", &api_key)
-                .header("anthropic-version", ANTHROPIC_VERSION)
-                .header("content-type", "application/json")
-                .json(&wire)
-                .send()
-                .await
-                .map_err(|e| LayersError::Provider(format!("stream request failed: {e}")))?;
+        Box::pin(
+            stream::once(async move {
+                let resp = client
+                    .post(ANTHROPIC_API_URL)
+                    .header("x-api-key", &api_key)
+                    .header("anthropic-version", ANTHROPIC_VERSION)
+                    .header("content-type", "application/json")
+                    .json(&wire)
+                    .send()
+                    .await
+                    .map_err(|e| LayersError::Provider(format!("stream request failed: {e}")))?;
 
-            let status = resp.status();
-            if !status.is_success() {
-                let body = resp.text().await.unwrap_or_default();
-                return Err(LayersError::Provider(format!("{status}: {body}")));
-            }
-
-            Ok(resp)
-        })
-        .filter_map(|res| async {
-            match res {
-                Err(e) => Some(Err(e)),
-                Ok(_resp) => {
-                    warn!("Anthropic streaming not fully wired — returning empty chunk");
-                    Some(Ok(StreamChunk {
-                        delta_text: None,
-                        delta_reasoning: None,
-                        tool_call_delta: None,
-                        usage: None,
-                        finish_reason: Some("end_turn".into()),
-                    }))
+                let status = resp.status();
+                if !status.is_success() {
+                    let body = resp.text().await.unwrap_or_default();
+                    return Err(LayersError::Provider(format!("{status}: {body}")));
                 }
-            }
-        }))
+
+                Ok(resp)
+            })
+            .filter_map(|res| async {
+                match res {
+                    Err(e) => Some(Err(e)),
+                    Ok(_resp) => {
+                        warn!("Anthropic streaming not fully wired — returning empty chunk");
+                        Some(Ok(StreamChunk {
+                            delta_text: None,
+                            delta_reasoning: None,
+                            tool_call_delta: None,
+                            usage: None,
+                            finish_reason: Some("end_turn".into()),
+                        }))
+                    }
+                }
+            }),
+        )
     }
 
     fn supports_tools(&self) -> bool {
@@ -191,7 +193,9 @@ impl ModelProvider for AnthropicProvider {
     }
 
     fn tokenizer(&self) -> Option<Arc<dyn Tokenizer>> {
-        Some(tokenizer_for_family(crate::capabilities::TokenizerFamily::Anthropic))
+        Some(tokenizer_for_family(
+            crate::capabilities::TokenizerFamily::Anthropic,
+        ))
     }
 }
 
@@ -620,12 +624,7 @@ mod tests {
         };
 
         let resp = convert_anthropic_response(anth_resp).unwrap();
-        assert!(resp
-            .message
-            .content
-            .as_text()
-            .unwrap()
-            .contains("weather"));
+        assert!(resp.message.content.as_text().unwrap().contains("weather"));
         let tcs = resp.message.tool_calls.as_ref().expect("tool calls");
         assert_eq!(tcs.len(), 1);
         assert_eq!(tcs[0].id, "toolu_abc");

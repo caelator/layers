@@ -8,7 +8,7 @@ use layers_core::{
     CancellationToken, ChannelAdapter, ChannelHealth, ChannelRuntimeHandle, InboundMessage,
     OutboundMessage, Result, StreamingTarget,
 };
-use tokio::sync::{mpsc, Mutex, RwLock};
+use tokio::sync::{Mutex, RwLock, mpsc};
 use tracing::{info, warn};
 
 use crate::types::{ChannelModelOverride, DedupKey};
@@ -213,8 +213,8 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
     use layers_core::{ChannelHealth, OutboundMessage, StreamingTarget};
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     /// Mock adapter for testing the manager's routing and registration logic.
     struct MockAdapter {
@@ -341,12 +341,16 @@ mod tests {
         mgr.register(adapter_b.clone()).await;
 
         // Send to chan-a
-        mgr.dispatch_outbound(make_outbound("chan-a")).await.unwrap();
+        mgr.dispatch_outbound(make_outbound("chan-a"))
+            .await
+            .unwrap();
         assert_eq!(adapter_a.send_count.load(Ordering::SeqCst), 1);
         assert_eq!(adapter_b.send_count.load(Ordering::SeqCst), 0);
 
         // Send to chan-b
-        mgr.dispatch_outbound(make_outbound("chan-b")).await.unwrap();
+        mgr.dispatch_outbound(make_outbound("chan-b"))
+            .await
+            .unwrap();
         assert_eq!(adapter_b.send_count.load(Ordering::SeqCst), 1);
     }
 

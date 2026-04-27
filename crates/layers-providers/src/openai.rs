@@ -26,7 +26,11 @@ pub struct OpenAiProvider {
 }
 
 impl OpenAiProvider {
-    pub fn new(id: impl Into<String>, base_url: impl Into<String>, api_key: impl Into<String>) -> Self {
+    pub fn new(
+        id: impl Into<String>,
+        base_url: impl Into<String>,
+        api_key: impl Into<String>,
+    ) -> Self {
         Self {
             id: id.into(),
             base_url: base_url.into(),
@@ -36,7 +40,10 @@ impl OpenAiProvider {
     }
 
     fn endpoint(&self) -> String {
-        format!("{}/v1/chat/completions", self.base_url.trim_end_matches('/'))
+        format!(
+            "{}/v1/chat/completions",
+            self.base_url.trim_end_matches('/')
+        )
     }
 
     fn build_wire_request(request: &ModelRequest, stream: bool) -> OpenAiChatRequest {
@@ -127,41 +134,43 @@ impl ModelProvider for OpenAiProvider {
         let api_key = self.api_key.clone();
         let client = self.client.clone();
 
-        Box::pin(stream::once(async move {
-            let resp = client
-                .post(endpoint)
-                .bearer_auth(&api_key)
-                .json(&wire)
-                .send()
-                .await
-                .map_err(|e| LayersError::Provider(format!("stream request failed: {e}")))?;
+        Box::pin(
+            stream::once(async move {
+                let resp = client
+                    .post(endpoint)
+                    .bearer_auth(&api_key)
+                    .json(&wire)
+                    .send()
+                    .await
+                    .map_err(|e| LayersError::Provider(format!("stream request failed: {e}")))?;
 
-            let status = resp.status();
-            if !status.is_success() {
-                let body = resp.text().await.unwrap_or_default();
-                return Err(LayersError::Provider(format!("{status}: {body}")));
-            }
-
-            Ok(resp)
-        })
-        .filter_map(|res| async {
-            match res {
-                Err(e) => Some(Err(e)),
-                Ok(_resp) => {
-                    // In a full implementation we would read the SSE byte stream,
-                    // parse "data: " lines, handle "[DONE]", and yield StreamChunks.
-                    // For now, yield a single empty chunk to satisfy the type.
-                    warn!("OpenAI streaming not fully wired — returning empty chunk");
-                    Some(Ok(StreamChunk {
-                        delta_text: None,
-                        delta_reasoning: None,
-                        tool_call_delta: None,
-                        usage: None,
-                        finish_reason: Some("stop".into()),
-                    }))
+                let status = resp.status();
+                if !status.is_success() {
+                    let body = resp.text().await.unwrap_or_default();
+                    return Err(LayersError::Provider(format!("{status}: {body}")));
                 }
-            }
-        }))
+
+                Ok(resp)
+            })
+            .filter_map(|res| async {
+                match res {
+                    Err(e) => Some(Err(e)),
+                    Ok(_resp) => {
+                        // In a full implementation we would read the SSE byte stream,
+                        // parse "data: " lines, handle "[DONE]", and yield StreamChunks.
+                        // For now, yield a single empty chunk to satisfy the type.
+                        warn!("OpenAI streaming not fully wired — returning empty chunk");
+                        Some(Ok(StreamChunk {
+                            delta_text: None,
+                            delta_reasoning: None,
+                            tool_call_delta: None,
+                            usage: None,
+                            finish_reason: Some("stop".into()),
+                        }))
+                    }
+                }
+            }),
+        )
     }
 
     fn supports_tools(&self) -> bool {
@@ -183,7 +192,9 @@ impl ModelProvider for OpenAiProvider {
     fn tokenizer(&self) -> Option<Arc<dyn Tokenizer>> {
         // Return o200k_base as the default; callers should use
         // `tokenizer_for_model()` for model-specific tokenizers.
-        Some(tokenizer_for_family(crate::capabilities::TokenizerFamily::O200kBase))
+        Some(tokenizer_for_family(
+            crate::capabilities::TokenizerFamily::O200kBase,
+        ))
     }
 }
 
@@ -309,8 +320,8 @@ mod tests {
     };
 
     use crate::types::{
-        OpenAiChatResponse, OpenAiChoice, OpenAiFunctionCall, OpenAiResponseMessage, OpenAiToolCall,
-        OpenAiUsage,
+        OpenAiChatResponse, OpenAiChoice, OpenAiFunctionCall, OpenAiResponseMessage,
+        OpenAiToolCall, OpenAiUsage,
     };
 
     // -- Helpers --------------------------------------------------------------

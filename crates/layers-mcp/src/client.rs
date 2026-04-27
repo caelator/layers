@@ -9,9 +9,7 @@ use tokio::process::{Child, Command};
 use tokio::sync::Mutex;
 use tracing::{debug, error, warn};
 
-use layers_core::{
-    LayersError, McpServerConfig, Result, Tool, ToolContext, ToolOutput,
-};
+use layers_core::{LayersError, McpServerConfig, Result, Tool, ToolContext, ToolOutput};
 
 // ---------------------------------------------------------------------------
 // JSON-RPC types
@@ -80,10 +78,7 @@ impl McpClient {
         }
 
         // Parse the URL as a command. If it starts with "stdio://", extract the command.
-        let command_str = config
-            .url
-            .strip_prefix("stdio://")
-            .unwrap_or(&config.url);
+        let command_str = config.url.strip_prefix("stdio://").unwrap_or(&config.url);
 
         let parts: Vec<&str> = command_str.split_whitespace().collect();
         if parts.is_empty() {
@@ -151,9 +146,7 @@ impl McpClient {
 
     /// Discover tools from the MCP server.
     pub async fn list_tools(&self) -> Result<Vec<McpRemoteTool>> {
-        let response = self
-            .send_request("tools/list", None)
-            .await?;
+        let response = self.send_request("tools/list", None).await?;
 
         let tools_value = response
             .and_then(|v| v.get("tools").cloned())
@@ -167,10 +160,7 @@ impl McpClient {
             .map(|def| McpRemoteTool {
                 server_name: self.name.clone(),
                 tool_name: def.name.clone(),
-                tool_description: def
-                    .description
-                    .clone()
-                    .unwrap_or_default(),
+                tool_description: def.description.clone().unwrap_or_default(),
                 tool_schema: def
                     .input_schema
                     .clone()
@@ -228,8 +218,7 @@ impl McpClient {
             params,
         };
 
-        let mut line = serde_json::to_string(&request)
-            .map_err(LayersError::Serialization)?;
+        let mut line = serde_json::to_string(&request).map_err(LayersError::Serialization)?;
         line.push('\n');
 
         // Write to stdin.
@@ -385,11 +374,7 @@ impl Tool for McpRemoteTool {
         self.tool_schema.clone()
     }
 
-    async fn execute(
-        &self,
-        _args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, _args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         // In real usage, this would be dispatched through the McpClient.
         // The registry should use McpDispatchTool instead for live connections.
         Err(LayersError::Tool(format!(
@@ -417,9 +402,7 @@ impl McpManager {
     }
 
     /// Connect to all configured MCP servers.
-    pub async fn connect_all(
-        configs: &HashMap<String, McpServerConfig>,
-    ) -> Result<Self> {
+    pub async fn connect_all(configs: &HashMap<String, McpServerConfig>) -> Result<Self> {
         let mut clients = HashMap::new();
 
         for (name, config) in configs {
@@ -511,7 +494,8 @@ mod tests {
 
     #[test]
     fn json_rpc_error_response_framing() {
-        let resp_json = r#"{"jsonrpc":"2.0","id":2,"error":{"code":-32601,"message":"Method not found"}}"#;
+        let resp_json =
+            r#"{"jsonrpc":"2.0","id":2,"error":{"code":-32601,"message":"Method not found"}}"#;
         let parsed: JsonRpcResponse = serde_json::from_str(resp_json).unwrap();
         assert_eq!(parsed.id, Some(2));
         assert!(parsed.result.is_none());

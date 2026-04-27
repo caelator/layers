@@ -233,10 +233,7 @@ impl TokenAccounting for TokenLedger {
         self.total_input = self.total_input.saturating_add(event.usage.input_tokens);
         self.total_output = self.total_output.saturating_add(event.usage.output_tokens);
 
-        let acc = self
-            .per_model
-            .entry(event.model.clone())
-            .or_default();
+        let acc = self.per_model.entry(event.model.clone()).or_default();
         acc.input_tokens = acc.input_tokens.saturating_add(event.usage.input_tokens);
         acc.output_tokens = acc.output_tokens.saturating_add(event.usage.output_tokens);
         acc.completions = acc.completions.saturating_add(1);

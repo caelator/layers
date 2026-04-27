@@ -33,8 +33,7 @@ pub enum StreamEvent {
 // ---------------------------------------------------------------------------
 
 /// How streaming is delivered to the caller.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum StreamingMode {
     /// No streaming — wait for full response.
     #[default]
@@ -46,7 +45,6 @@ pub enum StreamingMode {
     /// Progress-only: lifecycle + tool events, no text deltas.
     Progress,
 }
-
 
 // ---------------------------------------------------------------------------
 // Stream sink trait

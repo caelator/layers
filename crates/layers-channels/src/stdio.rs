@@ -2,14 +2,13 @@
 //!
 //! Reads lines from stdin and writes responses to stdout.
 
-
 use async_trait::async_trait;
 use layers_core::{
     CancellationToken, ChannelAdapter, ChannelHealth, InboundMessage, LayersError, OutboundMessage,
     PeerKind, Result, StreamingTarget,
 };
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{Mutex, mpsc};
 use tracing::info;
 
 /// Terminal/CLI channel adapter.

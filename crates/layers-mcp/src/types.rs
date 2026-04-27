@@ -59,7 +59,11 @@ pub struct McpTool {
     pub name: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    #[serde(default, rename = "inputSchema", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "inputSchema",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub input_schema: Option<serde_json::Value>,
 }
 
@@ -137,11 +141,7 @@ mod tests {
 
     #[test]
     fn json_rpc_request_roundtrip() {
-        let req = JsonRpcRequest::new(
-            1,
-            "tools/list",
-            Some(serde_json::json!({"cursor": null})),
-        );
+        let req = JsonRpcRequest::new(1, "tools/list", Some(serde_json::json!({"cursor": null})));
         let json = serde_json::to_string(&req).unwrap();
         let decoded: JsonRpcRequest = serde_json::from_str(&json).unwrap();
         assert_eq!(decoded.id, 1);

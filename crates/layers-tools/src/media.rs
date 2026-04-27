@@ -62,11 +62,7 @@ impl Tool for ImageTool {
         })
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         let params: ImageParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid image params: {e}")))?;
 
@@ -82,7 +78,7 @@ impl Tool for ImageTool {
             .to_string(),
             attachments: Vec::new(),
             structured_content: None,
-                is_error: None,
+            is_error: None,
         })
     }
 }
@@ -148,11 +144,7 @@ impl Tool for ImageGenerateTool {
         })
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         let params: ImageGenerateParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid image_generate params: {e}")))?;
 
@@ -168,7 +160,7 @@ impl Tool for ImageGenerateTool {
             .to_string(),
             attachments: Vec::new(),
             structured_content: None,
-                is_error: None,
+            is_error: None,
         })
     }
 }
@@ -228,11 +220,7 @@ impl Tool for VideoGenerateTool {
         })
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         let params: VideoGenerateParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid video_generate params: {e}")))?;
 
@@ -248,7 +236,7 @@ impl Tool for VideoGenerateTool {
             .to_string(),
             attachments: Vec::new(),
             structured_content: None,
-                is_error: None,
+            is_error: None,
         })
     }
 }

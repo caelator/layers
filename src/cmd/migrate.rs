@@ -75,7 +75,10 @@ pub fn handle_migrate(dry_run: bool) -> Result<()> {
         }
     }
 
-    let sources: Vec<String> = legacy_files.iter().map(|p| p.display().to_string()).collect();
+    let sources: Vec<String> = legacy_files
+        .iter()
+        .map(|p| p.display().to_string())
+        .collect();
 
     println!(
         "{}",

@@ -12,7 +12,7 @@ use layers_core::{
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{Mutex, mpsc};
 use tracing::{debug, info, warn};
 
 // ---------------------------------------------------------------------------
@@ -356,10 +356,7 @@ impl ChannelAdapter for TelegramAdapter {
                 let req = SendMessageRequest {
                     chat_id,
                     text: chunk.clone(),
-                    reply_to_message_id: target
-                        .message_id
-                        .as_ref()
-                        .and_then(|id| id.parse().ok()),
+                    reply_to_message_id: target.message_id.as_ref().and_then(|id| id.parse().ok()),
                 };
 
                 let resp = self

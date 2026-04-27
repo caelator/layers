@@ -57,7 +57,10 @@ impl DaemonRunner {
     #[must_use]
     pub fn new(
         config: DaemonConfig,
-    ) -> (Self, tokio::sync::mpsc::Receiver<layers_core::InboundMessage>) {
+    ) -> (
+        Self,
+        tokio::sync::mpsc::Receiver<layers_core::InboundMessage>,
+    ) {
         let cancel = CancellationToken::new();
         let (channel_manager, inbound_rx) = ChannelManager::new(256, 500);
         let channel_manager = Arc::new(channel_manager);
@@ -95,7 +98,11 @@ impl DaemonRunner {
 
     /// Set brain configs for CLI agent dispatch.
     #[must_use]
-    pub fn with_brains(mut self, brains: HashMap<String, layers_core::config::BrainConfig>, workdir: String) -> Self {
+    pub fn with_brains(
+        mut self,
+        brains: HashMap<String, layers_core::config::BrainConfig>,
+        workdir: String,
+    ) -> Self {
         self.brains = brains;
         self.workdir = Some(workdir);
         self
@@ -193,9 +200,7 @@ impl DaemonRunner {
         }
 
         // Start channel adapters.
-        self.channel_manager
-            .start_all(self.cancel.clone())
-            .await?;
+        self.channel_manager.start_all(self.cancel.clone()).await?;
 
         // Build and spawn the gateway.
         let gateway_config = GatewayConfig::from(&self.config);
@@ -208,7 +213,10 @@ impl DaemonRunner {
                 self.brains.clone(),
                 workdir,
             ));
-            info!(brain_count = self.brains.len(), "attaching brain dispatcher to gateway");
+            info!(
+                brain_count = self.brains.len(),
+                "attaching brain dispatcher to gateway"
+            );
             gateway = gateway.with_brain_dispatcher(dispatcher);
         }
 

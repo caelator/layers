@@ -125,8 +125,7 @@ impl CronScheduler {
 
             let is_due = {
                 let runs = self.next_runs.read().await;
-                runs.get(&job.id)
-                    .is_some_and(|next_time| now >= *next_time)
+                runs.get(&job.id).is_some_and(|next_time| now >= *next_time)
             };
 
             if !is_due {
@@ -167,8 +166,7 @@ impl CronScheduler {
                 match policy {
                     MisFirePolicy::Skip => {
                         debug!(job_id = %job.id, "session active — skipping (misfire=skip)");
-                        self.record_run(&job.id, CronRunStatus::Skipped, None)
-                            .await;
+                        self.record_run(&job.id, CronRunStatus::Skipped, None).await;
                     }
                     MisFirePolicy::RunImmediately | MisFirePolicy::Queue => {
                         let _ = queue.enqueue(msg).await;

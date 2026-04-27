@@ -3,24 +3,20 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use chrono::{DateTime, Utc, NaiveTime, Duration as ChronoDuration};
+use chrono::{DateTime, Duration as ChronoDuration, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use tracing::{debug, info};
 use uuid::Uuid;
 
-use layers_core::{
-    Session, SessionFilter, SessionStore,
-    DmScope, Result, LayersError,
-};
+use layers_core::{DmScope, LayersError, Result, Session, SessionFilter, SessionStore};
 
 // ---------------------------------------------------------------------------
 // DM scope routing
 // ---------------------------------------------------------------------------
 
 /// How DM sessions are scoped for an agent.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum DmScopeMode {
     /// One session per agent (global).
     Main,
@@ -32,7 +28,6 @@ pub enum DmScopeMode {
     /// One session per (account, channel, peer) tuple.
     PerAccountChannelPeer,
 }
-
 
 /// Inputs used to derive the session routing key.
 #[derive(Debug, Clone)]
@@ -174,11 +169,7 @@ impl SessionManager {
     }
 
     /// Create a brand-new session.
-    async fn create_session(
-        &self,
-        routing: &SessionRouting,
-        key: &str,
-    ) -> Result<Session> {
+    async fn create_session(&self, routing: &SessionRouting, key: &str) -> Result<Session> {
         let now = Utc::now();
         let session = Session {
             id: Uuid::new_v4().to_string(),
@@ -197,16 +188,16 @@ impl SessionManager {
         };
 
         self.store.put(&session).await?;
-        self.active.write().await.insert(key.to_string(), session.id.clone());
+        self.active
+            .write()
+            .await
+            .insert(key.to_string(), session.id.clone());
         info!(session_id = %session.id, key = %key, "created new session");
         Ok(session)
     }
 
     /// Archive current session and create a fresh one with the same routing.
-    pub async fn manual_reset(
-        &self,
-        routing: &SessionRouting,
-    ) -> Result<Session> {
+    pub async fn manual_reset(&self, routing: &SessionRouting) -> Result<Session> {
         let key = routing.session_key(self.dm_scope);
         let cache = self.active.read().await;
         if let Some(session_id) = cache.get(&key) {
@@ -257,7 +248,10 @@ impl SessionManager {
         };
 
         self.store.put(&session).await?;
-        self.active.write().await.insert(key.to_string(), session.id.clone());
+        self.active
+            .write()
+            .await
+            .insert(key.to_string(), session.id.clone());
         info!(session_id = %session.id, "created replacement session after reset");
         Ok(session)
     }
@@ -268,7 +262,8 @@ impl SessionManager {
 
         // Daily reset: session created before today's reset hour.
         let reset_hour = self.reset_policy.daily_reset_hour;
-        let today_reset = now.date_naive()
+        let today_reset = now
+            .date_naive()
             .and_time(NaiveTime::from_hms_opt(reset_hour, 0, 0).unwrap_or_default());
         let today_reset_utc = DateTime::<Utc>::from_naive_utc_and_offset(today_reset, Utc);
 

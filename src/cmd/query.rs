@@ -1,9 +1,15 @@
 use anyhow::Result;
+use layers_core::{ContextBudget, ContextItem, ContextPacket, ContextWarning, RetrievalReport};
 use serde_json::json;
 use std::time::Instant;
 
+use crate::cmd::autoresearch::{AutoresearchPacketBridgeOptions, add_autoresearch_to_packet};
 use crate::cmd::telemetry::PluginResult;
-use crate::config::{CONTEXT_PAYLOAD_SCHEMA_VERSION, memoryport_dir};
+use crate::config::{CONTEXT_PAYLOAD_SCHEMA_VERSION, memoryport_dir, workspace_root};
+use crate::context_packet_compiler::{
+    add_workspace_section, cited_item, collect_workspace_state, context_section, finalize_packet,
+    gitnexus_impact_section, source, workspace_id,
+};
 use crate::feedback::{
     FailureKind, HardErrorKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind, emit_failure,
     load_route_weights, read_recent_failures, route_corrections_path,
@@ -54,6 +60,7 @@ pub struct RetrievalMeta {
 pub fn handle_query(
     task: &str,
     json_out: bool,
+    agent_prompt: bool,
     no_audit: bool,
     uc_min_results: usize,
 ) -> Result<()> {
@@ -304,7 +311,7 @@ pub fn handle_query(
     // Enforce word budget
     let evidence_text = evidence_sections.join("\n\n");
     let word_count = evidence_text.split_whitespace().count();
-    let (final_evidence, budget_exceeded) = if word_count > MAX_OUTPUT_WORDS {
+    let (_final_evidence, budget_exceeded) = if word_count > MAX_OUTPUT_WORDS {
         open_uncertainty.push(format!(
             "Evidence exceeded {MAX_OUTPUT_WORDS}-word budget ({word_count} words). Truncated."
         ));
@@ -369,20 +376,28 @@ pub fn handle_query(
         append_jsonl(&audit_path, &audit)?;
     }
 
-    if json_out {
-        let output = json!({
-            "schema_version": CONTEXT_PAYLOAD_SCHEMA_VERSION,
-            "route": effective_route.label(),
-            "low_confidence_fallback": low_confidence_fallback,
-            "confidence": route_result.confidence.to_string(),
-            "scores": route_result.scores,
-            "why_retrieved": route_result.why,
-            "why_not_retrieved": route_result.why_not,
-            "evidence": final_evidence,
-            "open_uncertainty": open_uncertainty,
-            "retrieval_meta": retrieval_meta,
-        });
-        println!("{}", serde_json::to_string_pretty(&output)?);
+    let packet = build_context_packet(
+        task,
+        effective_route,
+        route_result.confidence.to_string(),
+        &memory_items,
+        &graph_items,
+        &open_uncertainty,
+        &retrieval_meta,
+        &route_result.scores,
+        &route_result.why,
+        &route_result.why_not,
+        word_count,
+        budget_exceeded,
+        low_confidence_fallback,
+        None,
+    );
+    let final_evidence = packet.evidence.clone();
+
+    if agent_prompt {
+        println!("{}", packet.to_agent_prompt());
+    } else if json_out {
+        println!("{}", serde_json::to_string_pretty(&packet)?);
     } else if matches!(effective_route, Route::Neither) {
         // Low-confidence fallback: if we retrieved anyway, show the evidence
         if !memory_items.is_empty() || !graph_items.is_empty() {
@@ -477,10 +492,7 @@ pub fn handle_query(
 ///
 /// This is the bridge between quality evaluation feedback (soft failures written
 /// to route-corrections.jsonl) and the initial routing decision.
-fn apply_weight_override(
-    route: Route,
-    weights: &std::collections::HashMap<RouteId, f32>,
-) -> Route {
+fn apply_weight_override(route: Route, weights: &std::collections::HashMap<RouteId, f32>) -> Route {
     let route_id = match route {
         Route::Neither => RouteId::Neither,
         Route::MemoryOnly => RouteId::MemoryOnly,
@@ -598,6 +610,133 @@ fn interleave_results(
     sections
 }
 
+#[allow(clippy::too_many_arguments)]
+fn build_context_packet(
+    task: &str,
+    route: Route,
+    confidence: String,
+    memory_items: &[RetrievalItem],
+    graph_items: &[RetrievalItem],
+    warnings: &[String],
+    retrieval_meta: &RetrievalMeta,
+    scores: &router::Scores,
+    why_retrieved: &str,
+    why_not_retrieved: &str,
+    used_words: usize,
+    truncated: bool,
+    low_confidence_fallback: bool,
+    evidence: Option<String>,
+) -> ContextPacket {
+    let workspace = workspace_root();
+    let workspace_id = workspace_id(&workspace);
+    let mut packet = ContextPacket::new(
+        format!("ctx-{}", uuid::Uuid::new_v4()),
+        workspace_id,
+        task.to_string(),
+        chrono::Utc::now(),
+    );
+    packet.route = route.label().to_string();
+    packet.confidence = confidence;
+    packet.budget = ContextBudget {
+        max_units: MAX_OUTPUT_WORDS,
+        used_units: used_words,
+        unit: "words".to_string(),
+        truncated,
+    };
+    packet.retrieval = RetrievalReport {
+        memory_source: retrieval_meta.memory_source.clone(),
+        memory_latency_ms: retrieval_meta.memory_latency_ms,
+        graph_latency_ms: retrieval_meta.graph_latency_ms,
+        fallback_reason: retrieval_meta.fallback_reason.clone(),
+    };
+    packet.retrieval_meta = packet.retrieval.clone();
+    packet.scores = serde_json::to_value(scores).unwrap_or(serde_json::Value::Null);
+    packet.why_retrieved = why_retrieved.to_string();
+    packet.why_not_retrieved = why_not_retrieved.to_string();
+    packet.low_confidence_fallback = low_confidence_fallback;
+    packet.open_uncertainty = warnings.to_vec();
+
+    let workspace_state = collect_workspace_state(&workspace);
+    packet.git_ref.clone_from(&workspace_state.head);
+    add_workspace_section(&mut packet, &workspace_state);
+
+    if !memory_items.is_empty() {
+        packet.sections.push(context_section(
+            "memory",
+            "Memory",
+            "Relevant project memory and semantic recall.",
+            retrieval_items_to_context_items("memory", memory_items),
+        ));
+    }
+    if !graph_items.is_empty() {
+        packet
+            .sections
+            .push(gitnexus_impact_section(retrieval_items_to_context_items(
+                "gitnexus",
+                graph_items,
+            )));
+    }
+    add_autoresearch_to_packet(
+        &mut packet,
+        AutoresearchPacketBridgeOptions {
+            task,
+            targets: &[],
+            limit: MAX_MEMORY_RECORDS,
+            unavailable_message: "No persisted autoresearch store was available for query.",
+        },
+    );
+    if packet.sections.is_empty() {
+        packet.warnings.push(ContextWarning {
+            severity: "warning".to_string(),
+            code: "no_context_selected".to_string(),
+            message: "No memory or graph context was selected for this query.".to_string(),
+        });
+    }
+    for warning in warnings {
+        packet.warnings.push(ContextWarning {
+            severity: "warning".to_string(),
+            code: "retrieval_warning".to_string(),
+            message: warning.clone(),
+        });
+    }
+    if truncated {
+        packet.warnings.push(ContextWarning {
+            severity: "warning".to_string(),
+            code: "budget_truncated".to_string(),
+            message: format!("Evidence exceeded {MAX_OUTPUT_WORDS}-word budget and was truncated."),
+        });
+    }
+    if let Some(evidence_text) = evidence {
+        packet.evidence = evidence_text;
+        finalize_packet(&mut packet, false);
+    } else {
+        finalize_packet(&mut packet, true);
+    }
+    packet
+}
+
+fn retrieval_items_to_context_items(section: &str, items: &[RetrievalItem]) -> Vec<ContextItem> {
+    items
+        .iter()
+        .enumerate()
+        .map(|(idx, item)| {
+            let selected_reason = if section == "memory" {
+                "memory retrieval matched the query or low-confidence fallback"
+            } else {
+                "GitNexus graph retrieval matched structural query terms"
+            };
+            cited_item(
+                format!("{section}-{}", idx + 1),
+                item.source.clone(),
+                item.text.clone(),
+                source(section, item.source.clone()),
+                selected_reason,
+                Vec::new(),
+            )
+        })
+        .collect()
+}
+
 /// Build a `ContextPayload` for passing to the council binary.
 pub fn build_context_payload(
     task: &str,
@@ -622,9 +761,13 @@ pub fn build_context_payload(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cmd::autoresearch::{
+        AutoresearchCommands, ProfileCommands, SourceCommands, handle_autoresearch,
+    };
     use crate::config::CONTEXT_PAYLOAD_SCHEMA_VERSION;
     use crate::test_support::TestWorkspace;
     use crate::util::load_jsonl;
+    use std::io::Write;
 
     /// Memory-only routing produces correct output structure (JSON mode).
     /// Uses a task that triggers `MemoryOnly` routing via historical keywords.
@@ -647,6 +790,7 @@ mod tests {
         let result = handle_query(
             "recall the prior decided rationale from the council history",
             true,
+            false,
             true,
             3,
         );
@@ -659,8 +803,90 @@ mod tests {
         let _ws = TestWorkspace::new("query-neither");
 
         // "hello" has no historical/structural signal → routes to Neither
-        let result = handle_query("hello", true, true, 3);
+        let result = handle_query("hello", true, false, true, 3);
         assert!(result.is_ok(), "handle_query failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn query_context_packet_bridges_autoresearch_findings() {
+        let _ws = TestWorkspace::new("query-autoresearch-bridge");
+        seed_autoresearch_store("query");
+        let retrieval_meta = RetrievalMeta {
+            memory_source: "none".to_string(),
+            memory_latency_ms: 0,
+            graph_latency_ms: 0,
+            fallback_reason: None,
+        };
+        let scores = router::Scores {
+            historical: 0,
+            structural: 1,
+            local: 1,
+            action: 1,
+        };
+
+        let packet = build_context_packet(
+            "fill context compiler autoresearch gap",
+            Route::GraphOnly,
+            "medium".to_string(),
+            &[],
+            &[],
+            &[],
+            &retrieval_meta,
+            &scores,
+            "structural query",
+            "",
+            0,
+            false,
+            false,
+            None,
+        );
+        let section = packet
+            .sections
+            .iter()
+            .find(|section| section.id == "autoresearch")
+            .expect("query packet should include task-matched autoresearch findings");
+
+        assert_eq!(section.items[0].source.kind, "autoresearch");
+        assert!(
+            packet
+                .evidence
+                .contains("Context compiler autoresearch gap")
+        );
+        assert!(packet.scores["autoresearch_findings"].as_u64() == Some(1));
+        assert!(section.items[0].body.contains("Provenance:"));
+        assert!(
+            packet
+                .selection_trace
+                .iter()
+                .any(|trace| trace.item_id == "autoresearch-1")
+        );
+    }
+
+    fn seed_autoresearch_store(prefix: &str) {
+        handle_autoresearch(&AutoresearchCommands::Source {
+            command: SourceCommands::Add {
+                url: format!("file:///{prefix}/context-compiler-autoresearch-gap.md"),
+                title: Some("Context compiler autoresearch gap resolution".to_string()),
+                source_type: "article".to_string(),
+            },
+        })
+        .unwrap();
+        handle_autoresearch(&AutoresearchCommands::Profile {
+            command: ProfileCommands::Create {
+                name: "Context compiler".to_string(),
+                keywords: "context,compiler,autoresearch,gap".to_string(),
+                negative_keywords: None,
+                score_threshold: Some(1.0),
+                max_llm_calls: Some(0),
+                json: true,
+            },
+        })
+        .unwrap();
+        handle_autoresearch(&AutoresearchCommands::ScanOnce {
+            profile_id: None,
+            json: true,
+        })
+        .unwrap();
     }
 
     /// Audit log entry is written with `schema_version` and correct fields.
@@ -679,7 +905,7 @@ mod tests {
         }
 
         // Run with audit enabled (no_audit = false)
-        let result = handle_query("hello", false, false, 3);
+        let result = handle_query("hello", false, false, false, 3);
         assert!(result.is_ok(), "handle_query failed: {:?}", result.err());
 
         let audit_path = root.join("memoryport").join("layers-audit.jsonl");
@@ -710,13 +936,13 @@ mod tests {
     }
 
     /// Soft failure suppression: a route with prior failures (weight < -0.3) surfaces
-    /// a warning in open_uncertainty when results are retrieved.
+    /// a warning in `open_uncertainty` when results are retrieved.
     /// This is tested indirectly via the underlying functions:
-    /// - `read_recent_failures` (tested in feedback::tests)
-    /// - `load_route_weights` (tested in feedback::tests)
-    /// - The warning condition: route_weight < -0.3 after loading failures
+    /// - `read_recent_failures` (tested in `feedback::tests`)
+    /// - `load_route_weights` (tested in `feedback::tests`)
+    /// - The warning condition: `route_weight` < -0.3 after loading failures
     ///
-    /// An end-to-end test would require capturing stdout from handle_query,
+    /// An end-to-end test would require capturing stdout from `handle_query`,
     /// which is not easily possible without refactoring the function to
     /// return the output string. The unit-level coverage of the suppression
     /// logic via `load_route_weights` and `read_recent_failures` is sufficient
@@ -756,7 +982,6 @@ mod tests {
             .append(true)
             .open(&failures_path)
             .unwrap();
-        use std::io::Write;
         for f in &[&f1, &f2] {
             writeln!(file, "{}", serde_json::to_string(f).unwrap()).unwrap();
         }
@@ -775,7 +1000,7 @@ mod tests {
         );
 
         // Verify handle_query runs without error when failures file exists
-        let result = handle_query("hello", true, true, 3);
+        let result = handle_query("hello", true, false, true, 3);
         assert!(
             result.is_ok(),
             "handle_query should succeed with failures file: {:?}",
@@ -784,7 +1009,7 @@ mod tests {
     }
 
     /// When corrections accumulate and a route gets weight < -0.3,
-    /// apply_weight_override overrides to the best alternative route.
+    /// `apply_weight_override` overrides to the best alternative route.
     #[test]
     fn weight_override_demotes_route_below_threshold() {
         use std::collections::HashMap;

@@ -7,13 +7,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use tokio::sync::{mpsc, RwLock};
+use tokio::sync::{RwLock, mpsc};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
 use layers_core::{
-    InboundMessage, LayersError, Message, MessageContent, MessageRole, ModelProvider,
-    Result, Session, SessionStore,
+    InboundMessage, LayersError, Message, MessageContent, MessageRole, ModelProvider, Result,
+    Session, SessionStore,
 };
 
 use crate::agent_loop::{self, RunConfig, RunStatus};
@@ -45,13 +45,9 @@ enum ActorCommand {
     /// Cancel the active run (if any).
     Cancel,
     /// Interrupt the active run and re-queue a new message.
-    Interrupt {
-        message: InboundMessage,
-    },
+    Interrupt { message: InboundMessage },
     /// Cron-triggered wakeup: run the given prompt in this session.
-    CronWakeup {
-        prompt: String,
-    },
+    CronWakeup { prompt: String },
     /// A subagent has completed; deliver its result back.
     SubagentComplete {
         subagent_session_id: String,
@@ -233,8 +229,7 @@ async fn actor_loop(
     queue: Arc<SessionQueue>,
     mut cmd_rx: mpsc::Receiver<ActorCommand>,
     steer_rx: mpsc::Receiver<crate::queue::QueuedMessage>,
-    #[allow(unused_assignments, unused_variables)]
-    _run_cancel: CancellationToken,
+    #[allow(unused_assignments, unused_variables)] _run_cancel: CancellationToken,
 ) {
     let session_id = session.id.clone();
     debug!(session_id = %session_id, "session actor started");
@@ -517,7 +512,11 @@ async fn actor_loop(
 /// Synthesize a system InboundMessage for internal events (cron, heartbeat, subagent).
 fn make_system_inbound(session: &Session, text: &str) -> InboundMessage {
     InboundMessage {
-        channel: session.dm_scope.as_ref().map(|d| d.channel.clone()).unwrap_or_default(),
+        channel: session
+            .dm_scope
+            .as_ref()
+            .map(|d| d.channel.clone())
+            .unwrap_or_default(),
         channel_message_id: format!("sys-{}", uuid::Uuid::new_v4()),
         peer_id: "system".to_string(),
         peer_display_name: "System".to_string(),
@@ -706,7 +705,9 @@ impl SessionRuntime {
     ) -> Result<()> {
         let actors = self.actors.read().await;
         if let Some(actor) = actors.get(session_id) {
-            actor.subagent_complete(subagent_session_id, result_summary).await
+            actor
+                .subagent_complete(subagent_session_id, result_summary)
+                .await
         } else {
             Err(LayersError::SessionNotFound(session_id.to_string()))
         }

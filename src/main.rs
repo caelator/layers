@@ -25,15 +25,19 @@
 
 //! Layers — council orchestrator and memory spine for multi-model AI workflows.
 
+#[cfg(feature = "deprecated-runtime")]
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
+#[cfg(feature = "deprecated-runtime")]
 use layers_daemon::lifecycle::DaemonRunner;
+#[cfg(feature = "deprecated-runtime")]
 use layers_store::config::ConfigStore;
 use tracing_subscriber::EnvFilter;
 
 mod cmd;
 mod config;
+mod context_packet_compiler;
 mod council;
 #[allow(dead_code)]
 mod critical_path;
@@ -53,19 +57,24 @@ mod uc;
 
 pub mod memory_index;
 
+use cmd::autoresearch::{AutoresearchCommands, handle_autoresearch};
 use cmd::chat::{ChatArgs, handle_chat};
 use cmd::config_cmd::{ConfigArgs, handle_config};
 use cmd::council::{
     handle_council_list, handle_council_promote, handle_council_resume, handle_council_resume_last,
     handle_council_run, handle_council_status,
 };
-use cmd::curated::handle_curated_import;
+use cmd::curated::{
+    handle_curated_audit, handle_curated_import, handle_curated_list, handle_curated_search,
+    handle_curated_show,
+};
 use cmd::feedback::handle_feedback;
 use cmd::gate::handle_gate;
-use cmd::init::{InitArgs, handle_init};
 use cmd::infrastructure::{InfrastructureArgs, handle_infrastructure};
+use cmd::init::{InitArgs, handle_init};
 use cmd::migrate::handle_migrate;
 use cmd::monitor::handle_monitor;
+use cmd::preflight::{PreflightArgs, handle_preflight};
 use cmd::query::handle_query;
 use cmd::refresh::handle_refresh;
 use cmd::remember::handle_remember;
@@ -86,6 +95,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    #[cfg(feature = "deprecated-runtime")]
     /// [deprecated/experimental] Run the non-core daemon runtime.
     Daemon {
         #[command(subcommand)]
@@ -125,8 +135,11 @@ enum Commands {
         /// The task or question to retrieve context for.
         task: String,
         /// Output structured JSON instead of human-readable text.
-        #[arg(long)]
+        #[arg(long, conflicts_with = "agent_prompt")]
         json: bool,
+        /// Output an agent-ready prompt block.
+        #[arg(long, conflicts_with = "json")]
+        agent_prompt: bool,
         /// Skip writing to the audit log.
         #[arg(long)]
         no_audit: bool,
@@ -134,6 +147,32 @@ enum Commands {
         /// If UC returns fewer than this, a warning appears in the output.
         #[arg(long, default_value = "3")]
         uc_min_results: usize,
+    },
+    /// [beta] Prepare a local pre-edit context packet for a task.
+    Preflight {
+        /// The task or question to prepare context for before editing.
+        task: String,
+        /// File, directory, symbol, or test target to prioritize. Repeatable.
+        #[arg(long = "target")]
+        targets: Vec<String>,
+        /// Output structured JSON.
+        #[arg(long, conflicts_with = "agent_prompt")]
+        json: bool,
+        /// Output an agent-ready prompt block.
+        #[arg(long, conflicts_with = "json")]
+        agent_prompt: bool,
+        /// Skip audit side effects.
+        #[arg(long)]
+        no_audit: bool,
+        /// Fail if minimum code-heavy context coverage is not met.
+        #[arg(long)]
+        strict: bool,
+    },
+    /// [beta] Track, scan, and search external research sources.
+    Autoresearch {
+        /// Autoresearch subcommand.
+        #[command(subcommand)]
+        command: AutoresearchCommands,
     },
     /// [stable core] Append explicit memory to the JSONL spine.
     Remember {
@@ -241,8 +280,39 @@ enum CuratedCommands {
         /// Path to the JSONL file to import.
         file: String,
     },
+    /// List canonical curated memory records.
+    List {
+        /// Maximum number of records to return.
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
+        /// Include legacy council JSONL adapter records.
+        #[arg(long)]
+        include_legacy: bool,
+    },
+    /// Search canonical curated memory records.
+    Search {
+        /// Search query.
+        query: String,
+        /// Maximum number of records to return.
+        #[arg(long, default_value_t = 10)]
+        limit: usize,
+        /// Include legacy council JSONL adapter records.
+        #[arg(long)]
+        include_legacy: bool,
+    },
+    /// Show one canonical curated memory record.
+    Show {
+        /// Record id to show.
+        id: String,
+        /// Include legacy council JSONL adapter records.
+        #[arg(long)]
+        include_legacy: bool,
+    },
+    /// Audit canonical memory and legacy adapter counts.
+    Audit,
 }
 
+#[cfg(feature = "deprecated-runtime")]
 #[derive(Subcommand)]
 enum DaemonCommands {
     /// Start the Layers daemon.
@@ -447,15 +517,33 @@ fn main() -> anyhow::Result<()> {
             ConfigCommands::Path => ConfigArgs::Path,
             ConfigCommands::Validate => ConfigArgs::Validate,
         }),
+        #[cfg(feature = "deprecated-runtime")]
         Commands::Daemon { command } => match command {
             DaemonCommands::Run { config, pid_file } => handle_daemon_run(config, pid_file),
         },
         Commands::Query {
             task,
             json,
+            agent_prompt,
             no_audit,
             uc_min_results,
-        } => handle_query(&task, json, no_audit, uc_min_results),
+        } => handle_query(&task, json, agent_prompt, no_audit, uc_min_results),
+        Commands::Preflight {
+            task,
+            targets,
+            json,
+            agent_prompt,
+            no_audit,
+            strict,
+        } => handle_preflight(&PreflightArgs {
+            task,
+            targets,
+            json,
+            agent_prompt,
+            no_audit,
+            strict,
+        }),
+        Commands::Autoresearch { command } => handle_autoresearch(&command),
         Commands::Remember {
             kind,
             task,
@@ -500,6 +588,19 @@ fn main() -> anyhow::Result<()> {
         }
         Commands::Curated { command } => match command {
             CuratedCommands::Import { file } => handle_curated_import(&file),
+            CuratedCommands::List {
+                limit,
+                include_legacy,
+            } => handle_curated_list(limit, include_legacy),
+            CuratedCommands::Search {
+                query,
+                limit,
+                include_legacy,
+            } => handle_curated_search(&query, limit, include_legacy),
+            CuratedCommands::Show { id, include_legacy } => {
+                handle_curated_show(&id, include_legacy)
+            }
+            CuratedCommands::Audit => handle_curated_audit(),
         },
         Commands::Council { command } => match command {
             CouncilCommands::Run {
@@ -647,6 +748,7 @@ fn init_tracing(verbose: bool) {
         .init();
 }
 
+#[cfg(feature = "deprecated-runtime")]
 fn handle_daemon_run(config: Option<PathBuf>, pid_file: Option<PathBuf>) -> anyhow::Result<()> {
     let config = crate::config::load_config_with_precedence(config.as_deref())?;
     ConfigStore::validate(&config)?;
@@ -665,12 +767,17 @@ fn handle_daemon_run(config: Option<PathBuf>, pid_file: Option<PathBuf>) -> anyh
         let runner = if config.brains.is_empty() {
             runner
         } else {
-            let workdir = config.agent.workspace.clone()
+            let workdir = config
+                .agent
+                .workspace
+                .clone()
                 .unwrap_or_else(|| ".".to_string());
             runner.with_brains(config.brains.clone(), workdir)
         };
 
-        runner.bootstrap_providers(&db_path, &config_providers).await?;
+        runner
+            .bootstrap_providers(&db_path, &config_providers)
+            .await?;
         runner.run().await.map_err(anyhow::Error::from)
     })
 }

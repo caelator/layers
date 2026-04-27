@@ -51,11 +51,7 @@ impl Tool for SessionsListTool {
         })
     }
 
-    async fn execute(
-        &self,
-        _args: serde_json::Value,
-        context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, _args: serde_json::Value, context: ToolContext) -> Result<ToolOutput> {
         debug!(session = %context.session_id, "listing sessions");
 
         // Stub: requires SessionStore access at runtime.
@@ -67,7 +63,7 @@ impl Tool for SessionsListTool {
             .to_string(),
             attachments: Vec::new(),
             structured_content: None,
-                is_error: None,
+            is_error: None,
         })
     }
 }
@@ -126,11 +122,7 @@ impl Tool for SessionsSendTool {
         })
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         let params: SessionsSendParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid sessions_send params: {e}")))?;
 
@@ -146,7 +138,7 @@ impl Tool for SessionsSendTool {
             .to_string(),
             attachments: Vec::new(),
             structured_content: None,
-                is_error: None,
+            is_error: None,
         })
     }
 }
@@ -212,15 +204,14 @@ impl Tool for SessionsSpawnTool {
         })
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         let params: SessionsSpawnParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid sessions_spawn params: {e}")))?;
 
-        debug!(prompt_len = params.prompt.len(), "spawning subagent session");
+        debug!(
+            prompt_len = params.prompt.len(),
+            "spawning subagent session"
+        );
 
         // Stub: requires SubagentManager access at runtime.
         let session_id = uuid::Uuid::new_v4().to_string();
@@ -233,7 +224,7 @@ impl Tool for SessionsSpawnTool {
             .to_string(),
             attachments: Vec::new(),
             structured_content: None,
-                is_error: None,
+            is_error: None,
         })
     }
 }
@@ -292,11 +283,7 @@ impl Tool for SessionsHistoryTool {
         })
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         let params: SessionsHistoryParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid sessions_history params: {e}")))?;
 
@@ -316,7 +303,7 @@ impl Tool for SessionsHistoryTool {
             .to_string(),
             attachments: Vec::new(),
             structured_content: None,
-                is_error: None,
+            is_error: None,
         })
     }
 }

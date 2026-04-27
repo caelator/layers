@@ -179,8 +179,8 @@ mod tests {
     fn empty_results_are_unacceptable() {
         let q = evaluate("how does auth work", &[], 3);
         assert!(!q.acceptable);
-        assert_eq!(q.relevance, 0.0);
-        assert_eq!(q.coverage, 0.0);
+        assert!((q.relevance - 0.0).abs() < f64::EPSILON);
+        assert!((q.coverage - 0.0).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -226,7 +226,7 @@ mod tests {
         // A query with only stopwords should not penalize results
         let results = &["some detailed result with many words for specificity check"];
         let q = evaluate("the is a", results, 1);
-        assert_eq!(q.relevance, 1.0);
+        assert!((q.relevance - 1.0).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -246,6 +246,6 @@ mod tests {
     fn zero_requested_gives_full_coverage() {
         let results = &["some result with enough words for the specificity threshold"];
         let q = evaluate("test query", results, 0);
-        assert_eq!(q.coverage, 1.0);
+        assert!((q.coverage - 1.0).abs() < f64::EPSILON);
     }
 }

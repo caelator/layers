@@ -80,11 +80,7 @@ impl Tool for MemorySearchTool {
         })
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         let params: MemorySearchParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid memory_search params: {e}")))?;
 
@@ -198,11 +194,7 @@ impl Tool for MemoryGetTool {
         })
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         let params: MemoryGetParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid memory_get params: {e}")))?;
 

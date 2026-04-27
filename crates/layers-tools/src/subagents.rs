@@ -42,11 +42,7 @@ impl Tool for SubagentsListTool {
         })
     }
 
-    async fn execute(
-        &self,
-        _args: serde_json::Value,
-        context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, _args: serde_json::Value, context: ToolContext) -> Result<ToolOutput> {
         debug!(session = %context.session_id, "listing subagents");
 
         Ok(ToolOutput {
@@ -57,7 +53,7 @@ impl Tool for SubagentsListTool {
             .to_string(),
             attachments: Vec::new(),
             structured_content: None,
-                is_error: None,
+            is_error: None,
         })
     }
 }
@@ -110,11 +106,7 @@ impl Tool for SubagentsKillTool {
         })
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         let params: SubagentsKillParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid subagents_kill params: {e}")))?;
 
@@ -129,7 +121,7 @@ impl Tool for SubagentsKillTool {
             .to_string(),
             attachments: Vec::new(),
             structured_content: None,
-                is_error: None,
+            is_error: None,
         })
     }
 }
@@ -187,11 +179,7 @@ impl Tool for SubagentsSteerTool {
         })
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         let params: SubagentsSteerParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid subagents_steer params: {e}")))?;
 
@@ -210,7 +198,7 @@ impl Tool for SubagentsSteerTool {
             .to_string(),
             attachments: Vec::new(),
             structured_content: None,
-                is_error: None,
+            is_error: None,
         })
     }
 }

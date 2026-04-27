@@ -21,17 +21,8 @@ pub trait ChannelAdapter: Send + Sync {
     async fn start(&self, cancel: CancellationToken) -> Result<()>;
     async fn stop(&self) -> Result<()>;
     async fn send(&self, message: OutboundMessage) -> Result<()>;
-    async fn send_streaming(
-        &self,
-        target: StreamingTarget,
-        chunk: String,
-    ) -> Result<()>;
-    async fn send_reaction(
-        &self,
-        channel: &str,
-        message_id: &str,
-        emoji: &str,
-    ) -> Result<()>;
+    async fn send_streaming(&self, target: StreamingTarget, chunk: String) -> Result<()>;
+    async fn send_reaction(&self, channel: &str, message_id: &str, emoji: &str) -> Result<()>;
     async fn health(&self) -> ChannelHealth;
 }
 
@@ -73,11 +64,7 @@ pub trait Tool: Send + Sync {
     fn name(&self) -> &str;
     fn description(&self) -> &str;
     fn schema(&self) -> serde_json::Value;
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        context: ToolContext,
-    ) -> Result<ToolOutput>;
+    async fn execute(&self, args: serde_json::Value, context: ToolContext) -> Result<ToolOutput>;
 }
 
 // ---------------------------------------------------------------------------
@@ -163,8 +150,6 @@ pub trait EmbeddingIndexStore: Send + Sync {
     async fn get(&self, corpus: &str) -> Result<EmbeddingIndexState>;
 }
 
-
-
 // ---------------------------------------------------------------------------
 // ContextEngine
 // ---------------------------------------------------------------------------
@@ -172,11 +157,7 @@ pub trait EmbeddingIndexStore: Send + Sync {
 #[async_trait::async_trait]
 pub trait ContextEngine: Send + Sync {
     async fn ingest(&self, session_id: &str, message: &Message) -> Result<()>;
-    async fn assemble(
-        &self,
-        session_id: &str,
-        budget: &TokenBudget,
-    ) -> Result<Vec<Message>>;
+    async fn assemble(&self, session_id: &str, budget: &TokenBudget) -> Result<Vec<Message>>;
     async fn compact(&self, session_id: &str) -> Result<CompactionResult>;
     async fn prune(&self, session_id: &str, max_messages: usize) -> Result<()>;
 }
@@ -191,23 +172,8 @@ pub trait SessionStore: Send + Sync {
     async fn put(&self, session: &Session) -> Result<()>;
     async fn list(&self, filter: &SessionFilter) -> Result<Vec<Session>>;
     async fn delete(&self, session_id: &str) -> Result<()>;
-    async fn append_message(
-        &self,
-        session_id: &str,
-        message: Message,
-    ) -> Result<()>;
-    async fn get_messages(
-        &self,
-        session_id: &str,
-        limit: Option<usize>,
-    ) -> Result<Vec<Message>>;
-    async fn update_model(
-        &self,
-        session_id: &str,
-        model: &str,
-    ) -> Result<()>;
-    async fn begin_session_tx(
-        &self,
-        session_id: &str,
-    ) -> Result<Box<dyn SessionTransaction>>;
+    async fn append_message(&self, session_id: &str, message: Message) -> Result<()>;
+    async fn get_messages(&self, session_id: &str, limit: Option<usize>) -> Result<Vec<Message>>;
+    async fn update_model(&self, session_id: &str, model: &str) -> Result<()>;
+    async fn begin_session_tx(&self, session_id: &str) -> Result<Box<dyn SessionTransaction>>;
 }

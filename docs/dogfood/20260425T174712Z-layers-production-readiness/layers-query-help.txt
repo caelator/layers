@@ -1,0 +1,20 @@
+[stable core] Retrieve context for a task
+
+Usage: layers query [OPTIONS] <TASK>
+
+Arguments:
+  <TASK>  The task or question to retrieve context for
+
+Options:
+      --json
+          Output structured JSON instead of human-readable text
+  -v, --verbose
+          Enable verbose tracing output (sets `RUST_LOG=layers=debug`)
+      --agent-prompt
+          Output an agent-ready prompt block
+      --no-audit
+          Skip writing to the audit log
+      --uc-min-results <UC_MIN_RESULTS>
+          Minimum number of UC semantic results before surfacing a warning. If UC returns fewer than this, a warning appears in the output [default: 3]
+  -h, --help
+          Print help

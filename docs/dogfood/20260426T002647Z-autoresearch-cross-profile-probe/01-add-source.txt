@@ -1,0 +1,4 @@
+added source f377f9d8-dd71-4541-931c-787856d7029e
+  url   : https://example.test/agent-research
+  title : Agent Research Radar for Coding Agents
+  type  : article

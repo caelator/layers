@@ -29,11 +29,10 @@ use crate::registry::ProviderRegistry;
 ///
 /// Any other value is treated as OpenAI-compatible if an `api_base` is set,
 /// allowing custom/local providers.
-pub fn build_provider(profile: &AuthProfile) -> Result<Box<dyn layers_core::traits::ModelProvider>> {
-    let api_key = profile
-        .api_key
-        .as_deref()
-        .unwrap_or("");
+pub fn build_provider(
+    profile: &AuthProfile,
+) -> Result<Box<dyn layers_core::traits::ModelProvider>> {
+    let api_key = profile.api_key.as_deref().unwrap_or("");
 
     match profile.provider.as_str() {
         "openai" => {
@@ -41,20 +40,10 @@ pub fn build_provider(profile: &AuthProfile) -> Result<Box<dyn layers_core::trai
                 .api_base
                 .as_deref()
                 .unwrap_or("https://api.openai.com");
-            Ok(Box::new(OpenAiProvider::new(
-                &profile.name,
-                base,
-                api_key,
-            )))
+            Ok(Box::new(OpenAiProvider::new(&profile.name, base, api_key)))
         }
-        "anthropic" => Ok(Box::new(AnthropicProvider::new(
-            &profile.name,
-            api_key,
-        ))),
-        "google" => Ok(Box::new(GoogleProvider::new(
-            &profile.name,
-            api_key,
-        ))),
+        "anthropic" => Ok(Box::new(AnthropicProvider::new(&profile.name, api_key))),
+        "google" => Ok(Box::new(GoogleProvider::new(&profile.name, api_key))),
         other => {
             // Custom provider — must have an api_base, treated as OpenAI-compatible.
             let base = profile.api_base.as_deref().ok_or_else(|| {
@@ -171,9 +160,9 @@ pub fn bootstrap_from_config(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Utc;
     use layers_core::config::ProviderConfig;
     use std::collections::HashMap;
-    use chrono::Utc;
 
     #[test]
     fn build_provider_openai() {

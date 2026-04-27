@@ -304,7 +304,7 @@ mod tests {
                 query,
             } => {
                 assert_eq!(*route_id, RouteId::CouncilOnly);
-                assert_eq!(*correction, -0.3);
+                assert!((*correction - -0.3).abs() < f32::EPSILON);
                 assert!(query.contains("refactor"));
             }
             other => panic!("expected Correction, got {other:?}"),
@@ -390,8 +390,8 @@ mod tests {
         write_failure(&path, &failure);
 
         let reader = RouteCorrectionReader::from_path(&path);
-        assert_eq!(reader.weight_for(RouteId::CouncilOnly), -0.5);
-        assert_eq!(reader.weight_for(RouteId::Both), 0.0);
+        assert!((reader.weight_for(RouteId::CouncilOnly) - -0.5).abs() < f32::EPSILON);
+        assert!((reader.weight_for(RouteId::Both) - 0.0).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -410,7 +410,7 @@ mod tests {
         write_failure(&path, &failure);
 
         let reader = RouteCorrectionReader::from_path(&path);
-        assert_eq!(reader.weight_for(RouteId::Both), -0.2);
+        assert!((reader.weight_for(RouteId::Both) - -0.2).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -429,9 +429,9 @@ mod tests {
 
         let reader = RouteCorrectionReader::from_path(&path);
         // The wrong route (CouncilOnly) gets −0.3
-        assert_eq!(reader.weight_for(RouteId::CouncilOnly), -0.3);
+        assert!((reader.weight_for(RouteId::CouncilOnly) - -0.3).abs() < f32::EPSILON);
         // The human's correct choice (CouncilWithGraph) gets +0.4
-        assert_eq!(reader.weight_for(RouteId::CouncilWithGraph), 0.4);
+        assert!((reader.weight_for(RouteId::CouncilWithGraph) - 0.4).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -453,7 +453,7 @@ mod tests {
 
         let reader = RouteCorrectionReader::from_path(&path);
         // 3 hard failures: 3 × −0.5 = −1.5
-        assert_eq!(reader.weight_for(RouteId::CouncilOnly), -1.5);
+        assert!((reader.weight_for(RouteId::CouncilOnly) - -1.5).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -500,19 +500,19 @@ mod tests {
         let hard_delta = corrections
             .iter()
             .find(|c| matches!(c, RouteCorrection::Hard { .. }))
-            .map(|c| c.weight_delta());
+            .map(super::RouteCorrection::weight_delta);
         assert_eq!(hard_delta, Some(-0.5));
 
         let soft_delta = corrections
             .iter()
             .find(|c| matches!(c, RouteCorrection::Soft { .. }))
-            .map(|c| c.weight_delta());
+            .map(super::RouteCorrection::weight_delta);
         assert_eq!(soft_delta, Some(-0.2));
 
         let corr_delta = corrections
             .iter()
             .find(|c| matches!(c, RouteCorrection::Correction { .. }))
-            .map(|c| c.weight_delta());
+            .map(super::RouteCorrection::weight_delta);
         assert_eq!(corr_delta, Some(-0.3));
     }
 }

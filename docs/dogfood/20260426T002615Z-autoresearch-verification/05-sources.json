@@ -1,0 +1,23 @@
+[
+  {
+    "id": "062dbf86-2f37-4012-9c7e-1e7a209206f9",
+    "url": "https://example.test/gardening",
+    "title": "Garden Notes",
+    "source_type": "web",
+    "added_at": "2026-04-26T00:26:20.812097Z"
+  },
+  {
+    "id": "66a93106-22dc-457e-8dbf-56761628312d",
+    "url": "https://example.test/crypto-agent-research",
+    "title": "Crypto Agent Research Noise",
+    "source_type": "web",
+    "added_at": "2026-04-26T00:26:19.809058Z"
+  },
+  {
+    "id": "d1d90a27-26d1-4ed5-a2bc-5278a32b055b",
+    "url": "https://example.test/agent-research",
+    "title": "Agent Research Radar for Coding Agents",
+    "source_type": "article",
+    "added_at": "2026-04-26T00:26:18.807778Z"
+  }
+]

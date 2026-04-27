@@ -108,9 +108,7 @@ impl TokenAccountant {
     /// Record usage from a completed provider call.
     pub fn record_usage(&self, key: &AccountingKey, usage: &Usage) {
         let mut map = self.usage.write();
-        map.entry(key.clone())
-            .or_default()
-            .record(usage);
+        map.entry(key.clone()).or_default().record(usage);
 
         debug!(
             session = %key.session_id,
@@ -124,11 +122,7 @@ impl TokenAccountant {
 
     /// Get the current usage snapshot for a key.
     pub fn get_usage(&self, key: &AccountingKey) -> UsageSnapshot {
-        self.usage
-            .read()
-            .get(key)
-            .cloned()
-            .unwrap_or_default()
+        self.usage.read().get(key).cloned().unwrap_or_default()
     }
 
     /// Reset usage for a key (e.g., on session reset).
@@ -146,10 +140,7 @@ impl TokenAccountant {
     /// Estimate input tokens for a request using the provider's tokenizer.
     ///
     /// Counts message tokens, tool schema tokens, and system prompt tokens.
-    pub fn estimate_input(
-        provider: &dyn ModelProvider,
-        request: &ModelRequest,
-    ) -> usize {
+    pub fn estimate_input(provider: &dyn ModelProvider, request: &ModelRequest) -> usize {
         if let Some(tokenizer) = provider.tokenizer() {
             let msg_tokens = tokenizer.count_message_tokens(&request.messages);
             let tool_tokens = request
@@ -301,11 +292,9 @@ impl ModelProvider for AccountedProvider {
         TokenAccountant::validate_context_window(self.inner.as_ref(), &request)?;
 
         // Optional: check budget
-        let check = self.accountant.check_budget(
-            &self.accounting_key,
-            self.inner.as_ref(),
-            &request,
-        )?;
+        let check =
+            self.accountant
+                .check_budget(&self.accounting_key, self.inner.as_ref(), &request)?;
 
         if !check.within_budget {
             return Err(LayersError::ContextOverflow {
@@ -440,7 +429,10 @@ mod tests {
 
         // No budget set — always allowed
         let request = ModelRequest {
-            model: ModelRef { provider: "test".into(), model: "test".into() },
+            model: ModelRef {
+                provider: "test".into(),
+                model: "test".into(),
+            },
             messages: vec![],
             system: Some("hello world".into()),
             tools: None,
@@ -472,7 +464,10 @@ mod tests {
         acc.record_usage(&key, &big_usage);
 
         let request = ModelRequest {
-            model: ModelRef { provider: "test".into(), model: "test".into() },
+            model: ModelRef {
+                provider: "test".into(),
+                model: "test".into(),
+            },
             messages: vec![Message {
                 role: MessageRole::User,
                 content: MessageContent::Text("a".repeat(400)), // 100 tokens approx
@@ -506,7 +501,10 @@ mod tests {
         let key = AccountingKey::new("s1", "main");
 
         let request = ModelRequest {
-            model: ModelRef { provider: "test".into(), model: "test".into() },
+            model: ModelRef {
+                provider: "test".into(),
+                model: "test".into(),
+            },
             messages: vec![],
             system: None,
             tools: None,
@@ -531,7 +529,10 @@ mod tests {
         let big_text = "The quick brown fox jumps over the lazy dog. ".repeat(20_000); // ~920k chars
         assert!(big_text.len() > 500_000);
         let request = ModelRequest {
-            model: ModelRef { provider: "test".into(), model: "test".into() },
+            model: ModelRef {
+                provider: "test".into(),
+                model: "test".into(),
+            },
             messages: vec![Message {
                 role: MessageRole::User,
                 content: MessageContent::Text(big_text),

@@ -7,10 +7,10 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use layers_core::{
-    CancellationToken, ChannelAdapter, ChannelHealth, InboundMessage, LayersError,
-    OutboundMessage, PeerKind, Result, StreamingTarget,
+    CancellationToken, ChannelAdapter, ChannelHealth, InboundMessage, LayersError, OutboundMessage,
+    PeerKind, Result, StreamingTarget,
 };
-use tokio::sync::{mpsc, Mutex, RwLock};
+use tokio::sync::{Mutex, RwLock, mpsc};
 use tracing::{info, warn};
 
 /// A connected WebSocket client session.
@@ -73,9 +73,9 @@ impl WebChatAdapter {
         text: String,
     ) -> Result<()> {
         let clients = self.clients.read().await;
-        let client = clients.get(client_id).ok_or_else(|| {
-            LayersError::Channel(format!("unknown webchat client '{client_id}'"))
-        })?;
+        let client = clients
+            .get(client_id)
+            .ok_or_else(|| LayersError::Channel(format!("unknown webchat client '{client_id}'")))?;
 
         let msg = InboundMessage {
             channel: "webchat".to_string(),
@@ -108,15 +108,9 @@ impl WebChatAdapter {
         let clients = self.clients.read().await;
         for client in clients.values() {
             if client.peer_id == peer_id {
-                client
-                    .sender
-                    .send(text.to_string())
-                    .await
-                    .map_err(|_| {
-                        LayersError::Channel(format!(
-                            "failed to send to webchat client '{peer_id}'"
-                        ))
-                    })?;
+                client.sender.send(text.to_string()).await.map_err(|_| {
+                    LayersError::Channel(format!("failed to send to webchat client '{peer_id}'"))
+                })?;
                 return Ok(());
             }
         }

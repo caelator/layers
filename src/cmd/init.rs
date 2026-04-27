@@ -32,10 +32,7 @@ pub fn handle_init(args: &InitArgs) -> anyhow::Result<()> {
     }
 
     // Create directory structure
-    let dirs = [
-        "memoryport",
-        "memoryport/council-runs",
-    ];
+    let dirs = ["memoryport", "memoryport/council-runs"];
     for dir in &dirs {
         let path = root.join(dir);
         if path.exists() {
@@ -49,7 +46,10 @@ pub fn handle_init(args: &InitArgs) -> anyhow::Result<()> {
     // Create starter layers.toml if not present
     let config_path = root.join("layers.toml");
     if config_path.exists() && !args.force {
-        println!("exists  {} (use --force to overwrite)", config_path.display());
+        println!(
+            "exists  {} (use --force to overwrite)",
+            config_path.display()
+        );
     } else {
         let starter = starter_config();
         let store = ConfigStore::new(&config_path);
@@ -73,7 +73,10 @@ pub fn handle_init(args: &InitArgs) -> anyhow::Result<()> {
 
     println!();
     println!("Layers workspace initialized at {}", root.display());
-    println!("Edit {} to configure providers and channels.", config_path.display());
+    println!(
+        "Edit {} to configure providers and channels.",
+        config_path.display()
+    );
 
     Ok(())
 }

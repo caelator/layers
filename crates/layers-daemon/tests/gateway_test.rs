@@ -6,9 +6,7 @@ use axum::body::Body;
 use http_body_util::BodyExt;
 use hyper::Request;
 use layers_channels::manager::ChannelManager;
-use layers_core::{
-    Message, Result, Session, SessionFilter, SessionStore, SessionTransaction,
-};
+use layers_core::{Message, Result, Session, SessionFilter, SessionStore, SessionTransaction};
 use layers_daemon::gateway::{Gateway, GatewayConfig};
 use tower::ServiceExt; // for `oneshot`
 
@@ -21,7 +19,9 @@ struct MockSessionStore;
 #[async_trait::async_trait]
 impl SessionStore for MockSessionStore {
     async fn get(&self, _session_id: &str) -> Result<Session> {
-        Err(layers_core::LayersError::SessionNotFound("not found".into()))
+        Err(layers_core::LayersError::SessionNotFound(
+            "not found".into(),
+        ))
     }
     async fn put(&self, _session: &Session) -> Result<()> {
         Ok(())
@@ -41,11 +41,10 @@ impl SessionStore for MockSessionStore {
     async fn update_model(&self, _session_id: &str, _model: &str) -> Result<()> {
         Ok(())
     }
-    async fn begin_session_tx(
-        &self,
-        _session_id: &str,
-    ) -> Result<Box<dyn SessionTransaction>> {
-        Err(layers_core::LayersError::SessionNotFound("not implemented".into()))
+    async fn begin_session_tx(&self, _session_id: &str) -> Result<Box<dyn SessionTransaction>> {
+        Err(layers_core::LayersError::SessionNotFound(
+            "not implemented".into(),
+        ))
     }
 }
 

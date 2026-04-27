@@ -4,6 +4,7 @@ use std::fs;
 use std::path::Path;
 
 use crate::config::canonical_curated_memory_path;
+use crate::memory::{audit_canonical, list_canonical, search_canonical, show_canonical};
 use crate::types::{CuratedImportRecord, Decision, ProjectRecord, ProjectRecordPayload};
 use crate::util::{append_jsonl, compact, iso_now, load_jsonl};
 
@@ -28,6 +29,31 @@ pub fn handle_curated_import(file: &str) -> Result<()> {
     if !ok {
         anyhow::bail!("{errors} records failed to parse");
     }
+    Ok(())
+}
+
+pub fn handle_curated_list(limit: usize, include_legacy: bool) -> Result<()> {
+    let records = list_canonical(limit, include_legacy)?;
+    println!("{}", serde_json::to_string_pretty(&records)?);
+    Ok(())
+}
+
+pub fn handle_curated_search(query: &str, limit: usize, include_legacy: bool) -> Result<()> {
+    let records = search_canonical(query, limit, include_legacy)?;
+    println!("{}", serde_json::to_string_pretty(&records)?);
+    Ok(())
+}
+
+pub fn handle_curated_show(id: &str, include_legacy: bool) -> Result<()> {
+    let Some(record) = show_canonical(id, include_legacy)? else {
+        anyhow::bail!("curated memory record not found: {id}");
+    };
+    println!("{}", serde_json::to_string_pretty(&record)?);
+    Ok(())
+}
+
+pub fn handle_curated_audit() -> Result<()> {
+    println!("{}", serde_json::to_string_pretty(&audit_canonical()?)?);
     Ok(())
 }
 
@@ -185,5 +211,26 @@ mod tests {
         .unwrap();
         let result = handle_curated_import(&import_file.to_string_lossy());
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn curated_handlers_support_canonical_read_api() {
+        let ws = TestWorkspace::new("curated-read-api-handlers");
+        let root = ws.root();
+        let canonical = root.join("memoryport").join("curated-memory.jsonl");
+        crate::util::append_jsonl(&canonical, &json!({
+            "id": "cm_constraint_local_first",
+            "entity": "constraint",
+            "project": "layers",
+            "created_at": "2026-04-03T00:00:00Z",
+            "source": "test",
+            "payload": {"type": "constraint", "slug": "local-first", "title": "Local first", "summary": "Layers stays local-first."}
+        }))
+        .unwrap();
+
+        handle_curated_list(10, false).unwrap();
+        handle_curated_search("local-first", 10, false).unwrap();
+        handle_curated_show("cm_constraint_local_first", false).unwrap();
+        handle_curated_audit().unwrap();
     }
 }

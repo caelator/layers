@@ -239,7 +239,9 @@ pub fn detect_council_artifacts() -> Vec<Diagnosis> {
                 // Check referenced files exist (stdout/stderr are on attempts, not stage)
                 for stage in &record.stages {
                     for attempt in &stage.attempts {
-                        if !attempt.stdout_path.is_empty() && !Path::new(&attempt.stdout_path).exists() {
+                        if !attempt.stdout_path.is_empty()
+                            && !Path::new(&attempt.stdout_path).exists()
+                        {
                             diagnoses.push(Diagnosis::new(
                                 DiagnosisKind::CouncilRunArtifactsMissing,
                                 format!(
@@ -254,7 +256,9 @@ pub fn detect_council_artifacts() -> Vec<Diagnosis> {
                                 }),
                             ));
                         }
-                        if !attempt.stderr_path.is_empty() && !Path::new(&attempt.stderr_path).exists() {
+                        if !attempt.stderr_path.is_empty()
+                            && !Path::new(&attempt.stderr_path).exists()
+                        {
                             diagnoses.push(Diagnosis::new(
                                 DiagnosisKind::CouncilRunArtifactsMissing,
                                 format!(

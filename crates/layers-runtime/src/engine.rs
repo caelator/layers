@@ -8,15 +8,14 @@
 
 use std::sync::Arc;
 
-use tracing::{debug, info};
 use layers_core::{
-    CompactionResult, ContextEngine, Message, MessageContent,
-    Result, SessionStore, TokenBudget,
+    CompactionResult, ContextEngine, Message, MessageContent, Result, SessionStore, TokenBudget,
 };
+use tracing::{debug, info};
 
 use crate::context::{
-    build_compaction_summary, CompactionStrategy, ContextAssembler, ContextPlan,
-    MultimodalPruner, SystemPromptComposer,
+    CompactionStrategy, ContextAssembler, ContextPlan, MultimodalPruner, SystemPromptComposer,
+    build_compaction_summary,
 };
 
 // ---------------------------------------------------------------------------
@@ -56,11 +55,7 @@ impl DefaultContextEngine {
     }
 
     /// Produce a detailed [`ContextPlan`] for audit/debugging.
-    pub async fn plan(
-        &self,
-        session_id: &str,
-        budget: &TokenBudget,
-    ) -> Result<ContextPlan> {
+    pub async fn plan(&self, session_id: &str, budget: &TokenBudget) -> Result<ContextPlan> {
         self.assembler
             .plan(session_id, &self.store, budget, self.system_prompt())
             .await
@@ -139,11 +134,7 @@ impl ContextEngine for DefaultContextEngine {
         self.store.append_message(session_id, message.clone()).await
     }
 
-    async fn assemble(
-        &self,
-        session_id: &str,
-        budget: &TokenBudget,
-    ) -> Result<Vec<Message>> {
+    async fn assemble(&self, session_id: &str, budget: &TokenBudget) -> Result<Vec<Message>> {
         let prompt = self.system_prompt();
         self.assembler
             .assemble(session_id, &self.store, budget, prompt)
@@ -288,11 +279,7 @@ mod tests {
             let _ = (id, msg);
             Ok(())
         }
-        async fn get_messages(
-            &self,
-            id: &str,
-            _limit: Option<usize>,
-        ) -> Result<Vec<Message>> {
+        async fn get_messages(&self, id: &str, _limit: Option<usize>) -> Result<Vec<Message>> {
             Ok(self.sessions.get(id).cloned().unwrap_or_default())
         }
         async fn update_model(&self, _id: &str, _model: &str) -> Result<()> {
@@ -309,9 +296,7 @@ mod tests {
     fn make_store(messages: Vec<Message>) -> Arc<dyn SessionStore> {
         let mut map = std::collections::HashMap::new();
         map.insert("s1".to_string(), messages);
-        Arc::new(StubStore {
-            sessions: map,
-        })
+        Arc::new(StubStore { sessions: map })
     }
 
     #[tokio::test]

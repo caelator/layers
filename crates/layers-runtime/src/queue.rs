@@ -4,7 +4,7 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use tokio::sync::{mpsc, Mutex, RwLock};
+use tokio::sync::{Mutex, RwLock, mpsc};
 
 use layers_core::InboundMessage;
 
@@ -13,8 +13,7 @@ use layers_core::InboundMessage;
 // ---------------------------------------------------------------------------
 
 /// How queued messages are handled when a run is already active.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum QueueMode {
     /// Coalesce queued messages into a follow-up turn after current run finishes.
     #[default]
@@ -28,7 +27,6 @@ pub enum QueueMode {
     /// Steer the current message + preserve backlog for followup.
     SteerBacklog,
 }
-
 
 // ---------------------------------------------------------------------------
 // Queued entry

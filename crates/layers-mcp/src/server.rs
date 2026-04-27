@@ -20,21 +20,22 @@ use layers_tools::registry::ToolRegistry;
 
 /// Substrings that mark a tool name as dangerous (mutating / side-effectful).
 const DANGEROUS_PATTERNS: &[&str] = &[
-    "exec",
-    "execute",
-    "run",
-    "spawn",
-    "process",
-    "subagent",
-    "write",
-    "edit",
-    "delete",
-    "remove",
-    "create",
-    "mutate",
-    "update",
-    "kill",
-    "stop",
+    "exec", "execute", "run", "spawn", "process", "subagent", "write", "edit", "delete", "remove",
+    "create", "mutate", "update", "kill", "stop",
+];
+
+/// Stable product-facing MCP tools for Layers' context compiler surface.
+///
+/// This surface is intentionally narrow: it exposes context packet compilation,
+/// memory retrieval, code-impact analysis, and context validation. Generic
+/// runtime tools such as filesystem mutation, process execution, and subagent
+/// control must remain behind explicit allowlists and dangerous-tool opt-in.
+pub const STABLE_CONTEXT_SURFACE_TOOLS: &[&str] = &[
+    "context_compile",
+    "impact_analyze",
+    "memory_get",
+    "memory_search",
+    "validate_context",
 ];
 
 /// Returns `true` if the tool name matches any dangerous pattern.
@@ -43,6 +44,12 @@ pub fn is_dangerous_tool(name: &str) -> bool {
     DANGEROUS_PATTERNS
         .iter()
         .any(|pattern| lower.contains(pattern))
+}
+
+/// Stable context compiler MCP tool names in deterministic listing order.
+#[must_use]
+pub fn stable_context_surface_tools() -> Vec<&'static str> {
+    STABLE_CONTEXT_SURFACE_TOOLS.to_vec()
 }
 
 // ---------------------------------------------------------------------------
@@ -73,6 +80,24 @@ fn default_server_name() -> String {
 
 fn default_server_version() -> String {
     "0.1.0".to_string()
+}
+
+impl McpServerConfig {
+    /// Product-facing default for the stable context compiler MCP surface.
+    ///
+    /// This intentionally does not expose generic runtime capabilities. Tools
+    /// outside [`STABLE_CONTEXT_SURFACE_TOOLS`] require an explicit custom
+    /// allowlist, and dangerous tools additionally require `expose_dangerous`.
+    #[must_use]
+    pub fn stable_context_surface() -> Self {
+        Self {
+            allowlisted_tools: stable_context_surface_tools()
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+            ..Self::default()
+        }
+    }
 }
 
 impl Default for McpServerConfig {
@@ -225,8 +250,7 @@ impl McpServer {
                             message: format!("Parse error: {e}"),
                         }),
                     };
-                    let mut resp_line =
-                        serde_json::to_string(&response).unwrap_or_default();
+                    let mut resp_line = serde_json::to_string(&response).unwrap_or_default();
                     resp_line.push('\n');
                     let _ = stdout.write_all(resp_line.as_bytes()).await;
                     let _ = stdout.flush().await;
@@ -241,17 +265,13 @@ impl McpServer {
                 continue;
             }
 
-            let mut resp_line =
-                serde_json::to_string(&response).unwrap_or_default();
+            let mut resp_line = serde_json::to_string(&response).unwrap_or_default();
             resp_line.push('\n');
             stdout
                 .write_all(resp_line.as_bytes())
                 .await
                 .map_err(layers_core::LayersError::Io)?;
-            stdout
-                .flush()
-                .await
-                .map_err(layers_core::LayersError::Io)?;
+            stdout.flush().await.map_err(layers_core::LayersError::Io)?;
         }
 
         Ok(())
@@ -336,13 +356,14 @@ impl McpServer {
             message: "Missing params".to_string(),
         })?;
 
-        let tool_name = params
-            .get("name")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| JsonRpcError {
-                code: -32602,
-                message: "Missing 'name' in params".to_string(),
-            })?;
+        let tool_name =
+            params
+                .get("name")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| JsonRpcError {
+                    code: -32602,
+                    message: "Missing 'name' in params".to_string(),
+                })?;
 
         // Reject tools not in the exposed set.
         if !self.exposed.contains(tool_name) {
@@ -484,11 +505,66 @@ mod tests {
         }
     }
 
+    struct StableTool {
+        name: &'static str,
+    }
+
+    #[async_trait]
+    impl Tool for StableTool {
+        fn name(&self) -> &str {
+            self.name
+        }
+        fn description(&self) -> &str {
+            "Stable context compiler surface fixture"
+        }
+        fn schema(&self) -> serde_json::Value {
+            serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "task": { "type": "string" }
+                }
+            })
+        }
+        async fn execute(
+            &self,
+            params: serde_json::Value,
+            _ctx: ToolContext,
+        ) -> layers_core::Result<ToolOutput> {
+            let task = params
+                .get("task")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("unspecified");
+            Ok(ToolOutput {
+                content: serde_json::json!({
+                    "tool": self.name,
+                    "packet": {
+                        "task": task,
+                        "sections": []
+                    }
+                })
+                .to_string(),
+                structured_content: None,
+                attachments: vec![],
+                is_error: None,
+            })
+        }
+    }
+
     fn make_registry() -> Arc<ToolRegistry> {
         let mut reg = ToolRegistry::new();
         reg.register(Arc::new(SafeTool));
         reg.register(Arc::new(DangerousTool));
         reg.register(Arc::new(AnotherSafeTool));
+        Arc::new(reg)
+    }
+
+    fn make_stable_registry() -> Arc<ToolRegistry> {
+        let mut reg = ToolRegistry::new();
+        for name in STABLE_CONTEXT_SURFACE_TOOLS {
+            reg.register(Arc::new(StableTool { name }));
+        }
+        reg.register(Arc::new(SafeTool));
+        reg.register(Arc::new(DangerousTool));
         Arc::new(reg)
     }
 
@@ -555,6 +631,50 @@ mod tests {
         assert!(tools.is_empty());
     }
 
+    #[test]
+    fn stable_context_surface_exposes_only_product_tools() {
+        let registry = make_stable_registry();
+        let server = McpServer::new(registry, McpServerConfig::stable_context_surface());
+
+        let result = server.handle_tools_list().unwrap();
+        let mut names: Vec<&str> = result["tools"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|tool| tool["name"].as_str().unwrap())
+            .collect();
+        names.sort_unstable();
+
+        assert_eq!(names, stable_context_surface_tools());
+        assert!(server.is_tool_exposed("context_compile"));
+        assert!(server.is_tool_exposed("memory_search"));
+        assert!(server.is_tool_exposed("memory_get"));
+        assert!(server.is_tool_exposed("impact_analyze"));
+        assert!(server.is_tool_exposed("validate_context"));
+        assert!(!server.is_tool_exposed("read_config"));
+        assert!(!server.is_tool_exposed("execute_command"));
+    }
+
+    #[tokio::test]
+    async fn stable_context_tool_call_fixture_dispatches() {
+        let registry = make_stable_registry();
+        let server = McpServer::new(registry, McpServerConfig::stable_context_surface());
+
+        let result = server
+            .handle_tools_call(Some(&serde_json::json!({
+                "name": "context_compile",
+                "arguments": { "task": "refactor MCP surface" }
+            })))
+            .await
+            .unwrap();
+
+        assert_eq!(result["isError"], false);
+        let text = result["content"][0]["text"].as_str().unwrap();
+        let packet: serde_json::Value = serde_json::from_str(text).unwrap();
+        assert_eq!(packet["tool"], "context_compile");
+        assert_eq!(packet["packet"]["task"], "refactor MCP surface");
+    }
+
     // -- Dangerous tools hidden by default -------------------------------------
 
     #[test]
@@ -592,10 +712,7 @@ mod tests {
     fn dangerous_tools_exposed_when_opted_in() {
         let registry = make_registry();
         let config = McpServerConfig {
-            allowlisted_tools: vec![
-                "read_config".to_string(),
-                "execute_command".to_string(),
-            ],
+            allowlisted_tools: vec!["read_config".to_string(), "execute_command".to_string()],
             expose_dangerous: true,
             ..Default::default()
         };
@@ -650,10 +767,7 @@ mod tests {
     async fn tools_call_rejects_dangerous_when_not_opted_in() {
         let registry = make_registry();
         let config = McpServerConfig {
-            allowlisted_tools: vec![
-                "read_config".to_string(),
-                "execute_command".to_string(),
-            ],
+            allowlisted_tools: vec!["read_config".to_string(), "execute_command".to_string()],
             expose_dangerous: false,
             ..Default::default()
         };

@@ -114,9 +114,8 @@ std::thread_local! {
 /// Check if the current thread should bypass correction bias.
 #[cfg(test)]
 fn should_bypass_corrections() -> bool {
-    BYPASS_CORRECTIONS.with(|f| f.get())
+    BYPASS_CORRECTIONS.with(std::cell::Cell::get)
 }
-
 
 /// Heuristic routing algorithm for Layers query.
 ///
@@ -647,7 +646,7 @@ mod tests {
         }
     }
 
-    /// Reads benchmarks/routing-answer-keys.jsonl and verifies classify()
+    /// Reads benchmarks/routing-answer-keys.jsonl and verifies `classify()`
     /// matches every expected route (and confidence, when specified).
     ///
     /// Uses a thread-local bypass flag to isolate from the user's real
@@ -679,7 +678,7 @@ mod tests {
             let result = classify(query);
 
             let route_ok = result.route == expected_route;
-            let confidence_ok = expected_confidence.map_or(true, |c| result.confidence == c);
+            let confidence_ok = expected_confidence.is_none_or(|c| result.confidence == c);
 
             if route_ok && confidence_ok {
                 passed += 1;
@@ -695,15 +694,14 @@ mod tests {
         // Reset the bypass flag.
         BYPASS_CORRECTIONS.with(|f| f.set(false));
 
-        if !failed.is_empty() {
-            panic!(
-                "routing answer key benchmark: {}/{} passed, {} failed:\n{}",
-                passed,
-                passed + failed.len(),
-                failed.len(),
-                failed.join("\n"),
-            );
-        }
+        assert!(
+            failed.is_empty(),
+            "routing answer key benchmark: {}/{} passed, {} failed:\n{}",
+            passed,
+            passed + failed.len(),
+            failed.len(),
+            failed.join("\n"),
+        );
     }
 
     /// Reads benchmarks/routing-failures.jsonl and verifies that routing
@@ -749,15 +747,14 @@ mod tests {
         // Reset the bypass flag.
         BYPASS_CORRECTIONS.with(|f| f.set(false));
 
-        if !failed.is_empty() {
-            panic!(
-                "routing failure benchmark: {}/{} passed, {} failed:\n{}",
-                passed,
-                passed + failed.len(),
-                failed.len(),
-                failed.join("\n"),
-            );
-        }
+        assert!(
+            failed.is_empty(),
+            "routing failure benchmark: {}/{} passed, {} failed:\n{}",
+            passed,
+            passed + failed.len(),
+            failed.len(),
+            failed.join("\n"),
+        );
     }
 
     // ─── Feedback loop integration tests ────────────────────────────────────
@@ -796,7 +793,7 @@ mod tests {
 
     /// Verify the feedback loop with a query that has non-zero signal scores,
     /// demonstrating that corrections actually shift routing behavior.
-    /// Uses apply_correction_bias directly for deterministic testing.
+    /// Uses `apply_correction_bias` directly for deterministic testing.
     #[test]
     fn feedback_loop_demotes_incorrectly_predicted_route() {
         let ws = crate::test_support::TestWorkspace::new("router-feedback-demote");

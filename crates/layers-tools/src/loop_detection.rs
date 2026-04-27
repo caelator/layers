@@ -98,15 +98,18 @@ mod tests {
     #[test]
     fn no_loop_on_varied_calls() {
         let mut det = LoopDetector::new();
-        assert!(det
-            .record("read", &serde_json::json!({ "path": "/a" }))
-            .is_none());
-        assert!(det
-            .record("read", &serde_json::json!({ "path": "/b" }))
-            .is_none());
-        assert!(det
-            .record("write", &serde_json::json!({ "path": "/c" }))
-            .is_none());
+        assert!(
+            det.record("read", &serde_json::json!({ "path": "/a" }))
+                .is_none()
+        );
+        assert!(
+            det.record("read", &serde_json::json!({ "path": "/b" }))
+                .is_none()
+        );
+        assert!(
+            det.record("write", &serde_json::json!({ "path": "/c" }))
+                .is_none()
+        );
     }
 
     #[test]
@@ -118,7 +121,11 @@ mod tests {
         let reason = det.record("read", &args);
         assert!(reason.is_some());
         match reason {
-            Some(LoopReason::RepeatedCall { tool, count, threshold }) => {
+            Some(LoopReason::RepeatedCall {
+                tool,
+                count,
+                threshold,
+            }) => {
                 assert_eq!(tool, "read");
                 assert_eq!(count, 3);
                 assert_eq!(threshold, 3);
@@ -131,10 +138,7 @@ mod tests {
     fn max_iterations_enforced() {
         let mut det = LoopDetector::new().with_max_iterations(5);
         for i in 0..5 {
-            let result = det.record(
-                &format!("tool_{i}"),
-                &serde_json::json!({ "i": i }),
-            );
+            let result = det.record(&format!("tool_{i}"), &serde_json::json!({ "i": i }));
             if i >= 4 {
                 assert!(result.is_some());
                 match result {

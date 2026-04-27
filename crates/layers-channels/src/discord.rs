@@ -114,13 +114,10 @@ impl DiscordAdapter {
 
         if !resp.status().is_success() {
             let status = resp.status();
-            let err_body = resp
-                .json::<DiscordError>()
-                .await
-                .unwrap_or(DiscordError {
-                    code: None,
-                    message: Some(format!("HTTP {status}")),
-                });
+            let err_body = resp.json::<DiscordError>().await.unwrap_or(DiscordError {
+                code: None,
+                message: Some(format!("HTTP {status}")),
+            });
             return Err(LayersError::Channel(format!(
                 "discord API error ({}): {}",
                 status,
@@ -216,12 +213,7 @@ impl ChannelAdapter for DiscordAdapter {
         Ok(())
     }
 
-    async fn send_reaction(
-        &self,
-        channel: &str,
-        message_id: &str,
-        emoji: &str,
-    ) -> Result<()> {
+    async fn send_reaction(&self, channel: &str, message_id: &str, emoji: &str) -> Result<()> {
         // Discord requires URL-encoded emoji for the path. Use reqwest's
         // percent-encoding utilities since we already depend on reqwest.
         use reqwest::Url;
@@ -230,9 +222,8 @@ impl ChannelAdapter for DiscordAdapter {
         let encoded_emoji = Url::parse(&dummy)
             .map(|u| u.path().trim_start_matches('/').to_string())
             .unwrap_or_else(|_| emoji.to_string());
-        let path = format!(
-            "/channels/{channel}/messages/{message_id}/reactions/{encoded_emoji}/@me"
-        );
+        let path =
+            format!("/channels/{channel}/messages/{message_id}/reactions/{encoded_emoji}/@me");
 
         self.api_request(reqwest::Method::PUT, &path, None::<&()>)
             .await?;

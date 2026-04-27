@@ -54,183 +54,288 @@ impl ModelCapabilityRegistry {
             tokenizer_family: TokenizerFamily::O200kBase,
         };
         insert(&mut entries, "openai", "gpt-4o", &openai_gpt4o);
-        insert(&mut entries, "openai", "gpt-4o-mini", &ModelCapabilities {
-            max_output_tokens: 16_384,
-            ..openai_gpt4o.clone()
-        });
-        insert(&mut entries, "openai", "gpt-4.1", &ModelCapabilities {
-            context_window: 1_047_576,
-            max_output_tokens: 32_768,
-            supports_tools: true,
-            supports_vision: true,
-            supports_reasoning: false,
-            tokenizer_family: TokenizerFamily::O200kBase,
-        });
-        insert(&mut entries, "openai", "gpt-4.1-mini", &ModelCapabilities {
-            context_window: 1_047_576,
-            max_output_tokens: 32_768,
-            supports_tools: true,
-            supports_vision: true,
-            supports_reasoning: false,
-            tokenizer_family: TokenizerFamily::O200kBase,
-        });
-        insert(&mut entries, "openai", "gpt-4.1-nano", &ModelCapabilities {
-            context_window: 1_047_576,
-            max_output_tokens: 32_768,
-            supports_tools: true,
-            supports_vision: true,
-            supports_reasoning: false,
-            tokenizer_family: TokenizerFamily::O200kBase,
-        });
-        insert(&mut entries, "openai", "o3", &ModelCapabilities {
-            context_window: 200_000,
-            max_output_tokens: 100_000,
-            supports_tools: true,
-            supports_vision: true,
-            supports_reasoning: true,
-            tokenizer_family: TokenizerFamily::O200kBase,
-        });
-        insert(&mut entries, "openai", "o4-mini", &ModelCapabilities {
-            context_window: 200_000,
-            max_output_tokens: 100_000,
-            supports_tools: true,
-            supports_vision: true,
-            supports_reasoning: true,
-            tokenizer_family: TokenizerFamily::O200kBase,
-        });
+        insert(
+            &mut entries,
+            "openai",
+            "gpt-4o-mini",
+            &ModelCapabilities {
+                max_output_tokens: 16_384,
+                ..openai_gpt4o.clone()
+            },
+        );
+        insert(
+            &mut entries,
+            "openai",
+            "gpt-4.1",
+            &ModelCapabilities {
+                context_window: 1_047_576,
+                max_output_tokens: 32_768,
+                supports_tools: true,
+                supports_vision: true,
+                supports_reasoning: false,
+                tokenizer_family: TokenizerFamily::O200kBase,
+            },
+        );
+        insert(
+            &mut entries,
+            "openai",
+            "gpt-4.1-mini",
+            &ModelCapabilities {
+                context_window: 1_047_576,
+                max_output_tokens: 32_768,
+                supports_tools: true,
+                supports_vision: true,
+                supports_reasoning: false,
+                tokenizer_family: TokenizerFamily::O200kBase,
+            },
+        );
+        insert(
+            &mut entries,
+            "openai",
+            "gpt-4.1-nano",
+            &ModelCapabilities {
+                context_window: 1_047_576,
+                max_output_tokens: 32_768,
+                supports_tools: true,
+                supports_vision: true,
+                supports_reasoning: false,
+                tokenizer_family: TokenizerFamily::O200kBase,
+            },
+        );
+        insert(
+            &mut entries,
+            "openai",
+            "o3",
+            &ModelCapabilities {
+                context_window: 200_000,
+                max_output_tokens: 100_000,
+                supports_tools: true,
+                supports_vision: true,
+                supports_reasoning: true,
+                tokenizer_family: TokenizerFamily::O200kBase,
+            },
+        );
+        insert(
+            &mut entries,
+            "openai",
+            "o4-mini",
+            &ModelCapabilities {
+                context_window: 200_000,
+                max_output_tokens: 100_000,
+                supports_tools: true,
+                supports_vision: true,
+                supports_reasoning: true,
+                tokenizer_family: TokenizerFamily::O200kBase,
+            },
+        );
         // GPT-5.x
-        insert(&mut entries, "openai", "gpt-5", &ModelCapabilities {
-            context_window: 400_000,
-            max_output_tokens: 32_768,
-            supports_tools: true,
-            supports_vision: true,
-            supports_reasoning: false,
-            tokenizer_family: TokenizerFamily::O200kBase,
-        });
-        insert(&mut entries, "openai", "gpt-5.4", &ModelCapabilities {
-            context_window: 400_000,
-            max_output_tokens: 32_768,
-            supports_tools: true,
-            supports_vision: true,
-            supports_reasoning: false,
-            tokenizer_family: TokenizerFamily::O200kBase,
-        });
+        insert(
+            &mut entries,
+            "openai",
+            "gpt-5",
+            &ModelCapabilities {
+                context_window: 400_000,
+                max_output_tokens: 32_768,
+                supports_tools: true,
+                supports_vision: true,
+                supports_reasoning: false,
+                tokenizer_family: TokenizerFamily::O200kBase,
+            },
+        );
+        insert(
+            &mut entries,
+            "openai",
+            "gpt-5.4",
+            &ModelCapabilities {
+                context_window: 400_000,
+                max_output_tokens: 32_768,
+                supports_tools: true,
+                supports_vision: true,
+                supports_reasoning: false,
+                tokenizer_family: TokenizerFamily::O200kBase,
+            },
+        );
 
         // --- ZAI (OpenAI-compatible, uses same tokenizers) ---
-        insert(&mut entries, "zai", "glm-5", &ModelCapabilities {
-            context_window: 128_000,
-            max_output_tokens: 16_384,
-            supports_tools: true,
-            supports_vision: true,
-            supports_reasoning: true,
-            tokenizer_family: TokenizerFamily::O200kBase,
-        });
-        insert(&mut entries, "zai", "glm-5.1", &ModelCapabilities {
-            context_window: 128_000,
-            max_output_tokens: 16_384,
-            supports_tools: true,
-            supports_vision: true,
-            supports_reasoning: true,
-            tokenizer_family: TokenizerFamily::O200kBase,
-        });
+        insert(
+            &mut entries,
+            "zai",
+            "glm-5",
+            &ModelCapabilities {
+                context_window: 128_000,
+                max_output_tokens: 16_384,
+                supports_tools: true,
+                supports_vision: true,
+                supports_reasoning: true,
+                tokenizer_family: TokenizerFamily::O200kBase,
+            },
+        );
+        insert(
+            &mut entries,
+            "zai",
+            "glm-5.1",
+            &ModelCapabilities {
+                context_window: 128_000,
+                max_output_tokens: 16_384,
+                supports_tools: true,
+                supports_vision: true,
+                supports_reasoning: true,
+                tokenizer_family: TokenizerFamily::O200kBase,
+            },
+        );
 
         // --- OpenRouter (varies by model, default to O200kBase) ---
-        insert(&mut entries, "openrouter", "auto", &ModelCapabilities {
-            context_window: 128_000,
-            max_output_tokens: 16_384,
-            supports_tools: true,
-            supports_vision: true,
-            supports_reasoning: false,
-            tokenizer_family: TokenizerFamily::O200kBase,
-        });
+        insert(
+            &mut entries,
+            "openrouter",
+            "auto",
+            &ModelCapabilities {
+                context_window: 128_000,
+                max_output_tokens: 16_384,
+                supports_tools: true,
+                supports_vision: true,
+                supports_reasoning: false,
+                tokenizer_family: TokenizerFamily::O200kBase,
+            },
+        );
 
         // --- Groq (OpenAI-compatible) ---
-        insert(&mut entries, "groq", "llama-3.3-70b-versatile", &ModelCapabilities {
-            context_window: 128_000,
-            max_output_tokens: 32_768,
-            supports_tools: true,
-            supports_vision: false,
-            supports_reasoning: false,
-            tokenizer_family: TokenizerFamily::Fallback,
-        });
+        insert(
+            &mut entries,
+            "groq",
+            "llama-3.3-70b-versatile",
+            &ModelCapabilities {
+                context_window: 128_000,
+                max_output_tokens: 32_768,
+                supports_tools: true,
+                supports_vision: false,
+                supports_reasoning: false,
+                tokenizer_family: TokenizerFamily::Fallback,
+            },
+        );
 
         // --- DeepSeek (OpenAI-compatible) ---
-        insert(&mut entries, "deepseek", "deepseek-chat", &ModelCapabilities {
-            context_window: 64_000,
-            max_output_tokens: 8_192,
-            supports_tools: true,
-            supports_vision: false,
-            supports_reasoning: false,
-            tokenizer_family: TokenizerFamily::Fallback,
-        });
-        insert(&mut entries, "deepseek", "deepseek-reasoner", &ModelCapabilities {
-            context_window: 64_000,
-            max_output_tokens: 8_192,
-            supports_tools: false,
-            supports_vision: false,
-            supports_reasoning: true,
-            tokenizer_family: TokenizerFamily::Fallback,
-        });
+        insert(
+            &mut entries,
+            "deepseek",
+            "deepseek-chat",
+            &ModelCapabilities {
+                context_window: 64_000,
+                max_output_tokens: 8_192,
+                supports_tools: true,
+                supports_vision: false,
+                supports_reasoning: false,
+                tokenizer_family: TokenizerFamily::Fallback,
+            },
+        );
+        insert(
+            &mut entries,
+            "deepseek",
+            "deepseek-reasoner",
+            &ModelCapabilities {
+                context_window: 64_000,
+                max_output_tokens: 8_192,
+                supports_tools: false,
+                supports_vision: false,
+                supports_reasoning: true,
+                tokenizer_family: TokenizerFamily::Fallback,
+            },
+        );
 
         // --- Anthropic ---
-        insert(&mut entries, "anthropic", "claude-opus-4-6", &ModelCapabilities {
-            context_window: 200_000,
-            max_output_tokens: 32_000,
-            supports_tools: true,
-            supports_vision: true,
-            supports_reasoning: true,
-            tokenizer_family: TokenizerFamily::Anthropic,
-        });
-        insert(&mut entries, "anthropic", "claude-sonnet-4-6", &ModelCapabilities {
-            context_window: 200_000,
-            max_output_tokens: 16_384,
-            supports_tools: true,
-            supports_vision: true,
-            supports_reasoning: true,
-            tokenizer_family: TokenizerFamily::Anthropic,
-        });
-        insert(&mut entries, "anthropic", "claude-sonnet-4-5-20250514", &ModelCapabilities {
-            context_window: 200_000,
-            max_output_tokens: 16_384,
-            supports_tools: true,
-            supports_vision: true,
-            supports_reasoning: true,
-            tokenizer_family: TokenizerFamily::Anthropic,
-        });
-        insert(&mut entries, "anthropic", "claude-haiku-4-5-20251001", &ModelCapabilities {
-            context_window: 200_000,
-            max_output_tokens: 8_192,
-            supports_tools: true,
-            supports_vision: true,
-            supports_reasoning: true,
-            tokenizer_family: TokenizerFamily::Anthropic,
-        });
+        insert(
+            &mut entries,
+            "anthropic",
+            "claude-opus-4-6",
+            &ModelCapabilities {
+                context_window: 200_000,
+                max_output_tokens: 32_000,
+                supports_tools: true,
+                supports_vision: true,
+                supports_reasoning: true,
+                tokenizer_family: TokenizerFamily::Anthropic,
+            },
+        );
+        insert(
+            &mut entries,
+            "anthropic",
+            "claude-sonnet-4-6",
+            &ModelCapabilities {
+                context_window: 200_000,
+                max_output_tokens: 16_384,
+                supports_tools: true,
+                supports_vision: true,
+                supports_reasoning: true,
+                tokenizer_family: TokenizerFamily::Anthropic,
+            },
+        );
+        insert(
+            &mut entries,
+            "anthropic",
+            "claude-sonnet-4-5-20250514",
+            &ModelCapabilities {
+                context_window: 200_000,
+                max_output_tokens: 16_384,
+                supports_tools: true,
+                supports_vision: true,
+                supports_reasoning: true,
+                tokenizer_family: TokenizerFamily::Anthropic,
+            },
+        );
+        insert(
+            &mut entries,
+            "anthropic",
+            "claude-haiku-4-5-20251001",
+            &ModelCapabilities {
+                context_window: 200_000,
+                max_output_tokens: 8_192,
+                supports_tools: true,
+                supports_vision: true,
+                supports_reasoning: true,
+                tokenizer_family: TokenizerFamily::Anthropic,
+            },
+        );
 
         // --- Google ---
-        insert(&mut entries, "google", "gemini-2.5-pro-preview-06-05", &ModelCapabilities {
-            context_window: 1_048_576,
-            max_output_tokens: 65_536,
-            supports_tools: true,
-            supports_vision: true,
-            supports_reasoning: true,
-            tokenizer_family: TokenizerFamily::Google,
-        });
-        insert(&mut entries, "google", "gemini-2.5-flash-preview-05-20", &ModelCapabilities {
-            context_window: 1_048_576,
-            max_output_tokens: 65_536,
-            supports_tools: true,
-            supports_vision: true,
-            supports_reasoning: true,
-            tokenizer_family: TokenizerFamily::Google,
-        });
-        insert(&mut entries, "google", "gemini-3-flash-preview", &ModelCapabilities {
-            context_window: 1_000_000,
-            max_output_tokens: 65_536,
-            supports_tools: true,
-            supports_vision: true,
-            supports_reasoning: true,
-            tokenizer_family: TokenizerFamily::Google,
-        });
+        insert(
+            &mut entries,
+            "google",
+            "gemini-2.5-pro-preview-06-05",
+            &ModelCapabilities {
+                context_window: 1_048_576,
+                max_output_tokens: 65_536,
+                supports_tools: true,
+                supports_vision: true,
+                supports_reasoning: true,
+                tokenizer_family: TokenizerFamily::Google,
+            },
+        );
+        insert(
+            &mut entries,
+            "google",
+            "gemini-2.5-flash-preview-05-20",
+            &ModelCapabilities {
+                context_window: 1_048_576,
+                max_output_tokens: 65_536,
+                supports_tools: true,
+                supports_vision: true,
+                supports_reasoning: true,
+                tokenizer_family: TokenizerFamily::Google,
+            },
+        );
+        insert(
+            &mut entries,
+            "google",
+            "gemini-3-flash-preview",
+            &ModelCapabilities {
+                context_window: 1_000_000,
+                max_output_tokens: 65_536,
+                supports_tools: true,
+                supports_vision: true,
+                supports_reasoning: true,
+                tokenizer_family: TokenizerFamily::Google,
+            },
+        );
 
         Self { entries }
     }

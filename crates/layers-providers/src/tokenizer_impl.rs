@@ -284,7 +284,10 @@ mod tests {
             },
         }];
         let count = tok.count_tool_schema_tokens(&tools);
-        assert!(count > 0, "expected non-zero tool schema tokens, got {count}");
+        assert!(
+            count > 0,
+            "expected non-zero tool schema tokens, got {count}"
+        );
     }
 
     #[test]

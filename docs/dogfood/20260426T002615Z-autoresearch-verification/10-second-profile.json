@@ -1,0 +1,16 @@
+{
+  "id": "bb4a6d58-2eac-49db-a0aa-50bbd6948f47",
+  "name": "Second Agent Profile",
+  "keywords": [
+    "agent"
+  ],
+  "negative_keywords": [],
+  "sources": [],
+  "scoring_prompt": null,
+  "score_threshold": 0.5,
+  "max_llm_calls": 10,
+  "revision": 1,
+  "last_seen_at": null,
+  "archived_at": null,
+  "created_at": "2026-04-26T00:26:27.108115Z"
+}

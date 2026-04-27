@@ -1,0 +1,41 @@
+{
+  "council": {
+    "commands_configured": true,
+    "order": "Gemini -> Claude -> Codex"
+  },
+  "curated_memory": {
+    "exists": true,
+    "path": "/Users/xxx/layers/memoryport/curated-memory.jsonl",
+    "records": 18
+  },
+  "integration_notes": {
+    "gitnexus": "Layers expects GitNexus via local CLI and optionally MCP-backed runtimes/skills.",
+    "memoryport": "Layers expects direct MemoryPort access via uc + canonical files; codex-memoryport-bridge is a model proxy, not a raw MCP tool server."
+  },
+  "memory_spine": [
+    {
+      "exists": false,
+      "kind": "plan",
+      "path": "/Users/xxx/layers/memoryport/council-plans.jsonl",
+      "records": 0
+    },
+    {
+      "exists": true,
+      "kind": "trace",
+      "path": "/Users/xxx/layers/memoryport/council-traces.jsonl",
+      "records": 24
+    },
+    {
+      "exists": false,
+      "kind": "learning",
+      "path": "/Users/xxx/layers/memoryport/council-learnings.jsonl",
+      "records": 0
+    }
+  ],
+  "ok": true,
+  "tools": {
+    "gitnexus": true,
+    "uc": true
+  },
+  "workspace": "/Users/xxx/layers"
+}

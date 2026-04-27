@@ -14,7 +14,7 @@ use arrow_array::{
 use arrow_schema::{DataType, Field, Schema};
 use lancedb::database::CreateTableMode;
 use lancedb::query::{ExecutableQuery, QueryBase};
-use lancedb::{connect, Connection, Table as LanceTable};
+use lancedb::{Connection, Table as LanceTable, connect};
 
 use futures::TryStreamExt;
 use tracing::debug;
@@ -164,10 +164,25 @@ impl LanceStore {
         let schema = self.schema();
 
         let ids = StringArray::from(chunks.iter().map(|c| c.id.as_str()).collect::<Vec<_>>());
-        let source_paths = StringArray::from(chunks.iter().map(|c| c.source_path.as_str()).collect::<Vec<_>>());
-        let contents = StringArray::from(chunks.iter().map(|c| c.content.as_str()).collect::<Vec<_>>());
+        let source_paths = StringArray::from(
+            chunks
+                .iter()
+                .map(|c| c.source_path.as_str())
+                .collect::<Vec<_>>(),
+        );
+        let contents = StringArray::from(
+            chunks
+                .iter()
+                .map(|c| c.content.as_str())
+                .collect::<Vec<_>>(),
+        );
         let roles = StringArray::from(chunks.iter().map(|c| c.role.as_str()).collect::<Vec<_>>());
-        let session_ids = StringArray::from(chunks.iter().map(|c| c.session_id.as_str()).collect::<Vec<_>>());
+        let session_ids = StringArray::from(
+            chunks
+                .iter()
+                .map(|c| c.session_id.as_str())
+                .collect::<Vec<_>>(),
+        );
         let timestamps = Int64Array::from(chunks.iter().map(|c| c.timestamp).collect::<Vec<_>>());
 
         let embedding_values: Vec<Option<Vec<Option<f32>>>> = chunks
@@ -255,20 +270,40 @@ impl LanceStore {
 
         let mut search_results = Vec::new();
         for batch in &batches {
-            let ids = batch.column_by_name("id").and_then(|c| c.as_any().downcast_ref::<StringArray>());
-            let source_paths = batch.column_by_name("source_path").and_then(|c| c.as_any().downcast_ref::<StringArray>());
-            let contents = batch.column_by_name("content").and_then(|c| c.as_any().downcast_ref::<StringArray>());
-            let roles = batch.column_by_name("role").and_then(|c| c.as_any().downcast_ref::<StringArray>());
-            let session_ids_col = batch.column_by_name("session_id").and_then(|c| c.as_any().downcast_ref::<StringArray>());
-            let timestamps = batch.column_by_name("timestamp").and_then(|c| c.as_any().downcast_ref::<Int64Array>());
-            let distances = batch.column_by_name("_distance").and_then(|c| c.as_any().downcast_ref::<Float32Array>());
+            let ids = batch
+                .column_by_name("id")
+                .and_then(|c| c.as_any().downcast_ref::<StringArray>());
+            let source_paths = batch
+                .column_by_name("source_path")
+                .and_then(|c| c.as_any().downcast_ref::<StringArray>());
+            let contents = batch
+                .column_by_name("content")
+                .and_then(|c| c.as_any().downcast_ref::<StringArray>());
+            let roles = batch
+                .column_by_name("role")
+                .and_then(|c| c.as_any().downcast_ref::<StringArray>());
+            let session_ids_col = batch
+                .column_by_name("session_id")
+                .and_then(|c| c.as_any().downcast_ref::<StringArray>());
+            let timestamps = batch
+                .column_by_name("timestamp")
+                .and_then(|c| c.as_any().downcast_ref::<Int64Array>());
+            let distances = batch
+                .column_by_name("_distance")
+                .and_then(|c| c.as_any().downcast_ref::<Float32Array>());
 
             let Some(ids) = ids else { continue };
-            let Some(source_paths) = source_paths else { continue };
+            let Some(source_paths) = source_paths else {
+                continue;
+            };
             let Some(contents) = contents else { continue };
             let Some(roles) = roles else { continue };
-            let Some(session_ids_col) = session_ids_col else { continue };
-            let Some(timestamps) = timestamps else { continue };
+            let Some(session_ids_col) = session_ids_col else {
+                continue;
+            };
+            let Some(timestamps) = timestamps else {
+                continue;
+            };
 
             for i in 0..batch.num_rows() {
                 search_results.push(SearchResult {
@@ -290,11 +325,7 @@ impl LanceStore {
     }
 
     /// Perform a keyword/filter search (no vector similarity).
-    pub async fn keyword_search(
-        &self,
-        filter: &str,
-        limit: usize,
-    ) -> Result<Vec<EmbeddingChunk>> {
+    pub async fn keyword_search(&self, filter: &str, limit: usize) -> Result<Vec<EmbeddingChunk>> {
         let table = self.table().await?;
 
         let results = table
@@ -312,19 +343,37 @@ impl LanceStore {
 
         let mut chunks = Vec::new();
         for batch in &batches {
-            let ids = batch.column_by_name("id").and_then(|c| c.as_any().downcast_ref::<StringArray>());
-            let source_paths = batch.column_by_name("source_path").and_then(|c| c.as_any().downcast_ref::<StringArray>());
-            let contents = batch.column_by_name("content").and_then(|c| c.as_any().downcast_ref::<StringArray>());
-            let roles = batch.column_by_name("role").and_then(|c| c.as_any().downcast_ref::<StringArray>());
-            let session_ids_col = batch.column_by_name("session_id").and_then(|c| c.as_any().downcast_ref::<StringArray>());
-            let timestamps = batch.column_by_name("timestamp").and_then(|c| c.as_any().downcast_ref::<Int64Array>());
+            let ids = batch
+                .column_by_name("id")
+                .and_then(|c| c.as_any().downcast_ref::<StringArray>());
+            let source_paths = batch
+                .column_by_name("source_path")
+                .and_then(|c| c.as_any().downcast_ref::<StringArray>());
+            let contents = batch
+                .column_by_name("content")
+                .and_then(|c| c.as_any().downcast_ref::<StringArray>());
+            let roles = batch
+                .column_by_name("role")
+                .and_then(|c| c.as_any().downcast_ref::<StringArray>());
+            let session_ids_col = batch
+                .column_by_name("session_id")
+                .and_then(|c| c.as_any().downcast_ref::<StringArray>());
+            let timestamps = batch
+                .column_by_name("timestamp")
+                .and_then(|c| c.as_any().downcast_ref::<Int64Array>());
 
             let Some(ids) = ids else { continue };
-            let Some(source_paths) = source_paths else { continue };
+            let Some(source_paths) = source_paths else {
+                continue;
+            };
             let Some(contents) = contents else { continue };
             let Some(roles) = roles else { continue };
-            let Some(session_ids_col) = session_ids_col else { continue };
-            let Some(timestamps) = timestamps else { continue };
+            let Some(session_ids_col) = session_ids_col else {
+                continue;
+            };
+            let Some(timestamps) = timestamps else {
+                continue;
+            };
 
             for i in 0..batch.num_rows() {
                 chunks.push(EmbeddingChunk {
@@ -347,7 +396,12 @@ impl LanceStore {
 mod tests {
     use super::*;
 
-    fn make_chunk(id: &str, content: &str, session_id: &str, embedding: Vec<f32>) -> EmbeddingChunk {
+    fn make_chunk(
+        id: &str,
+        content: &str,
+        session_id: &str,
+        embedding: Vec<f32>,
+    ) -> EmbeddingChunk {
         EmbeddingChunk {
             id: id.to_string(),
             source_path: format!("/test/{id}.md"),
@@ -357,10 +411,6 @@ mod tests {
             timestamp: 1700000000,
             embedding,
         }
-    }
-
-    fn cosine_embedding(dim: i32, value: f32) -> Vec<f32> {
-        vec![value; dim as usize]
     }
 
     #[tokio::test]
@@ -375,7 +425,9 @@ mod tests {
     async fn upsert_and_vector_search() {
         let dir = tempfile::tempdir().unwrap();
         let dim = 8;
-        let store = LanceStore::open_with_dim(dir.path(), "test_vs", dim).await.unwrap();
+        let store = LanceStore::open_with_dim(dir.path(), "test_vs", dim)
+            .await
+            .unwrap();
 
         let chunk = make_chunk(
             "c1",
@@ -397,7 +449,9 @@ mod tests {
     async fn vector_search_returns_closest_match() {
         let dir = tempfile::tempdir().unwrap();
         let dim = 4;
-        let store = LanceStore::open_with_dim(dir.path(), "test_nearest", dim).await.unwrap();
+        let store = LanceStore::open_with_dim(dir.path(), "test_nearest", dim)
+            .await
+            .unwrap();
 
         let c1 = make_chunk("near", "near doc", "s1", vec![1.0, 0.0, 0.0, 0.0]);
         let c2 = make_chunk("far", "far doc", "s1", vec![0.0, 0.0, 0.0, 1.0]);
@@ -412,7 +466,9 @@ mod tests {
     async fn keyword_search_filters_by_field() {
         let dir = tempfile::tempdir().unwrap();
         let dim = 4;
-        let store = LanceStore::open_with_dim(dir.path(), "test_kw", dim).await.unwrap();
+        let store = LanceStore::open_with_dim(dir.path(), "test_kw", dim)
+            .await
+            .unwrap();
 
         let c1 = make_chunk("k1", "alpha content", "s1", vec![0.0; 4]);
         let c2 = make_chunk("k2", "beta content", "s2", vec![0.0; 4]);
@@ -427,14 +483,19 @@ mod tests {
     async fn delete_by_source_path_removes_chunks() {
         let dir = tempfile::tempdir().unwrap();
         let dim = 4;
-        let store = LanceStore::open_with_dim(dir.path(), "test_del", dim).await.unwrap();
+        let store = LanceStore::open_with_dim(dir.path(), "test_del", dim)
+            .await
+            .unwrap();
 
         let c1 = make_chunk("d1", "to delete", "s1", vec![1.0, 0.0, 0.0, 0.0]);
         store.upsert_chunks(&[c1]).await.unwrap();
 
         store.delete_by_source_path("/test/d1.md").await.unwrap();
 
-        let results = store.vector_search(&[1.0, 0.0, 0.0, 0.0], 10).await.unwrap();
+        let results = store
+            .vector_search(&[1.0, 0.0, 0.0, 0.0], 10)
+            .await
+            .unwrap();
         assert!(results.is_empty());
     }
 

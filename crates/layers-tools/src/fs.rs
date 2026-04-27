@@ -33,9 +33,7 @@ pub fn validate_path(
     // (defense in depth — canonicalization handles it properly for existing files)
     if must_exist {
         if !parsed.exists() {
-            return Err(LayersError::Tool(format!(
-                "path does not exist: {path}"
-            )));
+            return Err(LayersError::Tool(format!("path does not exist: {path}")));
         }
         let canonical = parsed
             .canonicalize()
@@ -47,9 +45,7 @@ pub fn validate_path(
                 .map_err(|e| LayersError::Tool(format!("failed to canonicalize root: {e}")))?;
             if !canonical.starts_with(&canonical_root) {
                 warn!(canonical = %canonical.display(), canonical_root = %canonical_root.display(), "path traversal blocked");
-                return Err(LayersError::Tool(
-                    "path escapes allowed directory".into(),
-                ));
+                return Err(LayersError::Tool("path escapes allowed directory".into()));
             }
         }
         Ok(canonical)
@@ -57,26 +53,22 @@ pub fn validate_path(
         // For writes/creates, validate the parent if it exists, otherwise
         // check that the path is absolute and doesn't contain suspicious patterns.
         if parsed.is_relative() {
-            return Err(LayersError::Tool(
-                "path must be absolute".into(),
-            ));
+            return Err(LayersError::Tool("path must be absolute".into()));
         }
 
         // Check parent directory if it exists
         if let Some(parent) = parsed.parent() {
             if parent.exists() {
-                let canonical_parent = parent
-                    .canonicalize()
-                    .map_err(|e| LayersError::Tool(format!("failed to canonicalize parent: {e}")))?;
+                let canonical_parent = parent.canonicalize().map_err(|e| {
+                    LayersError::Tool(format!("failed to canonicalize parent: {e}"))
+                })?;
                 if let Some(root) = allowed_root {
-                    let canonical_root = root
-                        .canonicalize()
-                        .map_err(|e| LayersError::Tool(format!("failed to canonicalize root: {e}")))?;
+                    let canonical_root = root.canonicalize().map_err(|e| {
+                        LayersError::Tool(format!("failed to canonicalize root: {e}"))
+                    })?;
                     if !canonical_parent.starts_with(&canonical_root) {
                         warn!(canonical_parent = %canonical_parent.display(), canonical_root = %canonical_root.display(), "path traversal blocked (parent)");
-                        return Err(LayersError::Tool(
-                            "path escapes allowed directory".into(),
-                        ));
+                        return Err(LayersError::Tool("path escapes allowed directory".into()));
                     }
                 }
             }
@@ -149,11 +141,7 @@ impl Tool for ReadTool {
         })
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         let params: ReadParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid read params: {e}")))?;
 
@@ -170,12 +158,7 @@ impl Tool for ReadTool {
         let offset = params.offset.unwrap_or(0);
         let limit = params.limit.unwrap_or(Self::MAX_LINES).min(Self::MAX_LINES);
 
-        let selected: Vec<&str> = lines
-            .iter()
-            .skip(offset)
-            .take(limit)
-            .copied()
-            .collect();
+        let selected: Vec<&str> = lines.iter().skip(offset).take(limit).copied().collect();
 
         let mut result = String::new();
         for (i, line) in selected.iter().enumerate() {
@@ -206,7 +189,7 @@ impl Tool for ReadTool {
             content: output,
             attachments: Vec::new(),
             structured_content: None,
-                is_error: None,
+            is_error: None,
         })
     }
 }
@@ -265,11 +248,7 @@ impl Tool for WriteTool {
         })
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         let params: WriteParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid write params: {e}")))?;
 
@@ -293,7 +272,7 @@ impl Tool for WriteTool {
             content: format!("Wrote {bytes} bytes to {}", params.path),
             attachments: Vec::new(),
             structured_content: None,
-                is_error: None,
+            is_error: None,
         })
     }
 }
@@ -372,11 +351,7 @@ impl Tool for EditTool {
         })
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         let params: EditParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid edit params: {e}")))?;
 
@@ -569,7 +544,10 @@ mod tests {
             .await
             .unwrap();
         assert!(!result.is_error.unwrap_or(false));
-        assert_eq!(tokio::fs::read_to_string(&path).await.unwrap(), "hello rust");
+        assert_eq!(
+            tokio::fs::read_to_string(&path).await.unwrap(),
+            "hello rust"
+        );
     }
 
     #[tokio::test]

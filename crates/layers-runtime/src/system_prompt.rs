@@ -4,8 +4,8 @@ use std::path::PathBuf;
 
 use tracing::warn;
 
-use layers_core::Session;
 use crate::tool_dispatch::ToolRegistry;
+use layers_core::Session;
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -109,10 +109,7 @@ impl SystemPromptBuilder {
         // 3. Available tools listing.
         let tool_names: Vec<&str> = tools.names().into_iter().collect();
         if !tool_names.is_empty() {
-            let tools_section = format!(
-                "## Available Tools\n\n{}\n\n",
-                tool_names.join(", ")
-            );
+            let tools_section = format!("## Available Tools\n\n{}\n\n", tool_names.join(", "));
             if total_chars + tools_section.len() <= MAX_TOTAL_CHARS {
                 total_chars += tools_section.len();
                 parts.push(tools_section);

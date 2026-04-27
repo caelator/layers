@@ -11,20 +11,20 @@ use axum::extract::ws::{Message as WsMessage, WebSocket, WebSocketUpgrade};
 use axum::extract::{Multipart, Path, State};
 use axum::http::StatusCode;
 use axum::middleware;
-use axum::response::sse::{Event, Sse};
 use axum::response::IntoResponse;
+use axum::response::sse::{Event, Sse};
 use axum::routing::{any, delete, get, post};
 use axum::{Json, Router};
 use layers_channels::manager::ChannelManager;
 use layers_core::{DaemonConfig, InboundMessage, PeerKind, SessionFilter, SessionStore, TlsConfig};
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
-use tokio_stream::{iter, StreamExt};
+use tokio_stream::{StreamExt, iter};
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::{ServeDir, ServeFile};
 use tracing::{error, info};
 
-use crate::auth::{require_bearer, BearerToken};
+use crate::auth::{BearerToken, require_bearer};
 
 /// Gateway server wrapping the axum router and configuration.
 pub struct Gateway {
@@ -156,7 +156,10 @@ impl Gateway {
 
     /// Attach a brain dispatcher for real AI model responses.
     #[must_use]
-    pub fn with_brain_dispatcher(mut self, dispatcher: Arc<layers_runtime::brain::BrainDispatcher>) -> Self {
+    pub fn with_brain_dispatcher(
+        mut self,
+        dispatcher: Arc<layers_runtime::brain::BrainDispatcher>,
+    ) -> Self {
         self.brain_dispatcher = Some(dispatcher);
         self
     }
@@ -289,19 +292,35 @@ async fn handle_ws_connection(mut socket: WebSocket, state: AppState) {
         match msg {
             WsMessage::Text(text) => {
                 // Try to parse as JSON for structured messages
-                let (prompt, model, session_id) = if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) {
-                    let p = json.get("message").and_then(|v| v.as_str()).unwrap_or(&text).to_string();
-                    let m = json.get("model").and_then(|v| v.as_str()).unwrap_or("default").to_string();
-                    let s = json.get("session_id").and_then(|v| v.as_str()).map(String::from);
-                    (p, m, s)
-                } else {
-                    (text.to_string(), "default".to_string(), None)
-                };
+                let (prompt, model, session_id) =
+                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) {
+                        let p = json
+                            .get("message")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(&text)
+                            .to_string();
+                        let m = json
+                            .get("model")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("default")
+                            .to_string();
+                        let s = json
+                            .get("session_id")
+                            .and_then(|v| v.as_str())
+                            .map(String::from);
+                        (p, m, s)
+                    } else {
+                        (text.to_string(), "default".to_string(), None)
+                    };
 
                 // Dispatch to brain if available
                 if let Some(ref dispatcher) = state.brain_dispatcher {
                     let brain_name = if model == "default" {
-                        dispatcher.available_brains().first().cloned().unwrap_or_else(|| "default".to_string())
+                        dispatcher
+                            .available_brains()
+                            .first()
+                            .cloned()
+                            .unwrap_or_else(|| "default".to_string())
                     } else {
                         model
                     };
@@ -311,24 +330,37 @@ async fn handle_ws_connection(mut socket: WebSocket, state: AppState) {
                         Ok(mut stream) => {
                             while let Some(event) = stream.next().await {
                                 let json = match &event {
-                                    layers_core::types::BrainEvent::Token { content } => serde_json::json!({"type": "token", "content": content}),
-                                    layers_core::types::BrainEvent::Done { session_id } => serde_json::json!({"type": "done", "session_id": session_id}),
-                                    layers_core::types::BrainEvent::Error { message } => serde_json::json!({"type": "error", "message": message}),
+                                    layers_core::types::BrainEvent::Token { content } => {
+                                        serde_json::json!({"type": "token", "content": content})
+                                    }
+                                    layers_core::types::BrainEvent::Done { session_id } => {
+                                        serde_json::json!({"type": "done", "session_id": session_id})
+                                    }
+                                    layers_core::types::BrainEvent::Error { message } => {
+                                        serde_json::json!({"type": "error", "message": message})
+                                    }
                                 };
-                                if socket.send(WsMessage::Text(json.to_string().into())).await.is_err() {
+                                if socket
+                                    .send(WsMessage::Text(json.to_string().into()))
+                                    .await
+                                    .is_err()
+                                {
                                     break;
                                 }
                             }
                         }
                         Err(e) => {
-                            let err = serde_json::json!({"type": "error", "message": e.to_string()});
+                            let err =
+                                serde_json::json!({"type": "error", "message": e.to_string()});
                             let _ = socket.send(WsMessage::Text(err.to_string().into())).await;
                         }
                     }
                 } else {
                     // No brain — echo back
                     let response = serde_json::json!({"type": "token", "content": "No brain configured. Configure in layers.toml."});
-                    let _ = socket.send(WsMessage::Text(response.to_string().into())).await;
+                    let _ = socket
+                        .send(WsMessage::Text(response.to_string().into()))
+                        .await;
                     let done = serde_json::json!({"type": "done", "session_id": client_id});
                     let _ = socket.send(WsMessage::Text(done.to_string().into())).await;
                 }
@@ -466,20 +498,35 @@ async fn chat_handler(
     // If brain dispatcher is available, use real model
     if let Some(ref dispatcher) = state.brain_dispatcher {
         let brain_name = if model == "default" {
-            dispatcher.available_brains().first().cloned().unwrap_or_else(|| "default".to_string())
+            dispatcher
+                .available_brains()
+                .first()
+                .cloned()
+                .unwrap_or_else(|| "default".to_string())
         } else {
             model.clone()
         };
 
-        match dispatcher.dispatch(&brain_name, &payload.message, Some(&session_id)).await {
+        match dispatcher
+            .dispatch(&brain_name, &payload.message, Some(&session_id))
+            .await
+        {
             Ok(stream) => {
                 let event_stream = stream.filter_map(move |event| {
                     let json = match &event {
-                        layers_core::types::BrainEvent::Token { content } => serde_json::json!({"type": "token", "content": content}),
-                        layers_core::types::BrainEvent::Done { session_id } => serde_json::json!({"type": "done", "session_id": session_id}),
-                        layers_core::types::BrainEvent::Error { message } => serde_json::json!({"type": "error", "message": message}),
+                        layers_core::types::BrainEvent::Token { content } => {
+                            serde_json::json!({"type": "token", "content": content})
+                        }
+                        layers_core::types::BrainEvent::Done { session_id } => {
+                            serde_json::json!({"type": "done", "session_id": session_id})
+                        }
+                        layers_core::types::BrainEvent::Error { message } => {
+                            serde_json::json!({"type": "error", "message": message})
+                        }
                     };
-                    Some(Ok(Event::default().json_data(json).expect("event should serialize")))
+                    Some(Ok(Event::default()
+                        .json_data(json)
+                        .expect("event should serialize")))
                 });
                 return Sse::new(Box::pin(event_stream));
             }
@@ -552,11 +599,7 @@ async fn delete_session_handler(
         }
     }
 
-    (
-        StatusCode::OK,
-        Json(serde_json::json!({ "deleted": true })),
-    )
-        .into_response()
+    (StatusCode::OK, Json(serde_json::json!({ "deleted": true }))).into_response()
 }
 
 async fn models_handler(State(state): State<AppState>) -> impl IntoResponse {
@@ -594,10 +637,7 @@ async fn upload_handler(
         .content_type()
         .unwrap_or("application/octet-stream")
         .to_string();
-    let ext = file_name
-        .rsplit('.')
-        .next()
-        .unwrap_or("bin");
+    let ext = file_name.rsplit('.').next().unwrap_or("bin");
     let stored_name = format!("{file_id}.{ext}");
     let path = state.upload_dir.join(&stored_name);
 

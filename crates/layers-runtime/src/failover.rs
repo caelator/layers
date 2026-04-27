@@ -7,9 +7,7 @@ use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tracing::{info, warn};
 
-use layers_core::{
-    LayersError, ModelRef, ModelRequest, ModelResponse, Result,
-};
+use layers_core::{LayersError, ModelRef, ModelRequest, ModelResponse, Result};
 use layers_providers::registry::ProviderRegistry;
 
 use crate::agent_loop::is_failover_worthy;

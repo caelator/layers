@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "id": "ctx-8b351d34-b07b-41dd-b789-ec57c837fe1d",
+  "workspace_id": "layers",
+  "query": "Dogfood Layers on its own repo for production readiness. Focus on ContextPacket v1 refactor under review, cargo test passing, clippy pedantic/test/doc lint debt, degraded provider warnings, explicit memory, GitNexus impact context, and next validation commands.",
+  "created_at": "2026-04-25T22:50:10.770272Z",
+  "git_ref": "2aeb5c0",
+  "route": "memory_only",
+  "confidence": "high",
+  "budget": {
+    "max_units": 1200,
+    "used_units": 73,
+    "unit": "words",
+    "truncated": false
+  },
+  "sections": [
+    {
+      "id": "memory",
+      "title": "Memory",
+      "summary": "Relevant project memory and semantic recall.",
+      "items": [
+        {
+          "id": "memory-1",
+          "title": "curated/decision",
+          "body": "Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memoryport-based continuity, and GitNexus-based codebase understanding.",
+          "source": {
+            "kind": "memory",
+            "uri": "curated/decision"
+          },
+          "token_estimate": 18,
+          "selected_reason": "memory retrieval matched the query or low-confidence fallback",
+          "tags": []
+        },
+        {
+          "id": "memory-2",
+          "title": "curated/next_step",
+          "body": "Implement first-class curated memory persistence and retrieval preference in the Rust repo, then strengthen GitNexus-backed workflow artifacts for planning/review/handoff while keeping the narrowed...",
+          "source": {
+            "kind": "memory",
+            "uri": "curated/next_step"
+          },
+          "token_estimate": 23,
+          "selected_reason": "memory retrieval matched the query or low-confidence fallback",
+          "tags": []
+        },
+        {
+          "id": "memory-3",
+          "title": "curated/decision",
+          "body": "GitNexus is a first-class structural provider and should evolve from ad hoc graph queries toward workflow-operational use in planning, review, handoff, and postmortem packets.",
+          "source": {
+            "kind": "memory",
+            "uri": "curated/decision"
+          },
+          "token_estimate": 24,
+          "selected_reason": "memory retrieval matched the query or low-confidence fallback",
+          "tags": []
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "retrieval_warning",
+      "message": "Memory quality: low relevance — query terms rarely appear in results"
+    }
+  ],
+  "selection_trace": [
+    {
+      "item_id": "memory-1",
+      "reason": "memory retrieval matched the query or low-confidence fallback"
+    },
+    {
+      "item_id": "memory-2",
+      "reason": "memory retrieval matched the query or low-confidence fallback"
+    },
+    {
+      "item_id": "memory-3",
+      "reason": "memory retrieval matched the query or low-confidence fallback"
+    }
+  ],
+  "retrieval": {
+    "memory_source": "keyword",
+    "memory_latency_ms": 506,
+    "graph_latency_ms": 0,
+    "fallback_reason": "uc timed out after 500ms"
+  },
+  "task": "Dogfood Layers on its own repo for production readiness. Focus on ContextPacket v1 refactor under review, cargo test passing, clippy pedantic/test/doc lint debt, degraded provider warnings, explicit memory, GitNexus impact context, and next validation commands.",
+  "low_confidence_fallback": false,
+  "scores": {
+    "action": 0,
+    "historical": 1,
+    "local": 2,
+    "structural": 3
+  },
+  "why_retrieved": "Structural signal (3) above threshold",
+  "why_not_retrieved": "Historical signal below threshold",
+  "evidence": "### Memory\n- [curated/decision] Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memoryport-based continuity, and GitNexus-based codebase understanding.\n- [curated/next_step] Implement first-class curated memory persistence and retrieval preference in the Rust repo, then strengthen GitNexus-backed workflow artifacts for planning/review/handoff while keeping the narrowed...\n- [curated/decision] GitNexus is a first-class structural provider and should evolve from ad hoc graph queries toward workflow-operational use in planning, review, handoff, and postmortem packets.",
+  "open_uncertainty": [
+    "Memory quality: low relevance — query terms rarely appear in results"
+  ],
+  "retrieval_meta": {
+    "memory_source": "keyword",
+    "memory_latency_ms": 506,
+    "graph_latency_ms": 0,
+    "fallback_reason": "uc timed out after 500ms"
+  }
+}

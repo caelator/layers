@@ -142,7 +142,11 @@ impl JsonlStore {
         let ts = Utc::now().format("%Y%m%d%H%M%S");
         let rotated = self.base_dir.join(format!("{hash}.{ts}.jsonl"));
 
-        debug!("rotating transcript {} -> {}", current.display(), rotated.display());
+        debug!(
+            "rotating transcript {} -> {}",
+            current.display(),
+            rotated.display()
+        );
         tokio::fs::rename(&current, &rotated).await?;
 
         Ok(())
@@ -209,8 +213,14 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = JsonlStore::new(dir.path());
 
-        store.append("sess-a", &make_message(MessageRole::User, "a")).await.unwrap();
-        store.append("sess-b", &make_message(MessageRole::User, "b")).await.unwrap();
+        store
+            .append("sess-a", &make_message(MessageRole::User, "a"))
+            .await
+            .unwrap();
+        store
+            .append("sess-b", &make_message(MessageRole::User, "b"))
+            .await
+            .unwrap();
 
         assert_eq!(store.read_all("sess-a").await.unwrap().len(), 1);
         assert_eq!(store.read_all("sess-b").await.unwrap().len(), 1);
@@ -241,7 +251,12 @@ mod tests {
 
         // There should now be a rotated file AND the primary file.
         let all = store.read_all_with_rotated("sess-rot").await.unwrap();
-        assert_eq!(all.len(), 2, "expected 2 messages after rotation, got {}", all.len());
+        assert_eq!(
+            all.len(),
+            2,
+            "expected 2 messages after rotation, got {}",
+            all.len()
+        );
     }
 
     #[tokio::test]

@@ -2,8 +2,8 @@
 //! Daemon services: gateway, heartbeat, cron, hooks, and lifecycle.
 
 pub mod auth;
+pub mod cron_scheduler;
 pub mod gateway;
 pub mod heartbeat;
-pub mod cron_scheduler;
 pub mod hooks;
 pub mod lifecycle;

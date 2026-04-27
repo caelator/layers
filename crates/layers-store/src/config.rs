@@ -31,11 +31,13 @@ impl ConfigStore {
             return Ok(LayersConfig::default());
         }
 
-        let content = std::fs::read_to_string(&self.path)
-            .map_err(|e| LayersError::Config(format!("failed to read {}: {e}", self.path.display())))?;
+        let content = std::fs::read_to_string(&self.path).map_err(|e| {
+            LayersError::Config(format!("failed to read {}: {e}", self.path.display()))
+        })?;
 
-        let config: LayersConfig = toml::from_str(&content)
-            .map_err(|e| LayersError::Config(format!("failed to parse {}: {e}", self.path.display())))?;
+        let config: LayersConfig = toml::from_str(&content).map_err(|e| {
+            LayersError::Config(format!("failed to parse {}: {e}", self.path.display()))
+        })?;
 
         Ok(config)
     }
@@ -46,12 +48,13 @@ impl ConfigStore {
             return Ok(LayersConfig::default());
         }
 
-        let content = tokio::fs::read_to_string(&self.path)
-            .await
-            .map_err(|e| LayersError::Config(format!("failed to read {}: {e}", self.path.display())))?;
+        let content = tokio::fs::read_to_string(&self.path).await.map_err(|e| {
+            LayersError::Config(format!("failed to read {}: {e}", self.path.display()))
+        })?;
 
-        let config: LayersConfig = toml::from_str(&content)
-            .map_err(|e| LayersError::Config(format!("failed to parse {}: {e}", self.path.display())))?;
+        let config: LayersConfig = toml::from_str(&content).map_err(|e| {
+            LayersError::Config(format!("failed to parse {}: {e}", self.path.display()))
+        })?;
 
         Ok(config)
     }
@@ -66,8 +69,9 @@ impl ConfigStore {
                 .map_err(|e| LayersError::Config(format!("failed to create config dir: {e}")))?;
         }
 
-        std::fs::write(&self.path, content)
-            .map_err(|e| LayersError::Config(format!("failed to write {}: {e}", self.path.display())))?;
+        std::fs::write(&self.path, content).map_err(|e| {
+            LayersError::Config(format!("failed to write {}: {e}", self.path.display()))
+        })?;
 
         Ok(())
     }
@@ -83,9 +87,9 @@ impl ConfigStore {
                 .map_err(|e| LayersError::Config(format!("failed to create config dir: {e}")))?;
         }
 
-        tokio::fs::write(&self.path, content)
-            .await
-            .map_err(|e| LayersError::Config(format!("failed to write {}: {e}", self.path.display())))?;
+        tokio::fs::write(&self.path, content).await.map_err(|e| {
+            LayersError::Config(format!("failed to write {}: {e}", self.path.display()))
+        })?;
 
         Ok(())
     }

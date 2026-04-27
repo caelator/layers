@@ -96,11 +96,7 @@ impl Tool for McpToolBridge {
         self.schema.clone()
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         let response = self.client.call_tool(&self.tool_name, args).await?;
 
         let mcp_result: McpToolResult = serde_json::from_value(response).map_err(|e| {

@@ -71,11 +71,7 @@ impl Tool for CronCreateTool {
         })
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         let params: CronCreateParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid cron_create params: {e}")))?;
 
@@ -96,7 +92,7 @@ impl Tool for CronCreateTool {
             .to_string(),
             attachments: Vec::new(),
             structured_content: None,
-                is_error: None,
+            is_error: None,
         })
     }
 }
@@ -138,11 +134,7 @@ impl Tool for CronListTool {
         })
     }
 
-    async fn execute(
-        &self,
-        _args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, _args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         debug!("listing cron jobs");
 
         // Stub: requires cron scheduler integration.
@@ -154,7 +146,7 @@ impl Tool for CronListTool {
             .to_string(),
             attachments: Vec::new(),
             structured_content: None,
-                is_error: None,
+            is_error: None,
         })
     }
 }
@@ -207,11 +199,7 @@ impl Tool for CronDeleteTool {
         })
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         let params: CronDeleteParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid cron_delete params: {e}")))?;
 
@@ -226,7 +214,7 @@ impl Tool for CronDeleteTool {
             .to_string(),
             attachments: Vec::new(),
             structured_content: None,
-                is_error: None,
+            is_error: None,
         })
     }
 }

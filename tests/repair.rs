@@ -3,12 +3,12 @@
 //! Phase 1 gate: every test here must pass for sh-phase1 to be considered done.
 //!
 //! These tests exercise the technician repair loop end-to-end:
-//! - Dry-run mode produces SkippedDryRun records (no file mutations)
-//! - Apply mode performs real file mutations + emits HealingRecords
-//! - HealingRecord schema is correct and round-trips through JSONL
+//! - Dry-run mode produces `SkippedDryRun` records (no file mutations)
+//! - Apply mode performs real file mutations + emits `HealingRecords`
+//! - `HealingRecord` schema is correct and round-trips through JSONL
 //! - Corrupt JSONL truncation works and verifies clean
 //! - UC config stub creation works and verifies present
-//! - RepairOutcome variants serialize correctly
+//! - `RepairOutcome` variants serialize correctly
 
 use std::fs;
 use std::io::Write;
@@ -72,7 +72,7 @@ fn run_technician(tmp: &Path, apply: bool) -> std::process::Output {
 // ---------------------------------------------------------------------------
 
 /// Dry-run mode should NOT create or modify any files, and should produce
-/// SkippedDryRun records in its output.
+/// `SkippedDryRun` records in its output.
 #[test]
 fn dry_run_does_not_mutate_files() {
     let tmp = TempDir::new().unwrap();
@@ -116,7 +116,7 @@ fn dry_run_reports_skipped() {
 }
 
 /// Apply mode with a corrupt JSONL file should truncate it and emit a
-/// HealingRecord to technician-healing.jsonl.
+/// `HealingRecord` to technician-healing.jsonl.
 #[test]
 fn apply_truncates_corrupt_jsonl() {
     let tmp = TempDir::new().unwrap();
@@ -174,7 +174,7 @@ fn apply_creates_uc_config_stub() {
     // error — the unit-level verification is in the module tests.
 }
 
-/// RepairOutcome serializes all variants correctly.
+/// `RepairOutcome` serializes all variants correctly.
 #[test]
 fn repair_outcome_variants_serialize() {
     // Verify the JSON serialization of all RepairOutcome variants
@@ -200,7 +200,7 @@ fn repair_outcome_variants_serialize() {
     }
 }
 
-/// HealingRecord schema includes verified and verify_note fields.
+/// `HealingRecord` schema includes verified and `verify_note` fields.
 #[test]
 fn healing_record_schema() {
     let record = serde_json::json!({

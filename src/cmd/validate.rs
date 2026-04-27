@@ -325,7 +325,11 @@ mod tests {
     fn validate_reports_degraded_when_no_retrieval_tools() {
         // Empty PATH: neither uc nor gitnexus will be found
         let (_ws, payload) = payload_with_path("validate-no-retrieval", "");
-        assert_eq!(payload["ok"], json!(false), "ok must be false when no retrieval tools available");
+        assert_eq!(
+            payload["ok"],
+            json!(false),
+            "ok must be false when no retrieval tools available"
+        );
         assert_eq!(payload["tools"]["uc"], json!(false));
         assert_eq!(payload["tools"]["gitnexus"], json!(false));
     }
@@ -376,9 +380,17 @@ mod tests {
         }
 
         // gitnexus present, uc absent → ok is true but uc is false
-        assert_eq!(payload["ok"], json!(true), "ok should be true with at least one tool");
+        assert_eq!(
+            payload["ok"],
+            json!(true),
+            "ok should be true with at least one tool"
+        );
         assert_eq!(payload["tools"]["gitnexus"], json!(true));
-        assert_eq!(payload["tools"]["uc"], json!(false), "uc should be reported as missing");
+        assert_eq!(
+            payload["tools"]["uc"],
+            json!(false),
+            "uc should be reported as missing"
+        );
     }
 
     #[test]

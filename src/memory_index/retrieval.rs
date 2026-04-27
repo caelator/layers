@@ -67,7 +67,11 @@ fn reciprocal_rank_fusion(
         })
         .collect();
 
-    results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    results.sort_by(|a, b| {
+        b.score
+            .partial_cmp(&a.score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     results
 }
 
@@ -125,8 +129,7 @@ mod tests {
     #[test]
     fn test_hybrid_search_integration() {
         let dir = tempfile::tempdir().unwrap();
-        let store =
-            crate::memory_index::store::MemoryStore::open_or_create(dir.path(), 4).unwrap();
+        let store = crate::memory_index::store::MemoryStore::open_or_create(dir.path(), 4).unwrap();
 
         let chunks = vec![
             MemoryChunk {
@@ -150,13 +153,7 @@ mod tests {
         ];
         store.upsert_chunks(&chunks).unwrap();
 
-        let results = hybrid_search(
-            &store,
-            "rust programming",
-            &[0.9, 0.1, 0.0, 0.0],
-            10,
-        )
-        .unwrap();
+        let results = hybrid_search(&store, "rust programming", &[0.9, 0.1, 0.0, 0.0], 10).unwrap();
 
         assert!(!results.is_empty());
         // Rust chunk should rank highest (matches both vector and keyword)

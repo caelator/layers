@@ -40,7 +40,7 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
 layers-core = { path = "crates/layers-core" }
 layers-store = { path = "crates/layers-store" }
-layers-daemon = { path = "crates/layers-daemon" }
+layers-daemon = { path = "crates/layers-daemon", optional = true }
 arrow-array = "57"
 arrow-schema = "57"
 futures = "0.3"
@@ -54,7 +54,12 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
 [features]
+default = ["deprecated-runtime"]
 integration = []
+# Compatibility surface for non-core daemon/runtime command paths. The default
+# stays enabled for CLI compatibility; stable-core checks can compile without it
+# via `cargo check --no-default-features --bin layers`.
+deprecated-runtime = ["dep:layers-daemon"]
 
 [dev-dependencies]
 libc = "0.2"

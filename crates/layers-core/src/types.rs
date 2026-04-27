@@ -592,16 +592,14 @@ impl ToolResultContent {
         match self {
             Self::Text { text } => text.clone(),
             Self::Structured { value } => value.to_string(),
-            Self::MultiPart { parts } => {
-                parts
-                    .iter()
-                    .filter_map(|p| match p {
-                        ContentPart::Text { text } => Some(text.as_str()),
-                        _ => None,
-                    })
-                    .collect::<Vec<_>>()
-                    .join("\n")
-            }
+            Self::MultiPart { parts } => parts
+                .iter()
+                .filter_map(|p| match p {
+                    ContentPart::Text { text } => Some(text.as_str()),
+                    _ => None,
+                })
+                .collect::<Vec<_>>()
+                .join("\n"),
         }
     }
 }

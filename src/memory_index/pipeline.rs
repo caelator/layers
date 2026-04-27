@@ -29,10 +29,12 @@ pub fn chunk_id(source_path: &str, content_prefix: &str) -> String {
     hasher.update(source_path.as_bytes());
     hasher.update(content_prefix.as_bytes());
     let hash = hasher.finalize();
-    hash[..8].iter().fold(String::with_capacity(16), |mut s, b| {
-        let _ = write!(s, "{b:02x}");
-        s
-    })
+    hash[..8]
+        .iter()
+        .fold(String::with_capacity(16), |mut s, b| {
+            let _ = write!(s, "{b:02x}");
+            s
+        })
 }
 
 /// Split text into chunks using paragraph boundaries.
@@ -91,9 +93,7 @@ pub fn generate_embeddings(config: &EmbeddingConfig, texts: &[&str]) -> Result<V
     for batch in texts.chunks(EMBEDDING_BATCH_SIZE) {
         let embeddings = match &config.provider {
             EmbeddingProvider::OpenAi { api_key } => embed_openai(api_key, &config.model, batch)?,
-            EmbeddingProvider::Ollama { base_url } => {
-                embed_ollama(base_url, &config.model, batch)?
-            }
+            EmbeddingProvider::Ollama { base_url } => embed_ollama(base_url, &config.model, batch)?,
         };
         all.extend(embeddings);
     }
@@ -112,7 +112,9 @@ fn embed_openai(api_key: &str, model: &str, texts: &[&str]) -> Result<Vec<Vec<f3
             .send_string(&body.to_string())?;
         serde_json::from_reader(response.into_reader())?
     };
-    let data = resp["data"].as_array().context("missing data in response")?;
+    let data = resp["data"]
+        .as_array()
+        .context("missing data in response")?;
     data.iter()
         .map(|item| {
             item["embedding"]
@@ -306,7 +308,8 @@ mod tests {
         let chunks = chunk_text(&content, "overlap.md");
         assert_eq!(chunks.len(), 2);
         // Second chunk should start with overlap from first chunk's tail
-        let first_tail = &chunks[0].content[chunks[0].content.len().saturating_sub(CHUNK_OVERLAP)..];
+        let first_tail =
+            &chunks[0].content[chunks[0].content.len().saturating_sub(CHUNK_OVERLAP)..];
         assert!(
             chunks[1].content.starts_with(first_tail),
             "second chunk should contain overlap from first"

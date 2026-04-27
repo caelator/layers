@@ -68,7 +68,7 @@ pub fn handle_chat(args: &ChatArgs) -> anyhow::Result<()> {
         // wired into the query pipeline. They will be used once the runtime
         // integration lands (Epic 1).
         let _ = (&args.system_prompt, &args.model);
-        match crate::cmd::query::handle_query(input, args.json, false, 1) {
+        match crate::cmd::query::handle_query(input, args.json, false, false, 1) {
             Ok(()) => {}
             Err(e) => {
                 eprintln!("Error: {e:#}");

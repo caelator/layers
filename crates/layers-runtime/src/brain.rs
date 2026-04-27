@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use tokio::io::{AsyncBufReadExt, BufReader};
 
-use tokio::sync::{mpsc, RwLock};
+use tokio::sync::{RwLock, mpsc};
 use tokio_stream::wrappers::ReceiverStream;
 use tracing::{debug, error, info};
 
@@ -57,9 +57,15 @@ impl BrainDispatcher {
         let workdir = self.workdir.clone();
 
         tokio::spawn(async move {
-            if let Err(e) =
-                Self::run_brain(&config, &prompt, session_id.as_deref(), &sessions, &workdir, &tx)
-                    .await
+            if let Err(e) = Self::run_brain(
+                &config,
+                &prompt,
+                session_id.as_deref(),
+                &sessions,
+                &workdir,
+                &tx,
+            )
+            .await
             {
                 error!(error = %e, "brain execution failed");
                 let _ = tx
@@ -101,7 +107,14 @@ impl BrainDispatcher {
 
         // For CLIs that output to stderr (read_stderr), merge stderr into stdout via shell
         let mut child = if config.read_stderr {
-            let shell_cmd = format!("{} {} 2>&1", config.cli, args.iter().map(|a| shlex::try_quote(a).unwrap_or(std::borrow::Cow::Borrowed(a))).collect::<Vec<_>>().join(" "));
+            let shell_cmd = format!(
+                "{} {} 2>&1",
+                config.cli,
+                args.iter()
+                    .map(|a| shlex::try_quote(a).unwrap_or(std::borrow::Cow::Borrowed(a)))
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            );
             tokio::process::Command::new("sh")
                 .arg("-c")
                 .arg(&shell_cmd)

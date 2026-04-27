@@ -185,8 +185,11 @@ impl MemoryStore {
         if table_names.contains(&TABLE_NAME.to_string()) {
             self.rt.block_on(self.db.drop_table(TABLE_NAME, &[]))?;
         }
-        self.rt
-            .block_on(self.db.create_empty_table(TABLE_NAME, self.schema.clone()).execute())?;
+        self.rt.block_on(
+            self.db
+                .create_empty_table(TABLE_NAME, self.schema.clone())
+                .execute(),
+        )?;
         Ok(())
     }
 
@@ -233,9 +236,7 @@ impl MemoryStore {
     }
 
     fn open_table(&self) -> Result<lancedb::Table> {
-        Ok(self
-            .rt
-            .block_on(self.db.open_table(TABLE_NAME).execute())?)
+        Ok(self.rt.block_on(self.db.open_table(TABLE_NAME).execute())?)
     }
 }
 
@@ -278,11 +279,7 @@ fn chunks_to_batch(chunks: &[MemoryChunk], schema: &Arc<Schema>) -> Result<Recor
 
     let flat_embeddings: Vec<f32> = chunks
         .iter()
-        .flat_map(|c| {
-            c.embedding
-                .clone()
-                .unwrap_or_else(|| vec![0.0; dims])
-        })
+        .flat_map(|c| c.embedding.clone().unwrap_or_else(|| vec![0.0; dims]))
         .collect();
 
     let values: ArrayRef = Arc::new(Float32Array::from(flat_embeddings));
@@ -349,10 +346,7 @@ fn batch_to_chunks(batch: &RecordBatch) -> Vec<MemoryChunk> {
     (0..batch.num_rows())
         .map(|i| {
             let emb_values = embeddings.value(i);
-            let emb_array = emb_values
-                .as_any()
-                .downcast_ref::<Float32Array>()
-                .unwrap();
+            let emb_array = emb_values.as_any().downcast_ref::<Float32Array>().unwrap();
             let embedding: Vec<f32> = emb_array.values().to_vec();
 
             MemoryChunk {
@@ -390,8 +384,18 @@ mod tests {
         let store = MemoryStore::open_or_create(dir.path(), 8).unwrap();
 
         let chunks = vec![
-            make_chunk("c1", "a.md", "hello world", vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-            make_chunk("c2", "a.md", "goodbye world", vec![0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+            make_chunk(
+                "c1",
+                "a.md",
+                "hello world",
+                vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            ),
+            make_chunk(
+                "c2",
+                "a.md",
+                "goodbye world",
+                vec![0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            ),
         ];
 
         // Upsert
@@ -423,11 +427,21 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = MemoryStore::open_or_create(dir.path(), 4).unwrap();
 
-        let chunks_v1 = vec![make_chunk("c1", "f.md", "version one", vec![1.0, 0.0, 0.0, 0.0])];
+        let chunks_v1 = vec![make_chunk(
+            "c1",
+            "f.md",
+            "version one",
+            vec![1.0, 0.0, 0.0, 0.0],
+        )];
         store.upsert_chunks(&chunks_v1).unwrap();
 
         // Upsert with same source path replaces
-        let chunks_v2 = vec![make_chunk("c2", "f.md", "version two", vec![0.0, 1.0, 0.0, 0.0])];
+        let chunks_v2 = vec![make_chunk(
+            "c2",
+            "f.md",
+            "version two",
+            vec![0.0, 1.0, 0.0, 0.0],
+        )];
         store.upsert_chunks(&chunks_v2).unwrap();
 
         let results = store.vector_search(&[0.0, 1.0, 0.0, 0.0], 10).unwrap();
@@ -464,7 +478,12 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = MemoryStore::open_or_create(dir.path(), 4).unwrap();
 
-        let chunks = vec![make_chunk("c1", "x.md", "some content", vec![1.0, 0.0, 0.0, 0.0])];
+        let chunks = vec![make_chunk(
+            "c1",
+            "x.md",
+            "some content",
+            vec![1.0, 0.0, 0.0, 0.0],
+        )];
         store.upsert_chunks(&chunks).unwrap();
 
         store.clear().unwrap();

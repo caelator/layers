@@ -427,7 +427,7 @@ mod tests {
         };
 
         let delta = s.seconds_since_update();
-        assert!(delta >= 29 && delta <= 31, "expected ~30s, got {delta}");
+        assert!((29..=31).contains(&delta), "expected ~30s, got {delta}");
     }
 
     // ── classify ────────────────────────────────────────────────────────────

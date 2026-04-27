@@ -86,7 +86,7 @@ impl CharEstimateTokenizer {
     /// Panics if `ratio` is not finite or is ≤ 0.
     #[must_use]
     pub fn with_ratio(ratio: f64) -> Self {
-        assert!(ratio.is_finite() && ratio > 0.0, "ratio must be > 0");
+        assert!(ratio.is_finite() && ratio > 0.0, "ratio must be positive");
         Self {
             chars_per_token: ratio,
         }
@@ -197,13 +197,13 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "ratio must be positive")]
     fn zero_ratio_panics() {
         let _ = CharEstimateTokenizer::with_ratio(0.0);
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "ratio must be positive")]
     fn negative_ratio_panics() {
         let _ = CharEstimateTokenizer::with_ratio(-1.0);
     }

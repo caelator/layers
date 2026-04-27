@@ -139,38 +139,40 @@ impl ModelProvider for GoogleProvider {
         );
         let client = self.client.clone();
 
-        Box::pin(stream::once(async move {
-            let resp = client
-                .post(endpoint)
-                .header("content-type", "application/json")
-                .json(&wire)
-                .send()
-                .await
-                .map_err(|e| LayersError::Provider(format!("stream request failed: {e}")))?;
+        Box::pin(
+            stream::once(async move {
+                let resp = client
+                    .post(endpoint)
+                    .header("content-type", "application/json")
+                    .json(&wire)
+                    .send()
+                    .await
+                    .map_err(|e| LayersError::Provider(format!("stream request failed: {e}")))?;
 
-            let status = resp.status();
-            if !status.is_success() {
-                let body = resp.text().await.unwrap_or_default();
-                return Err(LayersError::Provider(format!("{status}: {body}")));
-            }
-
-            Ok(resp)
-        })
-        .filter_map(|res| async {
-            match res {
-                Err(e) => Some(Err(e)),
-                Ok(_resp) => {
-                    warn!("Google streaming not fully wired — returning empty chunk");
-                    Some(Ok(StreamChunk {
-                        delta_text: None,
-                        delta_reasoning: None,
-                        tool_call_delta: None,
-                        usage: None,
-                        finish_reason: Some("STOP".into()),
-                    }))
+                let status = resp.status();
+                if !status.is_success() {
+                    let body = resp.text().await.unwrap_or_default();
+                    return Err(LayersError::Provider(format!("{status}: {body}")));
                 }
-            }
-        }))
+
+                Ok(resp)
+            })
+            .filter_map(|res| async {
+                match res {
+                    Err(e) => Some(Err(e)),
+                    Ok(_resp) => {
+                        warn!("Google streaming not fully wired — returning empty chunk");
+                        Some(Ok(StreamChunk {
+                            delta_text: None,
+                            delta_reasoning: None,
+                            tool_call_delta: None,
+                            usage: None,
+                            finish_reason: Some("STOP".into()),
+                        }))
+                    }
+                }
+            }),
+        )
     }
 
     fn supports_tools(&self) -> bool {
@@ -190,7 +192,9 @@ impl ModelProvider for GoogleProvider {
     }
 
     fn tokenizer(&self) -> Option<Arc<dyn Tokenizer>> {
-        Some(tokenizer_for_family(crate::capabilities::TokenizerFamily::Google))
+        Some(tokenizer_for_family(
+            crate::capabilities::TokenizerFamily::Google,
+        ))
     }
 }
 
@@ -408,7 +412,10 @@ mod tests {
         };
 
         let wire = GoogleProvider::build_wire_request(&req);
-        let sys = wire.system_instruction.as_ref().expect("system_instruction");
+        let sys = wire
+            .system_instruction
+            .as_ref()
+            .expect("system_instruction");
         assert_eq!(sys.parts[0].text, Some("You are helpful.".into()));
         assert!(sys.role.is_none()); // system instruction has no role
 
@@ -613,10 +620,7 @@ mod tests {
         assert_eq!(resp.message.role, MessageRole::Assistant);
         assert_eq!(resp.usage.prompt_tokens, 10);
         assert_eq!(resp.usage.completion_tokens, 5);
-        assert_eq!(
-            resp.model,
-            Some("gemini-2.5-pro-preview-06-05".into())
-        );
+        assert_eq!(resp.model, Some("gemini-2.5-pro-preview-06-05".into()));
         assert_eq!(resp.finish_reason, Some("STOP".into()));
     }
 

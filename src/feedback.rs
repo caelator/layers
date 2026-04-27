@@ -357,6 +357,7 @@ pub fn router_route_to_feedback_id(route: crate::router::Route) -> RouteId {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
 
     #[test]
     fn route_id_display() {
@@ -522,7 +523,6 @@ mod tests {
             .open(path)
             .unwrap();
         for f in &[&f1, &f2, &f3] {
-            use std::io::Write;
             writeln!(file, "{}", serde_json::to_string(f).unwrap()).unwrap();
         }
 
@@ -574,7 +574,6 @@ mod tests {
             .append(true)
             .open(path)
             .unwrap();
-        use std::io::Write;
         // Malformed: valid JSON but not a RouteFailure
         writeln!(file, "{{\"not_a_route_failure\": true}}").unwrap();
         writeln!(file, "{}", serde_json::to_string(&f1).unwrap()).unwrap();
@@ -617,7 +616,7 @@ mod tests {
         // Two hard failures on Both = -0.5 * 2 = -1.0
         assert_eq!(weights.get(&RouteId::Both), Some(&-1.0_f32));
         // MemoryOnly never failed, so not in map
-        assert!(weights.get(&RouteId::MemoryOnly).is_none());
+        assert!(!weights.contains_key(&RouteId::MemoryOnly));
     }
 
     #[test]

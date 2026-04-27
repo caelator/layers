@@ -170,61 +170,6 @@ pub fn mask_secrets(config: &LayersConfig) -> LayersConfig {
     c
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn mask_secret_short_value() {
-        assert_eq!(super::mask_secret("short"), "****");
-    }
-
-    #[test]
-    fn mask_secret_long_value() {
-        assert_eq!(super::mask_secret("abcdefghijklmnop"), "abcd****mnop");
-    }
-
-    #[test]
-    fn mask_secrets_redacts_provider_keys() {
-        let mut config = LayersConfig::default();
-        let provider = layers_core::config::ProviderConfig {
-            api_key: Some("sk-test-secret-key-value".to_string()),
-            api_base: None,
-            models: vec![],
-            extra: Default::default(),
-        };
-        config.providers.insert("openai".to_string(), provider);
-        let masked = mask_secrets(&config);
-        let p = masked.providers.get("openai").unwrap();
-        assert!(p.api_key.as_ref().unwrap().contains("****"));
-        assert!(!p.api_key.as_ref().unwrap().contains("secret"));
-    }
-
-    #[test]
-    fn merge_config_overlay_wins() {
-        let defaults = LayersConfig::default();
-        let mut overlay = LayersConfig::default();
-        overlay.daemon.port = 9999;
-        overlay.agent.model = Some("test-model".to_string());
-
-        let merged = merge_config(LayersConfig::default(), overlay);
-        assert_eq!(merged.daemon.port, 9999);
-        assert_eq!(merged.agent.model.as_deref(), Some("test-model"));
-        // Non-overridden fields stay at default
-        assert_eq!(merged.daemon.bind_address, defaults.daemon.bind_address);
-    }
-
-    #[test]
-    fn merge_config_default_values_do_not_override() {
-        let mut base = LayersConfig::default();
-        base.daemon.port = 8080;
-        let overlay = LayersConfig::default(); // all defaults
-        let merged = merge_config(base, overlay);
-        // base port should be preserved since overlay is at default
-        assert_eq!(merged.daemon.port, 8080);
-    }
-}
-
 /// Mask a single secret string, showing first 4 and last 4 chars if long enough.
 fn mask_secret(s: &str) -> String {
     if s.len() <= 12 {
@@ -304,4 +249,59 @@ pub const CONTEXT_PAYLOAD_SCHEMA_VERSION: u32 = 2;
 
 fn dirs_home() -> PathBuf {
     PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mask_secret_short_value() {
+        assert_eq!(super::mask_secret("short"), "****");
+    }
+
+    #[test]
+    fn mask_secret_long_value() {
+        assert_eq!(super::mask_secret("abcdefghijklmnop"), "abcd****mnop");
+    }
+
+    #[test]
+    fn mask_secrets_redacts_provider_keys() {
+        let mut config = LayersConfig::default();
+        let provider = layers_core::config::ProviderConfig {
+            api_key: Some("sk-test-secret-key-value".to_string()),
+            api_base: None,
+            models: vec![],
+            extra: std::collections::HashMap::default(),
+        };
+        config.providers.insert("openai".to_string(), provider);
+        let masked = mask_secrets(&config);
+        let p = masked.providers.get("openai").unwrap();
+        assert!(p.api_key.as_ref().unwrap().contains("****"));
+        assert!(!p.api_key.as_ref().unwrap().contains("secret"));
+    }
+
+    #[test]
+    fn merge_config_overlay_wins() {
+        let defaults = LayersConfig::default();
+        let mut overlay = LayersConfig::default();
+        overlay.daemon.port = 9999;
+        overlay.agent.model = Some("test-model".to_string());
+
+        let merged = merge_config(LayersConfig::default(), overlay);
+        assert_eq!(merged.daemon.port, 9999);
+        assert_eq!(merged.agent.model.as_deref(), Some("test-model"));
+        // Non-overridden fields stay at default
+        assert_eq!(merged.daemon.bind_address, defaults.daemon.bind_address);
+    }
+
+    #[test]
+    fn merge_config_default_values_do_not_override() {
+        let mut base = LayersConfig::default();
+        base.daemon.port = 8080;
+        let overlay = LayersConfig::default(); // all defaults
+        let merged = merge_config(base, overlay);
+        // base port should be preserved since overlay is at default
+        assert_eq!(merged.daemon.port, 8080);
+    }
 }

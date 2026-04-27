@@ -1,0 +1,10 @@
+<layers_context_packet>
+<task>Dogfood Layers on its own repo for production readiness. Focus on ContextPacket v1 refactor under review, cargo test passing, clippy pedantic/test/doc lint debt, degraded provider warnings, explicit memory, GitNexus impact context, and next validation commands.</task>
+<route>neither</route>
+<confidence>high</confidence>
+<warnings>
+- [warning] No memory or graph context was selected for this query.
+</warnings>
+<context>
+</context>
+</layers_context_packet>

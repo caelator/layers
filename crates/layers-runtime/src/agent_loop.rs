@@ -9,9 +9,8 @@ use tokio_util::sync::CancellationToken;
 use tracing::warn;
 
 use layers_core::{
-    LayersError, Message, MessageContent, MessageRole, ModelProvider, ModelRef,
-    ModelRequest, Result, Session, SessionStore,
-    ToolContext, TokenBudget,
+    LayersError, Message, MessageContent, MessageRole, ModelProvider, ModelRef, ModelRequest,
+    Result, Session, SessionStore, TokenBudget, ToolContext,
 };
 
 use crate::context::ContextAssembler;
@@ -178,7 +177,9 @@ pub async fn run_agent_loop(
 
     // Build token budget.
     let budget = TokenBudget {
-        max_input: provider.context_window().saturating_sub(provider.max_tokens()),
+        max_input: provider
+            .context_window()
+            .saturating_sub(provider.max_tokens()),
         max_output: provider.max_tokens(),
         reserved_for_tools: Some(4096),
     };
@@ -213,7 +214,11 @@ pub async fn run_agent_loop(
             model: run.model_ref.clone(),
             messages,
             system: Some(system_prompt.clone()),
-            tools: if tool_defs.is_empty() { None } else { Some(tool_defs) },
+            tools: if tool_defs.is_empty() {
+                None
+            } else {
+                Some(tool_defs)
+            },
             temperature: None,
             max_tokens: Some(budget.max_output),
             token_budget: Some(budget.clone()),
@@ -276,7 +281,9 @@ pub async fn run_agent_loop(
         }
 
         // Persist assistant message.
-        store.append_message(&session.id, assistant_msg.clone()).await?;
+        store
+            .append_message(&session.id, assistant_msg.clone())
+            .await?;
         produced.push(assistant_msg.clone());
 
         // Check for tool calls.

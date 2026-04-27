@@ -17,7 +17,7 @@
 //! - Replay small query corpus with evaluator on/off, prove effect
 //!
 //! ## D. End-to-end route-quality feedback loop
-//! - Evaluator failures compound in JSONL (bug fix: was atomic_write/replace)
+//! - Evaluator failures compound in JSONL (bug fix: was `atomic_write/replace`)
 //! - Compounded weights cross threshold → route changes
 //! - Counterfactual: evaluator OFF → no failures → route unchanged
 //! - Evaluator ON vs OFF produces measurably different routing decisions
@@ -341,9 +341,9 @@ mod critical_path_proofs {
             remaining += 1;
         }
 
-        let consumed = consumer.join().expect("consumer must not panic");
+        let consumed_count = consumer.join().expect("consumer must not panic");
         // Total consumed + remaining must equal total produced (minus rejected).
-        let total = consumed + remaining;
+        let total = consumed_count + remaining;
         assert!(
             total > 0,
             "must have consumed at least some items (got {total})"
@@ -364,7 +364,7 @@ mod session_monitor_proofs {
     // This validates the classification contract even if the binary's internal
     // layout changes.
 
-    /// Mirror of session_monitor's Session struct for integration testing.
+    /// Mirror of `session_monitor`'s Session struct for integration testing.
     #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
     struct Session {
         key: String,
@@ -631,9 +631,7 @@ mod session_monitor_proofs {
             assert_eq!(
                 is_live_session(&session),
                 *expected_live,
-                "status '{}' should be live={}",
-                status,
-                expected_live
+                "status {status} should be live={expected_live}"
             );
         }
     }
@@ -836,8 +834,8 @@ mod quality_evaluator_proofs {
         );
 
         // Net effect: evaluator provides differentiation.
-        let effect = evaluator_on_rejections as f64
-            / (evaluator_on_rejections + evaluator_on_acceptances) as f64;
+        let effect = f64::from(evaluator_on_rejections)
+            / f64::from(evaluator_on_rejections + evaluator_on_acceptances);
         assert!(
             effect >= 0.3,
             "evaluator rejection rate should be at least 30% to prove meaningful effect (got {:.1}%)",
@@ -897,8 +895,7 @@ mod quality_evaluator_proofs {
         };
 
         let json = serde_json::to_string(&original).expect("serialize to JSON");
-        let restored: ResultQuality =
-            serde_json::from_str(&json).expect("deserialize from JSON");
+        let restored: ResultQuality = serde_json::from_str(&json).expect("deserialize from JSON");
 
         assert!(
             (restored.relevance - original.relevance).abs() < f64::EPSILON,
@@ -952,7 +949,10 @@ mod quality_evaluator_proofs {
             &["any result with enough words for the specificity threshold"],
             1,
         );
-        assert_eq!(q.relevance, 1.0, "all-stopword query should yield 1.0 relevance");
+        assert!(
+            (q.relevance - 1.0).abs() < f64::EPSILON,
+            "all-stopword query should yield 1.0 relevance"
+        );
 
         // Very long results
         let long_result = "word ".repeat(10_000);
@@ -975,7 +975,7 @@ mod quality_evaluator_proofs {
 // Proves the FULL live-fire loop:
 //   1. Evaluator scores bad results → unacceptable
 //   2. emit_if_poor() writes RouteFailure records to the corrections file
-//   3. Multiple failures compound in the file (bug fix: was atomic_write/replace)
+//   3. Multiple failures compound in the file (bug fix: was `atomic_write/replace`)
 //   4. load_route_weights() computes negative weight from compounded failures
 //   5. Routing decision changes: weight < −0.3 triggers route fallback
 //   6. Counterfactual: with evaluator OFF (no failures emitted), route is unchanged
@@ -989,7 +989,7 @@ mod route_quality_e2e_loop {
     use std::io::Write;
     use tempfile::TempDir;
 
-    /// Replicate the routing-decision logic from council::apply_route_corrections
+    /// Replicate the routing-decision logic from `council::apply_route_corrections`
     /// so we can test the full loop without needing the cmd module in lib scope.
     /// This is identical to src/council/mod.rs lines 53–97.
     fn apply_route_corrections_from(
@@ -1000,7 +1000,6 @@ mod route_quality_e2e_loop {
         let weights = load_route_weights(&failures);
 
         let route_id = match route {
-            "direct" | "council_only" => RouteId::CouncilOnly,
             "memory_only" | "memory" => RouteId::CouncilWithMemory,
             "graph_only" | "graph" => RouteId::CouncilWithGraph,
             "both" => RouteId::Both,
@@ -1074,7 +1073,7 @@ mod route_quality_e2e_loop {
 
         let query = "how does the auth middleware validate JWT tokens";
         let bad = bad_results();
-        let bad_refs: Vec<&str> = bad.iter().copied().collect();
+        let bad_refs: Vec<&str> = bad.clone();
 
         // Step 1: Evaluate bad results — must be unacceptable
         let quality = evaluate(query, &bad_refs, 3);
@@ -1108,8 +1107,8 @@ mod route_quality_e2e_loop {
         // Step 4: Verify compounded weight
         let weights = load_route_weights(&failures);
         let both_weight = weights.get(&RouteId::Both).copied().unwrap_or(0.0);
-        assert_eq!(
-            both_weight, -0.4,
+        assert!(
+            (both_weight - -0.4).abs() < f32::EPSILON,
             "two soft failures on 'both' should compound to -0.4"
         );
         assert!(
@@ -1152,7 +1151,7 @@ mod route_quality_e2e_loop {
             "explain the circuit breaker in the council loop",
         ];
         let bad = bad_results();
-        let bad_refs: Vec<&str> = bad.iter().copied().collect();
+        let bad_refs: Vec<&str> = bad.clone();
 
         // Evaluator ON: evaluate each query, emit failures for bad results
         for query in queries {
@@ -1209,7 +1208,7 @@ mod route_quality_e2e_loop {
 
         let query = "how does the auth middleware validate JWT tokens";
         let good = good_results();
-        let good_refs: Vec<&str> = good.iter().copied().collect();
+        let good_refs: Vec<&str> = good.clone();
 
         // Good results pass quality evaluation
         let quality = evaluate(query, &good_refs, 3);
@@ -1231,11 +1230,11 @@ mod route_quality_e2e_loop {
         let query = "how does the auth middleware validate JWT tokens";
 
         let bad = bad_results();
-        let bad_refs: Vec<&str> = bad.iter().copied().collect();
+        let bad_refs: Vec<&str> = bad.clone();
         let bad_quality = evaluate(query, &bad_refs, 3);
 
         let good = good_results();
-        let good_refs: Vec<&str> = good.iter().copied().collect();
+        let good_refs: Vec<&str> = good.clone();
         let good_quality = evaluate(query, &good_refs, 3);
 
         // emit_if_poor for bad quality should return true (would emit)
@@ -1285,7 +1284,10 @@ mod route_quality_e2e_loop {
 
         let (route, weights) = apply_route_corrections_from("both", &corrections_path);
         let weight = weights.get(&RouteId::Both).copied().unwrap_or(0.0);
-        assert_eq!(weight, -0.2, "single soft failure = -0.2");
+        assert!(
+            (weight - -0.2).abs() < f32::EPSILON,
+            "single soft failure = -0.2"
+        );
         assert_eq!(route, "both", "single soft failure must NOT change route");
     }
 

@@ -78,11 +78,7 @@ impl HookManager {
     ///
     /// # Errors
     /// Returns an error if a pre-run hook fails (post-run and intercept failures are logged but not propagated).
-    pub async fn fire(
-        &self,
-        phase: HookPhase,
-        session: &Session,
-    ) -> Result<Vec<HookResult>> {
+    pub async fn fire(&self, phase: HookPhase, session: &Session) -> Result<Vec<HookResult>> {
         let hooks = self.hooks.read().await.clone();
         let matching: Vec<_> = hooks
             .iter()
@@ -111,10 +107,7 @@ impl HookManager {
                     continue;
                 }
                 drop(seen);
-                self.dedup_seen
-                    .write()
-                    .await
-                    .insert(key, hook.name.clone());
+                self.dedup_seen.write().await.insert(key, hook.name.clone());
             }
 
             let result = execute_hook(hook, session).await;

@@ -30,9 +30,8 @@ fn validate_fetch_url(url: &str) -> Result<()> {
         )));
     }
 
-    let parsed = url::Url::parse(url).map_err(|e| {
-        LayersError::Tool(format!("invalid URL: {e}"))
-    })?;
+    let parsed =
+        url::Url::parse(url).map_err(|e| LayersError::Tool(format!("invalid URL: {e}")))?;
 
     match parsed.scheme() {
         "http" | "https" => {}
@@ -127,11 +126,7 @@ impl Tool for WebSearchTool {
         })
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         let params: WebSearchParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid web_search params: {e}")))?;
 
@@ -224,11 +219,7 @@ impl Tool for WebFetchTool {
         })
     }
 
-    async fn execute(
-        &self,
-        args: serde_json::Value,
-        _context: ToolContext,
-    ) -> Result<ToolOutput> {
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
         let params: WebFetchParams = serde_json::from_value(args)
             .map_err(|e| LayersError::Tool(format!("invalid web_fetch params: {e}")))?;
 
@@ -241,9 +232,11 @@ impl Tool for WebFetchTool {
         validate_fetch_url(&params.url)?;
 
         let client = build_client();
-        let response = client.get(&params.url).send().await.map_err(|e| {
-            LayersError::Tool(format!("HTTP request failed: {e}"))
-        })?;
+        let response = client
+            .get(&params.url)
+            .send()
+            .await
+            .map_err(|e| LayersError::Tool(format!("HTTP request failed: {e}")))?;
 
         let status = response.status();
         let content_type = response
@@ -264,9 +257,10 @@ impl Tool for WebFetchTool {
         }
 
         // Enforce size limit at the body level.
-        let body = response.bytes().await.map_err(|e| {
-            LayersError::Tool(format!("failed to read response body: {e}"))
-        })?;
+        let body = response
+            .bytes()
+            .await
+            .map_err(|e| LayersError::Tool(format!("failed to read response body: {e}")))?;
 
         if body.len() > MAX_RESPONSE_BYTES {
             return Ok(ToolOutput {
@@ -500,7 +494,9 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         match err {
-            LayersError::Tool(msg) => assert!(msg.contains("localhost") || msg.contains("loopback")),
+            LayersError::Tool(msg) => {
+                assert!(msg.contains("localhost") || msg.contains("loopback"))
+            }
             _ => panic!("expected Tool error"),
         }
     }
@@ -509,10 +505,7 @@ mod tests {
     async fn fetch_rejects_invalid_url() {
         let tool = WebFetchTool::new();
         let result = tool
-            .execute(
-                serde_json::json!({ "url": "not-a-valid-url" }),
-                test_ctx(),
-            )
+            .execute(serde_json::json!({ "url": "not-a-valid-url" }), test_ctx())
             .await;
         assert!(result.is_err());
     }
@@ -523,10 +516,7 @@ mod tests {
     async fn search_returns_stub() {
         let tool = WebSearchTool::new();
         let result = tool
-            .execute(
-                serde_json::json!({ "query": "test" }),
-                test_ctx(),
-            )
+            .execute(serde_json::json!({ "query": "test" }), test_ctx())
             .await
             .unwrap();
         assert!(result.content.contains("test"));

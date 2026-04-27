@@ -178,11 +178,9 @@ pub struct BindingConfig {
 
 /// Parse a `layers.toml` file at the given path and return a [`LayersConfig`].
 pub fn parse_config(path: impl AsRef<Path>) -> Result<LayersConfig> {
-    let content = std::fs::read_to_string(path.as_ref()).map_err(|e| {
-        LayersError::Config(format!("failed to read config file: {e}"))
-    })?;
-    let config: LayersConfig = toml::from_str(&content).map_err(|e| {
-        LayersError::Config(format!("failed to parse config: {e}"))
-    })?;
+    let content = std::fs::read_to_string(path.as_ref())
+        .map_err(|e| LayersError::Config(format!("failed to read config file: {e}")))?;
+    let config: LayersConfig = toml::from_str(&content)
+        .map_err(|e| LayersError::Config(format!("failed to parse config: {e}")))?;
     Ok(config)
 }

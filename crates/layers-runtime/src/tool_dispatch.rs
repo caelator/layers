@@ -14,8 +14,7 @@ use layers_core::{
 // ---------------------------------------------------------------------------
 
 /// Predefined tool profile sets.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum ToolProfile {
     /// Minimal: only essential tools.
     Minimal,
@@ -29,7 +28,6 @@ pub enum ToolProfile {
     /// Custom allow-list.
     Custom(Vec<String>),
 }
-
 
 // ---------------------------------------------------------------------------
 // Tool registry
@@ -126,9 +124,9 @@ impl ToolRegistry {
         args: serde_json::Value,
         context: ToolContext,
     ) -> Result<ToolOutput> {
-        let tool = self.get(name).ok_or_else(|| {
-            LayersError::Tool(format!("tool not found or not permitted: {name}"))
-        })?;
+        let tool = self
+            .get(name)
+            .ok_or_else(|| LayersError::Tool(format!("tool not found or not permitted: {name}")))?;
 
         debug!(tool = %name, "dispatching tool call");
         tool.execute(args, context).await

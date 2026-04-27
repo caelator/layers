@@ -14,7 +14,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
 use uuid::Uuid;
 
-use layers_core::{ProcessRun, ProcessRunStatus, ProcessRunStore, Result, LayersError};
+use layers_core::{LayersError, ProcessRun, ProcessRunStatus, ProcessRunStore, Result};
 
 // ---------------------------------------------------------------------------
 // Config
@@ -189,22 +189,16 @@ impl SubagentManager {
             match &result {
                 Ok(summary) => {
                     let now = Utc::now();
-                    let _ = store.update_status(
-                        &rid,
-                        ProcessRunStatus::Completed,
-                        now,
-                        Some(summary),
-                    ).await;
+                    let _ = store
+                        .update_status(&rid, ProcessRunStatus::Completed, now, Some(summary))
+                        .await;
                     info!(run_id = %rid, "subagent completed");
                 }
                 Err(e) => {
                     let now = Utc::now();
-                    let _ = store.update_status(
-                        &rid,
-                        ProcessRunStatus::Failed,
-                        now,
-                        Some(&e.to_string()),
-                    ).await;
+                    let _ = store
+                        .update_status(&rid, ProcessRunStatus::Failed, now, Some(&e.to_string()))
+                        .await;
                     warn!(run_id = %rid, error = %e, "subagent failed");
                 }
             }
@@ -347,7 +341,13 @@ mod tests {
         let cancel = CancellationToken::new();
 
         let handle = mgr
-            .spawn("parent-1", "do something", "model-a", HashMap::new(), &cancel)
+            .spawn(
+                "parent-1",
+                "do something",
+                "model-a",
+                HashMap::new(),
+                &cancel,
+            )
             .await
             .expect("spawn should succeed");
 
@@ -356,8 +356,7 @@ mod tests {
         assert_eq!(run.parent_session_id.as_deref(), Some("parent-1"));
         // Initially Running (may already be Completed if the stub finished).
         assert!(
-            run.status == ProcessRunStatus::Running
-                || run.status == ProcessRunStatus::Completed
+            run.status == ProcessRunStatus::Running || run.status == ProcessRunStatus::Completed
         );
 
         // Wait for completion.
@@ -450,8 +449,7 @@ mod tests {
         // Check the store — status should be Cancelled or Completed.
         let run = store.get(&run_id).await.expect("run should exist");
         assert!(
-            run.status == ProcessRunStatus::Cancelled
-                || run.status == ProcessRunStatus::Completed,
+            run.status == ProcessRunStatus::Cancelled || run.status == ProcessRunStatus::Completed,
             "expected Cancelled or Completed, got {:?}",
             run.status
         );

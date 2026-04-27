@@ -16,7 +16,7 @@ use layers_core::{
     traits::ProcessRunStore,
 };
 
-use portable_pty::{native_pty_system, CommandBuilder, PtySize};
+use portable_pty::{CommandBuilder, PtySize, native_pty_system};
 
 static PROCESS_MANAGER: OnceLock<Arc<ProcessManager>> = OnceLock::new();
 
@@ -87,20 +87,18 @@ impl ProcessChild {
     fn try_wait(&mut self) -> std::io::Result<Option<std::process::ExitStatus>> {
         match self {
             Self::Std(c) => c.try_wait(),
-            Self::Pty { child, .. } => {
-                match child.get_mut().unwrap().try_wait() {
-                    Ok(Some(status)) => {
-                        let code = status.exit_code() as i32;
-                        #[cfg(unix)]
-                        {
-                            use std::os::unix::process::ExitStatusExt;
-                            Ok(Some(std::process::ExitStatus::from_raw(code)))
-                        }
+            Self::Pty { child, .. } => match child.get_mut().unwrap().try_wait() {
+                Ok(Some(status)) => {
+                    let code = status.exit_code() as i32;
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::process::ExitStatusExt;
+                        Ok(Some(std::process::ExitStatus::from_raw(code)))
                     }
-                    Ok(None) => Ok(None),
-                    Err(e) => Err(e),
                 }
-            }
+                Ok(None) => Ok(None),
+                Err(e) => Err(e),
+            },
         }
     }
 
@@ -183,7 +181,13 @@ impl ProcessManager {
     }
 
     /// Persist a status update to the backing store (if configured).
-    async fn persist_status(&self, id: &str, status: ProcessRunStatus, finished_at: chrono::DateTime<chrono::Utc>, summary: Option<&str>) {
+    async fn persist_status(
+        &self,
+        id: &str,
+        status: ProcessRunStatus,
+        finished_at: chrono::DateTime<chrono::Utc>,
+        summary: Option<&str>,
+    ) {
         if let Some(ref store) = self.store {
             if let Err(e) = store.update_status(id, status, finished_at, summary).await {
                 warn!(run_id = %id, error = %e, "failed to persist process run status");
@@ -386,7 +390,10 @@ impl ProcessManager {
             pid,
             pty: true,
             exit_code: None,
-            child: ProcessChild::Pty { child: std::sync::Mutex::new(child), writer },
+            child: ProcessChild::Pty {
+                child: std::sync::Mutex::new(child),
+                writer,
+            },
             stdin: None, // PTY uses writer for stdin
             stdout,
             stderr,
@@ -469,7 +476,8 @@ impl ProcessManager {
             ProcessRunStatus::Failed,
             process.run.finished_at.unwrap(),
             process.run.result_summary.as_deref(),
-        ).await;
+        )
+        .await;
         Ok(())
     }
 
@@ -487,7 +495,8 @@ impl ProcessManager {
                 process.run.status.clone(),
                 process.run.finished_at.unwrap_or_else(Utc::now),
                 process.run.result_summary.as_deref(),
-            ).await;
+            )
+            .await;
         }
         process.snapshot().await.pipe(Ok)
     }
@@ -550,9 +559,9 @@ impl ProcessManager {
         match &mut process.child {
             ProcessChild::Pty { writer, .. } => {
                 let guard = writer.get_mut().unwrap();
-                let w = guard
-                    .as_mut()
-                    .ok_or_else(|| LayersError::Tool(format!("pty writer unavailable: {run_id}")))?;
+                let w = guard.as_mut().ok_or_else(|| {
+                    LayersError::Tool(format!("pty writer unavailable: {run_id}"))
+                })?;
                 use std::io::Write;
                 w.write_all(data.as_bytes())
                     .map_err(|e| LayersError::Tool(format!("pty write failed: {e}")))?;
@@ -563,15 +572,18 @@ impl ProcessManager {
                 }
             }
             ProcessChild::Std(_) => {
-                let stdin = process.stdin.as_mut().ok_or_else(|| {
-                    LayersError::Tool(format!("stdin unavailable: {run_id}"))
-                })?;
-                stdin.write_all(data.as_bytes()).await.map_err(|e| {
-                    LayersError::Tool(format!("stdin write failed: {e}"))
-                })?;
-                stdin.flush().await.map_err(|e| {
-                    LayersError::Tool(format!("stdin flush failed: {e}"))
-                })?;
+                let stdin = process
+                    .stdin
+                    .as_mut()
+                    .ok_or_else(|| LayersError::Tool(format!("stdin unavailable: {run_id}")))?;
+                stdin
+                    .write_all(data.as_bytes())
+                    .await
+                    .map_err(|e| LayersError::Tool(format!("stdin write failed: {e}")))?;
+                stdin
+                    .flush()
+                    .await
+                    .map_err(|e| LayersError::Tool(format!("stdin flush failed: {e}")))?;
                 if eof {
                     process.stdin = None;
                 }
@@ -604,7 +616,8 @@ impl ProcessManager {
                 ProcessRunStatus::Cancelled,
                 process.run.finished_at.unwrap(),
                 process.run.result_summary.as_deref(),
-            ).await;
+            )
+            .await;
         }
 
         process.snapshot().await.pipe(Ok)

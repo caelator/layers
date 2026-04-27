@@ -74,8 +74,14 @@ impl ProviderRegistry {
     }
 
     /// Add a custom alias.
-    pub fn add_alias(&mut self, alias: impl Into<String>, provider: impl Into<String>, model: impl Into<String>) {
-        self.aliases.insert(alias.into(), (provider.into(), model.into()));
+    pub fn add_alias(
+        &mut self,
+        alias: impl Into<String>,
+        provider: impl Into<String>,
+        model: impl Into<String>,
+    ) {
+        self.aliases
+            .insert(alias.into(), (provider.into(), model.into()));
     }
 
     /// Try providers in order, returning the first successful response.
@@ -175,10 +181,7 @@ mod tests {
 
         async fn complete(&self, _request: ModelRequest) -> Result<ModelResponse> {
             if self.should_fail {
-                return Err(LayersError::Provider(format!(
-                    "{} mock failure",
-                    self.name
-                )));
+                return Err(LayersError::Provider(format!("{} mock failure", self.name)));
             }
             Ok(ModelResponse {
                 message: Message {
@@ -418,10 +421,7 @@ mod tests {
         let reg = ProviderRegistry::new();
         let request = make_request("x", "y");
 
-        let err = reg
-            .complete_with_fallback(&request, &[])
-            .await
-            .unwrap_err();
+        let err = reg.complete_with_fallback(&request, &[]).await.unwrap_err();
         assert!(matches!(err, LayersError::FallbackExhausted));
     }
 

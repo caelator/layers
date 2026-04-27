@@ -284,27 +284,21 @@ impl RealEmbeddingPipeline {
         let mut total = 0;
         for (i, (role, content)) in messages.iter().enumerate() {
             let path = format!("session://{session_id}/msg-{i}");
-            let count = self.index_document(&path, content, session_id, role).await?;
+            let count = self
+                .index_document(&path, content, session_id, role)
+                .await?;
             total += count;
         }
         Ok(total)
     }
 
     /// Delegate vector search to the underlying LanceStore.
-    pub async fn search(
-        &self,
-        query_embedding: &[f32],
-        limit: usize,
-    ) -> Result<Vec<SearchResult>> {
+    pub async fn search(&self, query_embedding: &[f32], limit: usize) -> Result<Vec<SearchResult>> {
         self.store.vector_search(query_embedding, limit).await
     }
 
     /// Embed a query string and search.
-    pub async fn search_text(
-        &self,
-        query: &str,
-        limit: usize,
-    ) -> Result<Vec<SearchResult>> {
+    pub async fn search_text(&self, query: &str, limit: usize) -> Result<Vec<SearchResult>> {
         let embeddings = self.provider.embed(&[query.to_string()]).await?;
         let query_vec = embeddings.into_iter().next().unwrap_or_default();
         self.store.vector_search(&query_vec, limit).await
@@ -321,10 +315,7 @@ impl RealEmbeddingPipeline {
         };
 
         // Update metadata fields.
-        metadata.insert(
-            "last_indexed_path".into(),
-            serde_json::json!(last_path),
-        );
+        metadata.insert("last_indexed_path".into(), serde_json::json!(last_path));
         let prev_count = metadata
             .get("total_chunks")
             .and_then(|v| v.as_u64())
@@ -386,7 +377,11 @@ mod tests {
         let sentence = "This is a moderately long sentence that takes up some space. ";
         let long_para = sentence.repeat(20); // ~1200 chars
         let chunks = chunk_text(&long_para, 64); // 64 tokens ≈ 256 chars
-        assert!(chunks.len() > 1, "should split into multiple chunks, got {}", chunks.len());
+        assert!(
+            chunks.len() > 1,
+            "should split into multiple chunks, got {}",
+            chunks.len()
+        );
         for chunk in &chunks {
             // Each chunk should be ≤ max_chars (with some tolerance for sentence boundaries).
             assert!(chunk.len() <= 300, "chunk too long: {} chars", chunk.len());
@@ -491,7 +486,10 @@ mod tests {
 
         let messages = vec![
             ("user".to_string(), "How do I use LanceDB?".to_string()),
-            ("assistant".to_string(), "You can use LanceDB by creating a connection and table.".to_string()),
+            (
+                "assistant".to_string(),
+                "You can use LanceDB by creating a connection and table.".to_string(),
+            ),
         ];
 
         let total = pipeline
@@ -524,16 +522,11 @@ mod tests {
             Ok(())
         }
         async fn get(&self, corpus: &str) -> Result<EmbeddingIndexState> {
-            self.data
-                .lock()
-                .await
-                .get(corpus)
-                .cloned()
-                .ok_or_else(|| {
-                    layers_core::error::LayersError::Config(format!(
-                        "embedding index state not found: {corpus}"
-                    ))
-                })
+            self.data.lock().await.get(corpus).cloned().ok_or_else(|| {
+                layers_core::error::LayersError::Config(format!(
+                    "embedding index state not found: {corpus}"
+                ))
+            })
         }
     }
 }
