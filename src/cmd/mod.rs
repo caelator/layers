@@ -8,11 +8,13 @@ pub mod gate;
 pub mod infrastructure;
 pub mod init;
 pub mod migrate;
+#[cfg(feature = "substrate-storage")]
 pub mod monitor;
 pub mod preflight;
 pub mod query;
 pub mod refresh;
 pub mod remember;
+#[cfg(feature = "substrate-storage")]
 pub mod technician;
 pub mod telemetry;
 pub mod validate;

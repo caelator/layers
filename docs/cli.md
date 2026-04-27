@@ -401,12 +401,25 @@ Layers currently assumes:
 - `codex-memoryport-bridge` is optional model-traffic augmentation, not a generic MCP provider.
 - Model CLIs are optional and only required for council/experimental runtime features.
 
-## Bootstrap Known Issue
+## Bootstrap Reality
 
-The current root `Cargo.toml` depends on:
+Stable-core builds do not require the deprecated compatibility storage dependency:
 
-```toml
-substrate = { path = "../substrate" }
+```bash
+cargo check --no-default-features --all-targets
+cargo clippy --no-default-features --all-targets -- -D warnings
 ```
 
-A fresh clone without a sibling `../substrate` will not build. This must be fixed or explicitly bootstrapped before v0.2 release readiness.
+Default-feature builds still enable `substrate-storage` for monitor/technician/prove-it compatibility. That feature uses the optional git `substrate` dependency:
+
+```toml
+substrate = { git = "https://github.com/caelator/substrate.git", optional = true }
+```
+
+A fresh clone can run full default-feature development without a sibling `substrate` checkout:
+
+```bash
+cargo check --workspace --all-targets
+```
+
+The `proveit` binary is compatibility tooling and requires `substrate-storage`; no-default all-target checks intentionally skip it.

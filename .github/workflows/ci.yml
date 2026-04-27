@@ -10,12 +10,24 @@ env:
   RUSTFLAGS: "-D warnings"
 
 jobs:
+  stable-core:
+    name: Stable core (no default features)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Check stable core without deprecated compatibility features
+        run: cargo check --no-default-features --all-targets
+      - name: Clippy stable core without deprecated compatibility features
+        run: cargo clippy --no-default-features --all-targets -- -D warnings
+
   clippy:
     name: Clippy (strict)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: git clone --depth 1 https://github.com/caelator/substrate.git ../substrate
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -28,7 +40,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: git clone --depth 1 https://github.com/caelator/substrate.git ../substrate
       - uses: dtolnay/rust-toolchain@stable
       - name: Install protoc
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
@@ -39,7 +50,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: git clone --depth 1 https://github.com/caelator/substrate.git ../substrate
       - uses: dtolnay/rust-toolchain@1.94.1
         with:
           components: rustfmt

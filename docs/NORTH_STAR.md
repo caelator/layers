@@ -55,7 +55,7 @@ Those systems should be treated as execution layers, memory backends, or integra
 
 ## Strategic Boundary
 
-Layers owns context assembly, not task execution.
+Layers owns context assembly, not task execution. The v2 stable-core contract is defined in [V2 Product Contract](V2_PRODUCT_CONTRACT.md).
 
 Stable Layers work should serve one of these jobs:
 
@@ -69,7 +69,7 @@ Work outside those jobs is non-essential and should be experimental, deprecated,
 
 ## Stable Core
 
-The stable product surface should converge on:
+The v2.0 stable surface is defined by [V2 Product Contract](V2_PRODUCT_CONTRACT.md). Longer-term v2.x work should converge on:
 
 - `layers query` — produce a context packet
 - `layers remember` — write explicit project memory

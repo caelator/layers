@@ -52,6 +52,7 @@ mod feedback;
 mod plugins;
 mod quality;
 mod router;
+#[cfg(feature = "substrate-storage")]
 mod technician;
 mod uc;
 
@@ -73,11 +74,13 @@ use cmd::gate::handle_gate;
 use cmd::infrastructure::{InfrastructureArgs, handle_infrastructure};
 use cmd::init::{InitArgs, handle_init};
 use cmd::migrate::handle_migrate;
+#[cfg(feature = "substrate-storage")]
 use cmd::monitor::handle_monitor;
 use cmd::preflight::{PreflightArgs, handle_preflight};
 use cmd::query::handle_query;
 use cmd::refresh::handle_refresh;
 use cmd::remember::handle_remember;
+#[cfg(feature = "substrate-storage")]
 use cmd::technician::handle_technician;
 use cmd::telemetry::{TelemetryCommands, handle_telemetry};
 use cmd::validate::handle_validate;
@@ -256,11 +259,13 @@ enum Commands {
         #[arg(long)]
         dry_run: bool,
     },
+    #[cfg(feature = "substrate-storage")]
     /// [deprecated/experimental] Run the non-core autonomous repo monitor.
     Monitor {
         #[command(subcommand)]
         command: cmd::monitor::MonitorArgs,
     },
+    #[cfg(feature = "substrate-storage")]
     /// [deprecated/experimental] Run non-core self-healing integration checks.
     Technician {
         #[command(subcommand)]
@@ -720,7 +725,9 @@ fn main() -> anyhow::Result<()> {
             handle_infrastructure(&args)
         }
         Commands::Migrate { dry_run } => handle_migrate(dry_run),
+        #[cfg(feature = "substrate-storage")]
         Commands::Monitor { command } => handle_monitor(&command),
+        #[cfg(feature = "substrate-storage")]
         Commands::Technician { command } => handle_technician(&command),
         Commands::Telemetry { command } => handle_telemetry(&command),
     }

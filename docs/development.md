@@ -6,15 +6,28 @@
 - `gitnexus` on `PATH` for graph-backed workflows
 - `uc` and `~/.memoryport/uc.toml` for MemoryPort semantic retrieval
 
-## Bootstrap Known Issue
+## Bootstrap and Compatibility Dependencies
 
-The current root `Cargo.toml` depends on a sibling path crate:
+The stable target set must work without hidden sibling repositories:
 
-```toml
-substrate = { path = "../substrate" }
+```bash
+cargo check --no-default-features --all-targets
+cargo clippy --no-default-features --all-targets -- -D warnings
 ```
 
-A fresh clone without `../substrate/Cargo.toml` will not build or test. Before v0.2 release readiness, this must be resolved by moving the crate into the workspace, switching to a git/crates.io dependency, or adding an explicit bootstrap script that clones the expected sibling repository.
+Default-feature development still enables deprecated compatibility storage through the `substrate-storage` feature. That feature uses the optional git `substrate` dependency:
+
+```toml
+substrate = { git = "https://github.com/caelator/substrate.git", optional = true }
+```
+
+A fresh clone can run full default-feature builds without placing `substrate` next to `layers`:
+
+```bash
+cargo check --workspace --all-targets
+```
+
+This is compatibility baggage, not a stable-core requirement. Do not add new stable context-compiler code that depends on `substrate-storage`. The `proveit` binary requires `substrate-storage` and is intentionally skipped by no-default all-target checks.
 
 ## Common Commands
 
@@ -44,6 +57,15 @@ cargo build --release
 cargo test
 ./target/release/layers validate --routing benchmarks/routing-answer-keys.jsonl --ci
 ```
+
+Stable-core validation:
+
+```bash
+cargo check --no-default-features --all-targets
+cargo clippy --no-default-features --all-targets -- -D warnings
+```
+
+The stable-core gate must not require deprecated runtime, daemon, monitor, technician, channel, or hidden sibling-repository dependencies. Default-feature CI may still exercise compatibility surfaces.
 
 Inspect help:
 

@@ -28,6 +28,7 @@
     clippy::return_self_not_must_use
 )]
 
+#[cfg(feature = "substrate-storage")]
 pub mod blob;
 pub mod config;
 pub mod critical_path;

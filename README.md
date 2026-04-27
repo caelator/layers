@@ -69,11 +69,13 @@ Layers is not:
 
 Non-essential runtime surfaces still exist in the repository, but they are deprecated as product direction unless they directly support context packet generation.
 
-See [docs/NORTH_STAR.md](docs/NORTH_STAR.md) for the binding product direction.
+See [docs/NORTH_STAR.md](docs/NORTH_STAR.md) for the binding product direction and [docs/V2_PRODUCT_CONTRACT.md](docs/V2_PRODUCT_CONTRACT.md) for the v2 stable-core contract.
 
 ## Stable Core
 
-These commands define the intended product surface:
+These commands define the current and near-term product surface. The v2.0 stable-core boundary is stricter and is defined in [docs/V2_PRODUCT_CONTRACT.md](docs/V2_PRODUCT_CONTRACT.md).
+
+These commands define the currently implemented stable/support surface:
 
 | Command | Status | Purpose |
 |---------|--------|---------|
@@ -129,15 +131,19 @@ cargo run -- query "What did we decide about model routing?" --json
 
 ## Bootstrap Reality
 
-Layers currently has a local path dependency on `../substrate` in `Cargo.toml`.
+Layers' stable context-compiler core can be checked without deprecated compatibility dependencies:
 
-If a fresh clone fails with:
-
-```text
-failed to read ../substrate/Cargo.toml
+```bash
+cargo check --no-default-features --all-targets
 ```
 
-then clone or place the expected `substrate` crate next to `layers`, or update the dependency once it is published/moved into this workspace. This is a known bootstrap issue and should be resolved before v0.2 is considered release-ready.
+Default-feature builds still include compatibility storage used by deprecated monitor/technician/prove-it artifacts. Those compatibility paths use the optional git `substrate` dependency:
+
+```toml
+substrate = { git = "https://github.com/caelator/substrate.git", optional = true }
+```
+
+A fresh clone no longer needs a hidden sibling checkout for stable-core or default-feature development. The dependency is intentionally isolated behind the `substrate-storage` default feature so the stable core does not require compatibility storage. The `proveit` binary is compatibility tooling and requires `substrate-storage`.
 
 ## External Dependencies
 
