@@ -1,0 +1,71 @@
+{
+  "schema_version": 2,
+  "id": "ctx-example-minimal-v2",
+  "workspace_id": "layers",
+  "query": "What should I know before editing README?",
+  "created_at": "2026-04-27T00:00:00Z",
+  "git_ref": null,
+  "route": "preflight",
+  "confidence": "high",
+  "budget": {
+    "max_units": 1200,
+    "used_units": 6,
+    "unit": "words",
+    "truncated": false
+  },
+  "sections": [
+    {
+      "id": "workspace",
+      "title": "Workspace State",
+      "summary": "Minimal example context section.",
+      "items": [
+        {
+          "id": "workspace-state",
+          "title": "Clean workspace",
+          "body": "Branch: main\nDirty: false",
+          "source": {
+            "kind": "workspace",
+            "uri": "git status --porcelain=v1"
+          },
+          "score": null,
+          "token_estimate": 6,
+          "selected_reason": "Workspace state changes how agents should interpret context.",
+          "tags": ["workspace"]
+        }
+      ]
+    }
+  ],
+  "warnings": [],
+  "selection_trace": [
+    {
+      "item_id": "workspace-state",
+      "reason": "Workspace state changes how agents should interpret context."
+    }
+  ],
+  "retrieval": {
+    "memory_source": "none",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0
+  },
+  "provenance": {
+    "compiler": "layers-context-packet",
+    "compiler_version": "2",
+    "surface": "preflight",
+    "workspace_id": "layers",
+    "git_ref": null,
+    "generated_at": "2026-04-27T00:00:00Z",
+    "source_adapters": ["workspace"]
+  },
+  "task": "What should I know before editing README?",
+  "low_confidence_fallback": false,
+  "scores": null,
+  "why_retrieved": "",
+  "why_not_retrieved": "",
+  "evidence": "",
+  "open_uncertainty": [],
+  "retrieval_meta": {
+    "memory_source": "none",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0
+  }
+}

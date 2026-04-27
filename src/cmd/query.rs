@@ -636,6 +636,7 @@ fn build_context_packet(
         chrono::Utc::now(),
     );
     packet.route = route.label().to_string();
+    packet.provenance.surface = "query".to_string();
     packet.confidence = confidence;
     packet.budget = ContextBudget {
         max_units: MAX_OUTPUT_WORDS,

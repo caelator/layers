@@ -63,6 +63,7 @@ fn build_preflight_packet(args: &PreflightArgs) -> Result<ContextPacket> {
     );
     packet.task.clone_from(&args.task);
     packet.route = "preflight".to_string();
+    packet.provenance.surface = "preflight".to_string();
     packet.budget = ContextBudget {
         max_units: DEFAULT_BUDGET_WORDS,
         used_units: 0,
@@ -664,6 +665,7 @@ mod tests {
         let packet = build_preflight_packet(&args).unwrap();
 
         assert_eq!(packet.route, "preflight");
+        assert_eq!(packet.provenance.surface, "preflight");
         assert!(packet.id.starts_with("preflight-"));
         assert_eq!(packet.task, "fix src/main.rs");
     }

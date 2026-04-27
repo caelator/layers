@@ -133,6 +133,7 @@ impl Tool for ContextCompileTool {
         );
         packet.git_ref = params.git_ref;
         packet.route = "mcp_context_compile".to_string();
+        packet.provenance.surface = "mcp".to_string();
         packet.confidence = "explicit".to_string();
         packet.budget = ContextBudget {
             max_units: params.max_units.unwrap_or(0),
@@ -345,6 +346,8 @@ mod tests {
         assert_eq!(packet.workspace_id, "layers");
         assert_eq!(packet.sections[0].id, "mcp_input");
         assert_eq!(packet.selection_trace[0].item_id, "mcp-evidence-1");
+        assert_eq!(packet.provenance.surface, "mcp");
+        assert_eq!(packet.provenance.source_adapters, vec!["memory"]);
     }
 
     #[tokio::test]

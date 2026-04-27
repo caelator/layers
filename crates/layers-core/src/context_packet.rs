@@ -6,9 +6,10 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::BTreeSet;
 
 /// Current stable ContextPacket schema version.
-pub const CONTEXT_PACKET_SCHEMA_VERSION: u32 = 1;
+pub const CONTEXT_PACKET_SCHEMA_VERSION: u32 = 2;
 
 /// Agent-ready bundle of selected context for one task/query.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -24,7 +25,6 @@ pub struct ContextPacket {
     /// Packet creation timestamp.
     pub created_at: DateTime<Utc>,
     /// Current git reference/commit when known.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub git_ref: Option<String>,
     /// Retrieval route selected for this packet.
     pub route: String,
@@ -42,6 +42,9 @@ pub struct ContextPacket {
     pub selection_trace: Vec<SelectionTraceEntry>,
     /// Operational retrieval metadata.
     pub retrieval: RetrievalReport,
+    /// How this packet was compiled.
+    #[serde(default)]
+    pub provenance: PacketProvenance,
     /// Transitional compatibility field for existing query JSON consumers.
     #[serde(default)]
     pub task: String,
@@ -75,7 +78,7 @@ impl ContextPacket {
         Self {
             schema_version: CONTEXT_PACKET_SCHEMA_VERSION,
             id,
-            workspace_id,
+            workspace_id: workspace_id.clone(),
             query: query.clone(),
             created_at,
             git_ref: None,
@@ -86,6 +89,11 @@ impl ContextPacket {
             warnings: Vec::new(),
             selection_trace: Vec::new(),
             retrieval: RetrievalReport::default(),
+            provenance: PacketProvenance {
+                workspace_id,
+                generated_at: created_at,
+                ..PacketProvenance::default()
+            },
             task: query.clone(),
             low_confidence_fallback: false,
             scores: Value::Null,
@@ -175,6 +183,41 @@ impl ContextPacket {
             .collect();
     }
 
+    /// Refresh minimal provenance from already-assembled packet fields.
+    ///
+    /// Packet finalization keeps provenance deliberately small: it records the
+    /// compiler identity, calling surface, workspace/git identity, generation
+    /// timestamp, and source adapter labels represented in selected sections.
+    pub fn refresh_provenance_from_packet(&mut self) {
+        if self.provenance.compiler.trim().is_empty() {
+            self.provenance.compiler = "layers-context-packet".to_string();
+        }
+        if self.provenance.compiler_version.trim().is_empty() {
+            self.provenance.compiler_version = CONTEXT_PACKET_SCHEMA_VERSION.to_string();
+        }
+        if self.provenance.surface.trim().is_empty() || self.provenance.surface == "unknown" {
+            self.provenance.surface.clone_from(&self.route);
+        }
+        if self.provenance.workspace_id.trim().is_empty() {
+            self.provenance.workspace_id.clone_from(&self.workspace_id);
+        }
+        if self.provenance.git_ref.is_none() {
+            self.provenance.git_ref.clone_from(&self.git_ref);
+        }
+        if self.provenance.source_adapters.is_empty() {
+            self.provenance.source_adapters = self
+                .sections
+                .iter()
+                .flat_map(|section| section.items.iter())
+                .map(|item| item.source.kind.trim())
+                .filter(|kind| !kind.is_empty())
+                .map(str::to_string)
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect();
+        }
+    }
+
     /// Apply pure packet consistency invariants.
     ///
     /// Finalization deliberately avoids changing evidence text, scores,
@@ -183,6 +226,7 @@ impl ContextPacket {
     pub fn finalize_consistency(&mut self) {
         self.refresh_selection_trace_from_sections();
         self.refresh_open_uncertainty_from_warnings();
+        self.refresh_provenance_from_packet();
     }
 
     /// Render packet as an agent-facing prompt block.
@@ -417,6 +461,40 @@ pub struct SelectionTraceEntry {
     pub reason: String,
 }
 
+/// Minimal packet compilation provenance.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PacketProvenance {
+    /// Compiler implementation name.
+    pub compiler: String,
+    /// Compiler/schema implementation version.
+    pub compiler_version: String,
+    /// Command or integration surface that produced the packet.
+    pub surface: String,
+    /// Workspace/project identifier used during compilation.
+    pub workspace_id: String,
+    /// Git reference/commit observed during compilation, when known.
+    pub git_ref: Option<String>,
+    /// Packet generation timestamp.
+    pub generated_at: DateTime<Utc>,
+    /// Source adapters consulted or represented in the packet.
+    #[serde(default)]
+    pub source_adapters: Vec<String>,
+}
+
+impl Default for PacketProvenance {
+    fn default() -> Self {
+        Self {
+            compiler: "layers-context-packet".to_string(),
+            compiler_version: CONTEXT_PACKET_SCHEMA_VERSION.to_string(),
+            surface: "unknown".to_string(),
+            workspace_id: String::new(),
+            git_ref: None,
+            generated_at: Utc::now(),
+            source_adapters: Vec::new(),
+        }
+    }
+}
+
 /// Retrieval metadata.
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct RetrievalReport {
@@ -492,6 +570,91 @@ mod tests {
         assert_eq!(decoded.query, packet.query);
         assert_eq!(decoded.sections[0].items[0].source.kind, "memory");
         assert_eq!(decoded.warnings[0].code, "degraded_memory");
+    }
+
+    #[test]
+    fn context_packet_v2_serializes_minimal_contract_fields() {
+        let packet = sample_packet();
+        let value = serde_json::to_value(&packet).unwrap();
+        let object = value.as_object().unwrap();
+
+        for field in [
+            "schema_version",
+            "id",
+            "workspace_id",
+            "query",
+            "created_at",
+            "git_ref",
+            "route",
+            "confidence",
+            "budget",
+            "sections",
+            "warnings",
+            "selection_trace",
+            "retrieval",
+            "provenance",
+        ] {
+            assert!(object.contains_key(field), "missing v2 field {field}");
+        }
+        assert_eq!(value["schema_version"], 2);
+    }
+
+    #[test]
+    fn context_packet_v2_items_keep_source_and_selection_reason() {
+        let packet = sample_packet();
+        for section in &packet.sections {
+            for item in &section.items {
+                assert!(!item.source.kind.trim().is_empty());
+                assert!(!item.source.uri.trim().is_empty());
+                assert!(!item.selected_reason.trim().is_empty());
+            }
+        }
+    }
+
+    #[test]
+    fn documented_minimal_v2_example_matches_schema_contract() {
+        let example = include_str!("../../../docs/examples/context-packet-v2-minimal.json");
+        let packet: ContextPacket = serde_json::from_str(example).unwrap();
+
+        assert_eq!(packet.schema_version, CONTEXT_PACKET_SCHEMA_VERSION);
+        assert_eq!(packet.provenance.compiler, "layers-context-packet");
+        assert_eq!(packet.provenance.compiler_version, "2");
+        assert_eq!(packet.sections.len(), 1);
+        assert_eq!(packet.sections[0].items.len(), 1);
+        assert!(!packet.sections[0].items[0].source.kind.trim().is_empty());
+        assert!(!packet.sections[0].items[0].source.uri.trim().is_empty());
+        assert!(
+            !packet.sections[0].items[0]
+                .selected_reason
+                .trim()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn finalize_consistency_populates_minimal_packet_provenance() {
+        let mut packet = sample_packet();
+        packet.git_ref = Some("abc1234".to_string());
+        packet.finalize_consistency();
+
+        assert_eq!(packet.provenance.compiler, "layers-context-packet");
+        assert_eq!(packet.provenance.compiler_version, "2");
+        assert_eq!(packet.provenance.surface, packet.route);
+        assert_eq!(packet.provenance.workspace_id, packet.workspace_id);
+        assert_eq!(packet.provenance.git_ref, packet.git_ref);
+        assert_eq!(packet.provenance.generated_at, packet.created_at);
+        assert_eq!(packet.provenance.source_adapters, vec!["memory"]);
+    }
+
+    #[test]
+    fn finalize_consistency_preserves_explicit_provenance_surface_and_adapters() {
+        let mut packet = sample_packet();
+        packet.provenance.surface = "mcp".to_string();
+        packet.provenance.source_adapters = vec!["explicit".to_string()];
+        packet.finalize_consistency();
+
+        assert_eq!(packet.provenance.surface, "mcp");
+        assert_eq!(packet.provenance.source_adapters, vec!["explicit"]);
     }
 
     #[test]
