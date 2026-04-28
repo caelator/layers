@@ -60,10 +60,18 @@ pub(crate) enum PacketCommands {
 pub(crate) fn handle_packet(command: &PacketCommands) -> Result<()> {
     match command {
         PacketCommands::Validate { path, strict, json } => validate_packet(path, *strict, *json),
-        PacketCommands::Inspect { .. } => bail!("packet inspect is not implemented yet"),
+        PacketCommands::Inspect { path, json } => inspect_packet(path, *json),
         PacketCommands::Render { .. } => bail!("packet render is not implemented yet"),
         PacketCommands::Diff { .. } => bail!("packet diff is not implemented yet"),
     }
+}
+
+fn inspect_packet(path: &Path, json: bool) -> Result<()> {
+    let text = fs::read_to_string(path)
+        .with_context(|| format!("failed to read ContextPacket artifact {}", path.display()))?;
+    let output = inspect_packet_text(&text, json)?;
+    println!("{output}");
+    Ok(())
 }
 
 fn validate_packet(path: &Path, strict: bool, json: bool) -> Result<()> {
@@ -92,6 +100,42 @@ impl PacketValidationReport {
     const fn is_valid(&self) -> bool {
         self.valid
     }
+}
+
+#[derive(Debug, Serialize, PartialEq, Eq)]
+struct PacketInspectionReport {
+    schema_version: u32,
+    id: String,
+    workspace_id: String,
+    query: String,
+    created_at: String,
+    git_ref: Option<String>,
+    route: String,
+    confidence: String,
+    budget: PacketBudgetInspection,
+    provenance: PacketProvenanceInspection,
+    section_count: usize,
+    item_count: usize,
+    warning_count: usize,
+    degraded: bool,
+    low_confidence_fallback: bool,
+}
+
+#[derive(Debug, Serialize, PartialEq, Eq)]
+struct PacketBudgetInspection {
+    used_units: usize,
+    max_units: usize,
+    unit: String,
+    truncated: bool,
+}
+
+#[derive(Debug, Serialize, PartialEq, Eq)]
+struct PacketProvenanceInspection {
+    compiler: String,
+    compiler_version: String,
+    surface: String,
+    generated_at: String,
+    source_adapters: Vec<String>,
 }
 
 fn print_validation_report(report: &PacketValidationReport, json: bool) -> Result<()> {
@@ -135,6 +179,131 @@ fn validate_packet_text(text: &str, strict: bool) -> Result<PacketValidationRepo
         .map_err(|_| anyhow::anyhow!("JSON did not match the ContextPacket v2 artifact shape"))?;
 
     Ok(validate_packet_value(&value, &packet, strict))
+}
+
+fn inspect_packet_text(text: &str, json: bool) -> Result<String> {
+    let value: Value = serde_json::from_str(text).context("invalid ContextPacket JSON")?;
+    let mut pre_deserialization_errors = Vec::new();
+    validate_secret_like_values(&value, &mut pre_deserialization_errors);
+    if !pre_deserialization_errors.is_empty() {
+        bail!(
+            "ContextPacket validation failed: {}",
+            pre_deserialization_errors.join("; ")
+        );
+    }
+
+    let packet: ContextPacket = serde_json::from_value(value.clone())
+        .map_err(|_| anyhow::anyhow!("JSON did not match the ContextPacket v2 artifact shape"))?;
+    let validation = validate_packet_value(&value, &packet, false);
+    if !validation.is_valid() {
+        bail!(
+            "ContextPacket validation failed: {}",
+            validation.errors.join("; ")
+        );
+    }
+
+    let inspection = inspect_context_packet(&packet);
+    if json {
+        serde_json::to_string_pretty(&inspection)
+            .context("failed to serialize packet inspection report")
+    } else {
+        Ok(format_inspection_report(&inspection))
+    }
+}
+
+fn inspect_context_packet(packet: &ContextPacket) -> PacketInspectionReport {
+    let item_count = packet
+        .sections
+        .iter()
+        .map(|section| section.items.len())
+        .sum();
+    let degraded = !packet.warnings.is_empty()
+        || packet.low_confidence_fallback
+        || packet.retrieval.fallback_reason.is_some()
+        || packet.budget.truncated;
+
+    PacketInspectionReport {
+        schema_version: packet.schema_version,
+        id: packet.id.clone(),
+        workspace_id: packet.workspace_id.clone(),
+        query: packet.query.clone(),
+        created_at: packet.created_at.to_string(),
+        git_ref: packet.git_ref.clone(),
+        route: packet.route.clone(),
+        confidence: packet.confidence.clone(),
+        budget: PacketBudgetInspection {
+            used_units: packet.budget.used_units,
+            max_units: packet.budget.max_units,
+            unit: packet.budget.unit.clone(),
+            truncated: packet.budget.truncated,
+        },
+        provenance: PacketProvenanceInspection {
+            compiler: packet.provenance.compiler.clone(),
+            compiler_version: packet.provenance.compiler_version.clone(),
+            surface: packet.provenance.surface.clone(),
+            generated_at: packet.provenance.generated_at.to_string(),
+            source_adapters: packet.provenance.source_adapters.clone(),
+        },
+        section_count: packet.sections.len(),
+        item_count,
+        warning_count: packet.warnings.len(),
+        degraded,
+        low_confidence_fallback: packet.low_confidence_fallback,
+    }
+}
+
+fn format_inspection_report(report: &PacketInspectionReport) -> String {
+    let git_ref = report.git_ref.as_deref().unwrap_or("none");
+    let source_adapters = if report.provenance.source_adapters.is_empty() {
+        "none".to_string()
+    } else {
+        report.provenance.source_adapters.join(", ")
+    };
+
+    format!(
+        "ContextPacket inspection\n\
+         schema_version: {}\n\
+         id: {}\n\
+         workspace_id: {}\n\
+         query: {}\n\
+         created_at: {}\n\
+         git_ref: {}\n\
+         route: {}\n\
+         confidence: {}\n\
+         budget: {}/{} {} (truncated: {})\n\
+         provenance.compiler: {}\n\
+         provenance.compiler_version: {}\n\
+         provenance.surface: {}\n\
+         provenance.generated_at: {}\n\
+         provenance.source_adapters: {}\n\
+         sections: {}\n\
+         items: {}\n\
+         warnings: {}\n\
+         degraded: {}\n\
+         low_confidence_fallback: {}",
+        report.schema_version,
+        report.id,
+        report.workspace_id,
+        report.query,
+        report.created_at,
+        git_ref,
+        report.route,
+        report.confidence,
+        report.budget.used_units,
+        report.budget.max_units,
+        report.budget.unit,
+        report.budget.truncated,
+        report.provenance.compiler,
+        report.provenance.compiler_version,
+        report.provenance.surface,
+        report.provenance.generated_at,
+        source_adapters,
+        report.section_count,
+        report.item_count,
+        report.warning_count,
+        report.degraded,
+        report.low_confidence_fallback
+    )
 }
 
 fn validate_packet_value(
@@ -469,6 +638,81 @@ mod tests {
                 .iter()
                 .all(|error| !error.contains(&secret_fragment))
         );
+    }
+
+    #[test]
+    fn inspects_documented_minimal_v2_packet_without_body_text() {
+        let output = super::inspect_packet_text(MINIMAL_PACKET, false)
+            .expect("minimal packet should inspect successfully");
+
+        assert!(output.contains("ContextPacket inspection"));
+        assert!(output.contains("schema_version: 2"));
+        assert!(output.contains("id: ctx-example-minimal-v2"));
+        assert!(output.contains("workspace_id: layers"));
+        assert!(output.contains("query: What should I know before editing README?"));
+        assert!(output.contains("created_at: 2026-04-27 00:00:00 UTC"));
+        assert!(output.contains("git_ref: none"));
+        assert!(output.contains("route: preflight"));
+        assert!(output.contains("confidence: high"));
+        assert!(output.contains("budget: 6/1200 words (truncated: false)"));
+        assert!(output.contains("provenance.compiler: layers-context-packet"));
+        assert!(output.contains("provenance.surface: preflight"));
+        assert!(output.contains("provenance.source_adapters: workspace"));
+        assert!(output.contains("sections: 1"));
+        assert!(output.contains("items: 1"));
+        assert!(output.contains("warnings: 0"));
+        assert!(output.contains("degraded: false"));
+        assert!(!output.contains("Branch: main"));
+        assert!(!output.contains("Dirty: false"));
+    }
+
+    #[test]
+    fn inspects_documented_minimal_v2_packet_as_json() {
+        let output = super::inspect_packet_text(MINIMAL_PACKET, true)
+            .expect("minimal packet should inspect successfully");
+        let value: Value = serde_json::from_str(&output).expect("inspection output should be JSON");
+
+        assert_eq!(value["schema_version"], 2);
+        assert_eq!(value["id"], "ctx-example-minimal-v2");
+        assert_eq!(value["workspace_id"], "layers");
+        assert_eq!(value["query"], "What should I know before editing README?");
+        assert_eq!(value["git_ref"], Value::Null);
+        assert_eq!(value["route"], "preflight");
+        assert_eq!(value["confidence"], "high");
+        assert_eq!(value["budget"]["used_units"], 6);
+        assert_eq!(value["budget"]["max_units"], 1200);
+        assert_eq!(value["provenance"]["compiler"], "layers-context-packet");
+        assert_eq!(
+            value["provenance"]["source_adapters"],
+            serde_json::json!(["workspace"])
+        );
+        assert_eq!(value["section_count"], 1);
+        assert_eq!(value["item_count"], 1);
+        assert_eq!(value["warning_count"], 0);
+        assert_eq!(value["degraded"], false);
+        assert_eq!(value["low_confidence_fallback"], false);
+        assert!(
+            output
+                .find("schema_version")
+                .expect("schema_version appears")
+                < output.find("workspace_id").expect("workspace_id appears")
+        );
+    }
+
+    #[test]
+    fn inspect_rejects_invalid_packets_without_echoing_secret_like_text() {
+        let mut packet = minimal_packet_value();
+        let secret_value = ["pass", "word=", "abc", "123", "secret", "456"].concat();
+        let secret_fragment = ["abc", "123", "secret", "456"].concat();
+        packet["sections"][0]["items"][0]["body"] = Value::from(secret_value);
+
+        let error = super::inspect_packet_text(&packet.to_string(), false)
+            .expect_err("secret-looking packet should fail inspection")
+            .to_string();
+
+        assert!(error.contains("ContextPacket validation failed"));
+        assert!(error.contains("[REDACTED]") || !error.contains(&secret_fragment));
+        assert!(!error.contains(&secret_fragment));
     }
 
     fn minimal_packet_value() -> Value {
