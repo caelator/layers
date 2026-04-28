@@ -149,6 +149,7 @@ fn which(bin: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::env_guard;
 
     #[test]
     fn meets_threshold_requires_no_fallback_and_enough_lines() {
@@ -183,6 +184,8 @@ mod tests {
 
     #[test]
     fn retrieve_returns_fallback_when_uc_not_on_path() {
+        let _env_guard = env_guard();
+
         // uc is unlikely to be on PATH in CI/test — this exercises the spawn-fail path
         if which("uc") {
             return; // skip if uc happens to be installed
@@ -195,6 +198,8 @@ mod tests {
     #[test]
     #[allow(unsafe_code)]
     fn retrieve_with_opts_passes_timeout_and_returns_lines() {
+        let _env_guard = env_guard();
+
         // Smoke-test: use a tiny shell script as a fake `uc` binary.
         // If real `uc` is on PATH we skip — the mock cannot shadow it without
         // manipulating PATH, which is not thread-safe.
@@ -269,6 +274,8 @@ mod tests {
 
     #[test]
     fn retriever_reports_unavailable_uc_cleanly() {
+        let _env_guard = env_guard();
+
         if which("uc") && uc_config_path().exists() {
             return;
         }
@@ -283,6 +290,8 @@ mod tests {
     #[test]
     #[allow(unsafe_code)]
     fn retrieve_falls_back_when_below_min_results() {
+        let _env_guard = env_guard();
+
         if which("uc") {
             return; // skip if real uc is on PATH
         }
@@ -334,6 +343,8 @@ mod tests {
     #[test]
     #[allow(unsafe_code)]
     fn retrieve_handles_garbage_output_without_crashing() {
+        let _env_guard = env_guard();
+
         if which("uc") {
             return;
         }
@@ -388,6 +399,8 @@ mod tests {
     #[test]
     #[allow(unsafe_code)]
     fn retrieve_falls_back_when_config_missing() {
+        let _env_guard = env_guard();
+
         if which("uc") {
             return;
         }

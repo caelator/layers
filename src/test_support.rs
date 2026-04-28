@@ -23,6 +23,17 @@ pub fn workspace_guard() -> MutexGuard<'static, ()> {
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
+pub fn env_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
+
+pub fn env_guard() -> MutexGuard<'static, ()> {
+    env_lock()
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
 pub struct TestWorkspace {
     _guard: MutexGuard<'static, ()>,
     original_root: Option<OsString>,
@@ -32,7 +43,7 @@ pub struct TestWorkspace {
 impl TestWorkspace {
     #[allow(unsafe_code)]
     pub fn new(name: &str) -> Self {
-        let guard = workspace_guard();
+        let guard = env_guard();
         let root = std::env::temp_dir().join(format!(
             "layers-tests-{}-{}",
             name,

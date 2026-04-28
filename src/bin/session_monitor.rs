@@ -413,6 +413,15 @@ impl Drop for DropGuard {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{Mutex, MutexGuard};
+
+    static ENV_MUTEX: Mutex<()> = Mutex::new(());
+
+    fn env_guard() -> MutexGuard<'static, ()> {
+        ENV_MUTEX
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
 
     // ── Session::seconds_since_update ─────────────────────────────────────
 
@@ -540,6 +549,8 @@ mod tests {
     #[allow(unsafe_code)]
     #[test]
     fn thresholds_default_when_env_unset() {
+        let _env_guard = env_guard();
+
         // Unset the vars if they are set.
         unsafe {
             std::env::remove_var("QUIET_THRESHOLD_SECS");
@@ -553,6 +564,8 @@ mod tests {
     #[allow(unsafe_code)]
     #[test]
     fn thresholds_from_env_vars() {
+        let _env_guard = env_guard();
+
         unsafe {
             std::env::set_var("QUIET_THRESHOLD_SECS", "60");
             std::env::set_var("STALLED_THRESHOLD_SECS", "300");

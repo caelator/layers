@@ -18,6 +18,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - name: Check stable core without deprecated compatibility features
         run: cargo check --no-default-features --all-targets
       - name: Clippy stable core without deprecated compatibility features
@@ -101,6 +103,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Configure repository hooks path
+        run: git config core.hooksPath hooks
       - name: Run repo-doctor health checks
         run: |
           chmod +x ./repo-doctor.sh

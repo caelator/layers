@@ -274,7 +274,7 @@ impl SystemPromptComposer {
         max_tokens: Option<usize>,
     ) -> String {
         let mut sorted: Vec<&PromptSection> = self.sections.iter().collect();
-        sorted.sort_by(|a, b| b.priority.cmp(&a.priority));
+        sorted.sort_by_key(|entry| std::cmp::Reverse(entry.priority));
 
         let mut result = String::new();
         for section in &sorted {

@@ -198,7 +198,7 @@ pub fn run_routing_benchmarks(file: &str) -> Result<Value> {
 mod tests {
     use super::*;
     use crate::test_support::TestWorkspace;
-    use std::fs;
+    use serde_json::{Value, json};
 
     #[test]
     fn validate_runs_without_benchmarks() {

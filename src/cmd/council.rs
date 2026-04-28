@@ -438,7 +438,7 @@ pub(crate) fn council_command(stage: &str, explicit: Option<String>) -> Result<S
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::TestWorkspace;
+    use crate::test_support::{TestWorkspace, env_guard};
     use crate::types::{CouncilConvergenceRecord, CouncilRunRecord};
     use crate::util::load_jsonl;
     use serde_json::json;
@@ -537,6 +537,8 @@ mod tests {
     #[test]
     #[allow(unsafe_code)]
     fn council_command_falls_back_to_env() {
+        let _env_guard = env_guard();
+
         unsafe {
             std::env::set_var("LAYERS_COUNCIL_GEMINI_CMD", "gemini-cli");
         }
@@ -550,6 +552,8 @@ mod tests {
     #[test]
     #[allow(unsafe_code)]
     fn council_command_falls_back_to_path_autodetect() {
+        let _env_guard = env_guard();
+
         // Skip if neither codex nor opencode is on PATH — CI environments typically lack these.
         let has_binary = |bin: &str| -> bool {
             std::process::Command::new("which")
