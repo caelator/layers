@@ -561,8 +561,7 @@ mod tests {
                 .stdout(std::process::Stdio::null())
                 .stderr(std::process::Stdio::null())
                 .status()
-                .map(|s| s.success())
-                .unwrap_or(false)
+                .is_ok_and(|s| s.success())
         };
         if !has_binary("codex") && !has_binary("opencode") {
             return;

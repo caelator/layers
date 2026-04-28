@@ -103,7 +103,7 @@ pub fn handle_refresh(embeddings: bool) -> Result<()> {
         .map(|(kind, path)| {
             let exists = path.exists();
             let count = if exists {
-                load_jsonl(&path).map(|v| v.len()).unwrap_or(0)
+                load_jsonl(&path).map_or(0, |v| v.len())
             } else {
                 0
             };

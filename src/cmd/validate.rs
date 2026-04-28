@@ -41,7 +41,7 @@ fn build_validate_payload() -> Value {
         .map(|(kind, path)| {
             let exists = path.exists();
             let count = if exists {
-                load_jsonl(&path).map(|v| v.len()).unwrap_or(0)
+                load_jsonl(&path).map_or(0, |v| v.len())
             } else {
                 0
             };
@@ -51,7 +51,7 @@ fn build_validate_payload() -> Value {
 
     let curated_path = canonical_curated_memory_path();
     let curated_count = if curated_path.exists() {
-        load_jsonl(&curated_path).map(|v| v.len()).unwrap_or(0)
+        load_jsonl(&curated_path).map_or(0, |v| v.len())
     } else {
         0
     };

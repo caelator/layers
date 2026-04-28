@@ -534,7 +534,7 @@ pub fn list_council_runs(limit: usize) -> Result<Vec<CouncilRunRecord>> {
 
     let mut runs = fs::read_dir(root)?
         .filter_map(Result::ok)
-        .filter(|entry| entry.file_type().map(|ty| ty.is_dir()).unwrap_or(false))
+        .filter(|entry| entry.file_type().is_ok_and(|ty| ty.is_dir()))
         .filter_map(|entry| {
             let run_id = entry.file_name().to_string_lossy().to_string();
             load_council_run_record(&run_id, Some(&entry.path())).ok()
