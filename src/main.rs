@@ -76,6 +76,7 @@ use cmd::init::{InitArgs, handle_init};
 use cmd::migrate::handle_migrate;
 #[cfg(feature = "substrate-storage")]
 use cmd::monitor::handle_monitor;
+use cmd::packet::{PacketCommands, handle_packet};
 use cmd::preflight::{PreflightArgs, handle_preflight};
 use cmd::query::handle_query;
 use cmd::refresh::handle_refresh;
@@ -150,6 +151,11 @@ enum Commands {
         /// If UC returns fewer than this, a warning appears in the output.
         #[arg(long, default_value = "3")]
         uc_min_results: usize,
+    },
+    /// [stable core] Validate, inspect, render, and diff `ContextPacket` artifacts.
+    Packet {
+        #[command(subcommand)]
+        command: PacketCommands,
     },
     /// [beta] Prepare a local pre-edit context packet for a task.
     Preflight {
@@ -533,6 +539,7 @@ fn main() -> anyhow::Result<()> {
             no_audit,
             uc_min_results,
         } => handle_query(&task, json, agent_prompt, no_audit, uc_min_results),
+        Commands::Packet { command } => handle_packet(&command),
         Commands::Preflight {
             task,
             targets,
@@ -787,4 +794,98 @@ fn handle_daemon_run(config: Option<PathBuf>, pid_file: Option<PathBuf>) -> anyh
             .await?;
         runner.run().await.map_err(anyhow::Error::from)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Cli, Commands};
+    use crate::cmd::packet::{PacketCommands, PacketRenderFormat};
+    use clap::Parser;
+    use std::path::PathBuf;
+
+    #[test]
+    fn parses_packet_validate_command() {
+        let cli = Cli::try_parse_from([
+            "layers",
+            "packet",
+            "validate",
+            "docs/examples/context-packet-v2-minimal.json",
+            "--strict",
+            "--json",
+        ])
+        .expect("packet validate should parse");
+
+        let Commands::Packet { command } = cli.command else {
+            panic!("expected packet command");
+        };
+        let PacketCommands::Validate { path, strict, json } = command else {
+            panic!("expected packet validate command");
+        };
+        assert_eq!(
+            path,
+            PathBuf::from("docs/examples/context-packet-v2-minimal.json")
+        );
+        assert!(strict);
+        assert!(json);
+    }
+
+    #[test]
+    fn parses_packet_render_command() {
+        let cli = Cli::try_parse_from([
+            "layers",
+            "packet",
+            "render",
+            "packet.json",
+            "--format",
+            "agent-prompt",
+        ])
+        .expect("packet render should parse");
+
+        let Commands::Packet { command } = cli.command else {
+            panic!("expected packet command");
+        };
+        let PacketCommands::Render { path, format } = command else {
+            panic!("expected packet render command");
+        };
+        assert_eq!(path, PathBuf::from("packet.json"));
+        assert_eq!(format, PacketRenderFormat::AgentPrompt);
+    }
+
+    #[test]
+    fn parses_packet_inspect_command() {
+        let cli = Cli::try_parse_from(["layers", "packet", "inspect", "packet.json", "--json"])
+            .expect("packet inspect should parse");
+
+        let Commands::Packet { command } = cli.command else {
+            panic!("expected packet command");
+        };
+        let PacketCommands::Inspect { path, json } = command else {
+            panic!("expected packet inspect command");
+        };
+        assert_eq!(path, PathBuf::from("packet.json"));
+        assert!(json);
+    }
+
+    #[test]
+    fn parses_packet_diff_command() {
+        let cli = Cli::try_parse_from([
+            "layers",
+            "packet",
+            "diff",
+            "before.json",
+            "after.json",
+            "--json",
+        ])
+        .expect("packet diff should parse");
+
+        let Commands::Packet { command } = cli.command else {
+            panic!("expected packet command");
+        };
+        let PacketCommands::Diff { old, new, json } = command else {
+            panic!("expected packet diff command");
+        };
+        assert_eq!(old, PathBuf::from("before.json"));
+        assert_eq!(new, PathBuf::from("after.json"));
+        assert!(json);
+    }
 }

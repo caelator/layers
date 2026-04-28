@@ -10,6 +10,7 @@ pub mod init;
 pub mod migrate;
 #[cfg(feature = "substrate-storage")]
 pub mod monitor;
+pub mod packet;
 pub mod preflight;
 pub mod query;
 pub mod refresh;
