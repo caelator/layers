@@ -1,6 +1,7 @@
 //! Tool implementations: exec, filesystem, web, sessions, subagents, memory, media, cron.
 #![allow(clippy::doc_markdown)]
 
+pub mod bootstrap;
 pub mod cron;
 pub mod exec;
 pub mod fs;
