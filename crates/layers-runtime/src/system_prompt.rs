@@ -81,6 +81,12 @@ impl SystemPromptBuilder {
 
     /// Build the full system prompt string.
     pub fn build(&self, session: &Session, tools: &ToolRegistry) -> String {
+        let tool_names = tools.names();
+        self.build_with_tool_names(session, &tool_names)
+    }
+
+    /// Build the full system prompt string using an explicit available-tool list.
+    pub fn build_with_tool_names(&self, session: &Session, tool_names: &[&str]) -> String {
         let mut parts: Vec<String> = Vec::new();
         let mut total_chars: usize = 0;
 
@@ -107,7 +113,6 @@ impl SystemPromptBuilder {
         }
 
         // 3. Available tools listing.
-        let tool_names: Vec<&str> = tools.names().into_iter().collect();
         if !tool_names.is_empty() {
             let tools_section = format!("## Available Tools\n\n{}\n\n", tool_names.join(", "));
             if total_chars + tools_section.len() <= MAX_TOTAL_CHARS {
