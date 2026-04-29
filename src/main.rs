@@ -1483,9 +1483,10 @@ mod tests {
         let cli = Cli::try_parse_from(["layers", "chat", "--tool-profile", "fs-readonly"])
             .expect("chat CLI should accept named tool profiles");
 
-        match cli.command {
-            Commands::Chat { tool_profile, .. } => assert_eq!(tool_profile, "fs-readonly"),
-            other => panic!("expected chat command, got {other:?}"),
+        if let Commands::Chat { tool_profile, .. } = cli.command {
+            assert_eq!(tool_profile, "fs-readonly");
+        } else {
+            panic!("expected chat command");
         }
     }
 }

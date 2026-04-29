@@ -5,10 +5,9 @@
 
 use std::collections::HashMap;
 use std::io::{self, BufRead, Write};
-use std::str::FromStr;
 
-use layers_runtime::tool_dispatch::{ToolCapabilityPolicy, ToolProfile};
-use layers_tools::bootstrap::runtime_registry;
+use layers_runtime::tool_dispatch::ToolCapabilityPolicy;
+use layers_tools::bootstrap::{runtime_policy_from_cli, runtime_registry};
 
 /// Arguments for the `layers chat` command.
 pub struct ChatArgs {
@@ -32,25 +31,13 @@ pub struct ChatArgs {
 
 impl ChatArgs {
     fn tool_policy(&self) -> anyhow::Result<ToolCapabilityPolicy> {
-        let profile_key = self.tool_profile.trim();
-        let base_profile = if let Ok(profile) = ToolProfile::from_str(profile_key) {
-            profile
-        } else if let Some(names) = self.named_tool_profiles.get(profile_key) {
-            ToolProfile::Custom(names.clone())
-        } else {
-            anyhow::bail!(
-                "unknown tool profile '{profile_key}' (expected builtin minimal/coding/messaging/full or a [tools.profiles] entry)"
-            );
-        };
-
-        let mut policy = ToolCapabilityPolicy::new(base_profile);
-        if !self.allow_tools.is_empty() {
-            policy = policy.with_allow(self.allow_tools.clone());
-        }
-        if !self.deny_tools.is_empty() {
-            policy = policy.with_deny(self.deny_tools.clone());
-        }
-        Ok(policy)
+        runtime_policy_from_cli(
+            &self.tool_profile,
+            &self.named_tool_profiles,
+            &self.allow_tools,
+            &self.deny_tools,
+        )
+        .map_err(anyhow::Error::from)
     }
 
     fn runtime_tool_names(&self) -> anyhow::Result<Vec<String>> {
