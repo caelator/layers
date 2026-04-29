@@ -4,11 +4,15 @@
 pub mod config;
 pub mod context_packet;
 pub mod error;
+pub mod packet_quality;
+pub mod task_spec;
 pub mod traits;
 pub mod types;
 
 pub use config::*;
 pub use context_packet::*;
 pub use error::*;
+pub use packet_quality::*;
+pub use task_spec::*;
 pub use traits::*;
 pub use types::*;

@@ -1,0 +1,31 @@
+{
+  "schema_version": 2,
+  "id": "ctx-8f5f5cc6-0e4a-4e75-b81d-6c1ec5422f63",
+  "workspace_id": "layers",
+  "query": "What files, symbols, tests, and command wiring are involved in the layers workflow-benchmark analyze command implementation?",
+  "created_at": "2026-04-29 19:25:32.593972 UTC",
+  "git_ref": "6c37a27",
+  "route": "memory_only",
+  "confidence": "high",
+  "budget": {
+    "used_units": 67,
+    "max_units": 1200,
+    "unit": "words",
+    "truncated": false
+  },
+  "provenance": {
+    "compiler": "layers-context-packet",
+    "compiler_version": "2",
+    "surface": "query",
+    "generated_at": "2026-04-29 19:25:32.593972 UTC",
+    "source_adapters": [
+      "memory",
+      "workspace"
+    ]
+  },
+  "section_count": 2,
+  "item_count": 4,
+  "warning_count": 4,
+  "degraded": true,
+  "low_confidence_fallback": false
+}

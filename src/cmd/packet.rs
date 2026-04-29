@@ -6,6 +6,7 @@ use std::{
 use anyhow::{Context as _, Result, bail};
 use clap::{Subcommand, ValueEnum};
 use layers_core::context_packet::{CONTEXT_PACKET_SCHEMA_VERSION, ContextPacket};
+use layers_core::{PacketQualityReport, TaskSpec};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -55,6 +56,17 @@ pub(crate) enum PacketCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Grade a `ContextPacket` against a workflow task spec.
+    Grade {
+        /// Path to a `ContextPacket` JSON artifact.
+        path: PathBuf,
+        /// Path to a workflow task spec JSON artifact.
+        #[arg(long)]
+        task: PathBuf,
+        /// Output a structured JSON quality report.
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 pub(crate) fn handle_packet(command: &PacketCommands) -> Result<()> {
@@ -63,6 +75,7 @@ pub(crate) fn handle_packet(command: &PacketCommands) -> Result<()> {
         PacketCommands::Inspect { path, json } => inspect_packet(path, *json),
         PacketCommands::Render { .. } => bail!("packet render is not implemented yet"),
         PacketCommands::Diff { .. } => bail!("packet diff is not implemented yet"),
+        PacketCommands::Grade { path, task, json } => grade_packet(path, task, *json),
     }
 }
 
@@ -70,6 +83,16 @@ fn inspect_packet(path: &Path, json: bool) -> Result<()> {
     let text = fs::read_to_string(path)
         .with_context(|| format!("failed to read ContextPacket artifact {}", path.display()))?;
     let output = inspect_packet_text(&text, json)?;
+    println!("{output}");
+    Ok(())
+}
+
+fn grade_packet(path: &Path, task_path: &Path, json: bool) -> Result<()> {
+    let packet_text = fs::read_to_string(path)
+        .with_context(|| format!("failed to read ContextPacket artifact {}", path.display()))?;
+    let task_text = fs::read_to_string(task_path)
+        .with_context(|| format!("failed to read task spec artifact {}", task_path.display()))?;
+    let output = grade_packet_text(&packet_text, &task_text, json)?;
     println!("{output}");
     Ok(())
 }
@@ -209,6 +232,88 @@ fn inspect_packet_text(text: &str, json: bool) -> Result<String> {
     } else {
         Ok(format_inspection_report(&inspection))
     }
+}
+
+fn grade_packet_text(packet_text: &str, task_text: &str, json: bool) -> Result<String> {
+    let packet_value: Value =
+        serde_json::from_str(packet_text).context("invalid ContextPacket JSON")?;
+    let mut pre_deserialization_errors = Vec::new();
+    validate_secret_like_values(&packet_value, &mut pre_deserialization_errors);
+    if !pre_deserialization_errors.is_empty() {
+        bail!(
+            "ContextPacket validation failed: {}",
+            pre_deserialization_errors.join("; ")
+        );
+    }
+
+    let packet: ContextPacket = serde_json::from_value(packet_value.clone())
+        .map_err(|_| anyhow::anyhow!("JSON did not match the ContextPacket v2 artifact shape"))?;
+    let validation = validate_packet_value(&packet_value, &packet, false);
+    if !validation.is_valid() {
+        bail!(
+            "ContextPacket validation failed: {}",
+            validation.errors.join("; ")
+        );
+    }
+
+    let task: TaskSpec = serde_json::from_str(task_text).context("invalid task spec JSON")?;
+    if let Err(errors) = task.validate() {
+        bail!("task spec validation failed: {}", errors.join("; "));
+    }
+
+    let report = PacketQualityReport::grade(&packet, &task);
+    if json {
+        serde_json::to_string_pretty(&report).context("failed to serialize packet quality report")
+    } else {
+        Ok(format_quality_report(&report))
+    }
+}
+
+fn format_quality_report(report: &PacketQualityReport) -> String {
+    format!(
+        "ContextPacket quality\n\
+         recommendation: {:?}\n\
+         average_score: {:.2}\n\
+         scores.relevance: {}\n\
+         scores.completeness: {}\n\
+         scores.specificity: {}\n\
+         scores.freshness: {}\n\
+         scores.grounding: {}\n\
+         scores.concision: {}\n\
+         scores.noise_absence: {}\n\
+         target_coverage_ratio: {:.3}\n\
+         validation_coverage_ratio: {:.3}\n\
+         warning_penalty: {:.3}\n\
+         missed_critical_context: {}\n\
+         hallucinated_or_stale_context: {}\n\
+         reasons:\n{}",
+        report.recommendation,
+        report.scores.average(),
+        report.scores.relevance,
+        report.scores.completeness,
+        report.scores.specificity,
+        report.scores.freshness,
+        report.scores.grounding,
+        report.scores.concision,
+        report.scores.noise_absence,
+        report.target_coverage_ratio,
+        report.validation_coverage_ratio,
+        report.warning_penalty,
+        report.missed_critical_context,
+        report.hallucinated_or_stale_context,
+        format_reasons(&report.reasons)
+    )
+}
+
+fn format_reasons(reasons: &[String]) -> String {
+    if reasons.is_empty() {
+        return "  - none".to_string();
+    }
+    reasons
+        .iter()
+        .map(|reason| format!("  - {reason}"))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn inspect_context_packet(packet: &ContextPacket) -> PacketInspectionReport {
@@ -700,6 +805,44 @@ mod tests {
     }
 
     #[test]
+    fn grades_documented_minimal_v2_packet_as_json() {
+        let output = super::grade_packet_text(MINIMAL_PACKET, orientation_task_json(), true)
+            .expect("minimal packet should grade successfully");
+        let value: Value = serde_json::from_str(&output).expect("grade output should be JSON");
+
+        assert_eq!(value["recommendation"], "inject_full");
+        assert_eq!(value["missed_critical_context"], false);
+        assert_eq!(value["target_coverage_ratio"], 1.0);
+        assert_eq!(value["scores"]["relevance"], 5);
+    }
+
+    #[test]
+    fn grades_documented_minimal_v2_packet_as_text() {
+        let output = super::grade_packet_text(MINIMAL_PACKET, orientation_task_json(), false)
+            .expect("minimal packet should grade successfully");
+
+        assert!(output.contains("ContextPacket quality"));
+        assert!(output.contains("recommendation: InjectFull"));
+        assert!(output.contains("target_coverage_ratio: 1.000"));
+        assert!(output.contains("reasons:"));
+    }
+
+    #[test]
+    fn grade_rejects_invalid_task_spec() {
+        let invalid_task = r#"{
+          "task_id":"bad",
+          "title":"Missing targets",
+          "prompt":"Fix the bug",
+          "category":"bugfix"
+        }"#;
+
+        let error = super::grade_packet_text(MINIMAL_PACKET, invalid_task, false)
+            .expect_err("code-heavy task without targets should fail");
+
+        assert!(error.to_string().contains("task spec validation failed"));
+    }
+
+    #[test]
     fn inspect_rejects_invalid_packets_without_echoing_secret_like_text() {
         let mut packet = minimal_packet_value();
         let secret_value = ["pass", "word=", "abc", "123", "secret", "456"].concat();
@@ -717,6 +860,16 @@ mod tests {
 
     fn minimal_packet_value() -> Value {
         serde_json::from_str(MINIMAL_PACKET).expect("minimal packet fixture must be valid JSON")
+    }
+
+    fn orientation_task_json() -> &'static str {
+        r#"{
+          "task_id":"orientation-readme-1",
+          "title":"Inspect README context",
+          "prompt":"What should I know before editing README?",
+          "category":"orientation",
+          "expected_validation_commands":["git status --porcelain=v1"]
+        }"#
     }
 
     fn validate_value(value: Value, strict: bool) -> super::PacketValidationReport {

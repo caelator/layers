@@ -1,0 +1,30 @@
+Workflow benchmark report
+=========================
+Runs: 4
+Paired tasks: 2
+
+Baseline
+- Runs: 2
+- Success rate: 1.000
+- Median wall time: 210000.0 ms
+- Average total tokens: 2800.0
+- Context relevant/waste ratios: 0.357 / 0.411
+- Verification/change/planning quality: 4.00 / 5.00 / 3.00
+
+Layers
+- Runs: 2
+- Success rate: 0.750
+- Median wall time: 150000.0 ms
+- Average total tokens: 1225.0
+- Context relevant/waste ratios: 0.355 / 0.082
+- Verification/change/planning quality: 4.50 / 5.00 / 3.50
+
+Paired net benefit
+- Net time saved per task: 60000.0 ms
+- Net tokens saved per task: 1575.0
+- Speedup: 1.400x
+- Token reduction ratio: 0.562
+- Success delta: -0.250
+- Human intervention delta: 0.000
+- Layers overhead: 261.5 ms / 435.0 tokens
+

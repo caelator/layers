@@ -1,0 +1,50 @@
+<layers_context_packet>
+<task>Run a full debug and self diagnostic of Layers, verify it is functional and better than using nothing</task>
+<route>memory_only</route>
+<confidence>low</confidence>
+<warnings>
+- [warning] Workspace has 3 changed and 2 untracked files; inspect before editing.
+- [info] No persisted autoresearch finding matched this task.
+- [info] No explicit target was provided; source selection may miss the relevant subsystem.
+- [warning] Memory quality: low relevance — query terms rarely appear in results
+- [warning] Prior route failures on 'memory_only' detected (weight=-0.4). Results may be degraded — verify critical details.
+</warnings>
+<context>
+## Workspace State
+- Git worktree state:
+  ```text
+Branch: main
+Head: 6c37a27
+Dirty: true
+Changed files:
+- emoryport/telemetry/events.jsonl
+- src/cmd/mod.rs
+- src/main.rs
+Untracked files:
+- docs/dogfood/20260429T192051Z-layers-self-diagnostic/
+- src/cmd/workflow_benchmark.rs
+
+  ```
+  Source: git status --porcelain=v1 (workspace)
+  Selected because: dirty or divergent workspace state changes how agents should interpret context
+## Memory
+- memoryport/curated-memory.jsonl#cm_decision_ai-council-jit-data-spine_treat-the-failed-jit-expert-data-spine-planning-run-and-the-council-v1-recovery-hardening-work-as-one-unified-project:
+  ```text
+Treat the failed JIT expert/data-spine planning run and the council v1 recovery/hardening work as one unified project.
+  ```
+  Source: memoryport/curated-memory.jsonl#cm_decision_ai-council-jit-data-spine_treat-the-failed-jit-expert-data-spine-planning-run-and-the-council-v1-recovery-hardening-work-as-one-unified-project (memory)
+  Selected because: memory retrieval matched the query or low-confidence fallback
+- memoryport/curated-memory.jsonl#cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed:
+  ```text
+Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.
+  ```
+  Source: memoryport/curated-memory.jsonl#cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed (memory)
+  Selected because: memory retrieval matched the query or low-confidence fallback
+- memoryport/curated-memory.jsonl#cm_decision_layers_curated-memory-records-should-be-first-class-and-should-include-at-minimum-decision-constraint-status-next-step-and-postmortem:
+  ```text
+Curated memory records should be first-class and should include at minimum: decision, constraint, status, next_step, and postmortem.
+  ```
+  Source: memoryport/curated-memory.jsonl#cm_decision_layers_curated-memory-records-should-be-first-class-and-should-include-at-minimum-decision-constraint-status-next-step-and-postmortem (memory)
+  Selected because: memory retrieval matched the query or low-confidence fallback
+</context>
+</layers_context_packet>

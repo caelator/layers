@@ -1,0 +1,165 @@
+{
+  "schema_version": 2,
+  "id": "ctx-8f5f5cc6-0e4a-4e75-b81d-6c1ec5422f63",
+  "workspace_id": "layers",
+  "query": "What files, symbols, tests, and command wiring are involved in the layers workflow-benchmark analyze command implementation?",
+  "created_at": "2026-04-29T19:25:32.593972Z",
+  "git_ref": "6c37a27",
+  "route": "memory_only",
+  "confidence": "high",
+  "budget": {
+    "max_units": 1200,
+    "used_units": 67,
+    "unit": "words",
+    "truncated": false
+  },
+  "sections": [
+    {
+      "id": "workspace",
+      "title": "Workspace State",
+      "summary": "Current Git/worktree context that can affect safe edits.",
+      "items": [
+        {
+          "id": "workspace-state-1",
+          "title": "Git worktree state",
+          "body": "Branch: main\nHead: 6c37a27\nDirty: true\nChanged files:\n- emoryport/telemetry/events.jsonl\n- src/cmd/mod.rs\n- src/main.rs\nUntracked files:\n- docs/dogfood/20260429T192051Z-layers-self-diagnostic/\n- src/cmd/workflow_benchmark.rs\n",
+          "source": {
+            "kind": "workspace",
+            "uri": "git status --porcelain=v1"
+          },
+          "token_estimate": 20,
+          "selected_reason": "dirty or divergent workspace state changes how agents should interpret context",
+          "tags": [
+            "workspace",
+            "git"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "title": "Memory",
+      "summary": "Relevant project memory and semantic recall.",
+      "items": [
+        {
+          "id": "memory-1",
+          "title": "memoryport/curated-memory.jsonl#cm_status_layers_rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true",
+          "body": "Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis/types/util, with tests passing and validate passing (`replacement_ready: true`).",
+          "source": {
+            "kind": "memory",
+            "uri": "memoryport/curated-memory.jsonl#cm_status_layers_rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true"
+          },
+          "token_estimate": 15,
+          "selected_reason": "memory retrieval matched the query or low-confidence fallback",
+          "tags": []
+        },
+        {
+          "id": "memory-2",
+          "title": "memoryport/curated-memory.jsonl#cm_decision_triumvirate-boundaries_triumvirate-should-be-treated-as-the-destination-system-while-layers-remains-the-proving-ground-tooling-substrate-that-helps-build-and-harden-it",
+          "body": "Triumvirate should be treated as the destination system, while Layers remains the proving ground/tooling substrate that helps build and harden it.",
+          "source": {
+            "kind": "memory",
+            "uri": "memoryport/curated-memory.jsonl#cm_decision_triumvirate-boundaries_triumvirate-should-be-treated-as-the-destination-system-while-layers-remains-the-proving-ground-tooling-substrate-that-helps-build-and-harden-it"
+          },
+          "token_estimate": 21,
+          "selected_reason": "memory retrieval matched the query or low-confidence fallback",
+          "tags": []
+        },
+        {
+          "id": "memory-3",
+          "title": "memoryport/curated-memory.jsonl#cm_next_step_layers_implement-first-class-curated-memory-persistence-and-retrieval-preference-in-the-rust-repo-then-strengthen-gitnexus-backed-workflow-artifacts-for-planning-review-handoff-while-keeping-the-narrowed-layers-scope-intact",
+          "body": "Implement first-class curated memory persistence and retrieval preference in the Rust repo, then strengthen GitNexus-backed workflow artifacts for planning/review/handoff while keeping the narrowed...",
+          "source": {
+            "kind": "memory",
+            "uri": "memoryport/curated-memory.jsonl#cm_next_step_layers_implement-first-class-curated-memory-persistence-and-retrieval-preference-in-the-rust-repo-then-strengthen-gitnexus-backed-workflow-artifacts-for-planning-review-handoff-while-keeping-the-narrowed-layers-scope-intact"
+          },
+          "token_estimate": 23,
+          "selected_reason": "memory retrieval matched the query or low-confidence fallback",
+          "tags": []
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "dirty_worktree",
+      "message": "Workspace has 3 changed and 2 untracked files; inspect before editing."
+    },
+    {
+      "severity": "info",
+      "code": "autoresearch_uncertainty",
+      "message": "No persisted autoresearch finding matched this task."
+    },
+    {
+      "severity": "info",
+      "code": "autoresearch_uncertainty",
+      "message": "No explicit target was provided; source selection may miss the relevant subsystem."
+    },
+    {
+      "severity": "warning",
+      "code": "retrieval_warning",
+      "message": "Prior route failures on 'memory_only' detected (weight=-0.6). Results may be degraded — verify critical details."
+    }
+  ],
+  "selection_trace": [
+    {
+      "item_id": "workspace-state-1",
+      "reason": "dirty or divergent workspace state changes how agents should interpret context"
+    },
+    {
+      "item_id": "memory-1",
+      "reason": "memory retrieval matched the query or low-confidence fallback"
+    },
+    {
+      "item_id": "memory-2",
+      "reason": "memory retrieval matched the query or low-confidence fallback"
+    },
+    {
+      "item_id": "memory-3",
+      "reason": "memory retrieval matched the query or low-confidence fallback"
+    }
+  ],
+  "retrieval": {
+    "memory_source": "keyword",
+    "memory_latency_ms": 526,
+    "graph_latency_ms": 0,
+    "fallback_reason": "uc timed out after 500ms"
+  },
+  "provenance": {
+    "compiler": "layers-context-packet",
+    "compiler_version": "2",
+    "surface": "query",
+    "workspace_id": "layers",
+    "git_ref": "6c37a27",
+    "generated_at": "2026-04-29T19:25:32.593972Z",
+    "source_adapters": [
+      "memory",
+      "workspace"
+    ]
+  },
+  "task": "What files, symbols, tests, and command wiring are involved in the layers workflow-benchmark analyze command implementation?",
+  "low_confidence_fallback": false,
+  "scores": {
+    "action": 1,
+    "autoresearch_findings": 0,
+    "historical": 0,
+    "local": 1,
+    "structural": 4
+  },
+  "why_retrieved": "Strong structural signal (4) with low historical (0)",
+  "why_not_retrieved": "Historical context not strongly indicated",
+  "evidence": "### Workspace State\nWorkspace State: Git worktree state\n- [git status --porcelain=v1] Branch: main\nHead: 6c37a27\nDirty: true\nChanged files:\n- emoryport/telemetry/events.jsonl\n- src/cmd/mod.rs\n- src/main.rs\nUntracked files:\n- docs/dogfood/20260429T192051Z-layers-self-diagnostic/\n- src/cmd/workflow_benchmark.rs\n\nSource: git status --porcelain=v1 (workspace)\nSelected because: dirty or divergent workspace state changes how agents should interpret context\n\n### Memory\nMemory: memoryport/curated-memory.jsonl#cm_status_layers_rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\n- [memoryport/curated-memory.jsonl#cm_status_layers_rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true] Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis/types/util, with tests passing and validate passing (`replacement_ready: true`).\nSource: memoryport/curated-memory.jsonl#cm_status_layers_rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true (memory)\nSelected because: memory retrieval matched the query or low-confidence fallback\n\nMemory: memoryport/curated-memory.jsonl#cm_decision_triumvirate-boundaries_triumvirate-should-be-treated-as-the-destination-system-while-layers-remains-the-proving-ground-tooling-substrate-that-helps-build-and-harden-it\n- [memoryport/curated-memory.jsonl#cm_decision_triumvirate-boundaries_triumvirate-should-be-treated-as-the-destination-system-while-layers-remains-the-proving-ground-tooling-substrate-that-helps-build-and-harden-it] Triumvirate should be treated as the destination system, while Layers remains the proving ground/tooling substrate that helps build and harden it.\nSource: memoryport/curated-memory.jsonl#cm_decision_triumvirate-boundaries_triumvirate-should-be-treated-as-the-destination-system-while-layers-remains-the-proving-ground-tooling-substrate-that-helps-build-and-harden-it (memory)\nSelected because: memory retrieval matched the query or low-confidence fallback\n\nMemory: memoryport/curated-memory.jsonl#cm_next_step_layers_implement-first-class-curated-memory-persistence-and-retrieval-preference-in-the-rust-repo-then-strengthen-gitnexus-backed-workflow-artifacts-for-planning-review-handoff-while-keeping-the-narrowed-layers-scope-intact\n- [memoryport/curated-memory.jsonl#cm_next_step_layers_implement-first-class-curated-memory-persistence-and-retrieval-preference-in-the-rust-repo-then-strengthen-gitnexus-backed-workflow-artifacts-for-planning-review-handoff-while-keeping-the-narrowed-layers-scope-intact] Implement first-class curated memory persistence and retrieval preference in the Rust repo, then strengthen GitNexus-backed workflow artifacts for planning/review/handoff while keeping the narrowed...\nSource: memoryport/curated-memory.jsonl#cm_next_step_layers_implement-first-class-curated-memory-persistence-and-retrieval-preference-in-the-rust-repo-then-strengthen-gitnexus-backed-workflow-artifacts-for-planning-review-handoff-while-keeping-the-narrowed-layers-scope-intact (memory)\nSelected because: memory retrieval matched the query or low-confidence fallback",
+  "open_uncertainty": [
+    "Workspace has 3 changed and 2 untracked files; inspect before editing.",
+    "No persisted autoresearch finding matched this task.",
+    "No explicit target was provided; source selection may miss the relevant subsystem.",
+    "Prior route failures on 'memory_only' detected (weight=-0.6). Results may be degraded — verify critical details."
+  ],
+  "retrieval_meta": {
+    "memory_source": "keyword",
+    "memory_latency_ms": 526,
+    "graph_latency_ms": 0,
+    "fallback_reason": "uc timed out after 500ms"
+  }
+}

@@ -1,6 +1,10 @@
 use anyhow::Result;
-use layers_core::{ContextBudget, ContextItem, ContextPacket, ContextWarning, RetrievalReport};
+use layers_core::{
+    ContextBudget, ContextItem, ContextPacket, ContextWarning, InjectionRecommendation,
+    PacketQualityReport, RetrievalReport, SuccessRubric, TaskCategory, TaskSpec,
+};
 use serde_json::json;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use crate::cmd::autoresearch::{AutoresearchPacketBridgeOptions, add_autoresearch_to_packet};
@@ -376,7 +380,7 @@ pub fn handle_query(
         append_jsonl(&audit_path, &audit)?;
     }
 
-    let packet = build_context_packet(
+    let mut packet = build_context_packet(
         task,
         effective_route,
         route_result.confidence.to_string(),
@@ -392,12 +396,23 @@ pub fn handle_query(
         low_confidence_fallback,
         None,
     );
+    let task_spec = task_spec_for_query(task, &route_result.scores);
+    add_packet_quality_report(&mut packet, &task_spec);
+    let recommendation = packet_quality_recommendation(&packet);
+    let should_inject = !matches!(
+        recommendation,
+        Some(InjectionRecommendation::Abstain | InjectionRecommendation::NeedsTarget)
+    );
     let final_evidence = packet.evidence.clone();
 
-    if agent_prompt {
+    if agent_prompt && should_inject {
         println!("{}", packet.to_agent_prompt());
+    } else if agent_prompt {
+        print_abstention_context(&packet);
     } else if json_out {
         println!("{}", serde_json::to_string_pretty(&packet)?);
+    } else if !should_inject {
+        print_abstention_context(&packet);
     } else if matches!(effective_route, Route::Neither) {
         // Low-confidence fallback: if we retrieved anyway, show the evidence
         if !memory_items.is_empty() || !graph_items.is_empty() {
@@ -716,6 +731,113 @@ fn build_context_packet(
     packet
 }
 
+fn task_spec_for_query(task: &str, scores: &router::Scores) -> TaskSpec {
+    let code_heavy = query_looks_code_heavy(task, scores);
+    let category = if code_heavy {
+        TaskCategory::Debugging
+    } else {
+        TaskCategory::Orientation
+    };
+    let targets = extract_path_like_targets(task);
+    TaskSpec {
+        task_id: "query-task".to_string(),
+        title: "Query task".to_string(),
+        prompt: task.to_string(),
+        category,
+        repo_root: Some(workspace_root()),
+        target_files: targets.clone(),
+        target_symbols: Vec::new(),
+        expected_relevant_files: targets,
+        expected_validation_commands: Vec::new(),
+        negative_control: false,
+        success_rubric: SuccessRubric::default(),
+    }
+}
+
+fn add_packet_quality_report(packet: &mut ContextPacket, task_spec: &TaskSpec) {
+    let report = PacketQualityReport::grade(packet, task_spec);
+    packet.scores = json!({
+        "router": packet.scores.clone(),
+        "packet_quality": &report,
+        "injection_recommendation": report.recommendation,
+    });
+    packet.warnings.push(ContextWarning {
+        severity: match report.recommendation {
+            InjectionRecommendation::InjectFull | InjectionRecommendation::InjectCompact => "info",
+            InjectionRecommendation::Abstain | InjectionRecommendation::NeedsTarget => "warning",
+        }
+        .to_string(),
+        code: "injection_policy".to_string(),
+        message: format!(
+            "Packet quality gate recommends {:?}: {}",
+            report.recommendation,
+            report.reasons.join("; ")
+        ),
+    });
+}
+
+fn packet_quality_recommendation(packet: &ContextPacket) -> Option<InjectionRecommendation> {
+    serde_json::from_value(packet.scores.get("injection_recommendation")?.clone()).ok()
+}
+
+fn print_abstention_context(packet: &ContextPacket) {
+    println!("<layers_context>");
+    println!("Route: {}", packet.route);
+    if let Some(recommendation) = packet.scores.get("injection_recommendation") {
+        println!("Injection Recommendation: {recommendation}");
+    }
+    if let Some(report) = packet.scores.get("packet_quality") {
+        if let Some(reasons) = report.get("reasons").and_then(serde_json::Value::as_array) {
+            println!("Why Not Injected:");
+            for reason in reasons.iter().filter_map(serde_json::Value::as_str) {
+                println!("- {reason}");
+            }
+        }
+    }
+    println!(
+        "No context injection — packet quality gate predicted low value or needs explicit targets."
+    );
+    println!("</layers_context>");
+}
+
+fn query_looks_code_heavy(task: &str, scores: &router::Scores) -> bool {
+    scores.structural > 0
+        || scores.local > 0
+        || task.split_whitespace().any(|word| {
+            let word = word.trim_matches(|c: char| c == ',' || c == '.' || c == ':' || c == ';');
+            word.contains("src/")
+                || has_extension(word, "rs")
+                || has_extension(word, "toml")
+                || matches!(
+                    word.to_ascii_lowercase().as_str(),
+                    "fix" | "bug" | "bugfix" | "implement" | "refactor" | "debug" | "test"
+                )
+        })
+}
+
+fn extract_path_like_targets(task: &str) -> Vec<PathBuf> {
+    task.split_whitespace()
+        .map(|word| {
+            word.trim_matches(|c: char| {
+                matches!(c, ',' | '.' | ':' | ';' | '(' | ')' | '`' | '"' | '\'')
+            })
+        })
+        .filter(|word| {
+            word.contains('/')
+                || has_extension(word, "rs")
+                || has_extension(word, "toml")
+                || has_extension(word, "md")
+        })
+        .map(PathBuf::from)
+        .collect()
+}
+
+fn has_extension(word: &str, extension: &str) -> bool {
+    Path::new(word)
+        .extension()
+        .is_some_and(|candidate| candidate.eq_ignore_ascii_case(extension))
+}
+
 fn retrieval_items_to_context_items(section: &str, items: &[RetrievalItem]) -> Vec<ContextItem> {
     items
         .iter()
@@ -860,6 +982,46 @@ mod tests {
                 .selection_trace
                 .iter()
                 .any(|trace| trace.item_id == "autoresearch-1")
+        );
+    }
+
+    #[test]
+    fn code_heavy_query_without_targets_requests_targets_before_injection() {
+        let _ws = TestWorkspace::new("query-quality-needs-target");
+        let retrieval_meta = RetrievalMeta {
+            memory_source: "none".to_string(),
+            memory_latency_ms: 0,
+            graph_latency_ms: 0,
+            fallback_reason: None,
+        };
+        let scores = router::Scores {
+            historical: 0,
+            structural: 1,
+            local: 1,
+            action: 1,
+        };
+        let mut packet = build_context_packet(
+            "fix the CLI parser bug",
+            Route::MemoryOnly,
+            "high".to_string(),
+            &[],
+            &[],
+            &[],
+            &retrieval_meta,
+            &scores,
+            "code-heavy broad query",
+            "",
+            0,
+            false,
+            false,
+            None,
+        );
+        let task_spec = task_spec_for_query("fix the CLI parser bug", &scores);
+        add_packet_quality_report(&mut packet, &task_spec);
+
+        assert_eq!(
+            packet_quality_recommendation(&packet),
+            Some(InjectionRecommendation::NeedsTarget)
         );
     }
 

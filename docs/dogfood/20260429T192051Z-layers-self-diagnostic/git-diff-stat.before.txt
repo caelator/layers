@@ -1,0 +1,4 @@
+ memoryport/telemetry/events.jsonl |  2 ++
+ src/cmd/mod.rs                    |  1 +
+ src/main.rs                       | 35 +++++++++++++++++++++++++++++++----
+ 3 files changed, 34 insertions(+), 4 deletions(-)

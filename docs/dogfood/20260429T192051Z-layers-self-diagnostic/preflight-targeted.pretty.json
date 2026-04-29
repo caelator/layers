@@ -1,0 +1,347 @@
+{
+    "schema_version": 2,
+    "id": "preflight-ae558575-1618-46b9-adf5-3321dff0b07f",
+    "workspace_id": "layers",
+    "query": "Diagnose workflow-benchmark CLI integration and verify Layers is functional before editing",
+    "created_at": "2026-04-29T19:25:49.582112Z",
+    "git_ref": "6c37a27",
+    "route": "preflight",
+    "confidence": "high",
+    "budget": {
+        "max_units": 1800,
+        "used_units": 802,
+        "unit": "words",
+        "truncated": false
+    },
+    "sections": [
+        {
+            "id": "preflight_summary",
+            "title": "Preflight Summary",
+            "summary": "Preflight planning result.",
+            "items": [
+                {
+                    "id": "research-summary-1",
+                    "title": "Preflight classification",
+                    "body": "Preflight classified this task as code-heavy. Explicit targets: src/cmd/workflow_benchmark.rs, src/main.rs, src/cmd/mod.rs. Effective targets: src/cmd/workflow_benchmark.rs, src/main.rs, src/cmd/mod.rs.",
+                    "source": {
+                        "kind": "preflight",
+                        "uri": "local-planner"
+                    },
+                    "token_estimate": 16,
+                    "selected_reason": "summarizes the local preflight plan before source collection",
+                    "tags": [
+                        "planning"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "workspace",
+            "title": "Workspace State",
+            "summary": "Current Git/worktree context that can affect safe edits.",
+            "items": [
+                {
+                    "id": "workspace-state-1",
+                    "title": "Git worktree state",
+                    "body": "Branch: main\nHead: 6c37a27\nDirty: true\nChanged files:\n- emoryport/telemetry/events.jsonl\n- src/cmd/mod.rs\n- src/main.rs\nUntracked files:\n- docs/dogfood/20260429T192051Z-layers-self-diagnostic/\n- src/cmd/workflow_benchmark.rs\n",
+                    "source": {
+                        "kind": "workspace",
+                        "uri": "git status --porcelain=v1"
+                    },
+                    "token_estimate": 20,
+                    "selected_reason": "dirty or divergent workspace state changes how agents should interpret context",
+                    "tags": [
+                        "workspace",
+                        "git"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "memory",
+            "title": "Project Memory",
+            "summary": "Relevant explicit project memory or memory-source warning.",
+            "items": [
+                {
+                    "id": "memory-1",
+                    "title": "Curated memory match",
+                    "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"payload\":{\"rationale\":\"Broader OS/platform ambitions created drift; the highest-leverage immediate value is better deliberation, better memory continuity, and better structural grounding.\",\"slug\":\"narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"summary\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memoryport-based continuity, and GitNexus-based codebase understanding.\",\"title\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memor...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"scope\",\"strategy\"]}",
+                    "source": {
+                        "kind": "memory",
+                        "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+                    },
+                    "token_estimate": 48,
+                    "selected_reason": "curated memory shares terms with the preflight task",
+                    "tags": [
+                        "memory"
+                    ]
+                },
+                {
+                    "id": "memory-2",
+                    "title": "Curated memory match",
+                    "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"payload\":{\"rationale\":\"Triumvirate is the destination architecture; Layers should accelerate and de-risk it by proving workflows, memory models, and graph-aware tooling before promotion.\",\"slug\":\"treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"summary\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-state system.\",\"title\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-st...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"triumvirate\",\"strategy\"]}",
+                    "source": {
+                        "kind": "memory",
+                        "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+                    },
+                    "token_estimate": 46,
+                    "selected_reason": "curated memory shares terms with the preflight task",
+                    "tags": [
+                        "memory"
+                    ]
+                },
+                {
+                    "id": "memory-3",
+                    "title": "Curated memory match",
+                    "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"payload\":{\"rationale\":\"Structured records preserve auditability, editability, and schema stability while still allowing semantic recall via derived retrieval text and embeddings.\",\"slug\":\"canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"summary\":\"Canonical curated memories should be structured records, not vectors as source of truth; semantic embeddings are derived retrieval artifacts.\",\"title\":\"Canonical curated memories should be structured records, not vectors as source of truth\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"memoryport\",\"architecture\"]}",
+                    "source": {
+                        "kind": "memory",
+                        "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+                    },
+                    "token_estimate": 49,
+                    "selected_reason": "curated memory shares terms with the preflight task",
+                    "tags": [
+                        "memory"
+                    ]
+                },
+                {
+                    "id": "memory-4",
+                    "title": "Curated memory match",
+                    "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"constraint\",\"id\":\"cm_constraint_layers_prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"payload\":{\"impact\":\"The user explicitly set the rule: if it can reasonably be built in Rust, build it in Rust; build software, not sandcastles.\",\"slug\":\"prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"summary\":\"Prefer Rust for durable systems; use scripting only for glue or temporary scaffolding.\",\"title\":\"Prefer Rust for durable systems\",\"type\":\"constraint\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"engineering\",\"rust\"]}",
+                    "source": {
+                        "kind": "memory",
+                        "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+                    },
+                    "token_estimate": 38,
+                    "selected_reason": "curated memory shares terms with the preflight task",
+                    "tags": [
+                        "memory"
+                    ]
+                },
+                {
+                    "id": "memory-5",
+                    "title": "Curated memory match",
+                    "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}",
+                    "source": {
+                        "kind": "memory",
+                        "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+                    },
+                    "token_estimate": 51,
+                    "selected_reason": "curated memory shares terms with the preflight task",
+                    "tags": [
+                        "memory"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "code",
+            "title": "Code and Impact Context",
+            "summary": "Local code context gathered without editing files.",
+            "items": [
+                {
+                    "id": "code-1",
+                    "title": "src/cmd/workflow_benchmark.rs",
+                    "body": "//! Workflow benchmark telemetry analysis for comparing Layers vs baseline runs.\n\nuse std::{\n    collections::BTreeMap,\n    fmt::Write as _,\n    fs,\n    path::{Path, PathBuf},\n};\n\nuse anyhow::{Context as _, Result, bail};\nuse clap::Subcommand;\nuse serde::{Deserialize, Serialize};\n\n/// Workflow benchmark commands.\n#[derive(Debug, Subcommand)]\npub(crate) enum WorkflowBenchmarkCommands {\n    /// Analyze Layers-vs-baseline workflow telemetry from JSONL.\n    Analyze {\n        /// Path to workflow run telemetry JSONL.\n        path: PathBuf,\n        /// Output a structured JSON report.\n        #[arg(long)]\n        json: bool,\n    },\n}\n\n/// Handle workflow benchmark commands.\npub(crate) fn handle_workflow_benchmark(command: &WorkflowBenchmarkCommands) -> Result<()> {\n    match command {\n        WorkflowBenchmarkCommands::Analyze { path, json } => {\n            let runs = load_runs(path)?;\n            let report = analyze_runs(&runs)?;\n            println!(\"{}\", format_report(&report, *json)?);\n            Ok(())\n        }\n    }\n}\n\n#[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Ord, PartialOrd, Serialize)]\n#[serde(rename_all = \"snake_case\")]\nenum WorkflowVariant {\n    Baseline,\n    Layers,\n}\n\n#[derive(Debug, Clone, Deserialize, Serialize)]\nstruct RetrievalQuality {\n    relevance: u8,\n    completeness: u8,\n    specificity: u8,\n    freshness: u8,\n    grounding: u8,\n    concision: u8,\n    noise_absence: u8,\n}\n\n#[derive(Debug, Clone, Deserialize, Serialize)]\nstruct WorkflowRun {\n    task_id: String,\n    variant: WorkflowVariant,\n    task_category: String,\n    success_score: f64,\n    wall_time_ms: u64,\n    orientation_ms: u64,\n    implementation_ms: u64,\n    debugging_ms: u64,\n    verification_ms: u64,\n    input_tokens: u64,\n    output_tokens: u64,\n    peak_context_tokens: u64,\n    context_relevant_tokens: u64,\n    context_duplicate_tokens: u64,\n    context_irrelevant_tokens: u64,\n    assistant_turns: u64,\n    tool_calls: u64,\n    failed_commands: u64,\n    patch_attempts: u64,\n    test_runs: u64,\n    human_interventions: u64,\n    failed_attempts: u64,",
+                    "source": {
+                        "kind": "file",
+                        "uri": "src/cmd/workflow_benchmark.rs",
+                        "repo_path": "src/cmd/workflow_benchmark.rs"
+                    },
+                    "token_estimate": 199,
+                    "selected_reason": "explicit or inferred target file should be inspected before editing",
+                    "tags": [
+                        "code"
+                    ]
+                },
+                {
+                    "id": "code-2",
+                    "title": "src/main.rs",
+                    "body": "#![deny(warnings)]\n#![deny(clippy::all)]\n#![deny(clippy::pedantic)]\n#![deny(unsafe_op_in_unsafe_fn)]\n#![deny(unused_variables)]\n#![deny(unused_must_use)]\n#![deny(unreachable_pub)]\n#![deny(elided_lifetimes_in_paths)]\n#![warn(missing_docs)]\n// Binary crate \u2014 all items are pub for internal clarity but not exported as a library.\n#![allow(unreachable_pub)]\n// Structural lints that cannot be fixed without invasive refactoring:\n#![allow(\n    clippy::too_many_arguments,\n    clippy::too_many_lines,\n    clippy::cast_possible_truncation,\n    clippy::cast_possible_wrap,\n    clippy::cast_sign_loss,\n    clippy::cast_lossless,\n    clippy::cast_precision_loss,\n    clippy::needless_pass_by_value,\n    clippy::unnecessary_wraps,\n    clippy::result_large_err\n)]\n\n//! Layers \u2014 council orchestrator and memory spine for multi-model AI workflows.\n\n#[cfg(feature = \"deprecated-runtime\")]\nuse std::path::PathBuf;\n\nuse clap::{Parser, Subcommand};\n#[cfg(feature = \"deprecated-runtime\")]\nuse layers_daemon::lifecycle::DaemonRunner;\n#[cfg(feature = \"deprecated-runtime\")]\nuse layers_store::config::ConfigStore;\nuse tracing_subscriber::EnvFilter;\n\nmod cmd;\nmod config;\nmod context_packet_compiler;\nmod council;\n#[allow(dead_code)]\nmod critical_path;\nmod graph;\nmod memory;\n#[cfg(test)]\nmod test_support;\nmod types;\nmod util;\n\nmod feedback;\nmod plugins;\nmod quality;\nmod router;\n#[cfg(feature = \"substrate-storage\")]\nmod technician;\nmod uc;\n\npub mod memory_index;\n\nuse cmd::autoresearch::{AutoresearchCommands, handle_autoresearch};\nuse cmd::chat::{ChatArgs, handle_chat};\nuse cmd::config_cmd::{ConfigArgs, handle_config};\nuse cmd::council::{\n    handle_council_list, handle_council_promote, handle_council_resume, handle_council_resume_last,\n    handle_council_run, handle_council_status,\n};\nuse cmd::curated::{\n    handle_curated_audit, handle_curated_import, handle_curated_list, handle_curated_search,\n    handle_curated_show,\n};\nuse cmd::feedback::handle_feedback;\nuse cmd::gate::handle_gate;\nuse cmd::infrastructure::{InfrastructureArgs, handle_infrastructure};\nuse cmd::init::{InitArgs, handle_init};\nuse cmd::migrate::handle_migrate;\n#[cfg(feature = \"substrate-storage\")]\nuse cmd::monitor::handle_monitor;\nuse cmd::packet::{PacketCommands, handle_packet};\nuse cmd::preflight::{PreflightArgs, handle_preflight};",
+                    "source": {
+                        "kind": "file",
+                        "uri": "src/main.rs",
+                        "repo_path": "src/main.rs"
+                    },
+                    "token_estimate": 170,
+                    "selected_reason": "explicit or inferred target file should be inspected before editing",
+                    "tags": [
+                        "code"
+                    ]
+                },
+                {
+                    "id": "code-3",
+                    "title": "src/cmd/mod.rs",
+                    "body": "pub mod autoresearch;\npub mod chat;\npub mod config_cmd;\npub mod council;\npub mod curated;\npub mod feedback;\npub mod gate;\npub mod infrastructure;\npub mod init;\npub mod migrate;\n#[cfg(feature = \"substrate-storage\")]\npub mod monitor;\npub mod packet;\npub mod preflight;\npub mod query;\npub mod refresh;\npub mod remember;\n#[cfg(feature = \"substrate-storage\")]\npub mod technician;\npub mod telemetry;\npub mod validate;\npub mod workflow_benchmark;\n\nuse crate::config::memoryport_dir;\nuse crate::plugins::telemetry::TelemetryPlugin;\nuse std::sync::{LazyLock, Mutex};\n\n/// Global telemetry plugin \u2014 initialized once on first use.\nstatic TELEMETRY_PLUGIN: LazyLock<Mutex<TelemetryPlugin>> =\n    LazyLock::new(|| Mutex::new(TelemetryPlugin::new(&memoryport_dir())));\n\n/// Access the global telemetry plugin for recording events.\npub fn telemetry_plugin() -> std::sync::MutexGuard<'static, TelemetryPlugin> {\n    TELEMETRY_PLUGIN\n        .lock()\n        .expect(\"telemetry plugin lock poisoned\")\n}",
+                    "source": {
+                        "kind": "file",
+                        "uri": "src/cmd/mod.rs",
+                        "repo_path": "src/cmd/mod.rs"
+                    },
+                    "token_estimate": 112,
+                    "selected_reason": "explicit or inferred target file should be inspected before editing",
+                    "tags": [
+                        "code"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "validation",
+            "title": "Suggested Validation Commands",
+            "summary": "Commands an agent should run after using this research.",
+            "items": [
+                {
+                    "id": "validation-1",
+                    "title": "git diff --check",
+                    "body": "Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors",
+                    "source": {
+                        "kind": "validation",
+                        "uri": "preflight-validation-policy"
+                    },
+                    "token_estimate": 17,
+                    "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+                    "tags": [
+                        "validation"
+                    ]
+                },
+                {
+                    "id": "validation-2",
+                    "title": "cargo test --workspace --all-targets",
+                    "body": "Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass",
+                    "source": {
+                        "kind": "validation",
+                        "uri": "preflight-validation-policy"
+                    },
+                    "token_estimate": 18,
+                    "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+                    "tags": [
+                        "validation"
+                    ]
+                },
+                {
+                    "id": "validation-3",
+                    "title": "cargo clippy --workspace --all-targets -- -D warnings",
+                    "body": "Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt",
+                    "source": {
+                        "kind": "validation",
+                        "uri": "preflight-validation-policy"
+                    },
+                    "token_estimate": 18,
+                    "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+                    "tags": [
+                        "validation"
+                    ]
+                }
+            ]
+        }
+    ],
+    "warnings": [
+        {
+            "severity": "warning",
+            "code": "dirty_worktree",
+            "message": "Workspace has 3 changed and 2 untracked files; inspect before editing."
+        },
+        {
+            "severity": "info",
+            "code": "autoresearch_uncertainty",
+            "message": "No persisted autoresearch finding matched this task."
+        }
+    ],
+    "selection_trace": [
+        {
+            "item_id": "research-summary-1",
+            "reason": "summarizes the local preflight plan before source collection"
+        },
+        {
+            "item_id": "workspace-state-1",
+            "reason": "dirty or divergent workspace state changes how agents should interpret context"
+        },
+        {
+            "item_id": "memory-1",
+            "reason": "curated memory shares terms with the preflight task"
+        },
+        {
+            "item_id": "memory-2",
+            "reason": "curated memory shares terms with the preflight task"
+        },
+        {
+            "item_id": "memory-3",
+            "reason": "curated memory shares terms with the preflight task"
+        },
+        {
+            "item_id": "memory-4",
+            "reason": "curated memory shares terms with the preflight task"
+        },
+        {
+            "item_id": "memory-5",
+            "reason": "curated memory shares terms with the preflight task"
+        },
+        {
+            "item_id": "code-1",
+            "reason": "explicit or inferred target file should be inspected before editing"
+        },
+        {
+            "item_id": "code-2",
+            "reason": "explicit or inferred target file should be inspected before editing"
+        },
+        {
+            "item_id": "code-3",
+            "reason": "explicit or inferred target file should be inspected before editing"
+        },
+        {
+            "item_id": "validation-1",
+            "reason": "validation commands prevent context-only research from becoming unverified implementation"
+        },
+        {
+            "item_id": "validation-2",
+            "reason": "validation commands prevent context-only research from becoming unverified implementation"
+        },
+        {
+            "item_id": "validation-3",
+            "reason": "validation commands prevent context-only research from becoming unverified implementation"
+        }
+    ],
+    "retrieval": {
+        "memory_source": "curated-memory-jsonl",
+        "memory_latency_ms": 0,
+        "graph_latency_ms": 0,
+        "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+    },
+    "provenance": {
+        "compiler": "layers-context-packet",
+        "compiler_version": "2",
+        "surface": "preflight",
+        "workspace_id": "layers",
+        "git_ref": "6c37a27",
+        "generated_at": "2026-04-29T19:25:49.582112Z",
+        "source_adapters": [
+            "file",
+            "memory",
+            "preflight",
+            "validation",
+            "workspace"
+        ]
+    },
+    "task": "Diagnose workflow-benchmark CLI integration and verify Layers is functional before editing",
+    "low_confidence_fallback": false,
+    "scores": {
+        "autoresearch_findings": 0,
+        "code_heavy": true,
+        "targets": 3,
+        "workspace_dirty": true
+    },
+    "why_retrieved": "Preflight compiles local pre-edit context from workspace state, persisted autoresearch findings, memory, code targets, and validation policy.",
+    "why_not_retrieved": "",
+    "evidence": "### Preflight Summary\nPreflight Summary: Preflight classification\n- [local-planner] Preflight classified this task as code-heavy. Explicit targets: src/cmd/workflow_benchmark.rs, src/main.rs, src/cmd/mod.rs. Effective targets: src/cmd/workflow_benchmark.rs, src/main.rs, src/cmd/mod.rs.\nSource: local-planner (preflight)\nSelected because: summarizes the local preflight plan before source collection\n\n### Workspace State\nWorkspace State: Git worktree state\n- [git status --porcelain=v1] Branch: main\nHead: 6c37a27\nDirty: true\nChanged files:\n- emoryport/telemetry/events.jsonl\n- src/cmd/mod.rs\n- src/main.rs\nUntracked files:\n- docs/dogfood/20260429T192051Z-layers-self-diagnostic/\n- src/cmd/workflow_benchmark.rs\n\nSource: git status --porcelain=v1 (workspace)\nSelected because: dirty or divergent workspace state changes how agents should interpret context\n\n### Project Memory\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"payload\":{\"rationale\":\"Broader OS/platform ambitions created drift; the highest-leverage immediate value is better deliberation, better memory continuity, and better structural grounding.\",\"slug\":\"narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"summary\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memoryport-based continuity, and GitNexus-based codebase understanding.\",\"title\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memor...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"scope\",\"strategy\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"payload\":{\"rationale\":\"Triumvirate is the destination architecture; Layers should accelerate and de-risk it by proving workflows, memory models, and graph-aware tooling before promotion.\",\"slug\":\"treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"summary\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-state system.\",\"title\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-st...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"triumvirate\",\"strategy\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"payload\":{\"rationale\":\"Structured records preserve auditability, editability, and schema stability while still allowing semantic recall via derived retrieval text and embeddings.\",\"slug\":\"canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"summary\":\"Canonical curated memories should be structured records, not vectors as source of truth; semantic embeddings are derived retrieval artifacts.\",\"title\":\"Canonical curated memories should be structured records, not vectors as source of truth\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"memoryport\",\"architecture\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"constraint\",\"id\":\"cm_constraint_layers_prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"payload\":{\"impact\":\"The user explicitly set the rule: if it can reasonably be built in Rust, build it in Rust; build software, not sandcastles.\",\"slug\":\"prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"summary\":\"Prefer Rust for durable systems; use scripting only for glue or temporary scaffolding.\",\"title\":\"Prefer Rust for durable systems\",\"type\":\"constraint\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"engineering\",\"rust\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\n### Code and Impact Context\nCode and Impact Context: src/cmd/workflow_benchmark.rs\n- [src/cmd/workflow_benchmark.rs] //! Workflow benchmark telemetry analysis for comparing Layers vs baseline runs.\n\nuse std::{\n    collections::BTreeMap,\n    fmt::Write as _,\n    fs,\n    path::{Path, PathBuf},\n};\n\nuse anyhow::{Context as _, Result, bail};\nuse clap::Subcommand;\nuse serde::{Deserialize, Serialize};\n\n/// Workflow benchmark commands.\n#[derive(Debug, Subcommand)]\npub(crate) enum WorkflowBenchmarkCommands {\n    /// Analyze Layers-vs-baseline workflow telemetry from JSONL.\n    Analyze {\n        /// Path to workflow run telemetry JSONL.\n        path: PathBuf,\n        /// Output a structured JSON report.\n        #[arg(long)]\n        json: bool,\n    },\n}\n\n/// Handle workflow benchmark commands.\npub(crate) fn handle_workflow_benchmark(command: &WorkflowBenchmarkCommands) -> Result<()> {\n    match command {\n        WorkflowBenchmarkCommands::Analyze { path, json } => {\n            let runs = load_runs(path)?;\n            let report = analyze_runs(&runs)?;\n            println!(\"{}\", format_report(&report, *json)?);\n            Ok(())\n        }\n    }\n}\n\n#[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Ord, PartialOrd, Serialize)]\n#[serde(rename_all = \"snake_case\")]\nenum WorkflowVariant {\n    Baseline,\n    Layers,\n}\n\n#[derive(Debug, Clone, Deserialize, Serialize)]\nstruct RetrievalQuality {\n    relevance: u8,\n    completeness: u8,\n    specificity: u8,\n    freshness: u8,\n    grounding: u8,\n    concision: u8,\n    noise_absence: u8,\n}\n\n#[derive(Debug, Clone, Deserialize, Serialize)]\nstruct WorkflowRun {\n    task_id: String,\n    variant: WorkflowVariant,\n    task_category: String,\n    success_score: f64,\n    wall_time_ms: u64,\n    orientation_ms: u64,\n    implementation_ms: u64,\n    debugging_ms: u64,\n    verification_ms: u64,\n    input_tokens: u64,\n    output_tokens: u64,\n    peak_context_tokens: u64,\n    context_relevant_tokens: u64,\n    context_duplicate_tokens: u64,\n    context_irrelevant_tokens: u64,\n    assistant_turns: u64,\n    tool_calls: u64,\n    failed_commands: u64,\n    patch_attempts: u64,\n    test_runs: u64,\n    human_interventions: u64,\n    failed_attempts: u64,\nSource: src/cmd/workflow_benchmark.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\nCode and Impact Context: src/main.rs\n- [src/main.rs] #![deny(warnings)]\n#![deny(clippy::all)]\n#![deny(clippy::pedantic)]\n#![deny(unsafe_op_in_unsafe_fn)]\n#![deny(unused_variables)]\n#![deny(unused_must_use)]\n#![deny(unreachable_pub)]\n#![deny(elided_lifetimes_in_paths)]\n#![warn(missing_docs)]\n// Binary crate \u2014 all items are pub for internal clarity but not exported as a library.\n#![allow(unreachable_pub)]\n// Structural lints that cannot be fixed without invasive refactoring:\n#![allow(\n    clippy::too_many_arguments,\n    clippy::too_many_lines,\n    clippy::cast_possible_truncation,\n    clippy::cast_possible_wrap,\n    clippy::cast_sign_loss,\n    clippy::cast_lossless,\n    clippy::cast_precision_loss,\n    clippy::needless_pass_by_value,\n    clippy::unnecessary_wraps,\n    clippy::result_large_err\n)]\n\n//! Layers \u2014 council orchestrator and memory spine for multi-model AI workflows.\n\n#[cfg(feature = \"deprecated-runtime\")]\nuse std::path::PathBuf;\n\nuse clap::{Parser, Subcommand};\n#[cfg(feature = \"deprecated-runtime\")]\nuse layers_daemon::lifecycle::DaemonRunner;\n#[cfg(feature = \"deprecated-runtime\")]\nuse layers_store::config::ConfigStore;\nuse tracing_subscriber::EnvFilter;\n\nmod cmd;\nmod config;\nmod context_packet_compiler;\nmod council;\n#[allow(dead_code)]\nmod critical_path;\nmod graph;\nmod memory;\n#[cfg(test)]\nmod test_support;\nmod types;\nmod util;\n\nmod feedback;\nmod plugins;\nmod quality;\nmod router;\n#[cfg(feature = \"substrate-storage\")]\nmod technician;\nmod uc;\n\npub mod memory_index;\n\nuse cmd::autoresearch::{AutoresearchCommands, handle_autoresearch};\nuse cmd::chat::{ChatArgs, handle_chat};\nuse cmd::config_cmd::{ConfigArgs, handle_config};\nuse cmd::council::{\n    handle_council_list, handle_council_promote, handle_council_resume, handle_council_resume_last,\n    handle_council_run, handle_council_status,\n};\nuse cmd::curated::{\n    handle_curated_audit, handle_curated_import, handle_curated_list, handle_curated_search,\n    handle_curated_show,\n};\nuse cmd::feedback::handle_feedback;\nuse cmd::gate::handle_gate;\nuse cmd::infrastructure::{InfrastructureArgs, handle_infrastructure};\nuse cmd::init::{InitArgs, handle_init};\nuse cmd::migrate::handle_migrate;\n#[cfg(feature = \"substrate-storage\")]\nuse cmd::monitor::handle_monitor;\nuse cmd::packet::{PacketCommands, handle_packet};\nuse cmd::preflight::{PreflightArgs, handle_preflight};\nSource: src/main.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\nCode and Impact Context: src/cmd/mod.rs\n- [src/cmd/mod.rs] pub mod autoresearch;\npub mod chat;\npub mod config_cmd;\npub mod council;\npub mod curated;\npub mod feedback;\npub mod gate;\npub mod infrastructure;\npub mod init;\npub mod migrate;\n#[cfg(feature = \"substrate-storage\")]\npub mod monitor;\npub mod packet;\npub mod preflight;\npub mod query;\npub mod refresh;\npub mod remember;\n#[cfg(feature = \"substrate-storage\")]\npub mod technician;\npub mod telemetry;\npub mod validate;\npub mod workflow_benchmark;\n\nuse crate::config::memoryport_dir;\nuse crate::plugins::telemetry::TelemetryPlugin;\nuse std::sync::{LazyLock, Mutex};\n\n/// Global telemetry plugin \u2014 initialized once on first use.\nstatic TELEMETRY_PLUGIN: LazyLock<Mutex<TelemetryPlugin>> =\n    LazyLock::new(|| Mutex::new(TelemetryPlugin::new(&memoryport_dir())));\n\n/// Access the global telemetry plugin for recording events.\npub fn telemetry_plugin() -> std::sync::MutexGuard<'static, TelemetryPlugin> {\n    TELEMETRY_PLUGIN\n        .lock()\n        .expect(\"telemetry plugin lock poisoned\")\n}\nSource: src/cmd/mod.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\n### Suggested Validation Commands\nSuggested Validation Commands: git diff --check\n- [preflight-validation-policy] Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo test --workspace --all-targets\n- [preflight-validation-policy] Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo clippy --workspace --all-targets -- -D warnings\n- [preflight-validation-policy] Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation",
+    "open_uncertainty": [
+        "Workspace has 3 changed and 2 untracked files; inspect before editing.",
+        "No persisted autoresearch finding matched this task."
+    ],
+    "retrieval_meta": {
+        "memory_source": "curated-memory-jsonl",
+        "memory_latency_ms": 0,
+        "graph_latency_ms": 0,
+        "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+    }
+}

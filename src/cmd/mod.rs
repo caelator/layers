@@ -19,6 +19,7 @@ pub mod remember;
 pub mod technician;
 pub mod telemetry;
 pub mod validate;
+pub mod workflow_benchmark;
 
 use crate::config::memoryport_dir;
 use crate::plugins::telemetry::TelemetryPlugin;

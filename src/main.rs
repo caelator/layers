@@ -85,6 +85,7 @@ use cmd::remember::handle_remember;
 use cmd::technician::handle_technician;
 use cmd::telemetry::{TelemetryCommands, handle_telemetry};
 use cmd::validate::handle_validate;
+use cmd::workflow_benchmark::{WorkflowBenchmarkCommands, handle_workflow_benchmark};
 
 /// Council orchestrator and memory spine for multi-model AI workflows.
 #[derive(Parser)]
@@ -281,6 +282,11 @@ enum Commands {
     Telemetry {
         #[command(subcommand)]
         command: TelemetryCommands,
+    },
+    /// [stable core] Analyze Layers-vs-baseline workflow benchmark telemetry.
+    WorkflowBenchmark {
+        #[command(subcommand)]
+        command: WorkflowBenchmarkCommands,
     },
 }
 
@@ -737,6 +743,7 @@ fn main() -> anyhow::Result<()> {
         #[cfg(feature = "substrate-storage")]
         Commands::Technician { command } => handle_technician(&command),
         Commands::Telemetry { command } => handle_telemetry(&command),
+        Commands::WorkflowBenchmark { command } => handle_workflow_benchmark(&command),
     }
 }
 
@@ -800,6 +807,7 @@ fn handle_daemon_run(config: Option<PathBuf>, pid_file: Option<PathBuf>) -> anyh
 mod tests {
     use super::{Cli, Commands};
     use crate::cmd::packet::{PacketCommands, PacketRenderFormat};
+    use crate::cmd::workflow_benchmark::WorkflowBenchmarkCommands;
     use clap::Parser;
     use std::path::PathBuf;
 
@@ -872,8 +880,8 @@ mod tests {
             "layers",
             "packet",
             "diff",
-            "before.json",
-            "after.json",
+            "old-packet.json",
+            "new-packet.json",
             "--json",
         ])
         .expect("packet diff should parse");
@@ -884,8 +892,27 @@ mod tests {
         let PacketCommands::Diff { old, new, json } = command else {
             panic!("expected packet diff command");
         };
-        assert_eq!(old, PathBuf::from("before.json"));
-        assert_eq!(new, PathBuf::from("after.json"));
+        assert_eq!(old, PathBuf::from("old-packet.json"));
+        assert_eq!(new, PathBuf::from("new-packet.json"));
+        assert!(json);
+    }
+
+    #[test]
+    fn parses_workflow_benchmark_analyze_command() {
+        let cli = Cli::try_parse_from([
+            "layers",
+            "workflow-benchmark",
+            "analyze",
+            "runs.jsonl",
+            "--json",
+        ])
+        .expect("workflow benchmark analyze should parse");
+
+        let Commands::WorkflowBenchmark { command } = cli.command else {
+            panic!("expected workflow benchmark command");
+        };
+        let WorkflowBenchmarkCommands::Analyze { path, json } = command;
+        assert_eq!(path, PathBuf::from("runs.jsonl"));
         assert!(json);
     }
 }

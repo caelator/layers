@@ -1,0 +1,6 @@
+## main...origin/main
+ M memoryport/telemetry/events.jsonl
+ M src/cmd/mod.rs
+ M src/main.rs
+?? docs/dogfood/20260429T192051Z-layers-self-diagnostic/
+?? src/cmd/workflow_benchmark.rs

@@ -1,0 +1,50 @@
+[
+  {
+    "artifact": "context-packet",
+    "route": "memory_only",
+    "confidence": "low",
+    "used_words": 68,
+    "sections": "workspace,memory",
+    "items": 4,
+    "warnings": "dirty_worktree,autoresearch_uncertainty,autoresearch_uncertainty,retrieval_warning",
+    "validate_exit": "0",
+    "inspect_exit": "0",
+    "memory_latency_ms": 523
+  },
+  {
+    "artifact": "targeted-context-packet",
+    "route": "memory_only",
+    "confidence": "low",
+    "used_words": 66,
+    "sections": "workspace,memory",
+    "items": 4,
+    "warnings": "dirty_worktree,autoresearch_uncertainty,autoresearch_uncertainty,retrieval_warning,retrieval_warning",
+    "validate_exit": "0",
+    "inspect_exit": "0",
+    "memory_latency_ms": 524
+  },
+  {
+    "artifact": "structural-context-packet",
+    "route": "memory_only",
+    "confidence": "high",
+    "used_words": 67,
+    "sections": "workspace,memory",
+    "items": 4,
+    "warnings": "dirty_worktree,autoresearch_uncertainty,autoresearch_uncertainty,retrieval_warning",
+    "validate_exit": "0",
+    "inspect_exit": "0",
+    "memory_latency_ms": 526
+  },
+  {
+    "artifact": "preflight-targeted",
+    "route": "preflight",
+    "confidence": "high",
+    "used_words": 802,
+    "sections": "preflight_summary,workspace,memory,code,validation",
+    "items": 13,
+    "warnings": "dirty_worktree,autoresearch_uncertainty",
+    "validate_exit": "0",
+    "inspect_exit": "0",
+    "memory_latency_ms": 0
+  }
+]

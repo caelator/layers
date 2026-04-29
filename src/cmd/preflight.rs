@@ -1,7 +1,10 @@
 //! Automatic local research for task-specific context packets.
 
 use anyhow::{Context, Result, anyhow};
-use layers_core::{ContextBudget, ContextItem, ContextPacket, ContextWarning, RetrievalReport};
+use layers_core::{
+    ContextBudget, ContextItem, ContextPacket, ContextWarning, InjectionRecommendation,
+    PacketQualityReport, RetrievalReport, SuccessRubric, TaskCategory, TaskSpec,
+};
 use serde_json::json;
 use std::path::{Path, PathBuf};
 
@@ -40,6 +43,11 @@ pub fn handle_preflight(args: &PreflightArgs) -> Result<()> {
     if args.strict && !minimum_bar_passes(&packet) {
         return Err(anyhow!(
             "preflight did not meet the minimum context bar; rerun without --strict to inspect warnings"
+        ));
+    }
+    if args.strict && !injection_policy_passes(&packet) {
+        return Err(anyhow!(
+            "preflight packet quality gate recommended abstaining or requesting explicit targets; rerun without --strict to inspect packet_quality"
         ));
     }
     if args.agent_prompt {
@@ -131,6 +139,8 @@ fn build_preflight_packet(args: &PreflightArgs) -> Result<ContextPacket> {
         });
     }
     finalize_packet(&mut packet, true);
+    let task_spec = task_spec_for_preflight(args, code_heavy, &inferred_targets);
+    add_packet_quality_report(&mut packet, &task_spec);
     Ok(packet)
 }
 
@@ -152,10 +162,71 @@ fn minimum_bar_passes(packet: &ContextPacket) -> bool {
         && (!is_packet_code_heavy(packet) || has_section(packet, "code"))
 }
 
+fn injection_policy_passes(packet: &ContextPacket) -> bool {
+    let recommendation = packet
+        .scores
+        .get("injection_recommendation")
+        .and_then(serde_json::Value::as_str);
+    !matches!(recommendation, Some("abstain" | "needs_target"))
+}
+
+fn task_spec_for_preflight(args: &PreflightArgs, code_heavy: bool, targets: &[String]) -> TaskSpec {
+    let category = if code_heavy {
+        TaskCategory::Debugging
+    } else {
+        TaskCategory::Orientation
+    };
+    let target_paths = targets.iter().map(PathBuf::from).collect::<Vec<_>>();
+    TaskSpec {
+        task_id: "preflight-task".to_string(),
+        title: "Preflight task".to_string(),
+        prompt: args.task.clone(),
+        category,
+        repo_root: Some(workspace_root()),
+        target_files: target_paths.clone(),
+        target_symbols: Vec::new(),
+        expected_relevant_files: target_paths,
+        expected_validation_commands: infer_validation_commands(code_heavy, targets)
+            .into_iter()
+            .map(|command| command.command)
+            .collect(),
+        negative_control: false,
+        success_rubric: SuccessRubric::default(),
+    }
+}
+
+fn add_packet_quality_report(packet: &mut ContextPacket, task_spec: &TaskSpec) {
+    let report = PacketQualityReport::grade(packet, task_spec);
+    packet.scores = json!({
+        "preflight": packet.scores.clone(),
+        "packet_quality": &report,
+        "injection_recommendation": report.recommendation,
+    });
+    packet.warnings.push(ContextWarning {
+        severity: match report.recommendation {
+            InjectionRecommendation::InjectFull | InjectionRecommendation::InjectCompact => "info",
+            InjectionRecommendation::Abstain | InjectionRecommendation::NeedsTarget => "warning",
+        }
+        .to_string(),
+        code: "injection_policy".to_string(),
+        message: format!(
+            "Packet quality gate recommends {:?}: {}",
+            report.recommendation,
+            report.reasons.join("; ")
+        ),
+    });
+}
+
 fn is_packet_code_heavy(packet: &ContextPacket) -> bool {
     packet
         .scores
         .get("code_heavy")
+        .or_else(|| {
+            packet
+                .scores
+                .get("preflight")
+                .and_then(|scores| scores.get("code_heavy"))
+        })
         .and_then(serde_json::Value::as_bool)
         .unwrap_or(false)
 }
@@ -715,7 +786,12 @@ mod tests {
             .find(|section| section.id == "autoresearch")
             .expect("preflight should include task-matched autoresearch findings");
 
-        assert_eq!(packet.scores["autoresearch_findings"].as_u64(), Some(1));
+        assert_eq!(
+            packet.scores["preflight"]["autoresearch_findings"].as_u64(),
+            Some(1)
+        );
+        assert!(packet.scores.get("packet_quality").is_some());
+        assert!(packet.scores.get("injection_recommendation").is_some());
         assert!(
             packet
                 .evidence

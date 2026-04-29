@@ -1,0 +1,32 @@
+Council orchestrator and memory spine for multi-model AI workflows
+
+Usage: layers [OPTIONS] <COMMAND>
+
+Commands:
+  daemon              [deprecated/experimental] Run the non-core daemon runtime
+  init                [support] Bootstrap a new Layers workspace
+  chat                [deprecated/experimental] Start the non-core interactive chat loop
+  config              [stable core] Display and manage configuration
+  query               [stable core] Retrieve context for a task
+  packet              [stable core] Validate, inspect, render, and diff `ContextPacket` artifacts
+  preflight           [beta] Prepare a local pre-edit context packet for a task
+  autoresearch        [beta] Track, scan, and search external research sources
+  remember            [stable core] Append explicit memory to the JSONL spine
+  validate            [stable core] Verify local readiness and degraded modes
+  refresh             [stable core] Refresh GitNexus/MemoryPort derived context
+  gate                [support] Run format, compile, clippy, test, audit, and MCP checks
+  feedback            [support] Record a route correction for context selection
+  curated             [stable core] Import or manage curated memory records
+  council             [beta] Run/promote council workflows as memory producers
+  infrastructure      [deprecated/experimental] Manage infrastructure credentials
+  migrate             [support] Migrate legacy project records into curated memory
+  monitor             [deprecated/experimental] Run the non-core autonomous repo monitor
+  technician          [deprecated/experimental] Run non-core self-healing integration checks
+  telemetry           [deprecated/experimental] View integration telemetry and health reports
+  workflow-benchmark  [stable core] Analyze Layers-vs-baseline workflow benchmark telemetry
+  help                Print this message or the help of the given subcommand(s)
+
+Options:
+  -v, --verbose  Enable verbose tracing output (sets `RUST_LOG=layers=debug`)
+  -h, --help     Print help
+  -V, --version  Print version

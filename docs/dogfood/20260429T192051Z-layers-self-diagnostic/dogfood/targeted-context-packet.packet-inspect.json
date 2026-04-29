@@ -1,0 +1,31 @@
+{
+  "schema_version": 2,
+  "id": "ctx-94263566-78e0-48d6-bb2f-88ad17f9aa3e",
+  "workspace_id": "layers",
+  "query": "Before editing src/cmd/workflow_benchmark.rs and src/main.rs, diagnose whether the workflow-benchmark CLI integration is functional and what validation commands matter",
+  "created_at": "2026-04-29 19:25:19.457688 UTC",
+  "git_ref": "6c37a27",
+  "route": "memory_only",
+  "confidence": "low",
+  "budget": {
+    "used_units": 66,
+    "max_units": 1200,
+    "unit": "words",
+    "truncated": false
+  },
+  "provenance": {
+    "compiler": "layers-context-packet",
+    "compiler_version": "2",
+    "surface": "query",
+    "generated_at": "2026-04-29 19:25:19.457688 UTC",
+    "source_adapters": [
+      "memory",
+      "workspace"
+    ]
+  },
+  "section_count": 2,
+  "item_count": 4,
+  "warning_count": 5,
+  "degraded": true,
+  "low_confidence_fallback": true
+}
