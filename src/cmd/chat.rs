@@ -3,7 +3,12 @@
 //! Provides a simple stdin/stdout chat loop that can be used for quick
 //! one-shot queries or multi-turn conversations using the Layers runtime.
 
+use std::collections::HashMap;
 use std::io::{self, BufRead, Write};
+use std::str::FromStr;
+
+use layers_runtime::tool_dispatch::{ToolCapabilityPolicy, ToolProfile};
+use layers_tools::bootstrap::runtime_registry;
 
 /// Arguments for the `layers chat` command.
 pub struct ChatArgs {
@@ -11,10 +16,57 @@ pub struct ChatArgs {
     pub system_prompt: Option<String>,
     /// Optional model override (e.g. "openai/gpt-4").
     pub model: Option<String>,
+    /// Runtime-backed tool profile baseline, either a built-in profile name or a named config profile.
+    pub tool_profile: String,
+    /// Named tool profiles loaded from config.
+    pub named_tool_profiles: HashMap<String, Vec<String>>,
+    /// Explicit per-tool allow-list, applied after profile selection.
+    pub allow_tools: Vec<String>,
+    /// Explicit per-tool deny-list, applied last.
+    pub deny_tools: Vec<String>,
     /// Maximum turns before exiting (0 = unlimited).
     pub max_turns: usize,
     /// Output as JSON.
     pub json: bool,
+}
+
+impl ChatArgs {
+    fn tool_policy(&self) -> anyhow::Result<ToolCapabilityPolicy> {
+        let profile_key = self.tool_profile.trim();
+        let base_profile = if let Ok(profile) = ToolProfile::from_str(profile_key) {
+            profile
+        } else if let Some(names) = self.named_tool_profiles.get(profile_key) {
+            ToolProfile::Custom(names.clone())
+        } else {
+            anyhow::bail!(
+                "unknown tool profile '{profile_key}' (expected builtin minimal/coding/messaging/full or a [tools.profiles] entry)"
+            );
+        };
+
+        let mut policy = ToolCapabilityPolicy::new(base_profile);
+        if !self.allow_tools.is_empty() {
+            policy = policy.with_allow(self.allow_tools.clone());
+        }
+        if !self.deny_tools.is_empty() {
+            policy = policy.with_deny(self.deny_tools.clone());
+        }
+        Ok(policy)
+    }
+
+    fn runtime_tool_names(&self) -> anyhow::Result<Vec<String>> {
+        let registry = runtime_registry(self.tool_policy()?);
+        let mut names = registry
+            .names()
+            .into_iter()
+            .map(str::to_string)
+            .collect::<Vec<_>>();
+        names.sort();
+        Ok(names)
+    }
+
+    fn resolved_profile_label(&self) -> &str {
+        self.tool_profile.trim()
+    }
 }
 
 /// Run the interactive chat loop.
@@ -23,6 +75,7 @@ pub struct ChatArgs {
 /// routing pipeline, and prints the assembled context/response.
 pub fn handle_chat(args: &ChatArgs) -> anyhow::Result<()> {
     let workspace = crate::config::workspace_root();
+    let runtime_tools = args.runtime_tool_names()?;
 
     println!("layers chat — type your query (Ctrl-D or 'exit' to quit)");
     println!("workspace: {}", workspace.display());
@@ -32,6 +85,15 @@ pub fn handle_chat(args: &ChatArgs) -> anyhow::Result<()> {
     if let Some(ref prompt) = args.system_prompt {
         println!("system prompt: {prompt}");
     }
+    println!("runtime tool profile: {}", args.resolved_profile_label());
+    println!(
+        "runtime-backed tools: {}",
+        if runtime_tools.is_empty() {
+            "(none)".to_string()
+        } else {
+            runtime_tools.join(", ")
+        }
+    );
     println!();
 
     let mut turn = 0usize;
@@ -67,7 +129,7 @@ pub fn handle_chat(args: &ChatArgs) -> anyhow::Result<()> {
         // Note: system_prompt and model overrides are accepted but not yet
         // wired into the query pipeline. They will be used once the runtime
         // integration lands (Epic 1).
-        let _ = (&args.system_prompt, &args.model);
+        let _ = (&args.system_prompt, &args.model, args.tool_policy()?);
         match crate::cmd::query::handle_query(input, args.json, false, false, 1) {
             Ok(()) => {}
             Err(e) => {
@@ -83,4 +145,75 @@ pub fn handle_chat(args: &ChatArgs) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use super::ChatArgs;
+
+    fn args(profile: &str) -> ChatArgs {
+        ChatArgs {
+            system_prompt: None,
+            model: None,
+            tool_profile: profile.to_string(),
+            named_tool_profiles: HashMap::new(),
+            allow_tools: Vec::new(),
+            deny_tools: Vec::new(),
+            max_turns: 0,
+            json: false,
+        }
+    }
+
+    #[test]
+    fn chat_tool_policy_uses_selected_builtin_profile() {
+        let args = args("coding");
+        let names = args.runtime_tool_names().expect("runtime tool names");
+
+        assert_eq!(names, vec!["read".to_string(), "write".to_string()]);
+    }
+
+    #[test]
+    fn chat_tool_policy_supports_named_config_profiles() {
+        let mut args = args("fs-readonly");
+        args.named_tool_profiles
+            .insert("fs-readonly".to_string(), vec!["read".to_string()]);
+
+        assert_eq!(
+            args.runtime_tool_names().expect("runtime tool names"),
+            vec!["read".to_string()]
+        );
+    }
+
+    #[test]
+    fn chat_tool_policy_honors_allow_override() {
+        let mut args = args("coding");
+        args.allow_tools = vec!["read".to_string()];
+
+        assert_eq!(
+            args.runtime_tool_names().expect("runtime tool names"),
+            vec!["read".to_string()]
+        );
+    }
+
+    #[test]
+    fn chat_tool_policy_honors_deny_override() {
+        let mut args = args("coding");
+        args.deny_tools = vec!["write".to_string()];
+
+        assert_eq!(
+            args.runtime_tool_names().expect("runtime tool names"),
+            vec!["read".to_string()]
+        );
+    }
+
+    #[test]
+    fn chat_tool_policy_rejects_unknown_profiles() {
+        let err = args("definitely-not-real")
+            .runtime_tool_names()
+            .expect_err("unknown profile should fail");
+
+        assert!(err.to_string().contains("unknown tool profile"));
+    }
 }

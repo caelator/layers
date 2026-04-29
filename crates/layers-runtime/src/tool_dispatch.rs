@@ -1,6 +1,8 @@
 //! Tool registry and dispatch: register, lookup, execute, and schema generation.
 
 use std::collections::HashMap;
+use std::fmt;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use tracing::debug;
@@ -38,6 +40,42 @@ impl ToolProfile {
             Self::Messaging => Some(vec!["read", "write"]),
             Self::Full => None,
             Self::Custom(names) => Some(names.iter().map(String::as_str).collect()),
+        }
+    }
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Minimal => "minimal",
+            Self::Coding => "coding",
+            Self::Messaging => "messaging",
+            Self::Full => "full",
+            Self::Custom(_) => "custom",
+        }
+    }
+}
+
+impl fmt::Display for ToolProfile {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Custom(names) => write!(f, "custom:{}", names.join(",")),
+            _ => f.write_str(self.as_str()),
+        }
+    }
+}
+
+impl FromStr for ToolProfile {
+    type Err = LayersError;
+
+    fn from_str(value: &str) -> Result<Self> {
+        match value.trim().to_ascii_lowercase().as_str() {
+            "minimal" => Ok(Self::Minimal),
+            "coding" => Ok(Self::Coding),
+            "messaging" => Ok(Self::Messaging),
+            "full" => Ok(Self::Full),
+            other => Err(LayersError::Config(format!(
+                "unknown tool profile '{other}' (expected one of: minimal, coding, messaging, full)"
+            ))),
         }
     }
 }
@@ -214,6 +252,8 @@ impl Default for ToolRegistry {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::{ToolCapabilityPolicy, ToolProfile, ToolRegistry};
     use layers_core::{Result, Tool, ToolContext, ToolOutput};
     use std::sync::Arc;
@@ -244,7 +284,11 @@ mod tests {
             serde_json::json!({"type": "object"})
         }
 
-        async fn execute(&self, _args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
+        async fn execute(
+            &self,
+            _args: serde_json::Value,
+            _context: ToolContext,
+        ) -> Result<ToolOutput> {
             Ok(ToolOutput::text("ok"))
         }
     }
@@ -263,9 +307,8 @@ mod tests {
 
     #[test]
     fn explicit_allow_narrows_profile() {
-        let mut registry = ToolRegistry::new().with_policy(
-            ToolCapabilityPolicy::new(ToolProfile::Coding).with_allow(["read"]),
-        );
+        let mut registry = ToolRegistry::new()
+            .with_policy(ToolCapabilityPolicy::new(ToolProfile::Coding).with_allow(["read"]));
         registry.register(Arc::new(MockTool::new("read")));
         registry.register(Arc::new(MockTool::new("write")));
 
@@ -275,13 +318,38 @@ mod tests {
 
     #[test]
     fn explicit_deny_wins_over_profile() {
-        let mut registry = ToolRegistry::new().with_policy(
-            ToolCapabilityPolicy::new(ToolProfile::Coding).with_deny(["write"]),
-        );
+        let mut registry = ToolRegistry::new()
+            .with_policy(ToolCapabilityPolicy::new(ToolProfile::Coding).with_deny(["write"]));
         registry.register(Arc::new(MockTool::new("read")));
         registry.register(Arc::new(MockTool::new("write")));
 
         assert!(registry.get("read").is_some());
         assert!(registry.get("write").is_none());
+    }
+
+    #[test]
+    fn parses_builtin_tool_profiles_from_cli_strings() {
+        assert_eq!(
+            ToolProfile::from_str("minimal").expect("minimal"),
+            ToolProfile::Minimal
+        );
+        assert_eq!(
+            ToolProfile::from_str("coding").expect("coding"),
+            ToolProfile::Coding
+        );
+        assert_eq!(
+            ToolProfile::from_str("messaging").expect("messaging"),
+            ToolProfile::Messaging
+        );
+        assert_eq!(
+            ToolProfile::from_str("full").expect("full"),
+            ToolProfile::Full
+        );
+    }
+
+    #[test]
+    fn rejects_unknown_tool_profile_strings() {
+        let err = ToolProfile::from_str("danger-zone").expect_err("invalid profile");
+        assert!(err.to_string().contains("unknown tool profile"));
     }
 }

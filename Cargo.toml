@@ -42,10 +42,12 @@ layers-core = { path = "crates/layers-core" }
 layers-compiler = { path = "crates/layers-compiler" }
 layers-store = { path = "crates/layers-store" }
 layers-mcp = { path = "crates/layers-mcp" }
-layers-daemon = { path = "crates/layers-daemon", optional = true }
+layers-daemon = { path = "crates/layers-daemon" }
+layers-runtime = { path = "crates/layers-runtime" }
+layers-tools = { path = "crates/layers-tools" }
 lancedb = { version = "0.27", optional = true }
-arrow-array = { version = "57", optional = true }
-arrow-schema = { version = "57", optional = true }
+arrow-array = "57"
+arrow-schema = "57"
 futures = "0.3"
 wait-timeout = "0.2"
 substrate = { git = "https://github.com/caelator/substrate.git", optional = true }

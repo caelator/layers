@@ -135,6 +135,15 @@ enum Commands {
         /// Model override (e.g. "openai/gpt-4").
         #[arg(long)]
         model: Option<String>,
+        /// Runtime-backed tool profile baseline, either a builtin profile or a named [tools.profiles] entry.
+        #[arg(long, default_value = "full")]
+        tool_profile: String,
+        /// Explicit runtime-backed tool allow-list. Repeat to keep multiple tools.
+        #[arg(long = "allow-tool")]
+        allow_tools: Vec<String>,
+        /// Explicit runtime-backed tool deny-list. Repeat to remove multiple tools.
+        #[arg(long = "deny-tool")]
+        deny_tools: Vec<String>,
         /// Maximum turns before exiting (0 = unlimited).
         #[arg(long, default_value_t = 0)]
         max_turns: usize,
@@ -583,14 +592,24 @@ fn main() -> anyhow::Result<()> {
         Commands::Chat {
             system_prompt,
             model,
+            tool_profile,
+            allow_tools,
+            deny_tools,
             max_turns,
             json,
-        } => handle_chat(&ChatArgs {
-            system_prompt,
-            model,
-            max_turns,
-            json,
-        }),
+        } => {
+            let config = crate::config::load_config_with_precedence(None)?;
+            handle_chat(&ChatArgs {
+                system_prompt,
+                model,
+                tool_profile,
+                named_tool_profiles: config.tools.profiles,
+                allow_tools,
+                deny_tools,
+                max_turns,
+                json,
+            })
+        }
         Commands::Config { command } => handle_config(&match command {
             ConfigCommands::Show => ConfigArgs::Show,
             ConfigCommands::Path => ConfigArgs::Path,
@@ -1458,5 +1477,15 @@ mod tests {
         assert_eq!(model, "turbocalm-local");
         assert_eq!(batch_size, 8);
         assert!(json);
+
+    #[test]
+    fn chat_cli_accepts_named_tool_profiles() {
+        let cli = Cli::try_parse_from(["layers", "chat", "--tool-profile", "fs-readonly"])
+            .expect("chat CLI should accept named tool profiles");
+
+        match cli.command {
+            Commands::Chat { tool_profile, .. } => assert_eq!(tool_profile, "fs-readonly"),
+            other => panic!("expected chat command, got {other:?}"),
+        }
     }
 }
