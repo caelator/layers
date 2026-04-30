@@ -86,6 +86,7 @@ fn build_preflight_packet(args: &PreflightArgs) -> Result<ContextPacket> {
     packet.git_ref.clone_from(&workspace_state.head);
 
     add_workspace_section(&mut packet, &workspace_state);
+    add_context_policy_section(&mut packet, &workspace);
     add_memory_section(&mut packet, &args.task);
     let autoresearch_findings =
         add_autoresearch_section(&mut packet, &args.task, &inferred_targets);
@@ -273,6 +274,28 @@ fn add_preflight_summary_section(
             )],
         ),
     );
+}
+
+fn add_context_policy_section(packet: &mut ContextPacket, workspace: &Path) {
+    let policy_path = workspace.join("LAYERS.md");
+    let Ok(body) = read_file_excerpt(&policy_path) else {
+        return;
+    };
+    packet.sections.push(context_section(
+        "context_policy",
+        "Repo-Owned Context Policy",
+        "Checked-in instructions that constrain packet compilation and downstream agent work.",
+        vec![context_item(
+            "context-policy-1",
+            "LAYERS.md",
+            &body,
+            "context_policy",
+            "LAYERS.md",
+            Some("LAYERS.md".to_string()),
+            "repo-owned context policy should constrain this preflight packet before agent work begins",
+            vec!["policy".to_string(), "repo-owned".to_string()],
+        )],
+    ));
 }
 
 fn add_memory_section(packet: &mut ContextPacket, task: &str) {
@@ -764,6 +787,45 @@ mod tests {
         );
         assert!(!packet.route.contains("autoresearch"));
         assert!(!packet.why_retrieved.contains("Autoresearch"));
+    }
+
+    #[test]
+    fn preflight_includes_repo_owned_context_policy() {
+        let ws = TestWorkspace::new("preflight-context-policy");
+        std::fs::write(
+            ws.root().join("LAYERS.md"),
+            "# Layers Context Policy\n\nPacket budget: 1200 words.\n\nValidation: run cargo test -p layers cmd::preflight.\n\nDanger: do not expand stable MCP into generic runtime tools.\n",
+        )
+        .unwrap();
+        let args = PreflightArgs {
+            task: "prepare context before editing src/cmd/preflight.rs".to_string(),
+            targets: vec!["src/cmd/preflight.rs".to_string()],
+            json: true,
+            agent_prompt: false,
+            no_audit: true,
+            strict: false,
+        };
+
+        let packet = build_preflight_packet(&args).unwrap();
+        let section = packet
+            .sections
+            .iter()
+            .find(|section| section.id == "context_policy")
+            .expect("repo-owned context policy should become packet context");
+
+        assert_eq!(section.items[0].source.kind, "context_policy");
+        assert_eq!(
+            section.items[0].source.repo_path.as_deref(),
+            Some("LAYERS.md")
+        );
+        assert!(section.items[0].body.contains("Packet budget: 1200 words"));
+        assert!(section.items[0].body.contains("stable MCP"));
+        assert!(
+            packet
+                .selection_trace
+                .iter()
+                .any(|trace| trace.item_id == "context-policy-1")
+        );
     }
 
     #[test]
