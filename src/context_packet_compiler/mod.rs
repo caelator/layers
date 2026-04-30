@@ -10,6 +10,8 @@ use std::process::Command;
 
 use layers_core::{ContextItem, ContextPacket, ContextSection, ContextSource, ContextWarning};
 
+pub mod query_plan;
+
 const MAX_CHANGED_FILES: usize = 20;
 
 /// Return a stable workspace identifier from a workspace path.

@@ -4,15 +4,18 @@ use layers_core::{
     PacketQualityReport, RetrievalReport, SuccessRubric, TaskCategory, TaskSpec,
 };
 use serde_json::json;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::Instant;
 
 use crate::cmd::autoresearch::{AutoresearchPacketBridgeOptions, add_autoresearch_to_packet};
 use crate::cmd::telemetry::PluginResult;
 use crate::config::{CONTEXT_PAYLOAD_SCHEMA_VERSION, memoryport_dir, workspace_root};
+use crate::context_packet_compiler::query_plan::{
+    BroadQueryPlan, QueryInjectionPolicy, looks_code_heavy,
+};
 use crate::context_packet_compiler::{
-    add_workspace_section, cited_item, collect_workspace_state, context_section, finalize_packet,
-    gitnexus_impact_section, source, workspace_id,
+    add_workspace_section, cited_item, code_impact_section, collect_workspace_state,
+    context_section, finalize_packet, gitnexus_impact_section, repo_source, source, workspace_id,
 };
 use crate::feedback::{
     FailureKind, HardErrorKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind, emit_failure,
@@ -78,6 +81,7 @@ pub fn handle_query(
     let recent_failures = read_recent_failures(&route_corrections_path(), 20);
     let route_weights = load_route_weights(&recent_failures);
     let effective_route = apply_weight_override(route_result.route, &route_weights);
+    let query_plan = BroadQueryPlan::new(task, &route_result.scores, &workspace_root());
 
     let mut memory_items: Vec<RetrievalItem> = Vec::new();
     let mut graph_items: Vec<RetrievalItem> = Vec::new();
@@ -395,8 +399,9 @@ pub fn handle_query(
         budget_exceeded,
         low_confidence_fallback,
         None,
+        &query_plan,
     );
-    let task_spec = task_spec_for_query(task, &route_result.scores);
+    let task_spec = task_spec_for_query(task, &route_result.scores, &query_plan);
     add_packet_quality_report(&mut packet, &task_spec);
     let recommendation = packet_quality_recommendation(&packet);
     let should_inject = !matches!(
@@ -641,6 +646,7 @@ fn build_context_packet(
     truncated: bool,
     low_confidence_fallback: bool,
     evidence: Option<String>,
+    query_plan: &BroadQueryPlan,
 ) -> ContextPacket {
     let workspace = workspace_root();
     let workspace_id = workspace_id(&workspace);
@@ -692,6 +698,7 @@ fn build_context_packet(
                 graph_items,
             )));
     }
+    add_query_plan_to_packet(&mut packet, query_plan);
     add_autoresearch_to_packet(
         &mut packet,
         AutoresearchPacketBridgeOptions {
@@ -731,14 +738,114 @@ fn build_context_packet(
     packet
 }
 
-fn task_spec_for_query(task: &str, scores: &router::Scores) -> TaskSpec {
-    let code_heavy = query_looks_code_heavy(task, scores);
+fn add_query_plan_to_packet(packet: &mut ContextPacket, query_plan: &BroadQueryPlan) {
+    match query_plan.injection_policy {
+        QueryInjectionPolicy::NeedsTarget => {
+            packet.open_uncertainty.push(format!(
+                "Code-heavy query needs explicit or discoverable targets before context injection. Try: {}",
+                query_plan.suggested_command
+            ));
+            packet.warnings.push(ContextWarning {
+                severity: "warning".to_string(),
+                code: "query_needs_target".to_string(),
+                message: format!(
+                    "Code-heavy query did not identify reliable code targets. Suggested command: {}",
+                    query_plan.suggested_command
+                ),
+            });
+        }
+        QueryInjectionPolicy::UseGroundedTargets => {
+            add_query_code_section(packet, query_plan);
+        }
+        QueryInjectionPolicy::AllowMemoryOnly => {}
+    }
+}
+
+fn add_query_code_section(packet: &mut ContextPacket, query_plan: &BroadQueryPlan) {
+    let workspace = workspace_root();
+    let items = query_plan
+        .all_targets()
+        .into_iter()
+        .enumerate()
+        .filter_map(|(idx, target)| query_target_item(idx, &workspace, &target))
+        .collect::<Vec<_>>();
+    if !items.is_empty() {
+        packet.sections.push(code_impact_section(items));
+    }
+}
+
+fn query_target_item(idx: usize, workspace: &Path, target: &Path) -> Option<ContextItem> {
+    let workspace = workspace.canonicalize().ok()?;
+    let path = if target.is_absolute() {
+        target.to_path_buf()
+    } else {
+        workspace.join(target)
+    };
+    let path = path.canonicalize().ok()?;
+    if !path.starts_with(&workspace) {
+        return None;
+    }
+    let target = path.strip_prefix(&workspace).ok()?.to_path_buf();
+    let metadata = std::fs::metadata(&path).ok()?;
+    let mut body = if metadata.is_dir() {
+        summarize_query_directory(&path)?
+    } else {
+        summarize_query_file(&path)?
+    };
+    if body.trim().is_empty() {
+        body = format!("Target exists at {}.", target.display());
+    }
+    let target_text = target.to_string_lossy().to_string();
+    Some(cited_item(
+        format!("query-target-{}", idx + 1),
+        format!("Query target: {target_text}"),
+        body,
+        repo_source(
+            "workspace_file",
+            format!("file://{}", path.display()),
+            Some(target_text),
+        ),
+        "broad-query planning identified this code target before injection",
+        vec!["query-target".to_string(), "code".to_string()],
+    ))
+}
+
+fn summarize_query_file(path: &Path) -> Option<String> {
+    const MAX_BYTES: u64 = 12_000;
+    let metadata = std::fs::metadata(path).ok()?;
+    if metadata.len() > MAX_BYTES {
+        return Some(format!(
+            "File exists but is larger than {MAX_BYTES} bytes; inspect directly before editing."
+        ));
+    }
+    std::fs::read_to_string(path)
+        .ok()
+        .map(|text| text.lines().take(80).collect::<Vec<_>>().join("\n"))
+}
+
+fn summarize_query_directory(path: &Path) -> Option<String> {
+    let mut entries = std::fs::read_dir(path)
+        .ok()?
+        .filter_map(Result::ok)
+        .map(|entry| entry.file_name().to_string_lossy().to_string())
+        .collect::<Vec<_>>();
+    entries.sort();
+    entries.truncate(40);
+    Some(format!("Directory entries:\n- {}", entries.join("\n- ")))
+}
+
+fn task_spec_for_query(
+    task: &str,
+    scores: &router::Scores,
+    query_plan: &BroadQueryPlan,
+) -> TaskSpec {
+    let code_heavy = looks_code_heavy(task, scores);
     let category = if code_heavy {
         TaskCategory::Debugging
     } else {
         TaskCategory::Orientation
     };
-    let targets = extract_path_like_targets(task);
+    let targets = query_plan.all_targets();
     TaskSpec {
         task_id: "query-task".to_string(),
         title: "Query task".to_string(),
@@ -798,44 +905,6 @@ fn print_abstention_context(packet: &ContextPacket) {
         "No context injection — packet quality gate predicted low value or needs explicit targets."
     );
     println!("</layers_context>");
-}
-
-fn query_looks_code_heavy(task: &str, scores: &router::Scores) -> bool {
-    scores.structural > 0
-        || scores.local > 0
-        || task.split_whitespace().any(|word| {
-            let word = word.trim_matches(|c: char| c == ',' || c == '.' || c == ':' || c == ';');
-            word.contains("src/")
-                || has_extension(word, "rs")
-                || has_extension(word, "toml")
-                || matches!(
-                    word.to_ascii_lowercase().as_str(),
-                    "fix" | "bug" | "bugfix" | "implement" | "refactor" | "debug" | "test"
-                )
-        })
-}
-
-fn extract_path_like_targets(task: &str) -> Vec<PathBuf> {
-    task.split_whitespace()
-        .map(|word| {
-            word.trim_matches(|c: char| {
-                matches!(c, ',' | '.' | ':' | ';' | '(' | ')' | '`' | '"' | '\'')
-            })
-        })
-        .filter(|word| {
-            word.contains('/')
-                || has_extension(word, "rs")
-                || has_extension(word, "toml")
-                || has_extension(word, "md")
-        })
-        .map(PathBuf::from)
-        .collect()
-}
-
-fn has_extension(word: &str, extension: &str) -> bool {
-    Path::new(word)
-        .extension()
-        .is_some_and(|candidate| candidate.eq_ignore_ascii_case(extension))
 }
 
 fn retrieval_items_to_context_items(section: &str, items: &[RetrievalItem]) -> Vec<ContextItem> {
@@ -947,6 +1016,11 @@ mod tests {
             action: 1,
         };
 
+        let query_plan = BroadQueryPlan::new(
+            "fill context compiler autoresearch gap",
+            &scores,
+            &workspace_root(),
+        );
         let packet = build_context_packet(
             "fill context compiler autoresearch gap",
             Route::GraphOnly,
@@ -962,6 +1036,7 @@ mod tests {
             false,
             false,
             None,
+            &query_plan,
         );
         let section = packet
             .sections
@@ -1000,6 +1075,7 @@ mod tests {
             local: 1,
             action: 1,
         };
+        let query_plan = BroadQueryPlan::new("fix the CLI parser bug", &scores, &workspace_root());
         let mut packet = build_context_packet(
             "fix the CLI parser bug",
             Route::MemoryOnly,
@@ -1015,14 +1091,26 @@ mod tests {
             false,
             false,
             None,
+            &query_plan,
         );
-        let task_spec = task_spec_for_query("fix the CLI parser bug", &scores);
+        let task_spec = task_spec_for_query("fix the CLI parser bug", &scores, &query_plan);
         add_packet_quality_report(&mut packet, &task_spec);
 
         assert_eq!(
             packet_quality_recommendation(&packet),
             Some(InjectionRecommendation::NeedsTarget)
         );
+    }
+
+    #[test]
+    fn query_target_item_rejects_absolute_paths_outside_workspace() {
+        let ws = TestWorkspace::new("query-target-absolute-rejection");
+        let outside = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(outside.path(), "do not inject").unwrap();
+
+        let item = query_target_item(0, &ws.root(), outside.path());
+
+        assert!(item.is_none());
     }
 
     fn seed_autoresearch_store(prefix: &str) {
