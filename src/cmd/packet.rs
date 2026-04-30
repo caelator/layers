@@ -73,7 +73,7 @@ pub(crate) fn handle_packet(command: &PacketCommands) -> Result<()> {
     match command {
         PacketCommands::Validate { path, strict, json } => validate_packet(path, *strict, *json),
         PacketCommands::Inspect { path, json } => inspect_packet(path, *json),
-        PacketCommands::Render { .. } => bail!("packet render is not implemented yet"),
+        PacketCommands::Render { path, format } => render_packet(path, *format),
         PacketCommands::Diff { .. } => bail!("packet diff is not implemented yet"),
         PacketCommands::Grade { path, task, json } => grade_packet(path, task, *json),
     }
@@ -83,6 +83,14 @@ fn inspect_packet(path: &Path, json: bool) -> Result<()> {
     let text = fs::read_to_string(path)
         .with_context(|| format!("failed to read ContextPacket artifact {}", path.display()))?;
     let output = inspect_packet_text(&text, json)?;
+    println!("{output}");
+    Ok(())
+}
+
+fn render_packet(path: &Path, format: PacketRenderFormat) -> Result<()> {
+    let text = fs::read_to_string(path)
+        .with_context(|| format!("failed to read ContextPacket artifact {}", path.display()))?;
+    let output = render_packet_text(&text, format)?;
     println!("{output}");
     Ok(())
 }
@@ -231,6 +239,36 @@ fn inspect_packet_text(text: &str, json: bool) -> Result<String> {
             .context("failed to serialize packet inspection report")
     } else {
         Ok(format_inspection_report(&inspection))
+    }
+}
+
+fn render_packet_text(text: &str, format: PacketRenderFormat) -> Result<String> {
+    let value: Value = serde_json::from_str(text).context("invalid ContextPacket JSON")?;
+    let mut pre_deserialization_errors = Vec::new();
+    validate_secret_like_values(&value, &mut pre_deserialization_errors);
+    if !pre_deserialization_errors.is_empty() {
+        bail!(
+            "ContextPacket validation failed: {}",
+            pre_deserialization_errors.join("; ")
+        );
+    }
+
+    let packet: ContextPacket = serde_json::from_value(value.clone())
+        .map_err(|_| anyhow::anyhow!("JSON did not match the ContextPacket v2 artifact shape"))?;
+    let validation = validate_packet_value(&value, &packet, false);
+    if !validation.is_valid() {
+        bail!(
+            "ContextPacket validation failed: {}",
+            validation.errors.join("; ")
+        );
+    }
+
+    match format {
+        PacketRenderFormat::Markdown => Ok(packet.to_markdown()),
+        PacketRenderFormat::AgentPrompt => Ok(packet.to_agent_prompt()),
+        PacketRenderFormat::Json => {
+            serde_json::to_string_pretty(&packet).context("failed to serialize ContextPacket JSON")
+        }
     }
 }
 
@@ -603,6 +641,8 @@ fn require_non_empty(errors: &mut Vec<String>, path: &str, value: &str) {
 mod tests {
     use serde_json::Value;
 
+    use super::PacketRenderFormat;
+
     const MINIMAL_PACKET: &str = include_str!("../../docs/examples/context-packet-v2-minimal.json");
 
     #[test]
@@ -801,6 +841,46 @@ mod tests {
                 .find("schema_version")
                 .expect("schema_version appears")
                 < output.find("workspace_id").expect("workspace_id appears")
+        );
+    }
+
+    #[test]
+    fn renders_documented_minimal_v2_packet_as_markdown() {
+        let output = super::render_packet_text(MINIMAL_PACKET, PacketRenderFormat::Markdown)
+            .expect("minimal packet should render as markdown");
+
+        assert!(output.contains("# Layers Context Packet"));
+        assert!(output.contains("Task: What should I know before editing README?"));
+        assert!(output.contains("## Workspace State"));
+        assert!(output.contains("Branch: main"));
+        assert!(output.contains("Source: git status --porcelain=v1 (workspace)"));
+    }
+
+    #[test]
+    fn renders_documented_minimal_v2_packet_as_agent_prompt() {
+        let output = super::render_packet_text(MINIMAL_PACKET, PacketRenderFormat::AgentPrompt)
+            .expect("minimal packet should render as an agent prompt");
+
+        assert!(output.starts_with("<layers_context_packet>"));
+        assert!(output.contains("<task>What should I know before editing README?</task>"));
+        assert!(output.contains("## Workspace State"));
+        assert!(output.contains("Branch: main"));
+        assert!(output.contains(
+            "Selected because: Workspace state changes how agents should interpret context."
+        ));
+    }
+
+    #[test]
+    fn renders_documented_minimal_v2_packet_as_json() {
+        let output = super::render_packet_text(MINIMAL_PACKET, PacketRenderFormat::Json)
+            .expect("minimal packet should render as JSON");
+        let value: Value = serde_json::from_str(&output).expect("render output should be JSON");
+
+        assert_eq!(value["schema_version"], 2);
+        assert_eq!(value["id"], "ctx-example-minimal-v2");
+        assert_eq!(
+            value["sections"][0]["items"][0]["body"],
+            "Branch: main\nDirty: false"
         );
     }
 
