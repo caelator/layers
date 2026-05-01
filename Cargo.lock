@@ -3264,6 +3264,7 @@ dependencies = [
  "futures",
  "globset",
  "lancedb",
+ "layers-compiler",
  "layers-core",
  "layers-daemon",
  "layers-store",
@@ -3298,6 +3299,14 @@ dependencies = [
  "tokio",
  "tracing",
  "uuid",
+]
+
+[[package]]
+name = "layers-compiler"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "layers-core",
 ]
 
 [[package]]

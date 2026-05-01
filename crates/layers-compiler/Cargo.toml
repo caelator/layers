@@ -1,0 +1,18 @@
+[package]
+name = "layers-compiler"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+
+[dependencies]
+layers-core = { path = "../layers-core" }
+
+[dev-dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = "deny"
+pedantic = "deny"

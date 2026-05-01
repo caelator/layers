@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/layers-core",
+    "crates/layers-compiler",
     "crates/layers-store",
     "crates/layers-providers",
     "crates/layers-runtime",
@@ -39,6 +40,7 @@ lancedb = "0.27"
 rusqlite = { version = "0.32", features = ["bundled"] }
 tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
 layers-core = { path = "crates/layers-core" }
+layers-compiler = { path = "crates/layers-compiler" }
 layers-store = { path = "crates/layers-store" }
 layers-daemon = { path = "crates/layers-daemon", optional = true }
 arrow-array = "57"
