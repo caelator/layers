@@ -1,6 +1,7 @@
 //! Automatic local research for task-specific context packets.
 
 use anyhow::{Context, Result, anyhow};
+use layers_compiler::{CompileMode, CompileRequest, ContextCompiler};
 use layers_core::{
     ContextBudget, ContextItem, ContextPacket, ContextWarning, InjectionRecommendation,
     PacketQualityReport, RetrievalReport, SuccessRubric, TaskCategory, TaskSpec,
@@ -12,7 +13,7 @@ use crate::cmd::autoresearch::{AutoresearchPacketBridgeOptions, add_autoresearch
 use crate::config::{canonical_curated_memory_path, workspace_root};
 use crate::context_packet_compiler::{
     add_workspace_section, cited_item, code_impact_section, collect_workspace_state,
-    context_section, finalize_packet, git_output, repo_source, workspace_id,
+    context_section, git_output, repo_source, workspace_id,
 };
 
 const DEFAULT_BUDGET_WORDS: usize = 1_800;
@@ -63,15 +64,15 @@ pub fn handle_preflight(args: &PreflightArgs) -> Result<()> {
 fn build_preflight_packet(args: &PreflightArgs) -> Result<ContextPacket> {
     let workspace = workspace_root();
     let workspace_id = workspace_id(&workspace);
+    let packet_id = format!("preflight-{}", uuid::Uuid::new_v4());
+    let generated_at = chrono::Utc::now();
     let mut packet = ContextPacket::new(
-        format!("preflight-{}", uuid::Uuid::new_v4()),
-        workspace_id,
+        packet_id.clone(),
+        workspace_id.clone(),
         args.task.clone(),
-        chrono::Utc::now(),
+        generated_at,
     );
     packet.task.clone_from(&args.task);
-    packet.route = "preflight".to_string();
-    packet.provenance.surface = "preflight".to_string();
     packet.budget = ContextBudget {
         max_units: DEFAULT_BUDGET_WORDS,
         used_units: 0,
@@ -94,6 +95,53 @@ fn build_preflight_packet(args: &PreflightArgs) -> Result<ContextPacket> {
     add_validation_section(&mut packet, code_heavy, &inferred_targets);
     add_preflight_summary_section(&mut packet, args, code_heavy, &inferred_targets);
 
+    packet.budget.used_units = estimate_packet_words(&packet);
+    if packet.budget.used_units > packet.budget.max_units {
+        packet.budget.truncated = true;
+        packet.warnings.push(ContextWarning {
+            severity: "warning".to_string(),
+            code: "budget_may_be_exceeded".to_string(),
+            message: format!(
+                "Preflight packet is estimated at {} words, above the {} word budget.",
+                packet.budget.used_units, packet.budget.max_units
+            ),
+        });
+    }
+
+    if !args.no_audit {
+        packet.warnings.push(ContextWarning {
+            severity: "info".to_string(),
+            code: "audit_not_yet_persisted".to_string(),
+            message: "Preflight audit persistence is not enabled in this beta implementation."
+                .to_string(),
+        });
+    }
+
+    let draft_scores = packet.scores;
+    let draft_budget_truncated = packet.budget.truncated;
+    let mut packet = ContextCompiler::new().compile(
+        CompileRequest::new(
+            packet_id,
+            workspace_id,
+            args.task.clone(),
+            generated_at,
+            CompileMode::Preflight,
+        )
+        .with_git_ref(workspace_state.head.clone())
+        .with_sections(packet.sections)
+        .with_warnings(packet.warnings),
+    );
+    packet.task.clone_from(&args.task);
+    packet.scores = draft_scores;
+    packet.budget = ContextBudget {
+        max_units: DEFAULT_BUDGET_WORDS,
+        used_units: estimate_packet_words(&packet),
+        unit: "words".to_string(),
+        truncated: draft_budget_truncated,
+    };
+    if packet.budget.used_units > packet.budget.max_units {
+        packet.budget.truncated = true;
+    }
     packet.retrieval = RetrievalReport {
         memory_source: "curated-memory-jsonl".to_string(),
         memory_latency_ms: 0,
@@ -119,27 +167,6 @@ fn build_preflight_packet(args: &PreflightArgs) -> Result<ContextPacket> {
         has_warning(&packet, "low_memory_relevance"),
     )
     .confidence;
-    packet.budget.used_units = estimate_packet_words(&packet);
-    if packet.budget.used_units > packet.budget.max_units {
-        packet.budget.truncated = true;
-        packet.warnings.push(ContextWarning {
-            severity: "warning".to_string(),
-            code: "budget_may_be_exceeded".to_string(),
-            message: format!(
-                "Preflight packet is estimated at {} words, above the {} word budget.",
-                packet.budget.used_units, packet.budget.max_units
-            ),
-        });
-    }
-    if !args.no_audit {
-        packet.warnings.push(ContextWarning {
-            severity: "info".to_string(),
-            code: "audit_not_yet_persisted".to_string(),
-            message: "Preflight audit persistence is not enabled in this beta implementation."
-                .to_string(),
-        });
-    }
-    finalize_packet(&mut packet, true);
     let task_spec = task_spec_for_preflight(args, code_heavy, &inferred_targets);
     add_packet_quality_report(&mut packet, &task_spec);
     Ok(packet)

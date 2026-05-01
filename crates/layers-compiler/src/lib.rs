@@ -41,6 +41,7 @@ pub struct CompileRequest {
     pub mode: CompileMode,
     pub sections: Vec<ContextSection>,
     pub warnings: Vec<ContextWarning>,
+    pub git_ref: Option<String>,
     pub derive_evidence: bool,
 }
 
@@ -61,6 +62,7 @@ impl CompileRequest {
             mode,
             sections: Vec::new(),
             warnings: Vec::new(),
+            git_ref: None,
             derive_evidence: true,
         }
     }
@@ -74,6 +76,12 @@ impl CompileRequest {
     #[must_use]
     pub fn with_warnings(mut self, warnings: Vec<ContextWarning>) -> Self {
         self.warnings = warnings;
+        self
+    }
+
+    #[must_use]
+    pub fn with_git_ref(mut self, git_ref: Option<String>) -> Self {
+        self.git_ref = git_ref;
         self
     }
 
@@ -103,6 +111,7 @@ impl ContextCompiler {
             request.generated_at,
         );
         packet.route = request.mode.route().to_string();
+        packet.git_ref = request.git_ref;
         packet.sections = request.sections;
         packet.warnings = request.warnings;
         finalize_packet(&mut packet, request.derive_evidence);
@@ -259,6 +268,7 @@ mod tests {
                 generated_at,
                 CompileMode::Preflight,
             )
+            .with_git_ref(Some("abc123".to_string()))
             .with_sections(vec![section])
             .with_warnings(vec![warning.clone()]),
         );
@@ -270,6 +280,8 @@ mod tests {
         assert_eq!(packet.provenance.surface, "preflight");
         assert_eq!(packet.provenance.workspace_id, "layers");
         assert_eq!(packet.provenance.generated_at, generated_at);
+        assert_eq!(packet.git_ref.as_deref(), Some("abc123"));
+        assert_eq!(packet.provenance.git_ref.as_deref(), Some("abc123"));
         assert_eq!(packet.warnings, vec![warning]);
         assert_eq!(
             packet.open_uncertainty,
