@@ -35,6 +35,7 @@ pub const STABLE_CONTEXT_SURFACE_TOOLS: &[&str] = &[
     "impact_analyze",
     "memory_get",
     "memory_search",
+    "preflight_context",
     "validate_context",
 ];
 
@@ -650,6 +651,7 @@ mod tests {
         assert!(server.is_tool_exposed("memory_search"));
         assert!(server.is_tool_exposed("memory_get"));
         assert!(server.is_tool_exposed("impact_analyze"));
+        assert!(server.is_tool_exposed("preflight_context"));
         assert!(server.is_tool_exposed("validate_context"));
         assert!(!server.is_tool_exposed("read_config"));
         assert!(!server.is_tool_exposed("execute_command"));

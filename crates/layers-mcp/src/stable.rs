@@ -4,9 +4,12 @@
 //! read-only context retrieval. It deliberately does not register generic
 //! runtime/process/filesystem/subagent capabilities.
 
+use layers_compiler::{
+    CompileMode, CompileRequest, ContextCompiler, cited_item, context_section, source,
+};
 use layers_core::{
-    ContextBudget, ContextItem, ContextPacket, ContextSection, ContextSource, LayersError, Result,
-    Tool, ToolContext, ToolOutput,
+    ContextBudget, ContextPacket, ContextSection, LayersError, Result, Tool, ToolContext,
+    ToolOutput,
 };
 use layers_tools::memory::{MemoryGetTool, MemorySearchTool};
 use layers_tools::registry::ToolRegistry;
@@ -24,6 +27,7 @@ use crate::server::STABLE_CONTEXT_SURFACE_TOOLS;
 pub fn stable_context_registry() -> ToolRegistry {
     let mut registry = ToolRegistry::new();
     registry.register(std::sync::Arc::new(ContextCompileTool));
+    registry.register(std::sync::Arc::new(PreflightContextTool));
     registry.register(std::sync::Arc::new(ImpactAnalyzeTool));
     registry.register(std::sync::Arc::new(MemoryGetTool::new()));
     registry.register(std::sync::Arc::new(MemorySearchTool::new()));
@@ -57,6 +61,24 @@ struct ContextCompileParams {
 }
 
 #[derive(Debug, Deserialize)]
+struct PreflightContextParams {
+    #[serde(default)]
+    task: Option<String>,
+    #[serde(default)]
+    query: Option<String>,
+    #[serde(default)]
+    workspace_id: Option<String>,
+    #[serde(default)]
+    git_ref: Option<String>,
+    #[serde(default)]
+    max_units: Option<usize>,
+    #[serde(default)]
+    targets: Vec<String>,
+    #[serde(default)]
+    evidence: Vec<ContextEvidenceParam>,
+}
+
+#[derive(Debug, Deserialize)]
 struct ContextEvidenceParam {
     title: String,
     body: String,
@@ -76,6 +98,79 @@ fn default_manual_source_kind() -> String {
 
 fn default_manual_source_uri() -> String {
     "mcp://context_compile/input".to_string()
+}
+
+fn evidence_section(
+    section_id: &str,
+    section_title: &str,
+    section_summary: &str,
+    item_prefix: &str,
+    evidence: Vec<ContextEvidenceParam>,
+) -> Option<ContextSection> {
+    if evidence.is_empty() {
+        return None;
+    }
+
+    let items = evidence
+        .into_iter()
+        .enumerate()
+        .map(|(idx, evidence)| {
+            let selected_reason = evidence
+                .selected_reason
+                .unwrap_or_else(|| format!("provided through stable MCP {section_id} input"));
+            cited_item(
+                format!("{item_prefix}-evidence-{}", idx + 1),
+                evidence.title,
+                evidence.body,
+                source(evidence.source_kind, evidence.source_uri),
+                selected_reason,
+                evidence.tags,
+            )
+        })
+        .collect();
+
+    Some(context_section(
+        section_id,
+        section_title,
+        section_summary,
+        items,
+    ))
+}
+
+fn compile_stable_packet(
+    task: String,
+    workspace_id: String,
+    git_ref: Option<String>,
+    max_units: Option<usize>,
+    mode: CompileMode,
+    route_label: &str,
+    sections: Vec<ContextSection>,
+) -> ContextPacket {
+    let used_units = sections
+        .iter()
+        .flat_map(|section| section.items.iter())
+        .map(|item| item.token_estimate)
+        .sum();
+    let mut packet = ContextCompiler::new().compile(
+        CompileRequest::new(
+            format!("ctx-{}", Uuid::new_v4()),
+            workspace_id,
+            task,
+            chrono::Utc::now(),
+            mode,
+        )
+        .with_route_label(route_label)
+        .with_git_ref(git_ref)
+        .with_sections(sections),
+    );
+    packet.confidence = "explicit".to_string();
+    packet.budget = ContextBudget {
+        max_units: max_units.unwrap_or(0),
+        used_units,
+        unit: "words".to_string(),
+        truncated: false,
+    };
+    packet
 }
 
 #[async_trait::async_trait]
@@ -125,53 +220,124 @@ impl Tool for ContextCompileTool {
             .or(params.query)
             .unwrap_or_else(|| "Prepare coding context".to_string());
         let workspace_id = params.workspace_id.unwrap_or_else(|| "unknown".to_string());
-        let mut packet = ContextPacket::new(
-            format!("ctx-{}", Uuid::new_v4()),
-            workspace_id,
+        let sections = evidence_section(
+            "mcp_input",
+            "MCP Input Context",
+            "Explicit context supplied by the MCP caller.",
+            "mcp",
+            params.evidence,
+        )
+        .into_iter()
+        .collect();
+        let packet = compile_stable_packet(
             task,
-            chrono::Utc::now(),
+            workspace_id,
+            params.git_ref,
+            params.max_units,
+            CompileMode::Mcp,
+            "mcp_context_compile",
+            sections,
         );
-        packet.git_ref = params.git_ref;
-        packet.route = "mcp_context_compile".to_string();
-        packet.provenance.surface = "mcp".to_string();
-        packet.confidence = "explicit".to_string();
-        packet.budget = ContextBudget {
-            max_units: params.max_units.unwrap_or(0),
-            used_units: 0,
-            unit: "words".to_string(),
-            truncated: false,
-        };
+        Ok(json_tool_output(&packet)?)
+    }
+}
 
-        if !params.evidence.is_empty() {
-            let items: Vec<ContextItem> = params
-                .evidence
+/// Compile a preflight-shaped `ContextPacket` from explicit MCP inputs.
+pub struct PreflightContextTool;
+
+#[async_trait::async_trait]
+impl Tool for PreflightContextTool {
+    fn name(&self) -> &str {
+        "preflight_context"
+    }
+
+    fn description(&self) -> &str {
+        "Compile explicit preflight context into a stable Layers ContextPacket."
+    }
+
+    fn schema(&self) -> serde_json::Value {
+        serde_json::json!({
+            "type": "object",
+            "properties": {
+                "task": { "type": "string", "description": "Task to prepare preflight context for" },
+                "query": { "type": "string", "description": "Alias for task" },
+                "workspace_id": { "type": "string", "description": "Workspace/project identifier" },
+                "git_ref": { "type": "string", "description": "Current git commit or ref, when known" },
+                "max_units": { "type": "integer", "description": "Context budget in words/tokens" },
+                "targets": {
+                    "type": "array",
+                    "description": "Explicit files/modules/features expected to be impacted",
+                    "items": { "type": "string" }
+                },
+                "evidence": {
+                    "type": "array",
+                    "description": "Explicit cited snippets to include in the preflight packet",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "title": { "type": "string" },
+                            "body": { "type": "string" },
+                            "source_kind": { "type": "string" },
+                            "source_uri": { "type": "string" },
+                            "selected_reason": { "type": "string" },
+                            "tags": { "type": "array", "items": { "type": "string" } }
+                        },
+                        "required": ["title", "body"]
+                    }
+                }
+            }
+        })
+    }
+
+    async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
+        let params: PreflightContextParams = serde_json::from_value(args)
+            .map_err(|e| LayersError::Tool(format!("invalid preflight_context params: {e}")))?;
+        let task = params
+            .task
+            .or(params.query)
+            .unwrap_or_else(|| "Prepare preflight context".to_string());
+        let workspace_id = params.workspace_id.unwrap_or_else(|| "unknown".to_string());
+        let mut sections: Vec<ContextSection> = evidence_section(
+            "preflight_input",
+            "Preflight Input Context",
+            "Explicit context supplied by the MCP caller for preflight.",
+            "preflight",
+            params.evidence,
+        )
+        .into_iter()
+        .collect();
+        if !params.targets.is_empty() {
+            let items = params
+                .targets
                 .into_iter()
                 .enumerate()
-                .map(|(idx, evidence)| {
-                    let selected_reason = evidence.selected_reason.unwrap_or_else(|| {
-                        "provided through stable MCP context_compile input".to_string()
-                    });
-                    ContextItem::cited(
-                        format!("mcp-evidence-{}", idx + 1),
-                        evidence.title,
-                        evidence.body,
-                        ContextSource::new(evidence.source_kind, evidence.source_uri),
-                        selected_reason,
+                .map(|(idx, target)| {
+                    cited_item(
+                        format!("preflight-target-{}", idx + 1),
+                        target.clone(),
+                        format!("Explicit preflight target: {target}"),
+                        source("target", target),
+                        "provided through stable MCP preflight_context targets".to_string(),
+                        vec!["target".to_string()],
                     )
-                    .with_tags(evidence.tags)
                 })
                 .collect();
-            let used_units = items.iter().map(|item| item.token_estimate).sum();
-            packet.budget.used_units = used_units;
-            packet.sections.push(ContextSection {
-                id: "mcp_input".to_string(),
-                title: "MCP Input Context".to_string(),
-                summary: Some("Explicit context supplied by the MCP caller.".to_string()),
+            sections.push(context_section(
+                "preflight_targets",
+                "Preflight Targets",
+                "Explicit impact targets supplied by the MCP caller.",
                 items,
-            });
+            ));
         }
-
-        packet.finalize_consistency();
+        let packet = compile_stable_packet(
+            task,
+            workspace_id,
+            params.git_ref,
+            params.max_units,
+            CompileMode::Preflight,
+            "preflight_context",
+            sections,
+        );
         Ok(json_tool_output(&packet)?)
     }
 }
@@ -323,13 +489,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn context_compile_returns_valid_context_packet() {
+    async fn context_compile_returns_compiler_finalized_context_packet() {
         let tool = ContextCompileTool;
         let output = tool
             .execute(
                 serde_json::json!({
                     "task": "ship stable MCP surface",
                     "workspace_id": "layers",
+                    "git_ref": "abc123",
+                    "max_units": 2000,
                     "evidence": [{
                         "title": "Direction",
                         "body": "Expose ContextPacket, not generic runtime tools.",
@@ -344,10 +512,57 @@ mod tests {
         let packet: ContextPacket = serde_json::from_str(&output.content).unwrap();
         assert_eq!(packet.query, "ship stable MCP surface");
         assert_eq!(packet.workspace_id, "layers");
+        assert_eq!(packet.route, "mcp_context_compile");
+        assert_eq!(packet.provenance.surface, "mcp");
+        assert_eq!(packet.git_ref.as_deref(), Some("abc123"));
+        assert_eq!(packet.provenance.git_ref.as_deref(), Some("abc123"));
+        assert_eq!(packet.budget.max_units, 2000);
         assert_eq!(packet.sections[0].id, "mcp_input");
         assert_eq!(packet.selection_trace[0].item_id, "mcp-evidence-1");
-        assert_eq!(packet.provenance.surface, "mcp");
         assert_eq!(packet.provenance.source_adapters, vec!["memory"]);
+        assert!(
+            packet
+                .evidence
+                .contains("Expose ContextPacket, not generic runtime tools.")
+        );
+    }
+
+    #[tokio::test]
+    async fn preflight_context_returns_compiler_finalized_context_packet() {
+        let registry = stable_context_registry();
+        assert!(registry.get("preflight_context").is_some());
+
+        let tool = registry.get("preflight_context").unwrap();
+        let output = tool
+            .execute(
+                serde_json::json!({
+                    "task": "refactor packet compiler",
+                    "workspace_id": "layers",
+                    "git_ref": "def456",
+                    "max_units": 1500,
+                    "targets": ["crates/layers-mcp/src/stable.rs"],
+                    "evidence": [{
+                        "title": "Stable MCP",
+                        "body": "MCP packet generation should go through ContextCompiler.",
+                        "source_kind": "repo",
+                        "source_uri": "crates/layers-mcp/src/stable.rs"
+                    }]
+                }),
+                tool_context(),
+            )
+            .await
+            .unwrap();
+        let packet: ContextPacket = serde_json::from_str(&output.content).unwrap();
+        assert_eq!(packet.query, "refactor packet compiler");
+        assert_eq!(packet.workspace_id, "layers");
+        assert_eq!(packet.route, "preflight_context");
+        assert_eq!(packet.provenance.surface, "preflight");
+        assert_eq!(packet.git_ref.as_deref(), Some("def456"));
+        assert_eq!(packet.budget.max_units, 1500);
+        assert_eq!(packet.sections[0].id, "preflight_input");
+        assert_eq!(packet.selection_trace[0].item_id, "preflight-evidence-1");
+        assert_eq!(packet.provenance.source_adapters, vec!["repo", "target"]);
+        assert!(packet.evidence.contains("ContextCompiler"));
     }
 
     #[tokio::test]
