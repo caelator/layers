@@ -39,6 +39,7 @@ pub struct CompileRequest {
     pub objective: String,
     pub generated_at: DateTime<Utc>,
     pub mode: CompileMode,
+    pub route_label: Option<String>,
     pub sections: Vec<ContextSection>,
     pub warnings: Vec<ContextWarning>,
     pub git_ref: Option<String>,
@@ -60,6 +61,7 @@ impl CompileRequest {
             objective: objective.into(),
             generated_at,
             mode,
+            route_label: None,
             sections: Vec::new(),
             warnings: Vec::new(),
             git_ref: None,
@@ -82,6 +84,12 @@ impl CompileRequest {
     #[must_use]
     pub fn with_git_ref(mut self, git_ref: Option<String>) -> Self {
         self.git_ref = git_ref;
+        self
+    }
+
+    #[must_use]
+    pub fn with_route_label(mut self, route_label: impl Into<String>) -> Self {
+        self.route_label = Some(route_label.into());
         self
     }
 
@@ -110,7 +118,10 @@ impl ContextCompiler {
             request.objective,
             request.generated_at,
         );
-        packet.route = request.mode.route().to_string();
+        packet.route = request
+            .route_label
+            .unwrap_or_else(|| request.mode.route().to_string());
+        packet.provenance.surface = request.mode.route().to_string();
         packet.git_ref = request.git_ref;
         packet.sections = request.sections;
         packet.warnings = request.warnings;
@@ -321,6 +332,23 @@ mod tests {
         assert_eq!(packet.route, "query");
         assert_eq!(packet.selection_trace.len(), 1);
         assert!(packet.evidence.is_empty());
+    }
+
+    #[test]
+    fn compiler_request_can_preserve_query_route_label() {
+        let packet = ContextCompiler::new().compile(
+            CompileRequest::new(
+                "ctx-query",
+                "layers",
+                "query",
+                Utc::now(),
+                CompileMode::Query,
+            )
+            .with_route_label("memory_only"),
+        );
+
+        assert_eq!(packet.route, "memory_only");
+        assert_eq!(packet.provenance.surface, "query");
     }
 
     #[test]

@@ -1,4 +1,5 @@
 use anyhow::Result;
+use layers_compiler::{CompileMode, CompileRequest, ContextCompiler};
 use layers_core::{
     ContextBudget, ContextItem, ContextPacket, ContextWarning, InjectionRecommendation,
     PacketQualityReport, RetrievalReport, SuccessRubric, TaskCategory, TaskSpec,
@@ -15,7 +16,7 @@ use crate::context_packet_compiler::query_plan::{
 };
 use crate::context_packet_compiler::{
     add_workspace_section, cited_item, code_impact_section, collect_workspace_state,
-    context_section, finalize_packet, gitnexus_impact_section, repo_source, source, workspace_id,
+    context_section, gitnexus_impact_section, repo_source, source, workspace_id,
 };
 use crate::feedback::{
     FailureKind, HardErrorKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind, emit_failure,
@@ -729,13 +730,33 @@ fn build_context_packet(
             message: format!("Evidence exceeded {MAX_OUTPUT_WORDS}-word budget and was truncated."),
         });
     }
+    let derive_evidence = evidence.is_none();
+    let mut compiled = ContextCompiler::new().compile(
+        CompileRequest::new(
+            packet.id.clone(),
+            packet.workspace_id.clone(),
+            packet.query.clone(),
+            packet.created_at,
+            CompileMode::Query,
+        )
+        .with_route_label(route.label())
+        .with_sections(std::mem::take(&mut packet.sections))
+        .with_warnings(std::mem::take(&mut packet.warnings))
+        .with_git_ref(packet.git_ref.clone())
+        .derive_evidence(derive_evidence),
+    );
     if let Some(evidence_text) = evidence {
-        packet.evidence = evidence_text;
-        finalize_packet(&mut packet, false);
-    } else {
-        finalize_packet(&mut packet, true);
+        compiled.evidence = evidence_text;
     }
-    packet
+    compiled.confidence = packet.confidence;
+    compiled.budget = packet.budget;
+    compiled.retrieval = packet.retrieval;
+    compiled.retrieval_meta = packet.retrieval_meta;
+    compiled.scores = packet.scores;
+    compiled.why_retrieved = packet.why_retrieved;
+    compiled.why_not_retrieved = packet.why_not_retrieved;
+    compiled.low_confidence_fallback = packet.low_confidence_fallback;
+    compiled
 }
 
 fn add_query_plan_to_packet(packet: &mut ContextPacket, query_plan: &BroadQueryPlan) {
@@ -1057,6 +1078,78 @@ mod tests {
                 .selection_trace
                 .iter()
                 .any(|trace| trace.item_id == "autoresearch-1")
+        );
+    }
+
+    #[test]
+    fn query_context_packet_preserves_route_label_and_query_surface() {
+        let _ws = TestWorkspace::new("query-route-label-surface");
+        let retrieval_meta = RetrievalMeta {
+            memory_source: "memoryport".to_string(),
+            memory_latency_ms: 7,
+            graph_latency_ms: 0,
+            fallback_reason: Some("graph disabled".to_string()),
+        };
+        let scores = router::Scores {
+            historical: 1,
+            structural: 0,
+            local: 0,
+            action: 0,
+        };
+        let query_plan =
+            BroadQueryPlan::new("recall prior route decision", &scores, &workspace_root());
+        let packet = build_context_packet(
+            "recall prior route decision",
+            Route::MemoryOnly,
+            "high".to_string(),
+            &[RetrievalItem {
+                source: "memoryport/council-plans.jsonl#1".to_string(),
+                text: "Route decision: query packets keep router labels while provenance records query."
+                    .to_string(),
+                timestamp: None,
+            }],
+            &[],
+            &["retrieval degraded".to_string()],
+            &retrieval_meta,
+            &scores,
+            "matched historical route decision",
+            "",
+            11,
+            false,
+            false,
+            None,
+            &query_plan,
+        );
+
+        assert_eq!(packet.route, "memory_only");
+        assert_eq!(packet.provenance.surface, "query");
+        assert_eq!(
+            packet.retrieval_meta.memory_source,
+            retrieval_meta.memory_source
+        );
+        assert_eq!(
+            packet.retrieval_meta.memory_latency_ms,
+            retrieval_meta.memory_latency_ms
+        );
+        assert_eq!(
+            packet.retrieval_meta.graph_latency_ms,
+            retrieval_meta.graph_latency_ms
+        );
+        assert_eq!(
+            packet.retrieval_meta.fallback_reason,
+            retrieval_meta.fallback_reason
+        );
+        assert!(
+            packet
+                .selection_trace
+                .iter()
+                .any(|trace| trace.item_id == "memory-1")
+        );
+        assert!(packet.evidence.contains("Route decision"));
+        assert!(
+            packet
+                .open_uncertainty
+                .contains(&"retrieval degraded".to_string())
         );
     }
 

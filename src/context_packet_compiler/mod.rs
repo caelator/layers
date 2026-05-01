@@ -9,8 +9,8 @@ use std::path::Path;
 use std::process::Command;
 
 pub use layers_compiler::{
-    cited_item, code_impact_section, context_section, finalize_packet, gitnexus_impact_section,
-    repo_source, source, workspace_id,
+    cited_item, code_impact_section, context_section, gitnexus_impact_section, repo_source, source,
+    workspace_id,
 };
 use layers_core::{ContextPacket, ContextSection, ContextWarning};
 
