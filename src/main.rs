@@ -841,6 +841,17 @@ mod tests {
     }
 
     #[test]
+    fn north_star_names_packet_artifacts_as_stable_core() {
+        let docs = include_str!("../docs/NORTH_STAR.md");
+
+        assert!(docs.contains("`layers packet validate`"));
+        assert!(docs.contains("`layers packet inspect`"));
+        assert!(docs.contains("`layers packet render`"));
+        assert!(docs.contains("`layers packet diff`"));
+        assert!(!docs.contains("context/memory spine"));
+    }
+
+    #[test]
     fn parses_packet_validate_command() {
         let cli = Cli::try_parse_from([
             "layers",

@@ -71,7 +71,11 @@ Work outside those jobs is non-essential and should be experimental, deprecated,
 
 The v2.0 stable surface is defined by [V2 Product Contract](V2_PRODUCT_CONTRACT.md). Longer-term v2.x work should converge on:
 
-- `layers query` — produce a context packet
+- `layers query` / `layers preflight` — produce a context packet
+- `layers packet validate` — validate persisted context packet artifacts
+- `layers packet inspect` — summarize packet provenance, warnings, sections, and quality signals
+- `layers packet render` — render persisted packets for human review, agent prompts, JSON normalization, or objective briefs
+- `layers packet diff` — compare persisted packets as reviewable, body-safe artifacts
 - `layers remember` — write explicit project memory
 - `layers memory` — list/search/show/retire/audit project memory
 - `layers impact` — summarize blast radius for a file/symbol/task
@@ -84,7 +88,7 @@ The v2.0 stable surface is defined by [V2 Product Contract](V2_PRODUCT_CONTRACT.
 
 ## Beta Surface
 
-Beta features are useful when they feed the context/memory spine but should not define the product:
+Beta features are useful when they feed context packet generation, memory quality, or local context dependency health, but should not define the product:
 
 - council deliberation
 - council promotion
