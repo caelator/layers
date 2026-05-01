@@ -6,8 +6,109 @@
 
 use std::path::Path;
 
-use layers_core::{ContextItem, ContextPacket, ContextSection, ContextSource};
+use chrono::{DateTime, Utc};
+use layers_core::{ContextItem, ContextPacket, ContextSection, ContextSource, ContextWarning};
 
+/// Compiler mode used to preserve caller intent in generated packet metadata.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompileMode {
+    /// Compile context for a query/injection flow.
+    Query,
+    /// Compile context for preflight validation before coding-agent work.
+    Preflight,
+    /// Compile context for stable MCP tool callers.
+    Mcp,
+}
+
+impl CompileMode {
+    #[must_use]
+    pub const fn route(self) -> &'static str {
+        match self {
+            Self::Query => "query",
+            Self::Preflight => "preflight",
+            Self::Mcp => "mcp",
+        }
+    }
+}
+
+/// Side-effect-free request for building a `ContextPacket` from caller-supplied context.
+#[derive(Debug, Clone)]
+pub struct CompileRequest {
+    pub packet_id: String,
+    pub workspace_id: String,
+    pub objective: String,
+    pub generated_at: DateTime<Utc>,
+    pub mode: CompileMode,
+    pub sections: Vec<ContextSection>,
+    pub warnings: Vec<ContextWarning>,
+    pub derive_evidence: bool,
+}
+
+impl CompileRequest {
+    #[must_use]
+    pub fn new(
+        packet_id: impl Into<String>,
+        workspace_id: impl Into<String>,
+        objective: impl Into<String>,
+        generated_at: DateTime<Utc>,
+        mode: CompileMode,
+    ) -> Self {
+        Self {
+            packet_id: packet_id.into(),
+            workspace_id: workspace_id.into(),
+            objective: objective.into(),
+            generated_at,
+            mode,
+            sections: Vec::new(),
+            warnings: Vec::new(),
+            derive_evidence: true,
+        }
+    }
+
+    #[must_use]
+    pub fn with_sections(mut self, sections: Vec<ContextSection>) -> Self {
+        self.sections = sections;
+        self
+    }
+
+    #[must_use]
+    pub fn with_warnings(mut self, warnings: Vec<ContextWarning>) -> Self {
+        self.warnings = warnings;
+        self
+    }
+
+    #[must_use]
+    pub const fn derive_evidence(mut self, derive_evidence: bool) -> Self {
+        self.derive_evidence = derive_evidence;
+        self
+    }
+}
+
+/// Pure compiler for caller-supplied context into a normalized `ContextPacket`.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct ContextCompiler;
+
+impl ContextCompiler {
+    #[must_use]
+    pub const fn new() -> Self {
+        Self
+    }
+
+    #[must_use]
+    pub fn compile(self, request: CompileRequest) -> ContextPacket {
+        let mut packet = ContextPacket::new(
+            request.packet_id,
+            request.workspace_id,
+            request.objective,
+            request.generated_at,
+        );
+        packet.route = request.mode.route().to_string();
+        packet.sections = request.sections;
+        packet.warnings = request.warnings;
+        finalize_packet(&mut packet, request.derive_evidence);
+        packet
+    }
+}
 /// Return a stable workspace identifier from a workspace path.
 #[must_use]
 pub fn workspace_id(workspace: &Path) -> String {
@@ -132,6 +233,90 @@ mod tests {
     use layers_core::{ContextPacket, ContextSection};
 
     use super::*;
+
+    #[test]
+    fn compiler_request_builds_normalized_packet_for_preflight() {
+        let generated_at = Utc::now();
+        let section = code_impact_section(vec![cited_item(
+            "code-1",
+            "Compiler API",
+            "ContextCompiler compiles caller-supplied sections.",
+            source("repo", "crates/layers-compiler/src/lib.rs"),
+            "exercises typed compiler API",
+            vec!["compiler".to_string()],
+        )]);
+        let warning = ContextWarning {
+            severity: "warning".to_string(),
+            code: "workspace_dirty".to_string(),
+            message: "Workspace has uncommitted changes.".to_string(),
+        };
+
+        let packet = ContextCompiler::new().compile(
+            CompileRequest::new(
+                "ctx-compiler-api",
+                "layers",
+                "compile context packet",
+                generated_at,
+                CompileMode::Preflight,
+            )
+            .with_sections(vec![section])
+            .with_warnings(vec![warning.clone()]),
+        );
+
+        assert_eq!(packet.id, "ctx-compiler-api");
+        assert_eq!(packet.workspace_id, "layers");
+        assert_eq!(packet.query, "compile context packet");
+        assert_eq!(packet.route, "preflight");
+        assert_eq!(packet.provenance.surface, "preflight");
+        assert_eq!(packet.provenance.workspace_id, "layers");
+        assert_eq!(packet.provenance.generated_at, generated_at);
+        assert_eq!(packet.warnings, vec![warning]);
+        assert_eq!(
+            packet.open_uncertainty,
+            vec!["Workspace has uncommitted changes."]
+        );
+        assert_eq!(packet.selection_trace.len(), 1);
+        assert!(
+            packet
+                .evidence
+                .contains("ContextCompiler compiles caller-supplied sections.")
+        );
+    }
+
+    #[test]
+    fn compiler_request_can_preserve_external_evidence_surface() {
+        let section = code_impact_section(vec![cited_item(
+            "code-1",
+            "Compiler API",
+            "section body",
+            source("repo", "crates/layers-compiler/src/lib.rs"),
+            "selected for compiler API",
+            Vec::new(),
+        )]);
+
+        let packet = ContextCompiler::new().compile(
+            CompileRequest::new(
+                "ctx-query",
+                "layers",
+                "query",
+                Utc::now(),
+                CompileMode::Query,
+            )
+            .with_sections(vec![section])
+            .derive_evidence(false),
+        );
+
+        assert_eq!(packet.route, "query");
+        assert_eq!(packet.selection_trace.len(), 1);
+        assert!(packet.evidence.is_empty());
+    }
+
+    #[test]
+    fn compile_modes_expose_stable_routes() {
+        assert_eq!(CompileMode::Query.route(), "query");
+        assert_eq!(CompileMode::Preflight.route(), "preflight");
+        assert_eq!(CompileMode::Mcp.route(), "mcp");
+    }
 
     #[test]
     fn workspace_id_falls_back_for_paths_without_file_name() {

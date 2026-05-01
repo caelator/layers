@@ -5,10 +5,8 @@ edition = "2024"
 rust-version = "1.85"
 
 [dependencies]
-layers-core = { path = "../layers-core" }
-
-[dev-dependencies]
 chrono = { version = "0.4", features = ["serde"] }
+layers-core = { path = "../layers-core" }
 
 [lints.rust]
 unsafe_code = "deny"
