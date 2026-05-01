@@ -23,7 +23,7 @@
     clippy::result_large_err
 )]
 
-//! Layers — council orchestrator and memory spine for multi-model AI workflows.
+//! Layers — local-first `ContextPacket` compiler for coding agents.
 
 #[cfg(feature = "deprecated-runtime")]
 use std::path::PathBuf;
@@ -87,9 +87,13 @@ use cmd::telemetry::{TelemetryCommands, handle_telemetry};
 use cmd::validate::handle_validate;
 use cmd::workflow_benchmark::{WorkflowBenchmarkCommands, handle_workflow_benchmark};
 
-/// Council orchestrator and memory spine for multi-model AI workflows.
+/// Local-first `ContextPacket` compiler for coding agents.
 #[derive(Parser)]
-#[command(name = "layers", version)]
+#[command(
+    name = "layers",
+    version,
+    about = "Layers — local-first ContextPacket compiler for coding agents."
+)]
 struct Cli {
     /// Enable verbose tracing output (sets `RUST_LOG=layers=debug`).
     #[arg(short, long, global = true)]
@@ -808,8 +812,21 @@ mod tests {
     use super::{Cli, Commands};
     use crate::cmd::packet::{PacketCommands, PacketRenderFormat};
     use crate::cmd::workflow_benchmark::WorkflowBenchmarkCommands;
-    use clap::Parser;
+    use clap::{CommandFactory, Parser};
     use std::path::PathBuf;
+
+    #[test]
+    fn cli_about_positions_layers_as_context_packet_compiler() {
+        let command = Cli::command();
+        let about = command
+            .get_about()
+            .expect("CLI should expose concise product positioning")
+            .to_string();
+
+        assert!(about.contains("local-first ContextPacket compiler"));
+        assert!(!about.contains("council orchestrator"));
+        assert!(!about.contains("memory spine"));
+    }
 
     #[test]
     fn parses_packet_validate_command() {
