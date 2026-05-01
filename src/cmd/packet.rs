@@ -359,6 +359,9 @@ fn format_objective_brief(packet: &ContextPacket) -> String {
     out.push_str("- Use the cited context above as the task boundary.\n");
     out.push_str("- Do not assume uncited repository facts are current.\n");
     out.push_str("- Preserve packet citations in review notes when they justify edits.\n");
+    out.push_str(
+        "- If the cited context is insufficient, stop and request an updated ContextPacket or explicit targets.\n",
+    );
     out
 }
 
@@ -1304,6 +1307,9 @@ mod tests {
         assert!(output.contains("## Validation Plan"));
         assert!(output.contains("No explicit validation commands were captured in this packet."));
         assert!(output.contains("## Handoff Expectations"));
+        assert!(output.contains(
+            "If the cited context is insufficient, stop and request an updated ContextPacket"
+        ));
     }
 
     #[test]
