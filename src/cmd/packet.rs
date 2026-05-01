@@ -1,5 +1,6 @@
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
+    fmt::Write as _,
     fs,
     path::{Path, PathBuf},
 };
@@ -15,6 +16,7 @@ use serde_json::Value;
 pub(crate) enum PacketRenderFormat {
     Markdown,
     AgentPrompt,
+    ObjectiveBrief,
     Json,
 }
 
@@ -282,10 +284,112 @@ fn render_packet_text(text: &str, format: PacketRenderFormat) -> Result<String> 
     match format {
         PacketRenderFormat::Markdown => Ok(packet.to_markdown()),
         PacketRenderFormat::AgentPrompt => Ok(packet.to_agent_prompt()),
+        PacketRenderFormat::ObjectiveBrief => Ok(format_objective_brief(&packet)),
         PacketRenderFormat::Json => {
             serde_json::to_string_pretty(&packet).context("failed to serialize ContextPacket JSON")
         }
     }
+}
+
+fn format_objective_brief(packet: &ContextPacket) -> String {
+    let mut out = String::new();
+    out.push_str("# Objective Brief\n\n");
+    out.push_str("## Objective\n\n");
+    out.push_str(&packet.query);
+    out.push_str("\n\n");
+    out.push_str("## Context Constraints\n\n");
+    let _ = writeln!(out, "- packet: {}", packet.id);
+    let _ = writeln!(out, "- workspace: {}", packet.workspace_id);
+    let _ = writeln!(out, "- route: {}", packet.route);
+    let _ = writeln!(out, "- confidence: {}", packet.confidence);
+    let _ = writeln!(
+        out,
+        "- budget: {}/{} {}{}",
+        packet.budget.used_units,
+        packet.budget.max_units,
+        packet.budget.unit,
+        if packet.budget.truncated {
+            " (truncated)"
+        } else {
+            ""
+        }
+    );
+    if let Some(git_ref) = &packet.git_ref {
+        let _ = writeln!(out, "- git ref: {git_ref}");
+    }
+    out.push('\n');
+
+    if !packet.warnings.is_empty() {
+        out.push_str("## Warnings\n\n");
+        for warning in &packet.warnings {
+            let _ = writeln!(
+                out,
+                "- [{}] {}: {}",
+                warning.severity, warning.code, warning.message
+            );
+        }
+        out.push('\n');
+    }
+
+    out.push_str("## Cited Context\n\n");
+    for section in &packet.sections {
+        for item in &section.items {
+            let _ = writeln!(out, "- {} / {}", section.title, item.title);
+            let _ = writeln!(out, "  source: {}", format_source_citation(item));
+            let _ = writeln!(out, "  selected because: {}", item.selected_reason);
+            if !item.tags.is_empty() {
+                let _ = writeln!(out, "  tags: {}", item.tags.join(", "));
+            }
+        }
+    }
+    out.push('\n');
+
+    out.push_str("## Validation Plan\n\n");
+    let validation_commands = validation_commands(packet);
+    if validation_commands.is_empty() {
+        out.push_str("No explicit validation commands were captured in this packet.\n\n");
+    } else {
+        for command in validation_commands {
+            let _ = writeln!(out, "- `{command}`");
+        }
+        out.push('\n');
+    }
+
+    out.push_str("## Handoff Expectations\n\n");
+    out.push_str("- Use the cited context above as the task boundary.\n");
+    out.push_str("- Do not assume uncited repository facts are current.\n");
+    out.push_str("- Preserve packet citations in review notes when they justify edits.\n");
+    out
+}
+
+fn format_source_citation(item: &layers_core::context_packet::ContextItem) -> String {
+    let mut citation = format!("{} ({})", item.source.uri, item.source.kind);
+    if let Some(repo_path) = &item.source.repo_path {
+        let _ = write!(citation, " [{repo_path}");
+        if let Some(line_range) = &item.source.line_range {
+            let _ = write!(citation, ":{line_range}");
+        }
+        citation.push(']');
+    }
+    if let Some(commit) = &item.source.commit {
+        let _ = write!(citation, " @ {commit}");
+    }
+    citation
+}
+
+fn validation_commands(packet: &ContextPacket) -> Vec<String> {
+    packet
+        .sections
+        .iter()
+        .flat_map(|section| section.items.iter())
+        .flat_map(|item| item.tags.iter())
+        .filter_map(|tag| tag.strip_prefix("validate:"))
+        .map(str::trim)
+        .filter(|command| !command.is_empty())
+        .map(str::to_string)
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect()
 }
 
 fn diff_packet_text(old_text: &str, new_text: &str, json: bool) -> Result<String> {
@@ -1182,6 +1286,24 @@ mod tests {
             value["sections"][0]["items"][0]["body"],
             "Branch: main\nDirty: false"
         );
+    }
+
+    #[test]
+    fn renders_documented_minimal_v2_packet_as_objective_brief() {
+        let output = super::render_packet_text(MINIMAL_PACKET, PacketRenderFormat::ObjectiveBrief)
+            .expect("minimal packet should render as an objective brief");
+
+        assert!(output.contains("# Objective Brief"));
+        assert!(output.contains("## Objective"));
+        assert!(output.contains("What should I know before editing README?"));
+        assert!(output.contains("## Context Constraints"));
+        assert!(output.contains("confidence: high"));
+        assert!(output.contains("## Cited Context"));
+        assert!(output.contains("- Workspace State / Clean workspace"));
+        assert!(output.contains("source: git status --porcelain=v1 (workspace)"));
+        assert!(output.contains("## Validation Plan"));
+        assert!(output.contains("No explicit validation commands were captured in this packet."));
+        assert!(output.contains("## Handoff Expectations"));
     }
 
     #[test]

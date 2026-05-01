@@ -860,6 +860,28 @@ mod tests {
     }
 
     #[test]
+    fn parses_packet_render_objective_brief_command() {
+        let cli = Cli::try_parse_from([
+            "layers",
+            "packet",
+            "render",
+            "packet.json",
+            "--format",
+            "objective-brief",
+        ])
+        .expect("packet objective brief render should parse");
+
+        let Commands::Packet { command } = cli.command else {
+            panic!("expected packet command");
+        };
+        let PacketCommands::Render { path, format } = command else {
+            panic!("expected packet render command");
+        };
+        assert_eq!(path, PathBuf::from("packet.json"));
+        assert_eq!(format, PacketRenderFormat::ObjectiveBrief);
+    }
+
+    #[test]
     fn parses_packet_inspect_command() {
         let cli = Cli::try_parse_from(["layers", "packet", "inspect", "packet.json", "--json"])
             .expect("packet inspect should parse");
