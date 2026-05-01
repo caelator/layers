@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
 };
@@ -74,7 +75,7 @@ pub(crate) fn handle_packet(command: &PacketCommands) -> Result<()> {
         PacketCommands::Validate { path, strict, json } => validate_packet(path, *strict, *json),
         PacketCommands::Inspect { path, json } => inspect_packet(path, *json),
         PacketCommands::Render { path, format } => render_packet(path, *format),
-        PacketCommands::Diff { .. } => bail!("packet diff is not implemented yet"),
+        PacketCommands::Diff { old, new, json } => diff_packet(old, new, *json),
         PacketCommands::Grade { path, task, json } => grade_packet(path, task, *json),
     }
 }
@@ -91,6 +92,24 @@ fn render_packet(path: &Path, format: PacketRenderFormat) -> Result<()> {
     let text = fs::read_to_string(path)
         .with_context(|| format!("failed to read ContextPacket artifact {}", path.display()))?;
     let output = render_packet_text(&text, format)?;
+    println!("{output}");
+    Ok(())
+}
+
+fn diff_packet(old: &Path, new: &Path, json: bool) -> Result<()> {
+    let old_text = fs::read_to_string(old).with_context(|| {
+        format!(
+            "failed to read old ContextPacket artifact {}",
+            old.display()
+        )
+    })?;
+    let new_text = fs::read_to_string(new).with_context(|| {
+        format!(
+            "failed to read new ContextPacket artifact {}",
+            new.display()
+        )
+    })?;
+    let output = diff_packet_text(&old_text, &new_text, json)?;
     println!("{output}");
     Ok(())
 }
@@ -150,6 +169,21 @@ struct PacketInspectionReport {
     warning_count: usize,
     degraded: bool,
     low_confidence_fallback: bool,
+}
+
+#[derive(Debug, Serialize, PartialEq, Eq)]
+struct PacketDiffReport {
+    old_id: String,
+    new_id: String,
+    metadata_changes: Vec<String>,
+    removed_sections: Vec<String>,
+    added_sections: Vec<String>,
+    changed_sections: Vec<String>,
+    removed_items: Vec<String>,
+    added_items: Vec<String>,
+    changed_items: Vec<String>,
+    warning_changes: Vec<String>,
+    summary: String,
 }
 
 #[derive(Debug, Serialize, PartialEq, Eq)]
@@ -243,6 +277,30 @@ fn inspect_packet_text(text: &str, json: bool) -> Result<String> {
 }
 
 fn render_packet_text(text: &str, format: PacketRenderFormat) -> Result<String> {
+    let packet = parse_valid_packet_text(text)?;
+
+    match format {
+        PacketRenderFormat::Markdown => Ok(packet.to_markdown()),
+        PacketRenderFormat::AgentPrompt => Ok(packet.to_agent_prompt()),
+        PacketRenderFormat::Json => {
+            serde_json::to_string_pretty(&packet).context("failed to serialize ContextPacket JSON")
+        }
+    }
+}
+
+fn diff_packet_text(old_text: &str, new_text: &str, json: bool) -> Result<String> {
+    let old_packet = parse_valid_packet_text(old_text)?;
+    let new_packet = parse_valid_packet_text(new_text)?;
+    let report = diff_context_packets(&old_packet, &new_packet)?;
+
+    if json {
+        serde_json::to_string_pretty(&report).context("failed to serialize packet diff report")
+    } else {
+        Ok(format_diff_report(&report))
+    }
+}
+
+fn parse_valid_packet_text(text: &str) -> Result<ContextPacket> {
     let value: Value = serde_json::from_str(text).context("invalid ContextPacket JSON")?;
     let mut pre_deserialization_errors = Vec::new();
     validate_secret_like_values(&value, &mut pre_deserialization_errors);
@@ -263,12 +321,254 @@ fn render_packet_text(text: &str, format: PacketRenderFormat) -> Result<String> 
         );
     }
 
-    match format {
-        PacketRenderFormat::Markdown => Ok(packet.to_markdown()),
-        PacketRenderFormat::AgentPrompt => Ok(packet.to_agent_prompt()),
-        PacketRenderFormat::Json => {
-            serde_json::to_string_pretty(&packet).context("failed to serialize ContextPacket JSON")
+    Ok(packet)
+}
+
+fn diff_context_packets(old: &ContextPacket, new: &ContextPacket) -> Result<PacketDiffReport> {
+    let metadata_changes = diff_packet_metadata(old, new);
+    let old_sections = section_map(old)?;
+    let new_sections = section_map(new)?;
+    let old_items = item_map(old)?;
+    let new_items = item_map(new)?;
+
+    let removed_sections = removed_keys(&old_sections, &new_sections);
+    let added_sections = added_keys(&old_sections, &new_sections);
+    let changed_sections = changed_keys(&old_sections, &new_sections);
+    let removed_items = removed_keys(&old_items, &new_items);
+    let added_items = added_keys(&old_items, &new_items);
+    let changed_items = changed_keys(&old_items, &new_items);
+    let warning_changes = diff_warnings(old, new);
+    let summary = format!(
+        "{} removed, {} added, {} changed",
+        removed_items.len(),
+        added_items.len(),
+        changed_items.len()
+    );
+
+    Ok(PacketDiffReport {
+        old_id: old.id.clone(),
+        new_id: new.id.clone(),
+        metadata_changes,
+        removed_sections,
+        added_sections,
+        changed_sections,
+        removed_items,
+        added_items,
+        changed_items,
+        warning_changes,
+        summary,
+    })
+}
+
+fn diff_packet_metadata(old: &ContextPacket, new: &ContextPacket) -> Vec<String> {
+    let mut changes = Vec::new();
+    push_change(
+        &mut changes,
+        "schema_version",
+        old.schema_version,
+        new.schema_version,
+    );
+    push_change(
+        &mut changes,
+        "workspace_id",
+        &old.workspace_id,
+        &new.workspace_id,
+    );
+    push_change(&mut changes, "query", &old.query, &new.query);
+    push_change(&mut changes, "git_ref", &old.git_ref, &new.git_ref);
+    push_change(&mut changes, "route", &old.route, &new.route);
+    push_change(&mut changes, "confidence", &old.confidence, &new.confidence);
+    push_change(
+        &mut changes,
+        "budget.used_units",
+        old.budget.used_units,
+        new.budget.used_units,
+    );
+    push_change(
+        &mut changes,
+        "budget.max_units",
+        old.budget.max_units,
+        new.budget.max_units,
+    );
+    push_change(
+        &mut changes,
+        "budget.unit",
+        &old.budget.unit,
+        &new.budget.unit,
+    );
+    push_change(
+        &mut changes,
+        "budget.truncated",
+        old.budget.truncated,
+        new.budget.truncated,
+    );
+    push_change(
+        &mut changes,
+        "provenance.compiler",
+        &old.provenance.compiler,
+        &new.provenance.compiler,
+    );
+    push_change(
+        &mut changes,
+        "provenance.compiler_version",
+        &old.provenance.compiler_version,
+        &new.provenance.compiler_version,
+    );
+    push_change(
+        &mut changes,
+        "provenance.surface",
+        &old.provenance.surface,
+        &new.provenance.surface,
+    );
+    push_change(
+        &mut changes,
+        "provenance.source_adapters",
+        &old.provenance.source_adapters,
+        &new.provenance.source_adapters,
+    );
+    changes
+}
+
+fn push_change<T>(changes: &mut Vec<String>, field: &str, old: T, new: T)
+where
+    T: PartialEq + std::fmt::Debug,
+{
+    if old != new {
+        changes.push(format!(
+            "{field}: {} -> {}",
+            clean_debug(&old),
+            clean_debug(&new)
+        ));
+    }
+}
+
+fn clean_debug<T: std::fmt::Debug>(value: &T) -> String {
+    format!("{value:?}").trim_matches('"').to_string()
+}
+
+fn section_map(packet: &ContextPacket) -> Result<BTreeMap<String, Value>> {
+    packet
+        .sections
+        .iter()
+        .map(|section| {
+            serde_json::to_value(section)
+                .map(|value| (section.id.clone(), value))
+                .context("failed to serialize packet section for diff")
+        })
+        .collect()
+}
+
+fn item_map(packet: &ContextPacket) -> Result<BTreeMap<String, Value>> {
+    let mut items = BTreeMap::new();
+    for section in &packet.sections {
+        for item in &section.items {
+            let value =
+                serde_json::to_value(item).context("failed to serialize packet item for diff")?;
+            items.insert(item.id.clone(), value);
         }
+    }
+    Ok(items)
+}
+
+fn removed_keys(old: &BTreeMap<String, Value>, new: &BTreeMap<String, Value>) -> Vec<String> {
+    old.keys()
+        .filter(|key| !new.contains_key(*key))
+        .cloned()
+        .collect()
+}
+
+fn added_keys(old: &BTreeMap<String, Value>, new: &BTreeMap<String, Value>) -> Vec<String> {
+    new.keys()
+        .filter(|key| !old.contains_key(*key))
+        .cloned()
+        .collect()
+}
+
+fn changed_keys(old: &BTreeMap<String, Value>, new: &BTreeMap<String, Value>) -> Vec<String> {
+    old.iter()
+        .filter_map(|(key, old_value)| match new.get(key) {
+            Some(new_value) if old_value != new_value => Some(key.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn diff_warnings(old: &ContextPacket, new: &ContextPacket) -> Vec<String> {
+    let old_warnings: BTreeMap<_, _> = old
+        .warnings
+        .iter()
+        .map(|warning| (warning.code.clone(), warning))
+        .collect();
+    let new_warnings: BTreeMap<_, _> = new
+        .warnings
+        .iter()
+        .map(|warning| (warning.code.clone(), warning))
+        .collect();
+
+    let mut changes = Vec::new();
+    for code in removed_warning_codes(&old_warnings, &new_warnings) {
+        changes.push(format!("removed warning: {code}"));
+    }
+    for code in added_warning_codes(&old_warnings, &new_warnings) {
+        changes.push(format!("added warning: {code}"));
+    }
+    for (code, old_warning) in &old_warnings {
+        if let Some(new_warning) = new_warnings.get(code) {
+            if *old_warning != *new_warning {
+                changes.push(format!("changed warning: {code}"));
+            }
+        }
+    }
+    changes
+}
+
+fn removed_warning_codes<T>(old: &BTreeMap<String, T>, new: &BTreeMap<String, T>) -> Vec<String> {
+    old.keys()
+        .filter(|key| !new.contains_key(*key))
+        .cloned()
+        .collect()
+}
+
+fn added_warning_codes<T>(old: &BTreeMap<String, T>, new: &BTreeMap<String, T>) -> Vec<String> {
+    new.keys()
+        .filter(|key| !old.contains_key(*key))
+        .cloned()
+        .collect()
+}
+
+fn format_diff_report(report: &PacketDiffReport) -> String {
+    format!(
+        "ContextPacket diff\n\
+         old_id: {}\n\
+         new_id: {}\n\
+         metadata_changes: {}\n\
+         removed_sections: {}\n\
+         added_sections: {}\n\
+         changed_sections: {}\n\
+         removed_items: {}\n\
+         added_items: {}\n\
+         changed_items: {}\n\
+         warning_changes: {}\n\
+         summary: {}",
+        report.old_id,
+        report.new_id,
+        format_list(&report.metadata_changes),
+        format_list(&report.removed_sections),
+        format_list(&report.added_sections),
+        format_list(&report.changed_sections),
+        format_list(&report.removed_items),
+        format_list(&report.added_items),
+        format_list(&report.changed_items),
+        format_list(&report.warning_changes),
+        report.summary
+    )
+}
+
+fn format_list(values: &[String]) -> String {
+    if values.is_empty() {
+        "none".to_string()
+    } else {
+        values.join(", ")
     }
 }
 
@@ -882,6 +1182,106 @@ mod tests {
             value["sections"][0]["items"][0]["body"],
             "Branch: main\nDirty: false"
         );
+    }
+
+    #[test]
+    fn diffs_documented_packets_as_text_without_body_echo() {
+        let old_packet = minimal_packet_value();
+        let mut new_packet = minimal_packet_value();
+        new_packet["id"] = Value::from("ctx-example-minimal-v2-new");
+        new_packet["sections"][0]["items"][0]["body"] = Value::from("Branch: main\nDirty: true");
+        new_packet["sections"][0]["items"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!({
+                "id": "context-policy-1",
+                "title": "LAYERS.md",
+                "body": "Policy: run tests before handoff",
+                "source": {
+                    "kind": "context_policy",
+                    "uri": "LAYERS.md",
+                    "repo_path": "LAYERS.md"
+                },
+                "token_estimate": 5,
+                "selected_reason": "repo-owned policy constrains agent work",
+                "tags": ["policy", "repo-owned"]
+            }));
+
+        let output =
+            super::diff_packet_text(&old_packet.to_string(), &new_packet.to_string(), false)
+                .expect("valid packets should diff");
+
+        assert!(output.contains("ContextPacket diff"));
+        assert!(output.contains("old_id: ctx-example-minimal-v2"));
+        assert!(output.contains("new_id: ctx-example-minimal-v2-new"));
+        assert!(output.contains("added_items: context-policy-1"));
+        assert!(output.contains("changed_items: workspace-state"));
+        assert!(!output.contains("Dirty: true"));
+        assert!(!output.contains("Policy: run tests"));
+    }
+
+    #[test]
+    fn diffs_documented_packets_as_json() {
+        let old_packet = minimal_packet_value();
+        let mut new_packet = minimal_packet_value();
+        new_packet["id"] = Value::from("ctx-example-minimal-v2-new");
+        new_packet["confidence"] = Value::from("medium");
+        new_packet["sections"][0]["items"]
+            .as_array_mut()
+            .unwrap()
+            .clear();
+        new_packet["sections"][0]["items"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!({
+                "id": "context-policy-1",
+                "title": "LAYERS.md",
+                "body": "Policy: run tests before handoff",
+                "source": {
+                    "kind": "context_policy",
+                    "uri": "LAYERS.md",
+                    "repo_path": "LAYERS.md"
+                },
+                "token_estimate": 5,
+                "selected_reason": "repo-owned policy constrains agent work",
+                "tags": ["policy", "repo-owned"]
+            }));
+
+        let output =
+            super::diff_packet_text(&old_packet.to_string(), &new_packet.to_string(), true)
+                .expect("valid packets should diff as JSON");
+        let value: Value = serde_json::from_str(&output).expect("diff output should be JSON");
+
+        assert_eq!(value["old_id"], "ctx-example-minimal-v2");
+        assert_eq!(value["new_id"], "ctx-example-minimal-v2-new");
+        assert_eq!(value["metadata_changes"][0], "confidence: high -> medium");
+        assert_eq!(
+            value["removed_items"],
+            serde_json::json!(["workspace-state"])
+        );
+        assert_eq!(
+            value["added_items"],
+            serde_json::json!(["context-policy-1"])
+        );
+        assert_eq!(value["summary"], "1 removed, 1 added, 0 changed");
+    }
+
+    #[test]
+    fn diff_rejects_invalid_packets_without_echoing_secret_like_text() {
+        let old_packet = minimal_packet_value();
+        let mut new_packet = minimal_packet_value();
+        let secret_value = ["api_key=", "abc", "123", "secret", "456"].concat();
+        let secret_fragment = ["abc", "123", "secret", "456"].concat();
+        new_packet["sections"][0]["items"][0]["body"] = Value::from(secret_value);
+
+        let error =
+            super::diff_packet_text(&old_packet.to_string(), &new_packet.to_string(), false)
+                .expect_err("secret-looking packet should fail diff")
+                .to_string();
+
+        assert!(error.contains("ContextPacket validation failed"));
+        assert!(error.contains("[REDACTED]") || !error.contains(&secret_fragment));
+        assert!(!error.contains(&secret_fragment));
     }
 
     #[test]
