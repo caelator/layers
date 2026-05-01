@@ -1108,7 +1108,7 @@ mod tests {
         let outside = tempfile::NamedTempFile::new().unwrap();
         std::fs::write(outside.path(), "do not inject").unwrap();
 
-        let item = query_target_item(0, &ws.root(), outside.path());
+        let item = query_target_item(0, ws.root(), outside.path());
 
         assert!(item.is_none());
     }
