@@ -175,6 +175,91 @@ Subcommands:
 - `path`
 - `validate`
 
+## `layers packet validate <packet.json>`
+
+Status: **Stable core**
+
+Validate a persisted `ContextPacket` artifact without retrieving context, mutating the workspace, or running agents.
+
+Arguments:
+
+- `<packet.json>` — path to a persisted `ContextPacket` JSON artifact.
+
+Options:
+
+| Flag | Description |
+|------|-------------|
+| `--strict` | Treat degraded, low-confidence, or warning-bearing packets as invalid |
+| `--json` | Append a structured validation report |
+
+Example:
+
+```bash
+layers packet validate docs/examples/context-packet-v2-minimal.json --strict
+```
+
+## `layers packet inspect <packet.json>`
+
+Status: **Stable core**
+
+Summarize a persisted `ContextPacket` artifact for review. Inspection reports packet metadata, provenance, section/item counts, warnings, budget use, and quality signals; it does not echo full item bodies by default.
+
+Options:
+
+| Flag | Description |
+|------|-------------|
+| `--json` | Emit the inspection report as JSON |
+
+Example:
+
+```bash
+layers packet inspect docs/examples/context-packet-v2-minimal.json --json
+```
+
+## `layers packet render <packet.json>`
+
+Status: **Stable core**
+
+Render a persisted `ContextPacket` artifact into an agent-neutral review or handoff format. This command is artifact-only: it validates and renders the packet that already exists, but does not retrieve more context, schedule work, execute tools, mutate files, or call an agent.
+
+Options:
+
+| Flag | Description |
+|------|-------------|
+| `--format <format>` | One of `markdown`, `agent-prompt`, `json`, or `objective-brief` |
+
+Formats:
+
+- `markdown` — human-readable packet rendering.
+- `agent-prompt` — prompt-oriented packet rendering for a downstream coding agent.
+- `json` — normalized pretty JSON for the same validated packet.
+- `objective-brief` — concise work-unit brief with objective, constraints, citations, validation guidance, and handoff expectations.
+
+Examples:
+
+```bash
+layers packet render docs/examples/context-packet-v2-minimal.json --format markdown
+layers packet render docs/examples/context-packet-v2-minimal.json --format objective-brief
+```
+
+## `layers packet diff <old.json> <new.json>`
+
+Status: **Stable core**
+
+Compare two persisted `ContextPacket` artifacts as reviewable data. The diff is artifact-only and body-safe: it reports changed metadata, sections, items, warnings, budget, provenance, and retrieval fields without echoing full context item bodies in the human text output.
+
+Options:
+
+| Flag | Description |
+|------|-------------|
+| `--json` | Emit the semantic diff report as JSON |
+
+Example:
+
+```bash
+layers packet diff before.packet.json after.packet.json --json
+```
+
 ## Planned Stable Commands
 
 These are the next commands Layers should add or stabilize for v0.2.

@@ -829,6 +829,18 @@ mod tests {
     }
 
     #[test]
+    fn cli_reference_documents_packet_artifact_commands() {
+        let docs = include_str!("../docs/cli.md");
+
+        assert!(docs.contains("## `layers packet validate <packet.json>`"));
+        assert!(docs.contains("## `layers packet inspect <packet.json>`"));
+        assert!(docs.contains("## `layers packet render <packet.json>`"));
+        assert!(docs.contains("## `layers packet diff <old.json> <new.json>`"));
+        assert!(docs.contains("objective-brief"));
+        assert!(docs.contains("artifact-only"));
+    }
+
+    #[test]
     fn parses_packet_validate_command() {
         let cli = Cli::try_parse_from([
             "layers",
