@@ -22,6 +22,14 @@ pub(crate) enum WorkflowBenchmarkCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Validate preregistered workflow benchmark task specs.
+    ValidateTasks {
+        /// Task spec file or directory containing task spec JSON files.
+        path: PathBuf,
+        /// Output a structured JSON validation report.
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 /// Handle workflow benchmark commands.
@@ -33,6 +41,17 @@ pub(crate) fn handle_workflow_benchmark(command: &WorkflowBenchmarkCommands) -> 
             println!("{}", format_report(&report, *json)?);
             Ok(())
         }
+        WorkflowBenchmarkCommands::ValidateTasks { path, json } => {
+            let report = validate_task_specs(path)?;
+            println!("{}", format_task_validation_report(&report, *json)?);
+            if report.invalid_count > 0 {
+                bail!(
+                    "{} workflow task spec(s) failed validation",
+                    report.invalid_count
+                );
+            }
+            Ok(())
+        }
     }
 }
 
@@ -40,7 +59,16 @@ pub(crate) fn handle_workflow_benchmark(command: &WorkflowBenchmarkCommands) -> 
 #[serde(rename_all = "snake_case")]
 enum WorkflowVariant {
     Baseline,
-    Layers,
+    #[serde(alias = "layers")]
+    LayersTargetedPreflight,
+    LayersBroadQuery,
+    LayersMcpPreflight,
+}
+
+impl WorkflowVariant {
+    fn is_layers(self) -> bool {
+        !matches!(self, Self::Baseline)
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -98,12 +126,86 @@ struct WorkflowRun {
     context_caused_regressions: u64,
 }
 
+#[derive(Debug, Clone, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum SurfaceClaim {
+    #[default]
+    LayersTargetedPreflight,
+    LayersBroadQuery,
+    LayersMcpPreflight,
+    Baseline,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct SuccessRubric {
+    pub(crate) full_success: String,
+    pub(crate) partial_success: String,
+    pub(crate) failure: String,
+    pub(crate) min_verification_quality: u8,
+    #[serde(default = "default_primary_endpoint")]
+    pub(crate) primary_endpoint: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct TaskSpec {
+    pub(crate) task_id: String,
+    pub(crate) title: String,
+    pub(crate) prompt: String,
+    pub(crate) category: String,
+    #[serde(default)]
+    pub(crate) difficulty: Option<String>,
+    #[serde(default)]
+    pub(crate) surface_claim: SurfaceClaim,
+    #[serde(default)]
+    pub(crate) negative_control: bool,
+    #[serde(default)]
+    pub(crate) stale_context_trap: bool,
+    #[serde(default)]
+    pub(crate) repo_commit: Option<String>,
+    #[serde(default)]
+    pub(crate) time_budget_minutes: Option<u64>,
+    #[serde(default)]
+    pub(crate) target_files: Vec<String>,
+    #[serde(default)]
+    pub(crate) target_symbols: Vec<String>,
+    #[serde(default)]
+    pub(crate) expected_relevant_files: Vec<String>,
+    pub(crate) expected_validation_commands: Vec<String>,
+    pub(crate) success_rubric: SuccessRubric,
+    #[serde(default)]
+    pub(crate) abstention_rubric: Option<String>,
+}
+
+fn default_primary_endpoint() -> String {
+    "verified_success".to_owned()
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct TaskValidationReport {
+    checked_count: usize,
+    valid_count: usize,
+    invalid_count: usize,
+    results: Vec<TaskValidationResult>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct TaskValidationResult {
+    path: PathBuf,
+    task_id: Option<String>,
+    valid: bool,
+    errors: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 struct BenchmarkReport {
     run_count: usize,
     paired_task_count: usize,
+    variants: Vec<VariantAggregate>,
     baseline: Option<VariantAggregate>,
     layers: Option<VariantAggregate>,
+    comparisons: Vec<PairedComparison>,
     comparison: Option<PairedComparison>,
     #[serde(skip_serializing_if = "Option::is_none")]
     claim: Option<ClaimReport>,
@@ -141,6 +243,7 @@ impl Default for ClaimThresholds {
 enum ClaimStatus {
     Supported,
     NotSupported,
+    Inconclusive,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -148,6 +251,7 @@ struct ClaimReport {
     status: ClaimStatus,
     thresholds: ClaimThresholds,
     blocking_metrics: Vec<String>,
+    uncertainty_notes: Vec<String>,
     negative_control_abstention_rate: f64,
     unnecessary_context_injection_rate: f64,
     context_caused_regression_rate: f64,
@@ -185,12 +289,14 @@ struct VariantAggregate {
 
 #[derive(Debug, Clone, Serialize)]
 struct PairedComparison {
+    variant: WorkflowVariant,
     paired_task_count: usize,
     net_time_saved_ms: f64,
     net_tokens_saved: f64,
     speedup: f64,
     token_reduction_ratio: f64,
     success_delta: f64,
+    success_delta_confidence_interval: ConfidenceInterval,
     human_intervention_delta: f64,
     tool_call_delta: f64,
     failed_attempt_delta: f64,
@@ -200,6 +306,14 @@ struct PairedComparison {
     layers_overhead_tokens: f64,
     missed_critical_context_rate: f64,
     hallucinated_or_stale_context_rate: f64,
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
+struct ConfidenceInterval {
+    estimate: f64,
+    lower_bound: f64,
+    upper_bound: f64,
+    confidence_level: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -216,6 +330,227 @@ struct TaskRunAverage {
     layers_overhead_tokens: f64,
     missed_critical_context: f64,
     hallucinated_or_stale_context: f64,
+}
+
+fn validate_task_specs(path: &Path) -> Result<TaskValidationReport> {
+    let mut paths = collect_task_spec_paths(path)?;
+    paths.sort();
+
+    let mut results = Vec::with_capacity(paths.len());
+    for path in paths {
+        match load_task_spec_unchecked(&path) {
+            Ok(spec) => match validate_task_spec(&spec) {
+                Ok(()) => results.push(TaskValidationResult {
+                    path,
+                    task_id: Some(spec.task_id),
+                    valid: true,
+                    errors: Vec::new(),
+                }),
+                Err(error) => results.push(TaskValidationResult {
+                    path,
+                    task_id: Some(spec.task_id),
+                    valid: false,
+                    errors: vec![error.to_string()],
+                }),
+            },
+            Err(error) => results.push(TaskValidationResult {
+                path,
+                task_id: None,
+                valid: false,
+                errors: vec![format!("{error:?}")],
+            }),
+        }
+    }
+
+    let checked_count = results.len();
+    let invalid_count = results.iter().filter(|result| !result.valid).count();
+    let valid_count = checked_count.saturating_sub(invalid_count);
+
+    Ok(TaskValidationReport {
+        checked_count,
+        valid_count,
+        invalid_count,
+        results,
+    })
+}
+
+fn collect_task_spec_paths(path: &Path) -> Result<Vec<PathBuf>> {
+    if path.is_file() {
+        return Ok(vec![path.to_path_buf()]);
+    }
+    if !path.is_dir() {
+        bail!("task spec path does not exist: {}", path.display());
+    }
+
+    let mut paths = Vec::new();
+    collect_task_spec_paths_recursive(path, &mut paths)?;
+    if paths.is_empty() {
+        bail!("no task spec JSON files found under {}", path.display());
+    }
+    Ok(paths)
+}
+
+fn collect_task_spec_paths_recursive(dir: &Path, paths: &mut Vec<PathBuf>) -> Result<()> {
+    for entry in fs::read_dir(dir)
+        .with_context(|| format!("failed to read task spec directory: {}", dir.display()))?
+    {
+        let entry = entry.with_context(|| format!("failed to read entry in {}", dir.display()))?;
+        let path = entry.path();
+        if path.is_dir() {
+            collect_task_spec_paths_recursive(&path, paths)?;
+        } else if path
+            .extension()
+            .is_some_and(|extension| extension == "json")
+        {
+            paths.push(path);
+        }
+    }
+    Ok(())
+}
+
+fn format_task_validation_report(report: &TaskValidationReport, json: bool) -> Result<String> {
+    if json {
+        return serde_json::to_string_pretty(report)
+            .context("failed to serialize validation report");
+    }
+
+    let mut output = String::new();
+    writeln!(&mut output, "Workflow task validation report")?;
+    writeln!(&mut output, "checked: {}", report.checked_count)?;
+    writeln!(&mut output, "valid: {}", report.valid_count)?;
+    writeln!(&mut output, "invalid: {}", report.invalid_count)?;
+    for result in &report.results {
+        if result.valid {
+            writeln!(&mut output, "OK {}", result.path.display())?;
+        } else {
+            writeln!(&mut output, "FAIL {}", result.path.display())?;
+            for error in &result.errors {
+                writeln!(&mut output, "  - {error}")?;
+            }
+        }
+    }
+    Ok(output)
+}
+
+#[cfg(test)]
+fn load_task_spec(path: &Path) -> Result<TaskSpec> {
+    let spec = load_task_spec_unchecked(path)?;
+    validate_task_spec(&spec).with_context(|| format!("invalid task spec: {}", path.display()))?;
+    Ok(spec)
+}
+
+fn load_task_spec_unchecked(path: &Path) -> Result<TaskSpec> {
+    let content = fs::read_to_string(path)
+        .with_context(|| format!("failed to read workflow task spec: {}", path.display()))?;
+    serde_json::from_str(&content)
+        .with_context(|| format!("task spec is not valid JSON: {}", path.display()))
+}
+
+pub(crate) fn validate_task_spec(spec: &TaskSpec) -> Result<()> {
+    require_non_empty("task_id", &spec.task_id)?;
+    validate_task_id(&spec.task_id)?;
+    require_non_empty("title", &spec.title)?;
+    require_non_empty("prompt", &spec.prompt)?;
+    require_non_empty("category", &spec.category)?;
+    validate_difficulty(spec.difficulty.as_deref())?;
+    if let Some(repo_commit) = &spec.repo_commit {
+        require_non_empty("repo_commit", repo_commit)?;
+    }
+    if matches!(spec.time_budget_minutes, Some(0)) {
+        bail!("time_budget_minutes must be at least 1");
+    }
+    require_no_blank_items("target_symbols", &spec.target_symbols)?;
+    require_non_empty_vec(
+        "expected_validation_commands",
+        &spec.expected_validation_commands,
+    )?;
+    validate_success_rubric(&spec.success_rubric)?;
+
+    if spec.negative_control {
+        require_no_blank_items("target_files", &spec.target_files)?;
+        require_no_blank_items("expected_relevant_files", &spec.expected_relevant_files)?;
+    } else {
+        require_non_empty_vec("target_files", &spec.target_files)?;
+        require_non_empty_vec("expected_relevant_files", &spec.expected_relevant_files)?;
+    }
+
+    if let Some(abstention_rubric) = &spec.abstention_rubric {
+        require_non_empty("abstention_rubric", abstention_rubric)?;
+    }
+
+    if spec.negative_control
+        && (!spec.target_files.is_empty() || !spec.expected_relevant_files.is_empty())
+        && spec.abstention_rubric.is_none()
+    {
+        bail!("negative_control tasks with context expectations must define abstention_rubric");
+    }
+
+    if spec.stale_context_trap && spec.expected_relevant_files.is_empty() {
+        bail!("stale_context_trap tasks must declare expected_relevant_files");
+    }
+
+    Ok(())
+}
+
+fn validate_success_rubric(rubric: &SuccessRubric) -> Result<()> {
+    require_non_empty("success_rubric.full_success", &rubric.full_success)?;
+    require_non_empty("success_rubric.partial_success", &rubric.partial_success)?;
+    require_non_empty("success_rubric.failure", &rubric.failure)?;
+    require_non_empty("success_rubric.primary_endpoint", &rubric.primary_endpoint)?;
+    if !(1..=5).contains(&rubric.min_verification_quality) {
+        bail!("success_rubric.min_verification_quality must be between 1 and 5");
+    }
+    if rubric.primary_endpoint != "verified_success" {
+        bail!("success_rubric.primary_endpoint must be verified_success");
+    }
+    Ok(())
+}
+
+fn validate_task_id(task_id: &str) -> Result<()> {
+    let mut chars = task_id.chars();
+    let Some(first) = chars.next() else {
+        bail!("task_id must not be empty");
+    };
+    if !first.is_ascii_lowercase() && !first.is_ascii_digit() {
+        bail!("task_id must start with a lowercase ASCII letter or digit");
+    }
+    if !chars.all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '_' || ch == '-') {
+        bail!("task_id may only contain lowercase ASCII letters, digits, '_' or '-'");
+    }
+    Ok(())
+}
+
+fn validate_difficulty(difficulty: Option<&str>) -> Result<()> {
+    let Some(difficulty) = difficulty else {
+        return Ok(());
+    };
+    match difficulty {
+        "trivial" | "small" | "medium" | "large" => Ok(()),
+        _ => bail!("difficulty must be one of trivial, small, medium, or large"),
+    }
+}
+
+fn require_non_empty(label: &str, value: &str) -> Result<()> {
+    if value.trim().is_empty() {
+        bail!("{label} must not be empty");
+    }
+    Ok(())
+}
+
+fn require_non_empty_vec(label: &str, values: &[String]) -> Result<()> {
+    if values.is_empty() {
+        bail!("{label} must not be empty");
+    }
+    require_no_blank_items(label, values)
+}
+
+fn require_no_blank_items(label: &str, values: &[String]) -> Result<()> {
+    for (index, value) in values.iter().enumerate() {
+        if value.trim().is_empty() {
+            bail!("{label}[{index}] must not be empty");
+        }
+    }
+    Ok(())
 }
 
 fn load_runs(path: &Path) -> Result<Vec<WorkflowRun>> {
@@ -357,27 +692,39 @@ fn analyze_runs(runs: &[WorkflowRun]) -> Result<BenchmarkReport> {
         .iter()
         .filter(|run| run.variant == WorkflowVariant::Baseline)
         .collect();
-    let layers_runs: Vec<&WorkflowRun> = runs
+    let targeted_layers_runs: Vec<&WorkflowRun> = runs
         .iter()
-        .filter(|run| run.variant == WorkflowVariant::Layers)
+        .filter(|run| run.variant == WorkflowVariant::LayersTargetedPreflight)
         .collect();
     if baseline_runs.is_empty() {
         bail!("workflow benchmark requires at least one baseline run");
     }
-    if layers_runs.is_empty() {
+    if !runs.iter().any(|run| run.variant.is_layers()) {
         bail!("workflow benchmark requires at least one Layers run");
     }
 
-    let comparison = paired_comparison(runs).context(
-        "workflow benchmark requires at least one task with both baseline and Layers runs",
-    )?;
+    let variants = aggregate_variants(runs);
+    let comparisons = paired_comparisons(runs);
+    let comparison = comparisons
+        .iter()
+        .find(|comparison| comparison.variant == WorkflowVariant::LayersTargetedPreflight)
+        .or_else(|| comparisons.first())
+        .cloned()
+        .context(
+            "workflow benchmark requires at least one task with both baseline and Layers runs",
+        )?;
     let paired_task_count = comparison.paired_task_count;
 
     Ok(BenchmarkReport {
         run_count: runs.len(),
         paired_task_count,
+        variants,
         baseline: aggregate_variant(WorkflowVariant::Baseline, &baseline_runs),
-        layers: aggregate_variant(WorkflowVariant::Layers, &layers_runs),
+        layers: aggregate_variant(
+            WorkflowVariant::LayersTargetedPreflight,
+            &targeted_layers_runs,
+        ),
+        comparisons,
         comparison: Some(comparison),
         claim: None,
     })
@@ -393,14 +740,15 @@ fn analyze_runs_with_thresholds(
         .as_ref()
         .context("claim thresholds require a paired comparison")?;
     let layers = report
-        .layers
-        .as_ref()
-        .context("claim thresholds require Layers aggregate")?;
+        .variants
+        .iter()
+        .find(|aggregate| aggregate.variant == comparison.variant)
+        .context("claim thresholds require aggregate for compared Layers surface")?;
 
     let negative_control_layers: Vec<&WorkflowRun> = runs
         .iter()
         .filter(|run| {
-            run.variant == WorkflowVariant::Layers
+            run.variant == comparison.variant
                 && run.task_category.eq_ignore_ascii_case("negative_control")
         })
         .collect();
@@ -454,14 +802,25 @@ fn analyze_runs_with_thresholds(
         blocking_metrics.push("context_caused_regression_rate".to_string());
     }
 
+    let mut uncertainty_notes = Vec::new();
+    if comparison.paired_task_count < thresholds.min_paired_tasks {
+        uncertainty_notes.push(format!(
+            "paired_task_count {} is below minimum {}",
+            comparison.paired_task_count, thresholds.min_paired_tasks
+        ));
+    }
+
     report.claim = Some(ClaimReport {
-        status: if blocking_metrics.is_empty() {
+        status: if !uncertainty_notes.is_empty() {
+            ClaimStatus::Inconclusive
+        } else if blocking_metrics.is_empty() {
             ClaimStatus::Supported
         } else {
             ClaimStatus::NotSupported
         },
         thresholds,
         blocking_metrics,
+        uncertainty_notes,
         negative_control_abstention_rate,
         unnecessary_context_injection_rate,
         context_caused_regression_rate,
@@ -518,13 +877,37 @@ fn aggregate_variant(variant: WorkflowVariant, runs: &[&WorkflowRun]) -> Option<
     })
 }
 
-fn paired_comparison(runs: &[WorkflowRun]) -> Option<PairedComparison> {
+fn aggregate_variants(runs: &[WorkflowRun]) -> Vec<VariantAggregate> {
+    let mut by_variant: BTreeMap<WorkflowVariant, Vec<&WorkflowRun>> = BTreeMap::new();
+    for run in runs {
+        by_variant.entry(run.variant).or_default().push(run);
+    }
+
+    by_variant
+        .into_iter()
+        .filter_map(|(variant, runs)| aggregate_variant(variant, &runs))
+        .collect()
+}
+
+fn paired_comparisons(runs: &[WorkflowRun]) -> Vec<PairedComparison> {
+    [
+        WorkflowVariant::LayersTargetedPreflight,
+        WorkflowVariant::LayersBroadQuery,
+        WorkflowVariant::LayersMcpPreflight,
+    ]
+    .into_iter()
+    .filter_map(|variant| paired_comparison(runs, variant))
+    .collect()
+}
+
+fn paired_comparison(runs: &[WorkflowRun], variant: WorkflowVariant) -> Option<PairedComparison> {
     let mut by_task: BTreeMap<&str, (Vec<&WorkflowRun>, Vec<&WorkflowRun>)> = BTreeMap::new();
     for run in runs {
         let entry = by_task.entry(&run.task_id).or_default();
-        match run.variant {
-            WorkflowVariant::Baseline => entry.0.push(run),
-            WorkflowVariant::Layers => entry.1.push(run),
+        if run.variant == WorkflowVariant::Baseline {
+            entry.0.push(run);
+        } else if run.variant == variant {
+            entry.1.push(run);
         }
     }
 
@@ -550,14 +933,17 @@ fn paired_comparison(runs: &[WorkflowRun]) -> Option<PairedComparison> {
     let layers_tokens: f64 = pairs.iter().map(|(_, layers)| layers.total_tokens).sum();
     let net_time_saved_ms = (baseline_wall - layers_wall) / paired_count;
     let net_tokens_saved = (baseline_tokens - layers_tokens) / paired_count;
+    let success_delta = average_pair_delta(&pairs, |run| run.success_score);
 
     Some(PairedComparison {
+        variant,
         paired_task_count: pairs.len(),
         net_time_saved_ms,
         net_tokens_saved,
         speedup: ratio_f64(baseline_wall, layers_wall),
         token_reduction_ratio: ratio_f64(baseline_tokens - layers_tokens, baseline_tokens),
-        success_delta: average_pair_delta(&pairs, |run| run.success_score),
+        success_delta,
+        success_delta_confidence_interval: success_delta_confidence_interval(&pairs, success_delta),
         human_intervention_delta: average_pair_delta(&pairs, |run| run.human_interventions),
         tool_call_delta: average_pair_delta(&pairs, |run| run.tool_calls),
         failed_attempt_delta: average_pair_delta(&pairs, |run| run.failed_attempts),
@@ -584,6 +970,44 @@ fn paired_comparison(runs: &[WorkflowRun]) -> Option<PairedComparison> {
             .count() as f64
             / paired_count,
     })
+}
+
+fn success_delta_confidence_interval(
+    pairs: &[(TaskRunAverage, TaskRunAverage)],
+    estimate: f64,
+) -> ConfidenceInterval {
+    let confidence_level = 0.95;
+    if pairs.len() < 2 {
+        return ConfidenceInterval {
+            estimate,
+            lower_bound: estimate,
+            upper_bound: estimate,
+            confidence_level,
+        };
+    }
+
+    let deltas: Vec<f64> = pairs
+        .iter()
+        .map(|(baseline, layers)| layers.success_score - baseline.success_score)
+        .collect();
+    let n = deltas.len() as f64;
+    let mean = deltas.iter().sum::<f64>() / n;
+    let variance = deltas
+        .iter()
+        .map(|delta| {
+            let centered = delta - mean;
+            centered * centered
+        })
+        .sum::<f64>()
+        / (n - 1.0);
+    let margin = 1.96 * (variance / n).sqrt();
+
+    ConfidenceInterval {
+        estimate,
+        lower_bound: estimate - margin,
+        upper_bound: estimate + margin,
+        confidence_level,
+    }
 }
 
 fn average_task_runs(runs: &[&WorkflowRun]) -> TaskRunAverage {
@@ -779,7 +1203,12 @@ fn checked_sum<const N: usize>(values: [u64; N], label: &str) -> Result<u64> {
 }
 
 fn total_tokens(run: &WorkflowRun) -> f64 {
-    run.input_tokens as f64 + run.output_tokens as f64
+    let prompt_and_response_tokens = run.input_tokens as f64 + run.output_tokens as f64;
+    if run.variant.is_layers() {
+        prompt_and_response_tokens + run.layers_overhead_tokens as f64
+    } else {
+        prompt_and_response_tokens
+    }
 }
 
 fn ratio_f64(numerator: f64, denominator: f64) -> f64 {
@@ -841,7 +1270,10 @@ mod tests {
         let runs = load_runs(&path).expect("valid fixture should parse");
         assert_eq!(runs.len(), 2);
         assert!(matches!(runs[0].variant, WorkflowVariant::Baseline));
-        assert!(matches!(runs[1].variant, WorkflowVariant::Layers));
+        assert!(matches!(
+            runs[1].variant,
+            WorkflowVariant::LayersTargetedPreflight
+        ));
     }
 
     #[test]
@@ -902,9 +1334,89 @@ mod tests {
 
         assert_eq!(comparison.paired_task_count, 1);
         assert_approx_eq(comparison.net_time_saved_ms, 300.0);
-        assert_approx_eq(comparison.net_tokens_saved, 500.0);
-        assert_approx_eq(comparison.speedup, 1_000.0 / 700.0);
-        assert_approx_eq(comparison.token_reduction_ratio, 500.0 / 2_100.0);
+        assert_approx_eq(comparison.net_tokens_saved, 400.0);
+        assert_approx_eq(comparison.layers_overhead_ms, 50.0);
+        assert_approx_eq(comparison.layers_overhead_tokens, 100.0);
+        assert_approx_eq(comparison.success_delta, 0.0);
+    }
+
+    #[test]
+    fn reports_layers_surfaces_separately() {
+        let runs = vec![
+            parse_run(&valid_run("task-1", "baseline", 1_000, 2_000)).expect("baseline"),
+            parse_run(&valid_run(
+                "task-1",
+                "layers_targeted_preflight",
+                700,
+                1_500,
+            ))
+            .expect("targeted"),
+            parse_run(&valid_run("task-1", "layers_broad_query", 1_200, 2_400)).expect("broad"),
+            parse_run(&valid_run("task-1", "layers_mcp_preflight", 800, 1_700)).expect("mcp"),
+        ];
+
+        let report = analyze_runs(&runs).expect("analysis");
+
+        assert_eq!(report.variants.len(), 4);
+        assert!(
+            report
+                .comparisons
+                .iter()
+                .any(|comparison| comparison.variant == WorkflowVariant::LayersTargetedPreflight)
+        );
+        assert!(
+            report
+                .comparisons
+                .iter()
+                .any(|comparison| comparison.variant == WorkflowVariant::LayersBroadQuery)
+        );
+        assert!(
+            report
+                .comparisons
+                .iter()
+                .any(|comparison| comparison.variant == WorkflowVariant::LayersMcpPreflight)
+        );
+        assert_eq!(
+            report.comparison.expect("default comparison").variant,
+            WorkflowVariant::LayersTargetedPreflight
+        );
+    }
+
+    #[test]
+    fn claim_is_inconclusive_when_sample_size_is_too_small() {
+        let runs = vec![
+            parse_run(&valid_run("task-1", "baseline", 1_000, 2_000)).expect("baseline"),
+            parse_run(&valid_run(
+                "task-1",
+                "layers_targeted_preflight",
+                700,
+                1_500,
+            ))
+            .expect("targeted"),
+        ];
+        let thresholds = ClaimThresholds {
+            min_paired_tasks: 2,
+            ..ClaimThresholds::default()
+        };
+
+        let report = analyze_runs_with_thresholds(&runs, thresholds).expect("analysis");
+        let claim = report.claim.expect("claim report");
+
+        assert_eq!(claim.status, ClaimStatus::Inconclusive);
+        assert!(
+            claim
+                .uncertainty_notes
+                .iter()
+                .any(|note| note.contains("paired_task_count"))
+        );
+        assert!(
+            report
+                .comparison
+                .expect("comparison")
+                .success_delta_confidence_interval
+                .confidence_level
+                > 0.0
+        );
     }
 
     #[test]
@@ -1047,5 +1559,194 @@ mod tests {
         assert!(output.contains("Workflow benchmark report"));
         assert!(output.contains("Paired net benefit"));
         assert!(output.contains("Context relevant/waste ratios"));
+    }
+
+    #[test]
+    fn parses_and_validates_task_spec_fixture() {
+        let spec = load_task_spec(Path::new(
+            "benchmarks/workflows/fixtures/valid-task-spec.json",
+        ))
+        .expect("valid task spec fixture");
+
+        assert_eq!(spec.task_id, "fixture-valid-code-task");
+        assert_eq!(spec.surface_claim, SurfaceClaim::LayersTargetedPreflight);
+        assert_eq!(spec.success_rubric.primary_endpoint, "verified_success");
+    }
+
+    #[test]
+    fn rejects_task_spec_missing_success_rubric() {
+        let err = load_task_spec(Path::new(
+            "benchmarks/workflows/fixtures/invalid-task-spec-missing-rubric.json",
+        ))
+        .expect_err("missing rubric should be rejected");
+
+        assert!(format!("{err:?}").contains("success_rubric"));
+    }
+
+    fn valid_task_spec_for_validation_tests() -> TaskSpec {
+        TaskSpec {
+            task_id: "valid-code-task".to_owned(),
+            title: "Valid code task".to_owned(),
+            prompt: "Prompt".to_owned(),
+            category: "bugfix".to_owned(),
+            difficulty: Some("small".to_owned()),
+            surface_claim: SurfaceClaim::LayersTargetedPreflight,
+            negative_control: false,
+            stale_context_trap: false,
+            repo_commit: Some("HEAD".to_owned()),
+            time_budget_minutes: Some(30),
+            target_files: vec!["src/lib.rs".to_owned()],
+            target_symbols: vec!["validate_task_spec".to_owned()],
+            expected_relevant_files: vec!["src/lib.rs".to_owned()],
+            expected_validation_commands: vec!["cargo check".to_owned()],
+            success_rubric: SuccessRubric {
+                full_success: "Full".to_owned(),
+                partial_success: "Partial".to_owned(),
+                failure: "Failure".to_owned(),
+                min_verification_quality: 4,
+                primary_endpoint: "verified_success".to_owned(),
+            },
+            abstention_rubric: None,
+        }
+    }
+
+    fn valid_negative_control_task_spec_for_validation_tests() -> TaskSpec {
+        TaskSpec {
+            task_id: "valid-negative-control-task".to_owned(),
+            title: "Valid negative control task".to_owned(),
+            prompt: "Prompt".to_owned(),
+            category: "negative_control".to_owned(),
+            difficulty: Some("trivial".to_owned()),
+            surface_claim: SurfaceClaim::LayersTargetedPreflight,
+            negative_control: true,
+            stale_context_trap: false,
+            repo_commit: Some("HEAD".to_owned()),
+            time_budget_minutes: Some(5),
+            target_files: Vec::new(),
+            target_symbols: Vec::new(),
+            expected_relevant_files: Vec::new(),
+            expected_validation_commands: vec!["cargo check".to_owned()],
+            success_rubric: SuccessRubric {
+                full_success: "Full".to_owned(),
+                partial_success: "Partial".to_owned(),
+                failure: "Failure".to_owned(),
+                min_verification_quality: 4,
+                primary_endpoint: "verified_success".to_owned(),
+            },
+            abstention_rubric: Some("Layers should abstain from injecting context.".to_owned()),
+        }
+    }
+
+    #[test]
+    fn rejects_task_spec_schema_constraint_mismatches() {
+        let mut spec = valid_task_spec_for_validation_tests();
+        spec.task_id = "BadTask".to_owned();
+        spec.difficulty = Some("tiny".to_owned());
+        spec.success_rubric.primary_endpoint = "token_savings".to_owned();
+
+        let err = validate_task_spec(&spec).expect_err("schema constraints should be enforced");
+        assert!(format!("{err:?}").contains("task_id"));
+
+        let unknown = serde_json::json!({
+            "task_id": "unknown-field-task",
+            "title": "Unknown field task",
+            "prompt": "Prompt",
+            "category": "bugfix",
+            "target_files": ["src/lib.rs"],
+            "expected_relevant_files": ["src/lib.rs"],
+            "expected_validation_commands": ["cargo check"],
+            "success_rubric": {
+                "full_success": "Full",
+                "partial_success": "Partial",
+                "failure": "Failure",
+                "min_verification_quality": 4,
+                "primary_endpoint": "verified_success"
+            },
+            "unexpected": true
+        });
+        assert!(serde_json::from_value::<TaskSpec>(unknown).is_err());
+
+        let negative_control_without_abstention = TaskSpec {
+            task_id: "negative-control-with-context".to_owned(),
+            title: "Negative control with context".to_owned(),
+            prompt: "Prompt".to_owned(),
+            category: "negative_control".to_owned(),
+            difficulty: Some("trivial".to_owned()),
+            surface_claim: SurfaceClaim::LayersTargetedPreflight,
+            negative_control: true,
+            stale_context_trap: false,
+            repo_commit: None,
+            time_budget_minutes: None,
+            target_files: vec!["src/lib.rs".to_owned()],
+            target_symbols: Vec::new(),
+            expected_relevant_files: Vec::new(),
+            expected_validation_commands: vec!["cargo check".to_owned()],
+            success_rubric: SuccessRubric {
+                full_success: "Full".to_owned(),
+                partial_success: "Partial".to_owned(),
+                failure: "Failure".to_owned(),
+                min_verification_quality: 4,
+                primary_endpoint: "verified_success".to_owned(),
+            },
+            abstention_rubric: None,
+        };
+        let err = validate_task_spec(&negative_control_without_abstention)
+            .expect_err("negative controls with context must require abstention rubric");
+        assert!(format!("{err:?}").contains("abstention_rubric"));
+    }
+
+    #[test]
+    fn rejects_task_spec_schema_scalar_parity_mismatches() {
+        let mut spec = valid_task_spec_for_validation_tests();
+        spec.repo_commit = Some(" ".to_owned());
+        let err = validate_task_spec(&spec).expect_err("blank repo_commit should fail");
+        assert!(format!("{err:?}").contains("repo_commit must not be empty"));
+
+        let mut spec = valid_task_spec_for_validation_tests();
+        spec.time_budget_minutes = Some(0);
+        let err = validate_task_spec(&spec).expect_err("zero time_budget_minutes should fail");
+        assert!(format!("{err:?}").contains("time_budget_minutes must be at least 1"));
+
+        let mut spec = valid_task_spec_for_validation_tests();
+        spec.target_symbols = vec!["validate_task_spec".to_owned(), " ".to_owned()];
+        let err = validate_task_spec(&spec).expect_err("blank target_symbols entry should fail");
+        assert!(format!("{err:?}").contains("target_symbols[1] must not be empty"));
+    }
+
+    #[test]
+    fn rejects_blank_context_file_entries_even_for_negative_controls() {
+        let mut spec = valid_negative_control_task_spec_for_validation_tests();
+        spec.target_files = vec![" ".to_owned()];
+        let err = validate_task_spec(&spec).expect_err("blank target_files entry should fail");
+        assert!(format!("{err:?}").contains("target_files[0] must not be empty"));
+
+        let mut spec = valid_negative_control_task_spec_for_validation_tests();
+        spec.expected_relevant_files = vec![" ".to_owned()];
+        let err =
+            validate_task_spec(&spec).expect_err("blank expected_relevant_files entry should fail");
+        assert!(format!("{err:?}").contains("expected_relevant_files[0] must not be empty"));
+    }
+
+    #[test]
+    fn allows_negative_control_with_empty_context_file_arrays() {
+        let spec = valid_negative_control_task_spec_for_validation_tests();
+        validate_task_spec(&spec).expect("negative controls may omit context file targets");
+    }
+
+    #[test]
+    fn validates_task_directory_and_reports_invalid_specs() {
+        let report = validate_task_specs(Path::new("benchmarks/workflows/fixtures"))
+            .expect("fixture directory validation report");
+
+        assert_eq!(report.checked_count, 2);
+        assert_eq!(report.valid_count, 1);
+        assert_eq!(report.invalid_count, 1);
+        assert!(report.results.iter().any(|result| {
+            !result.valid
+                && result
+                    .errors
+                    .iter()
+                    .any(|error| error.contains("success_rubric"))
+        }));
     }
 }

@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://layers.local/benchmarks/workflows/task-spec.schema.json",
+  "title": "Layers workflow benchmark task spec",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "task_id",
+    "title",
+    "prompt",
+    "category",
+    "expected_validation_commands",
+    "success_rubric"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "not": { "required": ["negative_control"] }
+      },
+      "then": {
+        "required": ["target_files", "expected_relevant_files"],
+        "properties": {
+          "target_files": { "$ref": "#/$defs/non_empty_strings_required" },
+          "expected_relevant_files": { "$ref": "#/$defs/non_empty_strings_required" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "negative_control": { "const": false } },
+        "required": ["negative_control"]
+      },
+      "then": {
+        "required": ["target_files", "expected_relevant_files"],
+        "properties": {
+          "target_files": { "$ref": "#/$defs/non_empty_strings_required" },
+          "expected_relevant_files": { "$ref": "#/$defs/non_empty_strings_required" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "stale_context_trap": { "const": true } },
+        "required": ["stale_context_trap"]
+      },
+      "then": {
+        "required": ["expected_relevant_files"],
+        "properties": {
+          "expected_relevant_files": { "$ref": "#/$defs/non_empty_strings_required" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "negative_control": { "const": true } },
+        "required": ["negative_control"],
+        "anyOf": [
+          {
+            "properties": {
+              "target_files": {
+                "type": "array",
+                "minItems": 1
+              }
+            },
+            "required": ["target_files"]
+          },
+          {
+            "properties": {
+              "expected_relevant_files": {
+                "type": "array",
+                "minItems": 1
+              }
+            },
+            "required": ["expected_relevant_files"]
+          }
+        ]
+      },
+      "then": {
+        "required": ["abstention_rubric"]
+      }
+    }
+  ],
+  "properties": {
+    "task_id": { "type": "string", "minLength": 1, "pattern": "^[a-z0-9][a-z0-9_-]*$" },
+    "title": { "$ref": "#/$defs/non_blank_string" },
+    "prompt": { "$ref": "#/$defs/non_blank_string" },
+    "category": { "$ref": "#/$defs/non_blank_string" },
+    "difficulty": { "type": "string", "enum": ["trivial", "small", "medium", "large"] },
+    "surface_claim": {
+      "type": "string",
+      "enum": ["baseline", "layers_broad_query", "layers_targeted_preflight", "layers_mcp_preflight"]
+    },
+    "negative_control": { "type": "boolean" },
+    "stale_context_trap": { "type": "boolean" },
+    "repo_commit": { "$ref": "#/$defs/non_blank_string" },
+    "time_budget_minutes": { "type": "integer", "minimum": 1 },
+    "target_files": { "$ref": "#/$defs/non_empty_strings" },
+    "target_symbols": { "$ref": "#/$defs/non_empty_strings" },
+    "expected_relevant_files": { "$ref": "#/$defs/non_empty_strings" },
+    "expected_validation_commands": { "$ref": "#/$defs/non_empty_strings_required" },
+    "success_rubric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["full_success", "partial_success", "failure", "min_verification_quality"],
+      "properties": {
+        "full_success": { "$ref": "#/$defs/non_blank_string" },
+        "partial_success": { "$ref": "#/$defs/non_blank_string" },
+        "failure": { "$ref": "#/$defs/non_blank_string" },
+        "min_verification_quality": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "primary_endpoint": { "type": "string", "enum": ["verified_success"] }
+      }
+    },
+    "abstention_rubric": { "$ref": "#/$defs/non_blank_string" }
+  },
+  "$defs": {
+    "non_blank_string": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "non_empty_strings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/non_blank_string" }
+    },
+    "non_empty_strings_required": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/non_blank_string" }
+    }
+  }
+}

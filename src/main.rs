@@ -973,8 +973,31 @@ mod tests {
         let Commands::WorkflowBenchmark { command } = cli.command else {
             panic!("expected workflow benchmark command");
         };
-        let WorkflowBenchmarkCommands::Analyze { path, json } = command;
+        let WorkflowBenchmarkCommands::Analyze { path, json } = command else {
+            panic!("expected workflow benchmark analyze command");
+        };
         assert_eq!(path, PathBuf::from("runs.jsonl"));
+        assert!(json);
+    }
+
+    #[test]
+    fn parses_workflow_benchmark_validate_tasks_command() {
+        let cli = Cli::try_parse_from([
+            "layers",
+            "workflow-benchmark",
+            "validate-tasks",
+            "benchmarks/workflows/tasks",
+            "--json",
+        ])
+        .expect("workflow benchmark validate-tasks should parse");
+
+        let Commands::WorkflowBenchmark { command } = cli.command else {
+            panic!("expected workflow benchmark command");
+        };
+        let WorkflowBenchmarkCommands::ValidateTasks { path, json } = command else {
+            panic!("expected workflow benchmark validate-tasks command");
+        };
+        assert_eq!(path, PathBuf::from("benchmarks/workflows/tasks"));
         assert!(json);
     }
 }

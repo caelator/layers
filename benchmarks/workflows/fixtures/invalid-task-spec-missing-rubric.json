@@ -1,0 +1,15 @@
+{
+  "task_id": "fixture-invalid-missing-rubric",
+  "title": "Fixture invalid missing rubric",
+  "prompt": "This fixture intentionally omits success_rubric.",
+  "category": "bugfix",
+  "target_files": [
+    "src/cmd/workflow_benchmark.rs"
+  ],
+  "expected_relevant_files": [
+    "src/cmd/workflow_benchmark.rs"
+  ],
+  "expected_validation_commands": [
+    "cargo test -q workflow_benchmark -- --nocapture"
+  ]
+}

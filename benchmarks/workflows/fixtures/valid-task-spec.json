@@ -1,0 +1,33 @@
+{
+  "task_id": "fixture-valid-code-task",
+  "title": "Fixture valid code task",
+  "prompt": "Fix a small context routing regression and run the focused tests.",
+  "category": "bugfix",
+  "difficulty": "small",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": false,
+  "stale_context_trap": false,
+  "repo_commit": "HEAD",
+  "time_budget_minutes": 20,
+  "target_files": [
+    "src/cmd/workflow_benchmark.rs"
+  ],
+  "target_symbols": [
+    "TaskSpec"
+  ],
+  "expected_relevant_files": [
+    "src/cmd/workflow_benchmark.rs",
+    "benchmarks/workflows/CLAIM_GATES.md"
+  ],
+  "expected_validation_commands": [
+    "cargo test -q workflow_benchmark -- --nocapture",
+    "cargo check --workspace --all-targets"
+  ],
+  "success_rubric": {
+    "full_success": "The task is implemented and all expected validation commands pass.",
+    "partial_success": "The main behavior is implemented but at least one non-critical validation is missing or incomplete.",
+    "failure": "The behavior is not implemented, validation fails, or the agent relies on irrelevant context.",
+    "min_verification_quality": 4,
+    "primary_endpoint": "verified_success"
+  }
+}
