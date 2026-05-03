@@ -1,0 +1,40 @@
+{
+  "total_runs": 2,
+  "completed_runs": 2,
+  "failed_runs": 0,
+  "run_records_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/compare/workflow-runs.jsonl",
+  "execution_report_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/compare/runner-execution-report.json",
+  "runs": [
+    {
+      "run_id": "phase12-smoke-runner-execution--layers_targeted_preflight",
+      "task_id": "phase12-smoke-runner-execution",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/worktrees/phase12-smoke-runner-execution--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/transcripts/phase12-smoke-runner-execution--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/validation/phase12-smoke-runner-execution--layers_targeted_preflight.log",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/packets/phase12-smoke-runner-execution--layers_targeted_preflight.json",
+      "agent_exit_code": 0,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 421,
+      "completed": true
+    },
+    {
+      "run_id": "phase12-smoke-runner-execution--baseline",
+      "task_id": "phase12-smoke-runner-execution",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/worktrees/phase12-smoke-runner-execution--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/transcripts/phase12-smoke-runner-execution--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/validation/phase12-smoke-runner-execution--baseline.log",
+      "agent_exit_code": 0,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 314,
+      "completed": true
+    }
+  ]
+}

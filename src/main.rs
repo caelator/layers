@@ -1045,4 +1045,39 @@ mod tests {
         assert_eq!(seed, 42);
         assert!(json);
     }
+
+    #[test]
+    fn parses_workflow_benchmark_run_plan_command() {
+        let cli = Cli::try_parse_from([
+            "layers",
+            "workflow-benchmark",
+            "run-plan",
+            "docs/dogfood/run/runner-plan.json",
+            "--preflight-command",
+            "layers preflight --no-audit --json --strict",
+            "--keep-worktrees",
+            "--json",
+        ])
+        .expect("workflow benchmark run-plan should parse");
+
+        let Commands::WorkflowBenchmark { command } = cli.command else {
+            panic!("expected workflow benchmark command");
+        };
+        let WorkflowBenchmarkCommands::RunPlan {
+            path,
+            preflight_command,
+            keep_worktrees,
+            json,
+        } = command
+        else {
+            panic!("expected workflow benchmark run-plan command");
+        };
+        assert_eq!(path, PathBuf::from("docs/dogfood/run/runner-plan.json"));
+        assert_eq!(
+            preflight_command,
+            "layers preflight --no-audit --json --strict"
+        );
+        assert!(keep_worktrees);
+        assert!(json);
+    }
 }

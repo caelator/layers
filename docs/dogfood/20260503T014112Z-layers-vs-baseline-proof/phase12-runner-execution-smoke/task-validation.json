@@ -1,0 +1,13 @@
+{
+  "checked_count": 1,
+  "valid_count": 1,
+  "invalid_count": 0,
+  "results": [
+    {
+      "path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/tasks/phase12-smoke-task.json",
+      "task_id": "phase12-smoke-runner-execution",
+      "valid": true,
+      "errors": []
+    }
+  ]
+}

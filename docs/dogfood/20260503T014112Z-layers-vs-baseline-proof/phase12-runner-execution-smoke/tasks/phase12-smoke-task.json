@@ -1,0 +1,33 @@
+{
+  "task_id": "phase12-smoke-runner-execution",
+  "title": "Phase 12 smoke runner execution task",
+  "prompt": "Run the smoke agent command in an isolated worktree. The smoke agent should create agent-output.txt from this prompt. Do not make product-effectiveness claims from this task.",
+  "category": "other",
+  "difficulty": "small",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": false,
+  "stale_context_trap": false,
+  "repo_commit": "HEAD",
+  "time_budget_minutes": 5,
+  "target_files": [
+    "docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/tasks/phase12-smoke-task.json"
+  ],
+  "target_symbols": [
+    "phase12-smoke-runner-execution"
+  ],
+  "expected_relevant_files": [
+    "src/cmd/workflow_benchmark.rs",
+    "benchmarks/workflows/RUN_PROTOCOL.md"
+  ],
+  "expected_validation_commands": [
+    "test -f agent-output.txt",
+    "python3 -m json.tool packets/targeted-preflight/phase12-smoke-runner-execution--layers_targeted_preflight.json >/dev/null 2>&1 || test ! -e packets/targeted-preflight/phase12-smoke-runner-execution--layers_targeted_preflight.json"
+  ],
+  "success_rubric": {
+    "full_success": "The smoke command executes in an isolated worktree, writes agent-output.txt, and validation commands pass.",
+    "partial_success": "The smoke command executes but an artifact or validation command is incomplete.",
+    "failure": "The smoke command does not execute, worktree isolation is absent, or required artifacts are missing.",
+    "min_verification_quality": 4,
+    "primary_endpoint": "verified_success"
+  }
+}

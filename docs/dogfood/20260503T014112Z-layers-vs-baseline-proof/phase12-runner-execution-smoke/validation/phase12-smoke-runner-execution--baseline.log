@@ -1,0 +1,8 @@
+# Workflow Benchmark Validation Log
+run_id: phase12-smoke-runner-execution--baseline
+
+Validation command: test -f agent-output.txt
+exit_status: 0
+
+Validation command: python3 -m json.tool packets/targeted-preflight/phase12-smoke-runner-execution--layers_targeted_preflight.json >/dev/null 2>&1 || test ! -e packets/targeted-preflight/phase12-smoke-runner-execution--layers_targeted_preflight.json
+exit_status: 0

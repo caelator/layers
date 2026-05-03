@@ -1,0 +1,52 @@
+{
+  "task_count": 1,
+  "variants": [
+    "baseline",
+    "layers_targeted_preflight"
+  ],
+  "repo_root": "/Users/xxx/layers",
+  "output_dir": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke",
+  "worktree_root": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/worktrees",
+  "runner_plan_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/runner-plan.json",
+  "execution_order_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/execution-order.jsonl",
+  "seed": 12,
+  "runs": [
+    {
+      "task_id": "phase12-smoke-runner-execution",
+      "task_category": "other",
+      "variant": "layers_targeted_preflight",
+      "run_id": "phase12-smoke-runner-execution--layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/worktrees/phase12-smoke-runner-execution--layers_targeted_preflight",
+      "prompt_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/prompts/phase12-smoke-runner-execution--layers_targeted_preflight.md",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/transcripts/phase12-smoke-runner-execution--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/validation/phase12-smoke-runner-execution--layers_targeted_preflight.log",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/packets/phase12-smoke-runner-execution--layers_targeted_preflight.json",
+      "requires_layers_preflight": true,
+      "agent_command": "python3 /Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/scripts/smoke-agent.py",
+      "model": "phase12-smoke-agent",
+      "time_budget_minutes": 5,
+      "expected_validation_commands": [
+        "test -f agent-output.txt",
+        "python3 -m json.tool packets/targeted-preflight/phase12-smoke-runner-execution--layers_targeted_preflight.json >/dev/null 2>&1 || test ! -e packets/targeted-preflight/phase12-smoke-runner-execution--layers_targeted_preflight.json"
+      ]
+    },
+    {
+      "task_id": "phase12-smoke-runner-execution",
+      "task_category": "other",
+      "variant": "baseline",
+      "run_id": "phase12-smoke-runner-execution--baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/worktrees/phase12-smoke-runner-execution--baseline",
+      "prompt_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/prompts/phase12-smoke-runner-execution--baseline.md",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/transcripts/phase12-smoke-runner-execution--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/validation/phase12-smoke-runner-execution--baseline.log",
+      "requires_layers_preflight": false,
+      "agent_command": "python3 /Users/xxx/layers/docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase12-runner-execution-smoke/scripts/smoke-agent.py",
+      "model": "phase12-smoke-agent",
+      "time_budget_minutes": 5,
+      "expected_validation_commands": [
+        "test -f agent-output.txt",
+        "python3 -m json.tool packets/targeted-preflight/phase12-smoke-runner-execution--layers_targeted_preflight.json >/dev/null 2>&1 || test ! -e packets/targeted-preflight/phase12-smoke-runner-execution--layers_targeted_preflight.json"
+      ]
+    }
+  ]
+}

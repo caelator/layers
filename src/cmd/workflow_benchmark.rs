@@ -1,10 +1,12 @@
 //! Workflow benchmark telemetry analysis for comparing Layers vs baseline runs.
-
 use std::{
     collections::BTreeMap,
     fmt::Write as _,
     fs,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
+    process::{Command, Stdio},
+    thread,
+    time::{Duration, Instant},
 };
 
 use anyhow::{Context as _, Result, bail};
@@ -50,6 +52,20 @@ pub(crate) enum WorkflowBenchmarkCommands {
         #[arg(long, default_value_t = 0)]
         seed: u64,
         /// Output the structured runner plan JSON to stdout.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Execute a runner plan in isolated worktrees and emit benchmark run records.
+    RunPlan {
+        /// Path to runner-plan.json produced by `workflow-benchmark plan-run`.
+        path: PathBuf,
+        /// Targeted preflight command to run before targeted-preflight agent runs.
+        #[arg(long, default_value = "layers preflight --no-audit --json --strict")]
+        preflight_command: String,
+        /// Keep worktrees after execution for manual inspection.
+        #[arg(long)]
+        keep_worktrees: bool,
+        /// Output the structured execution report JSON to stdout.
         #[arg(long)]
         json: bool,
     },
@@ -106,6 +122,36 @@ pub(crate) fn handle_workflow_benchmark(command: &WorkflowBenchmarkCommands) -> 
                 println!("output_dir: {}", plan.output_dir.display());
                 println!("runner_plan: {}", plan.plan_path.display());
                 println!("execution_order: {}", plan.execution_order_path.display());
+            }
+            Ok(())
+        }
+        WorkflowBenchmarkCommands::RunPlan {
+            path,
+            preflight_command,
+            keep_worktrees,
+            json,
+        } => {
+            let report = execute_runner_plan(&RunnerExecutionConfig {
+                plan_path: path.clone(),
+                preflight_command: preflight_command.clone(),
+                keep_worktrees: *keep_worktrees,
+            })?;
+            if *json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&report)
+                        .context("failed to serialize runner execution report")?
+                );
+            } else {
+                println!("Workflow benchmark runner execution");
+                println!("runs: {}", report.total_runs);
+                println!("completed: {}", report.completed_runs);
+                println!("failed: {}", report.failed_runs);
+                println!("run_records: {}", report.run_records_path.display());
+                println!(
+                    "execution_report: {}",
+                    report.execution_report_path.display()
+                );
             }
             Ok(())
         }
@@ -265,7 +311,7 @@ struct RunnerPlanConfig {
     seed: u64,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 struct RunnerPlan {
     task_count: usize,
     variants: Vec<String>,
@@ -279,7 +325,7 @@ struct RunnerPlan {
     runs: Vec<RunnerRunPlan>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 struct RunnerRunPlan {
     task_id: String,
     task_category: String,
@@ -297,6 +343,39 @@ struct RunnerRunPlan {
     model: Option<String>,
     time_budget_minutes: u64,
     expected_validation_commands: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+struct RunnerExecutionConfig {
+    plan_path: PathBuf,
+    preflight_command: String,
+    keep_worktrees: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct RunnerExecutionSummary {
+    total_runs: usize,
+    completed_runs: usize,
+    failed_runs: usize,
+    run_records_path: PathBuf,
+    execution_report_path: PathBuf,
+    runs: Vec<RunnerRunExecution>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct RunnerRunExecution {
+    run_id: String,
+    task_id: String,
+    variant: String,
+    worktree_path: PathBuf,
+    transcript_path: PathBuf,
+    validation_log_path: PathBuf,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    packet_artifact_path: Option<PathBuf>,
+    agent_exit_code: Option<i32>,
+    validation_exit_codes: Vec<Option<i32>>,
+    wall_time_ms: u64,
+    completed: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -595,6 +674,619 @@ fn plan_runner_artifacts(config: &RunnerPlanConfig) -> Result<RunnerPlan> {
     Ok(plan)
 }
 
+fn execute_runner_plan(config: &RunnerExecutionConfig) -> Result<RunnerExecutionSummary> {
+    let plan_text = fs::read_to_string(&config.plan_path)
+        .with_context(|| format!("failed to read runner plan: {}", config.plan_path.display()))?;
+    let mut plan: RunnerPlan = serde_json::from_str(&plan_text).with_context(|| {
+        format!(
+            "runner plan is not valid JSON: {}",
+            config.plan_path.display()
+        )
+    })?;
+    normalize_runner_plan_paths(&mut plan)?;
+    validate_runner_plan_for_execution(&plan)?;
+
+    let compare_dir = plan.output_dir.join("compare");
+    fs::create_dir_all(&compare_dir)
+        .with_context(|| format!("failed to create {}", compare_dir.display()))?;
+    let run_records_path = compare_dir.join("workflow-runs.jsonl");
+    let execution_report_path = compare_dir.join("runner-execution-report.json");
+
+    let mut records = Vec::with_capacity(plan.runs.len());
+    let mut executions = Vec::with_capacity(plan.runs.len());
+
+    for run in &plan.runs {
+        let execution = execute_runner_run(&plan, run, config)?;
+        records.push(build_execution_run_record(run, &execution)?);
+        executions.push(execution);
+    }
+
+    let run_records = records
+        .iter()
+        .map(|record| {
+            serde_json::to_string(record).context("failed to serialize workflow run record")
+        })
+        .collect::<Result<Vec<_>>>()?
+        .join("\n");
+    fs::write(&run_records_path, format!("{run_records}\n"))
+        .with_context(|| format!("failed to write {}", run_records_path.display()))?;
+
+    let completed_runs = executions
+        .iter()
+        .filter(|execution| execution.completed)
+        .count();
+    let failed_runs = executions.len().saturating_sub(completed_runs);
+    let summary = RunnerExecutionSummary {
+        total_runs: executions.len(),
+        completed_runs,
+        failed_runs,
+        run_records_path,
+        execution_report_path: execution_report_path.clone(),
+        runs: executions,
+    };
+    let summary_json = serde_json::to_string_pretty(&summary)
+        .context("failed to serialize runner execution summary")?;
+    fs::write(&execution_report_path, format!("{summary_json}\n"))
+        .with_context(|| format!("failed to write {}", execution_report_path.display()))?;
+
+    Ok(summary)
+}
+
+fn execute_runner_run(
+    plan: &RunnerPlan,
+    run: &RunnerRunPlan,
+    config: &RunnerExecutionConfig,
+) -> Result<RunnerRunExecution> {
+    prepare_isolated_worktree(&plan.repo_root, &run.worktree_path)
+        .with_context(|| format!("failed to prepare worktree for {}", run.run_id))?;
+
+    let started = Instant::now();
+    let mut transcript = String::new();
+    let mut validation_log = String::new();
+    writeln!(&mut transcript, "# Workflow Benchmark Transcript")?;
+    writeln!(&mut transcript)?;
+    writeln!(&mut transcript, "Task ID: {}", run.task_id)?;
+    writeln!(&mut transcript, "Variant: {}", run.variant)?;
+    writeln!(&mut transcript, "Run ID: {}", run.run_id)?;
+    writeln!(&mut transcript, "Worktree: {}", run.worktree_path.display())?;
+    writeln!(&mut transcript, "Prompt: {}", run.prompt_path.display())?;
+    writeln!(&mut transcript)?;
+
+    let mut preflight_ok = true;
+    if run.requires_layers_preflight {
+        let packet_path = run
+            .packet_artifact_path
+            .as_ref()
+            .context("targeted-preflight run is missing packet_artifact_path")?;
+        if let Some(parent) = packet_path.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("failed to create {}", parent.display()))?;
+        }
+        let preflight = run_shell_command(
+            &config.preflight_command,
+            &run.worktree_path,
+            run.time_budget_minutes,
+        )?;
+        fs::write(packet_path, &preflight.stdout)
+            .with_context(|| format!("failed to write {}", packet_path.display()))?;
+        preflight_ok = preflight.status.success();
+        writeln!(&mut transcript, "## Targeted Preflight")?;
+        writeln!(
+            &mut transcript,
+            "Preflight exit status: {}",
+            preflight.status.code().unwrap_or(-1)
+        )?;
+        writeln!(
+            &mut transcript,
+            "Packet artifact: {}",
+            packet_path.display()
+        )?;
+        if !preflight.stderr.is_empty() {
+            writeln!(
+                &mut transcript,
+                "Preflight stderr:\n{}",
+                output_text(&preflight.stderr)
+            )?;
+        }
+        writeln!(&mut transcript)?;
+    } else {
+        writeln!(&mut transcript, "## Baseline Isolation")?;
+        writeln!(&mut transcript, "No Layers preflight command was executed.")?;
+        writeln!(&mut transcript)?;
+    }
+
+    let prompt_path = absolutize_path(&run.prompt_path)?;
+    let prompt = fs::read_to_string(&prompt_path)
+        .with_context(|| format!("failed to read prompt: {}", prompt_path.display()))?;
+    let agent_shell = format!("{} < {}", run.agent_command, shell_quote(&prompt_path));
+    let agent = run_shell_command(&agent_shell, &run.worktree_path, run.time_budget_minutes)?;
+    let agent_exit_code = agent.status.code();
+    writeln!(&mut transcript, "## Agent Execution")?;
+    writeln!(&mut transcript, "Agent command: {}", run.agent_command)?;
+    writeln!(
+        &mut transcript,
+        "Agent exit status: {}",
+        agent_exit_code.unwrap_or(-1)
+    )?;
+    if !agent.stdout.is_empty() {
+        writeln!(
+            &mut transcript,
+            "Agent stdout:\n{}",
+            output_text(&agent.stdout)
+        )?;
+    }
+    if !agent.stderr.is_empty() {
+        writeln!(
+            &mut transcript,
+            "Agent stderr:\n{}",
+            output_text(&agent.stderr)
+        )?;
+    }
+    writeln!(&mut transcript)?;
+
+    writeln!(&mut validation_log, "# Workflow Benchmark Validation Log")?;
+    writeln!(&mut validation_log, "run_id: {}", run.run_id)?;
+    let mut validation_exit_codes = Vec::new();
+    for command in &run.expected_validation_commands {
+        writeln!(&mut validation_log)?;
+        writeln!(&mut validation_log, "Validation command: {command}")?;
+        let validation = run_shell_command(command, &run.worktree_path, run.time_budget_minutes)?;
+        validation_exit_codes.push(validation.status.code());
+        writeln!(
+            &mut validation_log,
+            "exit_status: {}",
+            validation.status.code().unwrap_or(-1)
+        )?;
+        if !validation.stdout.is_empty() {
+            writeln!(
+                &mut validation_log,
+                "stdout:\n{}",
+                output_text(&validation.stdout)
+            )?;
+        }
+        if !validation.stderr.is_empty() {
+            writeln!(
+                &mut validation_log,
+                "stderr:\n{}",
+                output_text(&validation.stderr)
+            )?;
+        }
+    }
+    writeln!(&mut transcript, "## Validation")?;
+    writeln!(
+        &mut transcript,
+        "Log: {}",
+        run.validation_log_path.display()
+    )?;
+    writeln!(&mut transcript)?;
+    writeln!(&mut transcript, "## Scoring Notes")?;
+    writeln!(
+        &mut transcript,
+        "Smoke execution record generated automatically; not product-effectiveness evidence."
+    )?;
+    writeln!(&mut transcript)?;
+    writeln!(&mut transcript, "## Context Quality Classification")?;
+    writeln!(
+        &mut transcript,
+        "Variant-scoped smoke classification; independent scoring required for claims."
+    )?;
+
+    if let Some(parent) = run.transcript_path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
+    fs::write(&run.transcript_path, transcript)
+        .with_context(|| format!("failed to write {}", run.transcript_path.display()))?;
+    if let Some(parent) = run.validation_log_path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
+    fs::write(&run.validation_log_path, validation_log)
+        .with_context(|| format!("failed to write {}", run.validation_log_path.display()))?;
+
+    let validation_ok = validation_exit_codes
+        .iter()
+        .all(|code| code.is_some_and(|code| code == 0));
+    let completed = preflight_ok && agent.status.success() && validation_ok;
+    let wall_time_ms = elapsed_ms(started);
+    let execution = RunnerRunExecution {
+        run_id: run.run_id.clone(),
+        task_id: run.task_id.clone(),
+        variant: run.variant.clone(),
+        worktree_path: run.worktree_path.clone(),
+        transcript_path: run.transcript_path.clone(),
+        validation_log_path: run.validation_log_path.clone(),
+        packet_artifact_path: run.packet_artifact_path.clone(),
+        agent_exit_code,
+        validation_exit_codes,
+        wall_time_ms,
+        completed,
+    };
+
+    if !config.keep_worktrees {
+        cleanup_isolated_worktree(&plan.repo_root, &run.worktree_path)?;
+    }
+
+    let _ = prompt;
+    Ok(execution)
+}
+
+fn prepare_isolated_worktree(repo_root: &Path, worktree_path: &Path) -> Result<()> {
+    if repo_root.join(".git").exists() {
+        cleanup_git_worktree_registration(repo_root, worktree_path);
+    }
+    if worktree_path.exists() {
+        fs::remove_dir_all(worktree_path)
+            .with_context(|| format!("failed to remove {}", worktree_path.display()))?;
+    }
+    if repo_root.join(".git").exists() {
+        if let Some(parent) = worktree_path.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("failed to create {}", parent.display()))?;
+        }
+        let status = Command::new("git")
+            .arg("-C")
+            .arg(repo_root)
+            .arg("worktree")
+            .arg("add")
+            .arg("--detach")
+            .arg(worktree_path)
+            .arg("HEAD")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .context("failed to spawn git worktree add")?;
+        if !status.success() {
+            bail!("git worktree add failed with status {status}");
+        }
+    } else {
+        fs::create_dir_all(worktree_path)
+            .with_context(|| format!("failed to create {}", worktree_path.display()))?;
+        copy_dir_contents(repo_root, worktree_path)?;
+    }
+    Ok(())
+}
+
+fn cleanup_isolated_worktree(repo_root: &Path, worktree_path: &Path) -> Result<()> {
+    if repo_root.join(".git").exists() {
+        cleanup_git_worktree_registration(repo_root, worktree_path);
+    }
+    if worktree_path.exists() {
+        fs::remove_dir_all(worktree_path)
+            .with_context(|| format!("failed to remove {}", worktree_path.display()))?;
+    }
+    Ok(())
+}
+
+fn cleanup_git_worktree_registration(repo_root: &Path, worktree_path: &Path) {
+    let _ = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .arg("worktree")
+        .arg("remove")
+        .arg("--force")
+        .arg(worktree_path)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+    let _ = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .arg("worktree")
+        .arg("prune")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+}
+
+fn copy_dir_contents(source: &Path, destination: &Path) -> Result<()> {
+    for entry in fs::read_dir(source)
+        .with_context(|| format!("failed to read directory {}", source.display()))?
+    {
+        let entry =
+            entry.with_context(|| format!("failed to read entry in {}", source.display()))?;
+        let source_path = entry.path();
+        let destination_path = destination.join(entry.file_name());
+        if source_path == destination || source_path.starts_with(destination) {
+            continue;
+        }
+        if source_path.is_dir() {
+            fs::create_dir_all(&destination_path)
+                .with_context(|| format!("failed to create {}", destination_path.display()))?;
+            copy_dir_contents(&source_path, &destination_path)?;
+        } else if source_path.is_file() {
+            fs::copy(&source_path, &destination_path).with_context(|| {
+                format!(
+                    "failed to copy {} to {}",
+                    source_path.display(),
+                    destination_path.display()
+                )
+            })?;
+        }
+    }
+    Ok(())
+}
+
+fn run_shell_command(
+    command: &str,
+    current_dir: &Path,
+    timeout_minutes: u64,
+) -> Result<std::process::Output> {
+    let timeout = Duration::from_secs(timeout_minutes.max(1).saturating_mul(60));
+    let started = Instant::now();
+    let mut child = Command::new("sh")
+        .arg("-c")
+        .arg(command)
+        .current_dir(current_dir)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .with_context(|| format!("failed to spawn shell command: {command}"))?;
+    loop {
+        if child
+            .try_wait()
+            .with_context(|| format!("failed to poll shell command: {command}"))?
+            .is_some()
+        {
+            return child
+                .wait_with_output()
+                .with_context(|| format!("failed to collect shell command output: {command}"));
+        }
+        if started.elapsed() >= timeout {
+            let _ = child.kill();
+            let output = child.wait_with_output().with_context(|| {
+                format!("failed to collect timed-out shell command output: {command}")
+            })?;
+            bail!(
+                "shell command timed out after {} minute(s): {command}\nstderr:\n{}",
+                timeout_minutes.max(1),
+                output_text(&output.stderr)
+            );
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+}
+
+fn build_execution_run_record(
+    run: &RunnerRunPlan,
+    execution: &RunnerRunExecution,
+) -> Result<WorkflowRun> {
+    let variant = match run.variant.as_str() {
+        "baseline" => WorkflowVariant::Baseline,
+        "layers_targeted_preflight" => WorkflowVariant::LayersTargetedPreflight,
+        "layers_broad_query" => WorkflowVariant::LayersBroadQuery,
+        "layers_mcp_preflight" => WorkflowVariant::LayersMcpPreflight,
+        other => bail!("unsupported workflow benchmark runner variant: {other}"),
+    };
+    let success_score = if execution.completed { 1.0 } else { 0.0 };
+    let overhead_ms = u64::from(run.requires_layers_preflight);
+    let overhead_tokens = u64::from(run.requires_layers_preflight);
+    let failed_validation_commands = execution
+        .validation_exit_codes
+        .iter()
+        .filter(|code| !code.is_some_and(|code| code == 0))
+        .count() as u64;
+    let failed_commands = u64::from(!execution.completed) + failed_validation_commands;
+    Ok(WorkflowRun {
+        task_id: run.task_id.clone(),
+        variant,
+        task_category: run.task_category.clone(),
+        success_score,
+        wall_time_ms: execution.wall_time_ms.max(overhead_ms),
+        orientation_ms: overhead_ms,
+        implementation_ms: execution.wall_time_ms.saturating_sub(overhead_ms),
+        debugging_ms: 0,
+        verification_ms: 0,
+        input_tokens: 1,
+        output_tokens: 1,
+        peak_context_tokens: 1,
+        context_relevant_tokens: u64::from(run.requires_layers_preflight),
+        context_duplicate_tokens: 0,
+        context_irrelevant_tokens: 0,
+        assistant_turns: 1,
+        tool_calls: 1 + run.expected_validation_commands.len() as u64,
+        failed_commands,
+        patch_attempts: 0,
+        test_runs: run.expected_validation_commands.len() as u64,
+        human_interventions: 0,
+        failed_attempts: u64::from(!execution.completed),
+        retrieval_quality: RetrievalQuality {
+            relevance: u8::from(run.requires_layers_preflight),
+            completeness: u8::from(run.requires_layers_preflight),
+            specificity: u8::from(run.requires_layers_preflight),
+            freshness: u8::from(run.requires_layers_preflight),
+            grounding: u8::from(run.requires_layers_preflight),
+            concision: u8::from(run.requires_layers_preflight),
+            noise_absence: 5,
+        },
+        verification_quality: u8::from(execution.completed),
+        change_quality: u8::from(execution.completed),
+        planning_quality: 1,
+        reproducibility: 5,
+        confidence_calibration: 1,
+        user_usefulness: 1,
+        layers_overhead_ms: overhead_ms,
+        layers_overhead_tokens: overhead_tokens,
+        missed_critical_context: 0,
+        hallucinated_or_stale_context: 0,
+        regressions: 0,
+        negative_control_abstained: false,
+        unnecessary_context_injections: 0,
+        context_caused_regressions: 0,
+    })
+}
+
+fn normalize_runner_plan_paths(plan: &mut RunnerPlan) -> Result<()> {
+    plan.repo_root = absolutize_path(&plan.repo_root)?;
+    plan.output_dir = absolutize_path(&plan.output_dir)?;
+    plan.worktree_root = absolutize_path(&plan.worktree_root)?;
+    plan.plan_path = absolutize_path(&plan.plan_path)?;
+    plan.execution_order_path = absolutize_path(&plan.execution_order_path)?;
+
+    for run in &mut plan.runs {
+        run.worktree_path = absolutize_path(&run.worktree_path)?;
+        run.prompt_path = absolutize_path(&run.prompt_path)?;
+        run.transcript_path = absolutize_path(&run.transcript_path)?;
+        run.validation_log_path = absolutize_path(&run.validation_log_path)?;
+        if let Some(packet_path) = &run.packet_artifact_path {
+            run.packet_artifact_path = Some(absolutize_path(packet_path)?);
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_runner_plan_for_execution(plan: &RunnerPlan) -> Result<()> {
+    let cwd = normalize_path(&std::env::current_dir()?);
+    let home = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .map(|path| normalize_path(&path));
+    let repo_root = normalize_path(&plan.repo_root);
+    let output_dir = normalize_path(&plan.output_dir);
+    let worktree_root = normalize_path(&plan.worktree_root);
+
+    if output_dir == repo_root {
+        bail!(
+            "runner output_dir must not equal repo_root: {}",
+            output_dir.display()
+        );
+    }
+    if worktree_root == repo_root || worktree_root == output_dir {
+        bail!(
+            "runner worktree_root must be distinct from repo_root and output_dir: {}",
+            worktree_root.display()
+        );
+    }
+
+    ensure_path_within(
+        &normalize_path(&plan.plan_path),
+        &output_dir,
+        "runner_plan_path",
+    )?;
+    ensure_path_within(
+        &normalize_path(&plan.execution_order_path),
+        &output_dir,
+        "execution_order_path",
+    )?;
+
+    for run in &plan.runs {
+        match run.variant.as_str() {
+            "baseline"
+            | "layers_targeted_preflight"
+            | "layers_broad_query"
+            | "layers_mcp_preflight" => {}
+            other => bail!("unsupported workflow benchmark runner variant: {other}"),
+        }
+
+        let worktree_path = normalize_path(&run.worktree_path);
+        ensure_path_within(&worktree_path, &worktree_root, "worktree_path")?;
+        if worktree_path == worktree_root
+            || worktree_path == repo_root
+            || worktree_path == output_dir
+            || worktree_path == cwd
+            || home.as_ref().is_some_and(|home| &worktree_path == home)
+            || worktree_path.parent().is_none()
+        {
+            bail!(
+                "unsafe runner worktree_path for {}: {}",
+                run.run_id,
+                run.worktree_path.display()
+            );
+        }
+
+        ensure_path_within(
+            &normalize_path(&run.prompt_path),
+            &output_dir,
+            "prompt_path",
+        )?;
+        ensure_path_within(
+            &normalize_path(&run.transcript_path),
+            &output_dir,
+            "transcript_path",
+        )?;
+        ensure_path_within(
+            &normalize_path(&run.validation_log_path),
+            &output_dir,
+            "validation_log_path",
+        )?;
+
+        if run.requires_layers_preflight {
+            if run.variant != "layers_targeted_preflight" {
+                bail!(
+                    "requires_layers_preflight is only supported for layers_targeted_preflight runs: {}",
+                    run.run_id
+                );
+            }
+            let packet_path = run.packet_artifact_path.as_ref().with_context(|| {
+                format!(
+                    "targeted-preflight run {} is missing packet_artifact_path",
+                    run.run_id
+                )
+            })?;
+            ensure_path_within(
+                &normalize_path(packet_path),
+                &output_dir,
+                "packet_artifact_path",
+            )?;
+        } else if run.packet_artifact_path.is_some() {
+            bail!(
+                "non-preflight runner run must not declare packet_artifact_path: {}",
+                run.run_id
+            );
+        }
+    }
+
+    Ok(())
+}
+
+fn ensure_path_within(path: &Path, root: &Path, label: &str) -> Result<()> {
+    if !path.starts_with(root) || path == root {
+        bail!(
+            "runner {label} must be inside its expected root: {} (root: {})",
+            path.display(),
+            root.display()
+        );
+    }
+    Ok(())
+}
+
+fn absolutize_path(path: &Path) -> Result<PathBuf> {
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()?.join(path)
+    };
+    Ok(normalize_path(&absolute))
+}
+
+fn normalize_path(path: &Path) -> PathBuf {
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                normalized.pop();
+            }
+            Component::Normal(part) => normalized.push(part),
+            Component::RootDir | Component::Prefix(_) => normalized.push(component.as_os_str()),
+        }
+    }
+    normalized
+}
+
+fn output_text(bytes: &[u8]) -> String {
+    String::from_utf8_lossy(bytes).into_owned()
+}
+
+fn shell_quote(path: &Path) -> String {
+    let value = path.display().to_string();
+    format!("'{}'", value.replace('\'', "'\\''"))
+}
+
+fn elapsed_ms(started: Instant) -> u64 {
+    u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX)
+}
+
 fn build_runner_run_plan(
     config: &RunnerPlanConfig,
     spec: &TaskSpec,
@@ -649,18 +1341,18 @@ fn write_runner_prompt(run: &RunnerRunPlan, spec: &TaskSpec) -> Result<()> {
         writeln!(&mut prompt, "## Targeted preflight setup")?;
         writeln!(
             &mut prompt,
-            "Run `layers preflight --no-audit --json --strict` before implementation."
+            "The benchmark harness handles the Layers targeted-preflight step before agent execution; do not run additional `layers preflight` commands."
         )?;
         if let Some(packet_path) = &run.packet_artifact_path {
             writeln!(
                 &mut prompt,
-                "Save the preflight JSON packet to `{}` before editing files.",
+                "The harness-generated targeted-preflight packet artifact for this run is `{}`; inspect it if needed before editing files.",
                 packet_path.display()
             )?;
         }
         writeln!(
             &mut prompt,
-            "Use only targeted-preflight context for this variant; do not mix broad-query or MCP-preflight artifacts."
+            "Use only the harness-captured targeted-preflight context for this variant; do not mix broad-query or MCP-preflight artifacts."
         )?;
     } else {
         writeln!(&mut prompt, "## Baseline isolation")?;
@@ -2098,6 +2790,179 @@ mod tests {
     }
 
     #[test]
+    fn executes_runner_plan_with_isolated_worktrees_and_run_records() {
+        let output = tempfile::tempdir().expect("temp output dir");
+        let repo = tempfile::tempdir().expect("temp repo dir");
+        let task_path = output.path().join("phase12-smoke-task.json");
+        fs::write(
+            &task_path,
+            r#"{
+  "task_id": "phase12-smoke-runner-execution-test",
+  "title": "Phase 12 smoke runner execution test",
+  "prompt": "Write agent-output.txt in the working directory.",
+  "category": "bugfix",
+  "difficulty": "small",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": false,
+  "stale_context_trap": false,
+  "repo_commit": "HEAD",
+  "time_budget_minutes": 1,
+  "target_files": ["agent-output.txt"],
+  "target_symbols": ["agent-output"],
+  "expected_relevant_files": ["agent-output.txt"],
+  "expected_validation_commands": ["test -f agent-output.txt"],
+  "success_rubric": {
+    "full_success": "agent-output.txt exists.",
+    "partial_success": "The agent ran but did not write the expected file.",
+    "failure": "The agent did not run or validation failed.",
+    "min_verification_quality": 4,
+    "primary_endpoint": "verified_success"
+  }
+}
+"#,
+        )
+        .expect("task written");
+        let config = RunnerPlanConfig {
+            task_path,
+            output_dir: output.path().join("phase12-run"),
+            repo_root: repo.path().to_path_buf(),
+            agent_command: "python3 -c \"from pathlib import Path; Path('agent-output.txt').write_text('done')\"".to_owned(),
+            model: Some("smoke-model".to_owned()),
+            seed: 12,
+        };
+        let plan = plan_runner_artifacts(&config).expect("runner plan artifacts");
+        let execution = execute_runner_plan(&RunnerExecutionConfig {
+            plan_path: plan.plan_path.clone(),
+            preflight_command: "python3 -c \"import json; print(json.dumps({'packet':'ok'}))\""
+                .to_owned(),
+            keep_worktrees: true,
+        })
+        .expect("runner execution");
+
+        assert_eq!(execution.total_runs, 2);
+        assert_eq!(execution.completed_runs, 2);
+        assert_eq!(execution.failed_runs, 0);
+        assert!(execution.run_records_path.starts_with(&config.output_dir));
+        let run_records =
+            fs::read_to_string(&execution.run_records_path).expect("run records written");
+        assert_eq!(run_records.lines().count(), 2);
+        let parsed_runs = run_records
+            .lines()
+            .map(parse_run)
+            .collect::<Result<Vec<_>>>()
+            .expect("run records parse");
+        assert!(
+            parsed_runs
+                .iter()
+                .any(|run| run.variant == WorkflowVariant::Baseline)
+        );
+        assert!(
+            parsed_runs
+                .iter()
+                .any(|run| run.variant == WorkflowVariant::LayersTargetedPreflight)
+        );
+        for run in &plan.runs {
+            assert!(
+                run.worktree_path.exists(),
+                "worktree exists for {}",
+                run.run_id
+            );
+            assert!(run.worktree_path.join("agent-output.txt").exists());
+            assert!(
+                fs::read_to_string(&run.transcript_path)
+                    .expect("transcript updated")
+                    .contains("Agent exit status: 0")
+            );
+            assert!(
+                fs::read_to_string(&run.validation_log_path)
+                    .expect("validation log written")
+                    .contains("Validation command")
+            );
+        }
+        let targeted = plan
+            .runs
+            .iter()
+            .find(|run| run.requires_layers_preflight)
+            .expect("targeted run");
+        assert!(
+            targeted
+                .packet_artifact_path
+                .as_ref()
+                .expect("packet path")
+                .exists()
+        );
+    }
+
+    #[test]
+    fn runner_validation_failure_marks_run_incomplete() {
+        let output = tempfile::tempdir().expect("temp output dir");
+        let repo = tempfile::tempdir().expect("temp repo dir");
+        let config = RunnerPlanConfig {
+            task_path: PathBuf::from("benchmarks/workflows/fixtures/valid-task-spec.json"),
+            output_dir: output.path().join("phase12-run"),
+            repo_root: repo.path().to_path_buf(),
+            agent_command: "python3 -c \"from pathlib import Path; Path('agent-output.txt').write_text('done')\"".to_owned(),
+            model: None,
+            seed: 14,
+        };
+        let mut plan = plan_runner_artifacts(&config).expect("runner plan artifacts");
+        for run in &mut plan.runs {
+            run.expected_validation_commands = vec!["false".to_owned()];
+        }
+        fs::write(
+            &plan.plan_path,
+            serde_json::to_string_pretty(&plan).expect("plan serializes"),
+        )
+        .expect("plan rewritten");
+
+        let execution = execute_runner_plan(&RunnerExecutionConfig {
+            plan_path: plan.plan_path.clone(),
+            preflight_command: "python3 -c \"print('{}')\"".to_owned(),
+            keep_worktrees: true,
+        })
+        .expect("runner execution");
+
+        assert_eq!(execution.completed_runs, 0);
+        assert_eq!(execution.failed_runs, 2);
+        let records = fs::read_to_string(&execution.run_records_path).expect("run records written");
+        for record in records.lines().map(parse_run) {
+            let record = record.expect("run record parses");
+            assert!(record.success_score.abs() < f64::EPSILON);
+            assert!(record.failed_commands > 0);
+            assert!(record.failed_attempts > 0);
+        }
+    }
+
+    #[test]
+    fn runner_cleanup_removes_worktrees_when_not_kept() {
+        let output = tempfile::tempdir().expect("temp output dir");
+        let repo = tempfile::tempdir().expect("temp repo dir");
+        let config = RunnerPlanConfig {
+            task_path: PathBuf::from("benchmarks/workflows/fixtures/valid-task-spec.json"),
+            output_dir: output.path().join("phase12-run"),
+            repo_root: repo.path().to_path_buf(),
+            agent_command: "python3 -c \"from pathlib import Path; Path('agent-output.txt').write_text('done')\"".to_owned(),
+            model: None,
+            seed: 13,
+        };
+        let plan = plan_runner_artifacts(&config).expect("runner plan artifacts");
+        execute_runner_plan(&RunnerExecutionConfig {
+            plan_path: plan.plan_path.clone(),
+            preflight_command: "python3 -c \"print('{}')\"".to_owned(),
+            keep_worktrees: false,
+        })
+        .expect("runner execution");
+
+        for run in &plan.runs {
+            assert!(
+                !run.worktree_path.exists(),
+                "worktree cleaned for {}",
+                run.run_id
+            );
+        }
+    }
+
+    #[test]
     fn runner_prompts_keep_baseline_free_of_layers_context() {
         let output = tempfile::tempdir().expect("temp output dir");
         let config = RunnerPlanConfig {
@@ -2127,8 +2992,11 @@ mod tests {
             .expect("targeted run");
         let targeted_prompt =
             fs::read_to_string(&targeted.prompt_path).expect("targeted prompt should be written");
-        assert!(targeted_prompt.contains("layers preflight --no-audit --json --strict"));
-        assert!(targeted_prompt.contains("Save the preflight JSON packet"));
+        assert!(
+            targeted_prompt.contains("benchmark harness handles the Layers targeted-preflight")
+        );
+        assert!(targeted_prompt.contains("do not run additional `layers preflight` commands"));
+        assert!(targeted_prompt.contains("harness-generated targeted-preflight packet artifact"));
     }
 
     #[test]
