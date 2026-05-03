@@ -1,0 +1,36 @@
+{
+  "task_id": "code-bugfix-runtime-queue-starvation",
+  "title": "Preserve runtime queue fairness under critical load",
+  "prompt": "Diagnose and fix a runtime queue fairness regression where critical work can starve standard work beyond the configured ratio. Add a deterministic regression test.",
+  "category": "bugfix",
+  "difficulty": "large",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": false,
+  "stale_context_trap": false,
+  "time_budget_minutes": 75,
+  "target_files": [
+    "crates/layers-runtime/src/queue.rs",
+    "crates/layers-runtime/src/agent_loop.rs",
+    "src/critical_path.rs"
+  ],
+  "target_symbols": [
+    "Queue",
+    "weighted_ratio"
+  ],
+  "expected_relevant_files": [
+    "crates/layers-runtime/src/queue.rs",
+    "crates/layers-runtime/src/agent_loop.rs",
+    "src/critical_path.rs"
+  ],
+  "expected_validation_commands": [
+    "cargo test -q -p layers-runtime -- --nocapture",
+    "cargo test -q critical_path -- --nocapture"
+  ],
+  "success_rubric": {
+    "full_success": "The requested repository change is implemented with focused regression coverage and all listed validation commands pass.",
+    "partial_success": "The main behavior is implemented but validation is incomplete, coverage is weak, or minor follow-up is required.",
+    "failure": "The requested behavior remains missing, untested, or introduces regressions.",
+    "min_verification_quality": 4,
+    "primary_endpoint": "verified_success"
+  }
+}

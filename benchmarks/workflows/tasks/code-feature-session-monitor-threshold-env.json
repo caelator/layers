@@ -1,0 +1,32 @@
+{
+  "task_id": "code-feature-session-monitor-threshold-env",
+  "title": "Validate session monitor threshold env vars",
+  "prompt": "Improve session monitor threshold parsing so invalid environment values fall back to defaults and are covered by tests without making live session classification flaky.",
+  "category": "feature",
+  "difficulty": "small",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": false,
+  "stale_context_trap": false,
+  "time_budget_minutes": 25,
+  "target_files": [
+    "src/bin/session_monitor.rs"
+  ],
+  "target_symbols": [
+    "thresholds_from_env_vars",
+    "classify"
+  ],
+  "expected_relevant_files": [
+    "src/bin/session_monitor.rs"
+  ],
+  "expected_validation_commands": [
+    "cargo test -q --bin session_monitor -- --nocapture",
+    "cargo check --workspace --all-targets"
+  ],
+  "success_rubric": {
+    "full_success": "The requested repository change is implemented with focused regression coverage and all listed validation commands pass.",
+    "partial_success": "The main behavior is implemented but validation is incomplete, coverage is weak, or minor follow-up is required.",
+    "failure": "The requested behavior remains missing, untested, or introduces regressions.",
+    "min_verification_quality": 4,
+    "primary_endpoint": "verified_success"
+  }
+}
