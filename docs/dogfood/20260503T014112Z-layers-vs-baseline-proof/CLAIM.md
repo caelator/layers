@@ -38,8 +38,17 @@ The preregistered targeted-preflight claim is not supported by this run. This ru
 2. No independent targeted-preflight coding-agent implementation after packet generation for code-heavy tasks.
 3. Code-heavy validation commands were not run after task-specific edits because no task-specific edits were made.
 
+## Phase 9 review addendum
+`PHASE9_REVIEW.md` records the independent artifact/static review. It passed the artifact set for credibility and safety as a deliberately `not_supported` protocol run, and failed any product-performance claim.
+
+Additional Phase 9 findings to carry into the product-fix loop:
+- Analyzer claim thresholds currently report `min_paired_tasks: 1`, which is weaker than preregistered `CLAIM_GATES.md`; align analyzer gates with preregistered gates before relying on analyzer status for a future effectiveness run.
+- Negative-control targeted-preflight rows include some context-relevant token accounting despite explicit abstention artifacts; clean this up so abstained runs do not appear to consume useful context.
+
 ## Next product fixes
 1. Add an automated benchmark runner that can launch isolated coding-agent runs per task/variant in throwaway worktrees.
 2. Add machine-readable transcript/run-record capture from actual agent sessions.
-3. Add packet validation/inspection subcommands specifically for preflight JSON packets if the packet schema differs from context-packet validation.
-4. Rerun Phase 8 with real agent execution before making any product-performance claim.
+3. Align analyzer claim thresholds with preregistered `CLAIM_GATES.md`, including minimum paired tasks and minimum code-heavy paired tasks.
+4. Clean up negative-control token accounting for abstained targeted-preflight runs.
+5. Add packet validation/inspection subcommands specifically for preflight JSON packets if the packet schema differs from context-packet validation.
+6. Rerun Phase 8 with real agent execution before making any product-performance claim.
