@@ -30,6 +30,29 @@ pub(crate) enum WorkflowBenchmarkCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Plan isolated paired coding-agent benchmark runs without executing them.
+    PlanRun {
+        /// Task spec file or directory containing task spec JSON files.
+        path: PathBuf,
+        /// Output artifact directory for prompts, order, and runner plan JSON.
+        #[arg(long)]
+        output_dir: PathBuf,
+        /// Repository root to clone/reset from when executing the plan.
+        #[arg(long, default_value = ".")]
+        repo_root: PathBuf,
+        /// Agent command recorded in each run plan, e.g. `codex exec` or `claude -p`.
+        #[arg(long)]
+        agent_command: String,
+        /// Optional model name recorded in each run plan.
+        #[arg(long)]
+        model: Option<String>,
+        /// Deterministic seed for variant/task execution order.
+        #[arg(long, default_value_t = 0)]
+        seed: u64,
+        /// Output the structured runner plan JSON to stdout.
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 /// Handle workflow benchmark commands.
@@ -49,6 +72,40 @@ pub(crate) fn handle_workflow_benchmark(command: &WorkflowBenchmarkCommands) -> 
                     "{} workflow task spec(s) failed validation",
                     report.invalid_count
                 );
+            }
+            Ok(())
+        }
+        WorkflowBenchmarkCommands::PlanRun {
+            path,
+            output_dir,
+            repo_root,
+            agent_command,
+            model,
+            seed,
+            json,
+        } => {
+            let config = RunnerPlanConfig {
+                task_path: path.clone(),
+                output_dir: output_dir.clone(),
+                repo_root: repo_root.clone(),
+                agent_command: agent_command.clone(),
+                model: model.clone(),
+                seed: *seed,
+            };
+            let plan = plan_runner_artifacts(&config)?;
+            if *json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&plan)
+                        .context("failed to serialize runner plan")?
+                );
+            } else {
+                println!("Workflow benchmark runner plan");
+                println!("tasks: {}", plan.task_count);
+                println!("runs: {}", plan.runs.len());
+                println!("output_dir: {}", plan.output_dir.display());
+                println!("runner_plan: {}", plan.plan_path.display());
+                println!("execution_order: {}", plan.execution_order_path.display());
             }
             Ok(())
         }
@@ -196,6 +253,50 @@ struct TaskValidationResult {
     task_id: Option<String>,
     valid: bool,
     errors: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+struct RunnerPlanConfig {
+    task_path: PathBuf,
+    output_dir: PathBuf,
+    repo_root: PathBuf,
+    agent_command: String,
+    model: Option<String>,
+    seed: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct RunnerPlan {
+    task_count: usize,
+    variants: Vec<String>,
+    repo_root: PathBuf,
+    output_dir: PathBuf,
+    worktree_root: PathBuf,
+    #[serde(rename = "runner_plan_path")]
+    plan_path: PathBuf,
+    execution_order_path: PathBuf,
+    seed: u64,
+    runs: Vec<RunnerRunPlan>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct RunnerRunPlan {
+    task_id: String,
+    task_category: String,
+    variant: String,
+    run_id: String,
+    worktree_path: PathBuf,
+    prompt_path: PathBuf,
+    transcript_path: PathBuf,
+    validation_log_path: PathBuf,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    packet_artifact_path: Option<PathBuf>,
+    requires_layers_preflight: bool,
+    agent_command: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    model: Option<String>,
+    time_budget_minutes: u64,
+    expected_validation_commands: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -416,6 +517,250 @@ fn collect_task_spec_paths_recursive(dir: &Path, paths: &mut Vec<PathBuf>) -> Re
         }
     }
     Ok(())
+}
+
+fn plan_runner_artifacts(config: &RunnerPlanConfig) -> Result<RunnerPlan> {
+    require_non_empty("agent_command", &config.agent_command)?;
+    let task_paths = collect_task_spec_paths(&config.task_path)?;
+    if task_paths.is_empty() {
+        bail!("runner plan requires at least one task spec");
+    }
+
+    let output_dir = config.output_dir.clone();
+    let prompts_dir = output_dir.join("prompts");
+    let transcripts_dir = output_dir.join("transcripts");
+    let validation_dir = output_dir.join("validation");
+    let packets_dir = output_dir.join("packets");
+    let worktree_root = output_dir.join("worktrees");
+    for dir in [
+        &output_dir,
+        &prompts_dir,
+        &transcripts_dir,
+        &validation_dir,
+        &packets_dir,
+        &worktree_root,
+    ] {
+        fs::create_dir_all(dir).with_context(|| format!("failed to create {}", dir.display()))?;
+    }
+
+    let mut runs = Vec::new();
+    for task_path in task_paths {
+        let spec = load_task_spec_unchecked(&task_path)?;
+        validate_task_spec(&spec)
+            .with_context(|| format!("invalid task spec: {}", task_path.display()))?;
+        for variant in ["baseline", "layers_targeted_preflight"] {
+            let run = build_runner_run_plan(config, &spec, variant, &output_dir, &worktree_root);
+            write_runner_prompt(&run, &spec)?;
+            write_transcript_stub(&run, &spec)?;
+            runs.push(run);
+        }
+    }
+
+    runs.sort_by_key(|run| deterministic_run_order_key(config.seed, &run.task_id, &run.variant));
+
+    let runner_plan_path = output_dir.join("runner-plan.json");
+    let execution_order_path = output_dir.join("execution-order.jsonl");
+    let plan = RunnerPlan {
+        task_count: runs
+            .iter()
+            .map(|run| run.task_id.as_str())
+            .collect::<std::collections::BTreeSet<_>>()
+            .len(),
+        variants: vec![
+            "baseline".to_owned(),
+            "layers_targeted_preflight".to_owned(),
+        ],
+        repo_root: config.repo_root.clone(),
+        output_dir: output_dir.clone(),
+        worktree_root,
+        plan_path: runner_plan_path.clone(),
+        execution_order_path: execution_order_path.clone(),
+        seed: config.seed,
+        runs,
+    };
+
+    let plan_json =
+        serde_json::to_string_pretty(&plan).context("failed to serialize runner plan")?;
+    fs::write(&runner_plan_path, format!("{plan_json}\n"))
+        .with_context(|| format!("failed to write {}", runner_plan_path.display()))?;
+    let order_jsonl = plan
+        .runs
+        .iter()
+        .map(|run| serde_json::to_string(run).context("failed to serialize execution-order row"))
+        .collect::<Result<Vec<_>>>()?
+        .join("\n");
+    fs::write(&execution_order_path, format!("{order_jsonl}\n"))
+        .with_context(|| format!("failed to write {}", execution_order_path.display()))?;
+
+    Ok(plan)
+}
+
+fn build_runner_run_plan(
+    config: &RunnerPlanConfig,
+    spec: &TaskSpec,
+    variant: &str,
+    output_dir: &Path,
+    worktree_root: &Path,
+) -> RunnerRunPlan {
+    let task_slug = safe_path_slug(&spec.task_id);
+    let variant_slug = safe_path_slug(variant);
+    let run_id = format!("{task_slug}--{variant_slug}");
+    let requires_layers_preflight = variant == "layers_targeted_preflight";
+    RunnerRunPlan {
+        task_id: spec.task_id.clone(),
+        task_category: spec.category.clone(),
+        variant: variant.to_owned(),
+        run_id: run_id.clone(),
+        worktree_path: worktree_root.join(&run_id),
+        prompt_path: output_dir.join("prompts").join(format!("{run_id}.md")),
+        transcript_path: output_dir.join("transcripts").join(format!("{run_id}.md")),
+        validation_log_path: output_dir.join("validation").join(format!("{run_id}.log")),
+        packet_artifact_path: requires_layers_preflight
+            .then(|| output_dir.join("packets").join(format!("{run_id}.json"))),
+        requires_layers_preflight,
+        agent_command: config.agent_command.clone(),
+        model: config.model.clone(),
+        time_budget_minutes: spec.time_budget_minutes.unwrap_or(30),
+        expected_validation_commands: spec.expected_validation_commands.clone(),
+    }
+}
+
+fn write_runner_prompt(run: &RunnerRunPlan, spec: &TaskSpec) -> Result<()> {
+    let mut prompt = String::new();
+    writeln!(&mut prompt, "# Workflow Benchmark Agent Prompt")?;
+    writeln!(&mut prompt)?;
+    writeln!(&mut prompt, "Task ID: {}", spec.task_id)?;
+    writeln!(&mut prompt, "Variant: {}", run.variant)?;
+    writeln!(
+        &mut prompt,
+        "Time budget minutes: {}",
+        run.time_budget_minutes
+    )?;
+    writeln!(&mut prompt)?;
+    writeln!(&mut prompt, "## Task")?;
+    writeln!(&mut prompt, "{}", spec.prompt)?;
+    writeln!(&mut prompt)?;
+    writeln!(&mut prompt, "## Required validation commands")?;
+    for command in &spec.expected_validation_commands {
+        writeln!(&mut prompt, "- `{command}`")?;
+    }
+    writeln!(&mut prompt)?;
+    if run.requires_layers_preflight {
+        writeln!(&mut prompt, "## Targeted preflight setup")?;
+        writeln!(
+            &mut prompt,
+            "Run `layers preflight --no-audit --json --strict` before implementation."
+        )?;
+        if let Some(packet_path) = &run.packet_artifact_path {
+            writeln!(
+                &mut prompt,
+                "Save the preflight JSON packet to `{}` before editing files.",
+                packet_path.display()
+            )?;
+        }
+        writeln!(
+            &mut prompt,
+            "Use only targeted-preflight context for this variant; do not mix broad-query or MCP-preflight artifacts."
+        )?;
+    } else {
+        writeln!(&mut prompt, "## Baseline isolation")?;
+        writeln!(
+            &mut prompt,
+            "Do not run Layers commands, inspect Layers packet artifacts, or use preflight-generated context."
+        )?;
+        writeln!(
+            &mut prompt,
+            "Work from the repository and the task prompt only so this run remains a clean no-Layers baseline."
+        )?;
+    }
+    writeln!(&mut prompt)?;
+    writeln!(&mut prompt, "## Scoring reminder")?;
+    writeln!(
+        &mut prompt,
+        "Full success: {}",
+        spec.success_rubric.full_success
+    )?;
+    writeln!(
+        &mut prompt,
+        "Partial success: {}",
+        spec.success_rubric.partial_success
+    )?;
+    writeln!(&mut prompt, "Failure: {}", spec.success_rubric.failure)?;
+
+    fs::write(&run.prompt_path, prompt)
+        .with_context(|| format!("failed to write {}", run.prompt_path.display()))
+}
+
+fn write_transcript_stub(run: &RunnerRunPlan, spec: &TaskSpec) -> Result<()> {
+    let mut transcript = String::new();
+    writeln!(&mut transcript, "# Workflow Benchmark Transcript")?;
+    writeln!(&mut transcript)?;
+    writeln!(&mut transcript, "## Setup")?;
+    writeln!(&mut transcript, "Task ID: {}", spec.task_id)?;
+    writeln!(&mut transcript, "Variant: {}", run.variant)?;
+    writeln!(&mut transcript, "Worktree: {}", run.worktree_path.display())?;
+    writeln!(&mut transcript, "Agent command: {}", run.agent_command)?;
+    if let Some(model) = &run.model {
+        writeln!(&mut transcript, "Model: {model}")?;
+    }
+    writeln!(&mut transcript)?;
+    writeln!(&mut transcript, "## Prompt")?;
+    writeln!(&mut transcript, "See {}", run.prompt_path.display())?;
+    writeln!(&mut transcript)?;
+    writeln!(&mut transcript, "## Packet Artifacts")?;
+    if let Some(packet_path) = &run.packet_artifact_path {
+        writeln!(
+            &mut transcript,
+            "Targeted packet: {}",
+            packet_path.display()
+        )?;
+    } else {
+        writeln!(
+            &mut transcript,
+            "Baseline run: no Layers packet artifacts allowed."
+        )?;
+    }
+    writeln!(&mut transcript)?;
+    writeln!(&mut transcript, "## Timeline")?;
+    writeln!(&mut transcript, "TBD by executor")?;
+    writeln!(&mut transcript)?;
+    writeln!(&mut transcript, "## Validation")?;
+    writeln!(
+        &mut transcript,
+        "Log: {}",
+        run.validation_log_path.display()
+    )?;
+    writeln!(&mut transcript)?;
+    writeln!(&mut transcript, "## Scoring Notes")?;
+    writeln!(&mut transcript, "TBD by scorer")?;
+    writeln!(&mut transcript)?;
+    writeln!(&mut transcript, "## Context Quality Classification")?;
+    writeln!(&mut transcript, "TBD by scorer")?;
+
+    fs::write(&run.transcript_path, transcript)
+        .with_context(|| format!("failed to write {}", run.transcript_path.display()))
+}
+
+fn deterministic_run_order_key(seed: u64, task_id: &str, variant: &str) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    seed.hash(&mut hasher);
+    task_id.hash(&mut hasher);
+    variant.hash(&mut hasher);
+    hasher.finish()
+}
+
+fn safe_path_slug(value: &str) -> String {
+    value
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+                ch
+            } else {
+                '-'
+            }
+        })
+        .collect()
 }
 
 fn format_task_validation_report(report: &TaskValidationReport, json: bool) -> Result<String> {
@@ -1696,6 +2041,94 @@ mod tests {
         assert_eq!(spec.task_id, "fixture-valid-code-task");
         assert_eq!(spec.surface_claim, SurfaceClaim::LayersTargetedPreflight);
         assert_eq!(spec.success_rubric.primary_endpoint, "verified_success");
+    }
+
+    #[test]
+    fn plans_isolated_runner_artifacts_for_paired_agent_runs() {
+        let output = tempfile::tempdir().expect("temp output dir");
+        let config = RunnerPlanConfig {
+            task_path: PathBuf::from("benchmarks/workflows/fixtures/valid-task-spec.json"),
+            output_dir: output.path().join("phase11-run"),
+            repo_root: PathBuf::from("/repo/layers"),
+            agent_command: "codex exec".to_owned(),
+            model: Some("test-model".to_owned()),
+            seed: 11,
+        };
+
+        let plan = plan_runner_artifacts(&config).expect("runner plan artifacts");
+
+        assert_eq!(plan.variants, vec!["baseline", "layers_targeted_preflight"]);
+        assert_eq!(plan.runs.len(), 2);
+        assert!(plan.runs.iter().any(|run| run.variant == "baseline"));
+        assert!(
+            plan.runs
+                .iter()
+                .any(|run| run.variant == "layers_targeted_preflight")
+        );
+        for run in &plan.runs {
+            assert!(run.worktree_path.starts_with(&plan.worktree_root));
+            assert!(run.transcript_path.starts_with(&config.output_dir));
+            assert!(run.prompt_path.starts_with(&config.output_dir));
+            assert!(run.validation_log_path.starts_with(&config.output_dir));
+            assert_eq!(run.agent_command, "codex exec");
+            assert_eq!(run.model.as_deref(), Some("test-model"));
+        }
+        let targeted = plan
+            .runs
+            .iter()
+            .find(|run| run.variant == "layers_targeted_preflight")
+            .expect("targeted run");
+        assert!(targeted.requires_layers_preflight);
+        assert!(targeted.packet_artifact_path.is_some());
+        let baseline = plan
+            .runs
+            .iter()
+            .find(|run| run.variant == "baseline")
+            .expect("baseline run");
+        assert!(!baseline.requires_layers_preflight);
+        assert!(baseline.packet_artifact_path.is_none());
+
+        let plan_json = fs::read_to_string(config.output_dir.join("runner-plan.json"))
+            .expect("runner plan JSON written");
+        let value: serde_json::Value = serde_json::from_str(&plan_json).expect("plan JSON parses");
+        assert_eq!(value["runs"].as_array().expect("runs array").len(), 2);
+        let order_jsonl = fs::read_to_string(config.output_dir.join("execution-order.jsonl"))
+            .expect("execution order JSONL written");
+        assert_eq!(order_jsonl.lines().count(), 2);
+    }
+
+    #[test]
+    fn runner_prompts_keep_baseline_free_of_layers_context() {
+        let output = tempfile::tempdir().expect("temp output dir");
+        let config = RunnerPlanConfig {
+            task_path: PathBuf::from("benchmarks/workflows/fixtures/valid-task-spec.json"),
+            output_dir: output.path().join("phase11-run"),
+            repo_root: PathBuf::from("/repo/layers"),
+            agent_command: "claude -p".to_owned(),
+            model: None,
+            seed: 7,
+        };
+
+        let plan = plan_runner_artifacts(&config).expect("runner plan artifacts");
+        let baseline = plan
+            .runs
+            .iter()
+            .find(|run| run.variant == "baseline")
+            .expect("baseline run");
+        let baseline_prompt =
+            fs::read_to_string(&baseline.prompt_path).expect("baseline prompt should be written");
+        assert!(baseline_prompt.contains("Do not run Layers commands"));
+        assert!(!baseline_prompt.contains("layers preflight --no-audit --json --strict"));
+
+        let targeted = plan
+            .runs
+            .iter()
+            .find(|run| run.variant == "layers_targeted_preflight")
+            .expect("targeted run");
+        let targeted_prompt =
+            fs::read_to_string(&targeted.prompt_path).expect("targeted prompt should be written");
+        assert!(targeted_prompt.contains("layers preflight --no-audit --json --strict"));
+        assert!(targeted_prompt.contains("Save the preflight JSON packet"));
     }
 
     #[test]

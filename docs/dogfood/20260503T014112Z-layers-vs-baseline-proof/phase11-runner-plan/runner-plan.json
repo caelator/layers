@@ -1,0 +1,52 @@
+{
+  "task_count": 1,
+  "variants": [
+    "baseline",
+    "layers_targeted_preflight"
+  ],
+  "repo_root": "/Users/xxx/layers",
+  "output_dir": "docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase11-runner-plan",
+  "worktree_root": "docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase11-runner-plan/worktrees",
+  "runner_plan_path": "docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase11-runner-plan/runner-plan.json",
+  "execution_order_path": "docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase11-runner-plan/execution-order.jsonl",
+  "seed": 11,
+  "runs": [
+    {
+      "task_id": "fixture-valid-code-task",
+      "task_category": "bugfix",
+      "variant": "baseline",
+      "run_id": "fixture-valid-code-task--baseline",
+      "worktree_path": "docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase11-runner-plan/worktrees/fixture-valid-code-task--baseline",
+      "prompt_path": "docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase11-runner-plan/prompts/fixture-valid-code-task--baseline.md",
+      "transcript_path": "docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase11-runner-plan/transcripts/fixture-valid-code-task--baseline.md",
+      "validation_log_path": "docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase11-runner-plan/validation/fixture-valid-code-task--baseline.log",
+      "requires_layers_preflight": false,
+      "agent_command": "codex exec",
+      "model": "phase11-dry-run-model",
+      "time_budget_minutes": 20,
+      "expected_validation_commands": [
+        "cargo test -q workflow_benchmark -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ]
+    },
+    {
+      "task_id": "fixture-valid-code-task",
+      "task_category": "bugfix",
+      "variant": "layers_targeted_preflight",
+      "run_id": "fixture-valid-code-task--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase11-runner-plan/worktrees/fixture-valid-code-task--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase11-runner-plan/prompts/fixture-valid-code-task--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase11-runner-plan/transcripts/fixture-valid-code-task--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase11-runner-plan/validation/fixture-valid-code-task--layers_targeted_preflight.log",
+      "packet_artifact_path": "docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/phase11-runner-plan/packets/fixture-valid-code-task--layers_targeted_preflight.json",
+      "requires_layers_preflight": true,
+      "agent_command": "codex exec",
+      "model": "phase11-dry-run-model",
+      "time_budget_minutes": 20,
+      "expected_validation_commands": [
+        "cargo test -q workflow_benchmark -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ]
+    }
+  ]
+}

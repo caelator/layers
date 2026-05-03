@@ -1000,4 +1000,49 @@ mod tests {
         assert_eq!(path, PathBuf::from("benchmarks/workflows/tasks"));
         assert!(json);
     }
+
+    #[test]
+    fn parses_workflow_benchmark_plan_run_command() {
+        let cli = Cli::try_parse_from([
+            "layers",
+            "workflow-benchmark",
+            "plan-run",
+            "benchmarks/workflows/tasks",
+            "--output-dir",
+            "docs/dogfood/run",
+            "--repo-root",
+            "/repo/layers",
+            "--agent-command",
+            "codex exec",
+            "--model",
+            "test-model",
+            "--seed",
+            "42",
+            "--json",
+        ])
+        .expect("workflow benchmark plan-run should parse");
+
+        let Commands::WorkflowBenchmark { command } = cli.command else {
+            panic!("expected workflow benchmark command");
+        };
+        let WorkflowBenchmarkCommands::PlanRun {
+            path,
+            output_dir,
+            repo_root,
+            agent_command,
+            model,
+            seed,
+            json,
+        } = command
+        else {
+            panic!("expected workflow benchmark plan-run command");
+        };
+        assert_eq!(path, PathBuf::from("benchmarks/workflows/tasks"));
+        assert_eq!(output_dir, PathBuf::from("docs/dogfood/run"));
+        assert_eq!(repo_root, PathBuf::from("/repo/layers"));
+        assert_eq!(agent_command, "codex exec");
+        assert_eq!(model.as_deref(), Some("test-model"));
+        assert_eq!(seed, 42);
+        assert!(json);
+    }
 }
