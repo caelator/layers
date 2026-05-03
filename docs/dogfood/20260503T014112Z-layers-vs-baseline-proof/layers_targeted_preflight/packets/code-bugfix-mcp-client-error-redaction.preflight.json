@@ -1,0 +1,375 @@
+{
+  "schema_version": 2,
+  "id": "preflight-a4afc86e-4c14-4072-b0a2-eea58cefe607",
+  "workspace_id": "layers",
+  "query": "Ensure MCP client/server error formatting never echoes secret-like request payload fields. Add tests that secret-like values are redacted in errors.",
+  "created_at": "2026-05-03T01:41:39.640256Z",
+  "git_ref": "e3e3763",
+  "route": "preflight",
+  "confidence": "high",
+  "budget": {
+    "max_units": 1800,
+    "used_units": 1063,
+    "unit": "words",
+    "truncated": false
+  },
+  "sections": [
+    {
+      "id": "preflight_summary",
+      "title": "Preflight Summary",
+      "summary": "Preflight planning result.",
+      "items": [
+        {
+          "id": "research-summary-1",
+          "title": "Preflight classification",
+          "body": "Preflight classified this task as code-heavy. Explicit targets: crates/layers-mcp/src/client.rs, crates/layers-mcp/src/server.rs, crates/layers-mcp/src/types.rs. Effective targets: crates/layers-mcp/src/client.rs, crates/layers-mcp/src/server.rs, crates/layers-mcp/src/types.rs, client/server.",
+          "source": {
+            "kind": "preflight",
+            "uri": "local-planner"
+          },
+          "token_estimate": 17,
+          "selected_reason": "summarizes the local preflight plan before source collection",
+          "tags": [
+            "planning"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "workspace",
+      "title": "Workspace State",
+      "summary": "Current Git/worktree context that can affect safe edits.",
+      "items": [
+        {
+          "id": "workspace-state-1",
+          "title": "Git worktree state",
+          "body": "Branch: main\nHead: e3e3763\nDirty: true\nUntracked files:\n- docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/\n",
+          "source": {
+            "kind": "workspace",
+            "uri": "git status --porcelain=v1"
+          },
+          "token_estimate": 10,
+          "selected_reason": "dirty or divergent workspace state changes how agents should interpret context",
+          "tags": [
+            "workspace",
+            "git"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "title": "Project Memory",
+      "summary": "Relevant explicit project memory or memory-source warning.",
+      "items": [
+        {
+          "id": "memory-1",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"payload\":{\"rationale\":\"Broader OS/platform ambitions created drift; the highest-leverage immediate value is better deliberation, better memory continuity, and better structural grounding.\",\"slug\":\"narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"summary\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memoryport-based continuity, and GitNexus-based codebase understanding.\",\"title\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memor...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"scope\",\"strategy\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 48,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-2",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"payload\":{\"rationale\":\"Triumvirate is the destination architecture; Layers should accelerate and de-risk it by proving workflows, memory models, and graph-aware tooling before promotion.\",\"slug\":\"treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"summary\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-state system.\",\"title\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-st...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"triumvirate\",\"strategy\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 46,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-3",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"payload\":{\"rationale\":\"Structured records preserve auditability, editability, and schema stability while still allowing semantic recall via derived retrieval text and embeddings.\",\"slug\":\"canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"summary\":\"Canonical curated memories should be structured records, not vectors as source of truth; semantic embeddings are derived retrieval artifacts.\",\"title\":\"Canonical curated memories should be structured records, not vectors as source of truth\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"memoryport\",\"architecture\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 49,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-4",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"constraint\",\"id\":\"cm_constraint_layers_prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"payload\":{\"impact\":\"The user explicitly set the rule: if it can reasonably be built in Rust, build it in Rust; build software, not sandcastles.\",\"slug\":\"prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"summary\":\"Prefer Rust for durable systems; use scripting only for glue or temporary scaffolding.\",\"title\":\"Prefer Rust for durable systems\",\"type\":\"constraint\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"engineering\",\"rust\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 38,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-5",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 51,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "title": "Code and Impact Context",
+      "summary": "Local code context gathered without editing files.",
+      "items": [
+        {
+          "id": "code-1",
+          "title": "crates/layers-mcp/src/client.rs",
+          "body": "//! MCP client: connect to stdio JSON-RPC MCP servers, discover tools, call them.\n\nuse std::collections::HashMap;\nuse std::sync::Arc;\n\nuse serde::{Deserialize, Serialize};\nuse tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};\nuse tokio::process::{Child, Command};\nuse tokio::sync::Mutex;\nuse tracing::{debug, error, warn};\n\nuse layers_core::{LayersError, McpServerConfig, Result, Tool, ToolContext, ToolOutput};\n\n// ---------------------------------------------------------------------------\n// JSON-RPC types\n// ---------------------------------------------------------------------------\n\n#[derive(Debug, Serialize)]\nstruct JsonRpcRequest {\n    jsonrpc: String,\n    id: u64,\n    method: String,\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    params: Option<serde_json::Value>,\n}\n\n#[derive(Debug, Deserialize)]\nstruct JsonRpcResponse {\n    #[allow(dead_code)]\n    jsonrpc: String,\n    #[allow(dead_code)]\n    id: Option<u64>,\n    result: Option<serde_json::Value>,\n    error: Option<JsonRpcError>,\n}\n\n#[derive(Debug, Deserialize)]\nstruct JsonRpcError {\n    #[allow(dead_code)]\n    code: i64,\n    message: String,\n}\n\n// ---------------------------------------------------------------------------\n// MCP tool definition from server\n// ---------------------------------------------------------------------------\n\n#[derive(Debug, Deserialize)]\nstruct McpToolDef {\n    name: String,\n    #[serde(default)]\n    description: Option<String>,\n    #[serde(default, rename = \"inputSchema\")]\n    input_schema: Option<serde_json::Value>,\n}\n\n// ---------------------------------------------------------------------------\n// MCP client\n// ---------------------------------------------------------------------------\n\n/// Client for a single MCP server connected via stdio.\npub struct McpClient {\n    name: String,\n    child: Mutex<Option<Child>>,\n    stdin: Mutex<Option<tokio::process::ChildStdin>>,\n    stdout: Mutex<Option<BufReader<tokio::process::ChildStdout>>>,\n    next_id: Mutex<u64>,\n    tools: Mutex<Vec<McpToolDef>>,\n}\n\nimpl McpClient {\n    /// Spawn an MCP server process and initialize the connection.\n    pub async fn connect(name: &str, config: &McpServerConfig) -> Result<Self> {\n        if config.url.is_empty() {\n            return Err(LayersError::Config(format!(\n                \"MCP server '{name}' has no URL/command configured\"\n            )));\n        }\n\n        // Parse the URL as a command. If it starts with \"stdio://\", extract the command.",
+          "source": {
+            "kind": "file",
+            "uri": "crates/layers-mcp/src/client.rs",
+            "repo_path": "crates/layers-mcp/src/client.rs"
+          },
+          "token_estimate": 204,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        },
+        {
+          "id": "code-2",
+          "title": "crates/layers-mcp/src/server.rs",
+          "body": "//! MCP server: expose Layers tools as an MCP server via stdio JSON-RPC.\n//!\n//! Tools are only exposed if explicitly allowlisted. Dangerous tools (those that\n//! mutate state — exec, process, subagent, fs-write, edit) are blocked by\n//! default unless `expose_dangerous` is set to `true` in the server config.\n\nuse std::collections::HashSet;\nuse std::sync::Arc;\n\nuse serde::{Deserialize, Serialize};\nuse tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};\nuse tracing::{debug, error, warn};\n\nuse layers_core::{Result, ToolContext};\nuse layers_tools::registry::ToolRegistry;\n\n// ---------------------------------------------------------------------------\n// Dangerous-tool patterns\n// ---------------------------------------------------------------------------\n\n/// Substrings that mark a tool name as dangerous (mutating / side-effectful).\nconst DANGEROUS_PATTERNS: &[&str] = &[\n    \"exec\", \"execute\", \"run\", \"spawn\", \"process\", \"subagent\", \"write\", \"edit\", \"delete\", \"remove\",\n    \"create\", \"mutate\", \"update\", \"kill\", \"stop\",\n];\n\n/// Stable product-facing MCP tools for Layers' context compiler surface.\n///\n/// This surface is intentionally narrow: it exposes context packet compilation,\n/// memory retrieval, code-impact analysis, and context validation. Generic\n/// runtime tools such as filesystem mutation, process execution, and subagent\n/// control must remain behind explicit allowlists and dangerous-tool opt-in.\npub const STABLE_CONTEXT_SURFACE_TOOLS: &[&str] = &[\n    \"context_compile\",\n    \"impact_analyze\",\n    \"memory_get\",\n    \"memory_search\",\n    \"preflight_context\",\n    \"validate_context\",\n];\n\n/// Returns `true` if the tool name matches any dangerous pattern.\npub fn is_dangerous_tool(name: &str) -> bool {\n    let lower = name.to_lowercase();\n    DANGEROUS_PATTERNS\n        .iter()\n        .any(|pattern| lower.contains(pattern))\n}\n\n/// Stable context compiler MCP tool names in deterministic listing order.\n#[must_use]\npub fn stable_context_surface_tools() -> Vec<&'static str> {\n    STABLE_CONTEXT_SURFACE_TOOLS.to_vec()\n}\n\n// ---------------------------------------------------------------------------\n// Server config\n// ---------------------------------------------------------------------------\n\n/// Configuration for the MCP server.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct McpServerConfig {\n    /// Server name announced during initialization.\n    #[serde(default = \"default_server_name\")]\n    pub server_name: String,\n    /// Server version announced during initialization.\n    #[serde(default = \"default_server_version\")]\n    pub server_version: String,\n    /// Explicit list of tool names to expose. Only these tools will appear in\n    /// `tools/list` and be callable via `tools/call`.\n    #[serde(default)]\n    pub allowlisted_tools: Vec<String>,\n    /// Whether to expose tools classified as dangerous. Default: `false`.\n    #[serde(default)]\n    pub expose_dangerous: bool,\n}\n\nfn default_server_name() -> String {\n    \"layers\".to_string()\n}",
+          "source": {
+            "kind": "file",
+            "uri": "crates/layers-mcp/src/server.rs",
+            "repo_path": "crates/layers-mcp/src/server.rs"
+          },
+          "token_estimate": 315,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        },
+        {
+          "id": "code-3",
+          "title": "crates/layers-mcp/src/types.rs",
+          "body": "//! JSON-RPC and MCP protocol types.\n\nuse serde::{Deserialize, Serialize};\n\n// ---------------------------------------------------------------------------\n// JSON-RPC\n// ---------------------------------------------------------------------------\n\n/// A JSON-RPC 2.0 request.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct JsonRpcRequest {\n    pub jsonrpc: String,\n    pub id: u64,\n    pub method: String,\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub params: Option<serde_json::Value>,\n}\n\nimpl JsonRpcRequest {\n    /// Create a new JSON-RPC request.\n    pub fn new(id: u64, method: impl Into<String>, params: Option<serde_json::Value>) -> Self {\n        Self {\n            jsonrpc: \"2.0\".to_string(),\n            id,\n            method: method.into(),\n            params,\n        }\n    }\n}\n\n/// A JSON-RPC 2.0 response.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct JsonRpcResponse {\n    pub jsonrpc: String,\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub id: Option<u64>,\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub result: Option<serde_json::Value>,\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub error: Option<JsonRpcError>,\n}\n\n/// A JSON-RPC 2.0 error object.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct JsonRpcError {\n    pub code: i64,\n    pub message: String,\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub data: Option<serde_json::Value>,\n}\n\n// ---------------------------------------------------------------------------\n// MCP protocol types\n// ---------------------------------------------------------------------------\n\n/// An MCP tool definition as returned by `tools/list`.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct McpTool {\n    pub name: String,\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub description: Option<String>,\n    #[serde(\n        default,\n        rename = \"inputSchema\",\n        skip_serializing_if = \"Option::is_none\"\n    )]\n    pub input_schema: Option<serde_json::Value>,\n}\n\n/// The result of calling an MCP tool via `tools/call`.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct McpToolResult {\n    pub content: Vec<ContentBlock>,\n    #[serde(default, rename = \"isError\")]\n    pub is_error: bool,\n}\n\nimpl McpToolResult {\n    /// Extract all text content joined by newlines.\n    pub fn text(&self) -> String {",
+          "source": {
+            "kind": "file",
+            "uri": "crates/layers-mcp/src/types.rs",
+            "repo_path": "crates/layers-mcp/src/types.rs"
+          },
+          "token_estimate": 232,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "validation",
+      "title": "Suggested Validation Commands",
+      "summary": "Commands an agent should run after using this research.",
+      "items": [
+        {
+          "id": "validation-1",
+          "title": "git diff --check",
+          "body": "Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 17,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-2",
+          "title": "cargo test --workspace --all-targets",
+          "body": "Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-3",
+          "title": "cargo clippy --workspace --all-targets -- -D warnings",
+          "body": "Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "dirty_worktree",
+      "message": "Workspace has 0 changed and 1 untracked files; inspect before editing."
+    },
+    {
+      "severity": "info",
+      "code": "autoresearch_uncertainty",
+      "message": "No persisted autoresearch finding matched this task."
+    },
+    {
+      "severity": "info",
+      "code": "injection_policy",
+      "message": "Packet quality gate recommends InjectCompact: packet is low-confidence or fallback-derived"
+    }
+  ],
+  "selection_trace": [
+    {
+      "item_id": "research-summary-1",
+      "reason": "summarizes the local preflight plan before source collection"
+    },
+    {
+      "item_id": "workspace-state-1",
+      "reason": "dirty or divergent workspace state changes how agents should interpret context"
+    },
+    {
+      "item_id": "memory-1",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-2",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-3",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-4",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-5",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "code-1",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "code-2",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "code-3",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "validation-1",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-2",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-3",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    }
+  ],
+  "retrieval": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  },
+  "provenance": {
+    "compiler": "layers-context-packet",
+    "compiler_version": "2",
+    "surface": "preflight",
+    "workspace_id": "layers",
+    "git_ref": "e3e3763",
+    "generated_at": "2026-05-03T01:41:39.640256Z",
+    "source_adapters": [
+      "file",
+      "memory",
+      "preflight",
+      "validation",
+      "workspace"
+    ]
+  },
+  "task": "Ensure MCP client/server error formatting never echoes secret-like request payload fields. Add tests that secret-like values are redacted in errors.",
+  "low_confidence_fallback": false,
+  "scores": {
+    "injection_recommendation": "inject_compact",
+    "packet_quality": {
+      "hallucinated_or_stale_context": false,
+      "missed_critical_context": false,
+      "reasons": [
+        "packet is low-confidence or fallback-derived"
+      ],
+      "recommendation": "inject_compact",
+      "scores": {
+        "completeness": 5,
+        "concision": 5,
+        "freshness": 3,
+        "grounding": 5,
+        "noise_absence": 3,
+        "relevance": 5,
+        "specificity": 5
+      },
+      "target_coverage_ratio": 1.0,
+      "validation_coverage_ratio": 1.0,
+      "warning_penalty": 2.25
+    },
+    "preflight": {
+      "autoresearch_findings": 0,
+      "code_heavy": true,
+      "targets": 4,
+      "workspace_dirty": true
+    }
+  },
+  "why_retrieved": "Preflight compiles local pre-edit context from workspace state, persisted autoresearch findings, memory, code targets, and validation policy.",
+  "why_not_retrieved": "",
+  "evidence": "### Preflight Summary\nPreflight Summary: Preflight classification\n- [local-planner] Preflight classified this task as code-heavy. Explicit targets: crates/layers-mcp/src/client.rs, crates/layers-mcp/src/server.rs, crates/layers-mcp/src/types.rs. Effective targets: crates/layers-mcp/src/client.rs, crates/layers-mcp/src/server.rs, crates/layers-mcp/src/types.rs, client/server.\nSource: local-planner (preflight)\nSelected because: summarizes the local preflight plan before source collection\n\n### Workspace State\nWorkspace State: Git worktree state\n- [git status --porcelain=v1] Branch: main\nHead: e3e3763\nDirty: true\nUntracked files:\n- docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/\n\nSource: git status --porcelain=v1 (workspace)\nSelected because: dirty or divergent workspace state changes how agents should interpret context\n\n### Project Memory\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"payload\":{\"rationale\":\"Broader OS/platform ambitions created drift; the highest-leverage immediate value is better deliberation, better memory continuity, and better structural grounding.\",\"slug\":\"narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"summary\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memoryport-based continuity, and GitNexus-based codebase understanding.\",\"title\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memor...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"scope\",\"strategy\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"payload\":{\"rationale\":\"Triumvirate is the destination architecture; Layers should accelerate and de-risk it by proving workflows, memory models, and graph-aware tooling before promotion.\",\"slug\":\"treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"summary\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-state system.\",\"title\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-st...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"triumvirate\",\"strategy\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"payload\":{\"rationale\":\"Structured records preserve auditability, editability, and schema stability while still allowing semantic recall via derived retrieval text and embeddings.\",\"slug\":\"canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"summary\":\"Canonical curated memories should be structured records, not vectors as source of truth; semantic embeddings are derived retrieval artifacts.\",\"title\":\"Canonical curated memories should be structured records, not vectors as source of truth\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"memoryport\",\"architecture\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"constraint\",\"id\":\"cm_constraint_layers_prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"payload\":{\"impact\":\"The user explicitly set the rule: if it can reasonably be built in Rust, build it in Rust; build software, not sandcastles.\",\"slug\":\"prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"summary\":\"Prefer Rust for durable systems; use scripting only for glue or temporary scaffolding.\",\"title\":\"Prefer Rust for durable systems\",\"type\":\"constraint\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"engineering\",\"rust\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\n### Code and Impact Context\nCode and Impact Context: crates/layers-mcp/src/client.rs\n- [crates/layers-mcp/src/client.rs] //! MCP client: connect to stdio JSON-RPC MCP servers, discover tools, call them.\n\nuse std::collections::HashMap;\nuse std::sync::Arc;\n\nuse serde::{Deserialize, Serialize};\nuse tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};\nuse tokio::process::{Child, Command};\nuse tokio::sync::Mutex;\nuse tracing::{debug, error, warn};\n\nuse layers_core::{LayersError, McpServerConfig, Result, Tool, ToolContext, ToolOutput};\n\n// ---------------------------------------------------------------------------\n// JSON-RPC types\n// ---------------------------------------------------------------------------\n\n#[derive(Debug, Serialize)]\nstruct JsonRpcRequest {\n    jsonrpc: String,\n    id: u64,\n    method: String,\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    params: Option<serde_json::Value>,\n}\n\n#[derive(Debug, Deserialize)]\nstruct JsonRpcResponse {\n    #[allow(dead_code)]\n    jsonrpc: String,\n    #[allow(dead_code)]\n    id: Option<u64>,\n    result: Option<serde_json::Value>,\n    error: Option<JsonRpcError>,\n}\n\n#[derive(Debug, Deserialize)]\nstruct JsonRpcError {\n    #[allow(dead_code)]\n    code: i64,\n    message: String,\n}\n\n// ---------------------------------------------------------------------------\n// MCP tool definition from server\n// ---------------------------------------------------------------------------\n\n#[derive(Debug, Deserialize)]\nstruct McpToolDef {\n    name: String,\n    #[serde(default)]\n    description: Option<String>,\n    #[serde(default, rename = \"inputSchema\")]\n    input_schema: Option<serde_json::Value>,\n}\n\n// ---------------------------------------------------------------------------\n// MCP client\n// ---------------------------------------------------------------------------\n\n/// Client for a single MCP server connected via stdio.\npub struct McpClient {\n    name: String,\n    child: Mutex<Option<Child>>,\n    stdin: Mutex<Option<tokio::process::ChildStdin>>,\n    stdout: Mutex<Option<BufReader<tokio::process::ChildStdout>>>,\n    next_id: Mutex<u64>,\n    tools: Mutex<Vec<McpToolDef>>,\n}\n\nimpl McpClient {\n    /// Spawn an MCP server process and initialize the connection.\n    pub async fn connect(name: &str, config: &McpServerConfig) -> Result<Self> {\n        if config.url.is_empty() {\n            return Err(LayersError::Config(format!(\n                \"MCP server '{name}' has no URL/command configured\"\n            )));\n        }\n\n        // Parse the URL as a command. If it starts with \"stdio://\", extract the command.\nSource: crates/layers-mcp/src/client.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\nCode and Impact Context: crates/layers-mcp/src/server.rs\n- [crates/layers-mcp/src/server.rs] //! MCP server: expose Layers tools as an MCP server via stdio JSON-RPC.\n//!\n//! Tools are only exposed if explicitly allowlisted. Dangerous tools (those that\n//! mutate state — exec, process, subagent, fs-write, edit) are blocked by\n//! default unless `expose_dangerous` is set to `true` in the server config.\n\nuse std::collections::HashSet;\nuse std::sync::Arc;\n\nuse serde::{Deserialize, Serialize};\nuse tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};\nuse tracing::{debug, error, warn};\n\nuse layers_core::{Result, ToolContext};\nuse layers_tools::registry::ToolRegistry;\n\n// ---------------------------------------------------------------------------\n// Dangerous-tool patterns\n// ---------------------------------------------------------------------------\n\n/// Substrings that mark a tool name as dangerous (mutating / side-effectful).\nconst DANGEROUS_PATTERNS: &[&str] = &[\n    \"exec\", \"execute\", \"run\", \"spawn\", \"process\", \"subagent\", \"write\", \"edit\", \"delete\", \"remove\",\n    \"create\", \"mutate\", \"update\", \"kill\", \"stop\",\n];\n\n/// Stable product-facing MCP tools for Layers' context compiler surface.\n///\n/// This surface is intentionally narrow: it exposes context packet compilation,\n/// memory retrieval, code-impact analysis, and context validation. Generic\n/// runtime tools such as filesystem mutation, process execution, and subagent\n/// control must remain behind explicit allowlists and dangerous-tool opt-in.\npub const STABLE_CONTEXT_SURFACE_TOOLS: &[&str] = &[\n    \"context_compile\",\n    \"impact_analyze\",\n    \"memory_get\",\n    \"memory_search\",\n    \"preflight_context\",\n    \"validate_context\",\n];\n\n/// Returns `true` if the tool name matches any dangerous pattern.\npub fn is_dangerous_tool(name: &str) -> bool {\n    let lower = name.to_lowercase();\n    DANGEROUS_PATTERNS\n        .iter()\n        .any(|pattern| lower.contains(pattern))\n}\n\n/// Stable context compiler MCP tool names in deterministic listing order.\n#[must_use]\npub fn stable_context_surface_tools() -> Vec<&'static str> {\n    STABLE_CONTEXT_SURFACE_TOOLS.to_vec()\n}\n\n// ---------------------------------------------------------------------------\n// Server config\n// ---------------------------------------------------------------------------\n\n/// Configuration for the MCP server.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct McpServerConfig {\n    /// Server name announced during initialization.\n    #[serde(default = \"default_server_name\")]\n    pub server_name: String,\n    /// Server version announced during initialization.\n    #[serde(default = \"default_server_version\")]\n    pub server_version: String,\n    /// Explicit list of tool names to expose. Only these tools will appear in\n    /// `tools/list` and be callable via `tools/call`.\n    #[serde(default)]\n    pub allowlisted_tools: Vec<String>,\n    /// Whether to expose tools classified as dangerous. Default: `false`.\n    #[serde(default)]\n    pub expose_dangerous: bool,\n}\n\nfn default_server_name() -> String {\n    \"layers\".to_string()\n}\nSource: crates/layers-mcp/src/server.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\nCode and Impact Context: crates/layers-mcp/src/types.rs\n- [crates/layers-mcp/src/types.rs] //! JSON-RPC and MCP protocol types.\n\nuse serde::{Deserialize, Serialize};\n\n// ---------------------------------------------------------------------------\n// JSON-RPC\n// ---------------------------------------------------------------------------\n\n/// A JSON-RPC 2.0 request.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct JsonRpcRequest {\n    pub jsonrpc: String,\n    pub id: u64,\n    pub method: String,\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub params: Option<serde_json::Value>,\n}\n\nimpl JsonRpcRequest {\n    /// Create a new JSON-RPC request.\n    pub fn new(id: u64, method: impl Into<String>, params: Option<serde_json::Value>) -> Self {\n        Self {\n            jsonrpc: \"2.0\".to_string(),\n            id,\n            method: method.into(),\n            params,\n        }\n    }\n}\n\n/// A JSON-RPC 2.0 response.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct JsonRpcResponse {\n    pub jsonrpc: String,\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub id: Option<u64>,\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub result: Option<serde_json::Value>,\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub error: Option<JsonRpcError>,\n}\n\n/// A JSON-RPC 2.0 error object.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct JsonRpcError {\n    pub code: i64,\n    pub message: String,\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub data: Option<serde_json::Value>,\n}\n\n// ---------------------------------------------------------------------------\n// MCP protocol types\n// ---------------------------------------------------------------------------\n\n/// An MCP tool definition as returned by `tools/list`.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct McpTool {\n    pub name: String,\n    #[serde(default, skip_serializing_if = \"Option::is_none\")]\n    pub description: Option<String>,\n    #[serde(\n        default,\n        rename = \"inputSchema\",\n        skip_serializing_if = \"Option::is_none\"\n    )]\n    pub input_schema: Option<serde_json::Value>,\n}\n\n/// The result of calling an MCP tool via `tools/call`.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct McpToolResult {\n    pub content: Vec<ContentBlock>,\n    #[serde(default, rename = \"isError\")]\n    pub is_error: bool,\n}\n\nimpl McpToolResult {\n    /// Extract all text content joined by newlines.\n    pub fn text(&self) -> String {\nSource: crates/layers-mcp/src/types.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\n### Suggested Validation Commands\nSuggested Validation Commands: git diff --check\n- [preflight-validation-policy] Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo test --workspace --all-targets\n- [preflight-validation-policy] Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo clippy --workspace --all-targets -- -D warnings\n- [preflight-validation-policy] Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation",
+  "open_uncertainty": [
+    "Workspace has 0 changed and 1 untracked files; inspect before editing.",
+    "No persisted autoresearch finding matched this task."
+  ],
+  "retrieval_meta": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  }
+}

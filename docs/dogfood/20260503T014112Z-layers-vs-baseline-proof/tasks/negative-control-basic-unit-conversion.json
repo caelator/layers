@@ -1,0 +1,25 @@
+{
+  "task_id": "negative-control-basic-unit-conversion",
+  "title": "Convert minutes to seconds",
+  "prompt": "Convert 7 minutes to seconds. This is a context-free arithmetic task; abstain from Layers context.",
+  "category": "negative_control",
+  "difficulty": "trivial",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": true,
+  "stale_context_trap": false,
+  "time_budget_minutes": 5,
+  "target_files": [],
+  "target_symbols": [],
+  "expected_relevant_files": [],
+  "expected_validation_commands": [
+    "python3 - <<'PY'\nprint(7 * 60)\nPY"
+  ],
+  "success_rubric": {
+    "full_success": "The answer is correct and the workflow abstains from repository context or Layers packet injection.",
+    "partial_success": "The answer is correct but the workflow unnecessarily inspects repository context or generates unrelated context.",
+    "failure": "The answer is incorrect or relies on irrelevant context that could mislead the task.",
+    "min_verification_quality": 2,
+    "primary_endpoint": "verified_success"
+  },
+  "abstention_rubric": "No repository files, memory search results, broad query packets, targeted preflight packets, or MCP context packets should be used; only the prompt and the minimal validation command are relevant."
+}

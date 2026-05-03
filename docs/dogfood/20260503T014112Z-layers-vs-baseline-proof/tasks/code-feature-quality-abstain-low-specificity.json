@@ -1,0 +1,36 @@
+{
+  "task_id": "code-feature-quality-abstain-low-specificity",
+  "title": "Surface abstention for low-specificity context",
+  "prompt": "Improve quality evaluation so low-specificity context for code-heavy tasks produces an explicit abstain or needs-target signal instead of being accepted as useful context. Add focused tests.",
+  "category": "feature",
+  "difficulty": "medium",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": false,
+  "stale_context_trap": false,
+  "time_budget_minutes": 45,
+  "target_files": [
+    "src/quality.rs",
+    "crates/layers-core/src/packet_quality.rs",
+    "src/cmd/preflight.rs"
+  ],
+  "target_symbols": [
+    "QualityReport",
+    "query_terms"
+  ],
+  "expected_relevant_files": [
+    "src/quality.rs",
+    "crates/layers-core/src/packet_quality.rs",
+    "src/cmd/preflight.rs"
+  ],
+  "expected_validation_commands": [
+    "cargo test -q quality::tests -- --nocapture",
+    "cargo test -q cmd::preflight -- --nocapture"
+  ],
+  "success_rubric": {
+    "full_success": "The requested repository change is implemented with focused regression coverage and all listed validation commands pass.",
+    "partial_success": "The main behavior is implemented but validation is incomplete, coverage is weak, or minor follow-up is required.",
+    "failure": "The requested behavior remains missing, untested, or introduces regressions.",
+    "min_verification_quality": 4,
+    "primary_endpoint": "verified_success"
+  }
+}

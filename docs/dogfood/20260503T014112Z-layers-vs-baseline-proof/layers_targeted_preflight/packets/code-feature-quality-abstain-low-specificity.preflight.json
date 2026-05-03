@@ -1,0 +1,375 @@
+{
+  "schema_version": 2,
+  "id": "preflight-2ba65ea3-0f35-4308-b714-c77f08747935",
+  "workspace_id": "layers",
+  "query": "Improve quality evaluation so low-specificity context for code-heavy tasks produces an explicit abstain or needs-target signal instead of being accepted as useful context. Add focused tests.",
+  "created_at": "2026-05-03T01:41:29.737609Z",
+  "git_ref": "e3e3763",
+  "route": "preflight",
+  "confidence": "high",
+  "budget": {
+    "max_units": 1800,
+    "used_units": 1171,
+    "unit": "words",
+    "truncated": false
+  },
+  "sections": [
+    {
+      "id": "preflight_summary",
+      "title": "Preflight Summary",
+      "summary": "Preflight planning result.",
+      "items": [
+        {
+          "id": "research-summary-1",
+          "title": "Preflight classification",
+          "body": "Preflight classified this task as code-heavy. Explicit targets: src/quality.rs, crates/layers-core/src/packet_quality.rs, src/cmd/preflight.rs. Effective targets: src/quality.rs, crates/layers-core/src/packet_quality.rs, src/cmd/preflight.rs.",
+          "source": {
+            "kind": "preflight",
+            "uri": "local-planner"
+          },
+          "token_estimate": 16,
+          "selected_reason": "summarizes the local preflight plan before source collection",
+          "tags": [
+            "planning"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "workspace",
+      "title": "Workspace State",
+      "summary": "Current Git/worktree context that can affect safe edits.",
+      "items": [
+        {
+          "id": "workspace-state-1",
+          "title": "Git worktree state",
+          "body": "Branch: main\nHead: e3e3763\nDirty: true\nUntracked files:\n- docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/\n",
+          "source": {
+            "kind": "workspace",
+            "uri": "git status --porcelain=v1"
+          },
+          "token_estimate": 10,
+          "selected_reason": "dirty or divergent workspace state changes how agents should interpret context",
+          "tags": [
+            "workspace",
+            "git"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "title": "Project Memory",
+      "summary": "Relevant explicit project memory or memory-source warning.",
+      "items": [
+        {
+          "id": "memory-1",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"constraint\",\"id\":\"cm_constraint_layers_prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"payload\":{\"impact\":\"The user explicitly set the rule: if it can reasonably be built in Rust, build it in Rust; build software, not sandcastles.\",\"slug\":\"prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"summary\":\"Prefer Rust for durable systems; use scripting only for glue or temporary scaffolding.\",\"title\":\"Prefer Rust for durable systems\",\"type\":\"constraint\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"engineering\",\"rust\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 38,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-2",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 51,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-3",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"payload\":{\"rationale\":\"Graph-aware routing and context are already valuable; deeper operational use is the clearest way to reduce codebase guessing and breakage.\",\"slug\":\"gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"summary\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries toward workflow-operational use in planning, review, handoff, and postmortem packets.\",\"title\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries tow...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"gitnexus\",\"architecture\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 57,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-4",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"status\",\"id\":\"cm_status_layers_rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"payload\":{\"slug\":\"rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"state\":\"active\",\"summary\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis/types/util, with tests passing and validate passing (`replacement_ready: true`).\",\"title\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis...\",\"type\":\"status\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"rust\",\"status\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 21,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-5",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_curated-memory-records-should-be-first-class-and-should-include-at-minimum-decision-constraint-status-next-step-and-postmortem\",\"payload\":{\"rationale\":\"These are the record kinds that most directly reduce context drift and allow Layers to retrieve high-signal, decision-aware memory instead of inferring everything from raw artifacts.\",\"slug\":\"curated-memory-records-should-be-first-class-and-should-include-at-minimum-decision-constraint-status-next-step-and-postmortem\",\"summary\":\"Curated memory records should be first-class and should include at minimum: decision, constraint, status, next_step, and postmortem.\",\"title\":\"Curated memory records should be first-class and should include at minimum: decision, constra...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"records\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 54,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "title": "Code and Impact Context",
+      "summary": "Local code context gathered without editing files.",
+      "items": [
+        {
+          "id": "code-1",
+          "title": "src/quality.rs",
+          "body": "//! Result quality evaluation for the Layers routing feedback loop.\n//!\n//! After retrieval, `evaluate()` scores the returned results against the\n//! original query. Low scores produce `RouteFailure::Soft` records that\n//! feed back into the route-weight system, closing the quality loop even\n//! when retrieval \"succeeds\" but returns poor results.\n\nuse crate::feedback::{\n    FailureKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind, emit_failure,\n};\n\n// ─── Thresholds ─────────────────────────────────────────────────────────────\n\n/// Minimum fraction of query terms that must appear in at least one result.\nconst RELEVANCE_THRESHOLD: f64 = 0.25;\n\n/// Minimum average words per result to avoid flagging as too thin.\nconst SPECIFICITY_MIN_WORDS: usize = 8;\n\n// ─── Public API ─────────────────────────────────────────────────────────────\n\n/// Quality dimensions for a set of retrieved results.\n#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]\n#[allow(dead_code)]\npub struct ResultQuality {\n    /// Fraction of query terms found in at least one result (0.0–1.0).\n    pub relevance: f64,\n    /// Number of results returned vs. number requested (0.0–1.0).\n    pub coverage: f64,\n    /// Average word count per result.\n    pub avg_words: f64,\n    /// Whether quality is acceptable (all dimensions above thresholds).\n    pub acceptable: bool,\n    /// Human-readable reason if not acceptable.\n    pub reason: Option<String>,\n}\n\n/// Evaluate the quality of retrieved results against the original query.\n///\n/// - `query`: the user's original query text\n/// - `results`: the text content of each retrieved result\n/// - `requested`: how many results were requested from the retriever\n///\n/// Returns a `ResultQuality` with per-dimension scores.\npub fn evaluate(query: &str, results: &[&str], requested: usize) -> ResultQuality {\n    if results.is_empty() {\n        return ResultQuality {\n            relevance: 0.0,\n            coverage: 0.0,\n            avg_words: 0.0,\n            acceptable: false,\n            reason: Some(\"No results returned\".into()),\n        };\n    }\n\n    let relevance = compute_relevance(query, results);\n    let coverage = if requested == 0 {\n        1.0\n    } else {\n        (results.len() as f64 / requested as f64).min(1.0)\n    };\n    let avg_words = results\n        .iter()\n        .map(|r| r.split_whitespace().count())\n        .sum::<usize>() as f64\n        / results.len() as f64;\n\n    let mut reasons: Vec<&str> = Vec::new();\n    if relevance < RELEVANCE_THRESHOLD {\n        reasons.push(\"low relevance — query terms rarely appear in results\");\n    }\n    if avg_words < SPECIFICITY_MIN_WORDS as f64 {\n        reasons.push(\"low specificity — results are too short/generic\");\n    }\n\n    let acceptable = reasons.is_empty();\n    let reason = if reasons.is_empty() {\n        None\n    } else {\n        Some(reasons.join(\"; \"))",
+          "source": {
+            "kind": "file",
+            "uri": "src/quality.rs",
+            "repo_path": "src/quality.rs"
+          },
+          "token_estimate": 351,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        },
+        {
+          "id": "code-2",
+          "title": "crates/layers-core/src/packet_quality.rs",
+          "body": "//! Deterministic quality reports for context packet injection decisions.\n\nuse crate::{ContextPacket, TaskSpec};\nuse serde::{Deserialize, Serialize};\nuse std::path::Path;\n\n/// Agent-facing policy recommendation for a packet.\n#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(rename_all = \"snake_case\")]\npub enum InjectionRecommendation {\n    InjectFull,\n    InjectCompact,\n    Abstain,\n    NeedsTarget,\n}\n\n/// Bounded packet quality scores. Each field is in `0..=5`.\n#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\npub struct PacketQualityScores {\n    pub relevance: u8,\n    pub completeness: u8,\n    pub specificity: u8,\n    pub freshness: u8,\n    pub grounding: u8,\n    pub concision: u8,\n    pub noise_absence: u8,\n}\n\nimpl PacketQualityScores {\n    #[must_use]\n    pub const fn high() -> Self {\n        Self {\n            relevance: 5,\n            completeness: 5,\n            specificity: 5,\n            freshness: 5,\n            grounding: 5,\n            concision: 5,\n            noise_absence: 5,\n        }\n    }\n\n    #[must_use]\n    pub fn average(&self) -> f64 {\n        f64::from(\n            self.relevance\n                + self.completeness\n                + self.specificity\n                + self.freshness\n                + self.grounding\n                + self.concision\n                + self.noise_absence,\n        ) / 7.0\n    }\n}\n\n/// Deterministic report for a packet graded against a task.\n#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]\npub struct PacketQualityReport {\n    pub scores: PacketQualityScores,\n    pub target_coverage_ratio: f64,\n    pub validation_coverage_ratio: f64,\n    pub warning_penalty: f64,\n    pub missed_critical_context: bool,\n    pub hallucinated_or_stale_context: bool,\n    pub recommendation: InjectionRecommendation,\n    pub reasons: Vec<String>,\n}\n\nimpl PacketQualityReport {\n    /// Grade a packet against a task using deterministic local signals only.\n    #[must_use]\n    pub fn grade(packet: &ContextPacket, task: &TaskSpec) -> Self {\n        let text = packet_text(packet);\n        let target_coverage_ratio = coverage_ratio(&expected_targets(task), packet, &text);\n        let validation_coverage_ratio = string_coverage(&task.expected_validation_commands, &text);\n        let warning_penalty = warning_penalty(packet);\n        let hallucinated_or_stale_context = packet.warnings.iter().any(|warning| {\n            let code = warning.code.to_ascii_lowercase();\n            let message = warning.message.to_ascii_lowercase();",
+          "source": {
+            "kind": "file",
+            "uri": "crates/layers-core/src/packet_quality.rs",
+            "repo_path": "crates/layers-core/src/packet_quality.rs"
+          },
+          "token_estimate": 241,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        },
+        {
+          "id": "code-3",
+          "title": "src/cmd/preflight.rs",
+          "body": "//! Automatic local research for task-specific context packets.\n\nuse anyhow::{Context, Result, anyhow};\nuse layers_compiler::{CompileMode, CompileRequest, ContextCompiler};\nuse layers_core::{\n    ContextBudget, ContextItem, ContextPacket, ContextWarning, InjectionRecommendation,\n    PacketQualityReport, RetrievalReport, SuccessRubric, TaskCategory, TaskSpec,\n};\nuse serde_json::json;\nuse std::path::{Path, PathBuf};\n\nuse crate::cmd::autoresearch::{AutoresearchPacketBridgeOptions, add_autoresearch_to_packet};\nuse crate::config::{canonical_curated_memory_path, workspace_root};\nuse crate::context_packet_compiler::{\n    add_workspace_section, cited_item, code_impact_section, collect_workspace_state,\n    context_section, git_output, repo_source, workspace_id,\n};\n\nconst DEFAULT_BUDGET_WORDS: usize = 1_800;\nconst MAX_MEMORY_ITEMS: usize = 5;\nconst MAX_CODE_ITEMS: usize = 8;\n\n/// Arguments for the `layers preflight` command.\n#[derive(Debug, Clone)]\n#[allow(clippy::struct_excessive_bools)]\npub struct PreflightArgs {\n    /// Task or question to research before editing.\n    pub task: String,\n    /// Optional user-provided files, directories, symbols, or tests.\n    pub targets: Vec<String>,\n    /// Output structured JSON.\n    pub json: bool,\n    /// Output an agent-ready prompt.\n    pub agent_prompt: bool,\n    /// Skip audit side effects. Reserved for parity with query workflows.\n    pub no_audit: bool,\n    /// Fail if minimum context coverage is not met.\n    pub strict: bool,\n}\n\n/// Run local preflight and print the requested packet format.\npub fn handle_preflight(args: &PreflightArgs) -> Result<()> {\n    let packet = build_preflight_packet(args)?;\n    if args.strict && !minimum_bar_passes(&packet) {\n        return Err(anyhow!(\n            \"preflight did not meet the minimum context bar; rerun without --strict to inspect warnings\"\n        ));\n    }\n    if args.strict && !injection_policy_passes(&packet) {\n        return Err(anyhow!(\n            \"preflight packet quality gate recommended abstaining or requesting explicit targets; rerun without --strict to inspect packet_quality\"\n        ));\n    }\n    if args.agent_prompt {\n        println!(\"{}\", packet.to_agent_prompt());\n    } else if args.json {\n        println!(\"{}\", serde_json::to_string_pretty(&packet)?);\n    } else {\n        println!(\"{}\", packet.to_markdown());\n    }\n    Ok(())\n}\n\nfn build_preflight_packet(args: &PreflightArgs) -> Result<ContextPacket> {\n    let workspace = workspace_root();\n    let workspace_id = workspace_id(&workspace);\n    let packet_id = format!(\"preflight-{}\", uuid::Uuid::new_v4());\n    let generated_at = chrono::Utc::now();\n    let mut packet = ContextPacket::new(\n        packet_id.clone(),\n        workspace_id.clone(),\n        args.task.clone(),\n        generated_at,\n    );\n    packet.task.clone_from(&args.task);\n    packet.budget = ContextBudget {\n        max_units: DEFAULT_BUDGET_WORDS,\n        used_units: 0,\n        unit: \"words\".to_string(),\n        truncated: false,",
+          "source": {
+            "kind": "file",
+            "uri": "src/cmd/preflight.rs",
+            "repo_path": "src/cmd/preflight.rs"
+          },
+          "token_estimate": 279,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "validation",
+      "title": "Suggested Validation Commands",
+      "summary": "Commands an agent should run after using this research.",
+      "items": [
+        {
+          "id": "validation-1",
+          "title": "git diff --check",
+          "body": "Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 17,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-2",
+          "title": "cargo test --workspace --all-targets",
+          "body": "Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-3",
+          "title": "cargo clippy --workspace --all-targets -- -D warnings",
+          "body": "Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "dirty_worktree",
+      "message": "Workspace has 0 changed and 1 untracked files; inspect before editing."
+    },
+    {
+      "severity": "info",
+      "code": "autoresearch_uncertainty",
+      "message": "No persisted autoresearch finding matched this task."
+    },
+    {
+      "severity": "info",
+      "code": "injection_policy",
+      "message": "Packet quality gate recommends InjectCompact: packet is low-confidence or fallback-derived"
+    }
+  ],
+  "selection_trace": [
+    {
+      "item_id": "research-summary-1",
+      "reason": "summarizes the local preflight plan before source collection"
+    },
+    {
+      "item_id": "workspace-state-1",
+      "reason": "dirty or divergent workspace state changes how agents should interpret context"
+    },
+    {
+      "item_id": "memory-1",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-2",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-3",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-4",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-5",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "code-1",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "code-2",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "code-3",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "validation-1",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-2",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-3",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    }
+  ],
+  "retrieval": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  },
+  "provenance": {
+    "compiler": "layers-context-packet",
+    "compiler_version": "2",
+    "surface": "preflight",
+    "workspace_id": "layers",
+    "git_ref": "e3e3763",
+    "generated_at": "2026-05-03T01:41:29.737609Z",
+    "source_adapters": [
+      "file",
+      "memory",
+      "preflight",
+      "validation",
+      "workspace"
+    ]
+  },
+  "task": "Improve quality evaluation so low-specificity context for code-heavy tasks produces an explicit abstain or needs-target signal instead of being accepted as useful context. Add focused tests.",
+  "low_confidence_fallback": false,
+  "scores": {
+    "injection_recommendation": "inject_compact",
+    "packet_quality": {
+      "hallucinated_or_stale_context": false,
+      "missed_critical_context": false,
+      "reasons": [
+        "packet is low-confidence or fallback-derived"
+      ],
+      "recommendation": "inject_compact",
+      "scores": {
+        "completeness": 5,
+        "concision": 5,
+        "freshness": 3,
+        "grounding": 5,
+        "noise_absence": 3,
+        "relevance": 5,
+        "specificity": 5
+      },
+      "target_coverage_ratio": 1.0,
+      "validation_coverage_ratio": 1.0,
+      "warning_penalty": 2.25
+    },
+    "preflight": {
+      "autoresearch_findings": 0,
+      "code_heavy": true,
+      "targets": 3,
+      "workspace_dirty": true
+    }
+  },
+  "why_retrieved": "Preflight compiles local pre-edit context from workspace state, persisted autoresearch findings, memory, code targets, and validation policy.",
+  "why_not_retrieved": "",
+  "evidence": "### Preflight Summary\nPreflight Summary: Preflight classification\n- [local-planner] Preflight classified this task as code-heavy. Explicit targets: src/quality.rs, crates/layers-core/src/packet_quality.rs, src/cmd/preflight.rs. Effective targets: src/quality.rs, crates/layers-core/src/packet_quality.rs, src/cmd/preflight.rs.\nSource: local-planner (preflight)\nSelected because: summarizes the local preflight plan before source collection\n\n### Workspace State\nWorkspace State: Git worktree state\n- [git status --porcelain=v1] Branch: main\nHead: e3e3763\nDirty: true\nUntracked files:\n- docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/\n\nSource: git status --porcelain=v1 (workspace)\nSelected because: dirty or divergent workspace state changes how agents should interpret context\n\n### Project Memory\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"constraint\",\"id\":\"cm_constraint_layers_prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"payload\":{\"impact\":\"The user explicitly set the rule: if it can reasonably be built in Rust, build it in Rust; build software, not sandcastles.\",\"slug\":\"prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"summary\":\"Prefer Rust for durable systems; use scripting only for glue or temporary scaffolding.\",\"title\":\"Prefer Rust for durable systems\",\"type\":\"constraint\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"engineering\",\"rust\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"payload\":{\"rationale\":\"Graph-aware routing and context are already valuable; deeper operational use is the clearest way to reduce codebase guessing and breakage.\",\"slug\":\"gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"summary\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries toward workflow-operational use in planning, review, handoff, and postmortem packets.\",\"title\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries tow...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"gitnexus\",\"architecture\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"status\",\"id\":\"cm_status_layers_rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"payload\":{\"slug\":\"rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"state\":\"active\",\"summary\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis/types/util, with tests passing and validate passing (`replacement_ready: true`).\",\"title\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis...\",\"type\":\"status\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"rust\",\"status\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_curated-memory-records-should-be-first-class-and-should-include-at-minimum-decision-constraint-status-next-step-and-postmortem\",\"payload\":{\"rationale\":\"These are the record kinds that most directly reduce context drift and allow Layers to retrieve high-signal, decision-aware memory instead of inferring everything from raw artifacts.\",\"slug\":\"curated-memory-records-should-be-first-class-and-should-include-at-minimum-decision-constraint-status-next-step-and-postmortem\",\"summary\":\"Curated memory records should be first-class and should include at minimum: decision, constraint, status, next_step, and postmortem.\",\"title\":\"Curated memory records should be first-class and should include at minimum: decision, constra...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"records\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\n### Code and Impact Context\nCode and Impact Context: src/quality.rs\n- [src/quality.rs] //! Result quality evaluation for the Layers routing feedback loop.\n//!\n//! After retrieval, `evaluate()` scores the returned results against the\n//! original query. Low scores produce `RouteFailure::Soft` records that\n//! feed back into the route-weight system, closing the quality loop even\n//! when retrieval \"succeeds\" but returns poor results.\n\nuse crate::feedback::{\n    FailureKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind, emit_failure,\n};\n\n// ─── Thresholds ─────────────────────────────────────────────────────────────\n\n/// Minimum fraction of query terms that must appear in at least one result.\nconst RELEVANCE_THRESHOLD: f64 = 0.25;\n\n/// Minimum average words per result to avoid flagging as too thin.\nconst SPECIFICITY_MIN_WORDS: usize = 8;\n\n// ─── Public API ─────────────────────────────────────────────────────────────\n\n/// Quality dimensions for a set of retrieved results.\n#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]\n#[allow(dead_code)]\npub struct ResultQuality {\n    /// Fraction of query terms found in at least one result (0.0–1.0).\n    pub relevance: f64,\n    /// Number of results returned vs. number requested (0.0–1.0).\n    pub coverage: f64,\n    /// Average word count per result.\n    pub avg_words: f64,\n    /// Whether quality is acceptable (all dimensions above thresholds).\n    pub acceptable: bool,\n    /// Human-readable reason if not acceptable.\n    pub reason: Option<String>,\n}\n\n/// Evaluate the quality of retrieved results against the original query.\n///\n/// - `query`: the user's original query text\n/// - `results`: the text content of each retrieved result\n/// - `requested`: how many results were requested from the retriever\n///\n/// Returns a `ResultQuality` with per-dimension scores.\npub fn evaluate(query: &str, results: &[&str], requested: usize) -> ResultQuality {\n    if results.is_empty() {\n        return ResultQuality {\n            relevance: 0.0,\n            coverage: 0.0,\n            avg_words: 0.0,\n            acceptable: false,\n            reason: Some(\"No results returned\".into()),\n        };\n    }\n\n    let relevance = compute_relevance(query, results);\n    let coverage = if requested == 0 {\n        1.0\n    } else {\n        (results.len() as f64 / requested as f64).min(1.0)\n    };\n    let avg_words = results\n        .iter()\n        .map(|r| r.split_whitespace().count())\n        .sum::<usize>() as f64\n        / results.len() as f64;\n\n    let mut reasons: Vec<&str> = Vec::new();\n    if relevance < RELEVANCE_THRESHOLD {\n        reasons.push(\"low relevance — query terms rarely appear in results\");\n    }\n    if avg_words < SPECIFICITY_MIN_WORDS as f64 {\n        reasons.push(\"low specificity — results are too short/generic\");\n    }\n\n    let acceptable = reasons.is_empty();\n    let reason = if reasons.is_empty() {\n        None\n    } else {\n        Some(reasons.join(\"; \"))\nSource: src/quality.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\nCode and Impact Context: crates/layers-core/src/packet_quality.rs\n- [crates/layers-core/src/packet_quality.rs] //! Deterministic quality reports for context packet injection decisions.\n\nuse crate::{ContextPacket, TaskSpec};\nuse serde::{Deserialize, Serialize};\nuse std::path::Path;\n\n/// Agent-facing policy recommendation for a packet.\n#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]\n#[serde(rename_all = \"snake_case\")]\npub enum InjectionRecommendation {\n    InjectFull,\n    InjectCompact,\n    Abstain,\n    NeedsTarget,\n}\n\n/// Bounded packet quality scores. Each field is in `0..=5`.\n#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]\npub struct PacketQualityScores {\n    pub relevance: u8,\n    pub completeness: u8,\n    pub specificity: u8,\n    pub freshness: u8,\n    pub grounding: u8,\n    pub concision: u8,\n    pub noise_absence: u8,\n}\n\nimpl PacketQualityScores {\n    #[must_use]\n    pub const fn high() -> Self {\n        Self {\n            relevance: 5,\n            completeness: 5,\n            specificity: 5,\n            freshness: 5,\n            grounding: 5,\n            concision: 5,\n            noise_absence: 5,\n        }\n    }\n\n    #[must_use]\n    pub fn average(&self) -> f64 {\n        f64::from(\n            self.relevance\n                + self.completeness\n                + self.specificity\n                + self.freshness\n                + self.grounding\n                + self.concision\n                + self.noise_absence,\n        ) / 7.0\n    }\n}\n\n/// Deterministic report for a packet graded against a task.\n#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]\npub struct PacketQualityReport {\n    pub scores: PacketQualityScores,\n    pub target_coverage_ratio: f64,\n    pub validation_coverage_ratio: f64,\n    pub warning_penalty: f64,\n    pub missed_critical_context: bool,\n    pub hallucinated_or_stale_context: bool,\n    pub recommendation: InjectionRecommendation,\n    pub reasons: Vec<String>,\n}\n\nimpl PacketQualityReport {\n    /// Grade a packet against a task using deterministic local signals only.\n    #[must_use]\n    pub fn grade(packet: &ContextPacket, task: &TaskSpec) -> Self {\n        let text = packet_text(packet);\n        let target_coverage_ratio = coverage_ratio(&expected_targets(task), packet, &text);\n        let validation_coverage_ratio = string_coverage(&task.expected_validation_commands, &text);\n        let warning_penalty = warning_penalty(packet);\n        let hallucinated_or_stale_context = packet.warnings.iter().any(|warning| {\n            let code = warning.code.to_ascii_lowercase();\n            let message = warning.message.to_ascii_lowercase();\nSource: crates/layers-core/src/packet_quality.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\nCode and Impact Context: src/cmd/preflight.rs\n- [src/cmd/preflight.rs] //! Automatic local research for task-specific context packets.\n\nuse anyhow::{Context, Result, anyhow};\nuse layers_compiler::{CompileMode, CompileRequest, ContextCompiler};\nuse layers_core::{\n    ContextBudget, ContextItem, ContextPacket, ContextWarning, InjectionRecommendation,\n    PacketQualityReport, RetrievalReport, SuccessRubric, TaskCategory, TaskSpec,\n};\nuse serde_json::json;\nuse std::path::{Path, PathBuf};\n\nuse crate::cmd::autoresearch::{AutoresearchPacketBridgeOptions, add_autoresearch_to_packet};\nuse crate::config::{canonical_curated_memory_path, workspace_root};\nuse crate::context_packet_compiler::{\n    add_workspace_section, cited_item, code_impact_section, collect_workspace_state,\n    context_section, git_output, repo_source, workspace_id,\n};\n\nconst DEFAULT_BUDGET_WORDS: usize = 1_800;\nconst MAX_MEMORY_ITEMS: usize = 5;\nconst MAX_CODE_ITEMS: usize = 8;\n\n/// Arguments for the `layers preflight` command.\n#[derive(Debug, Clone)]\n#[allow(clippy::struct_excessive_bools)]\npub struct PreflightArgs {\n    /// Task or question to research before editing.\n    pub task: String,\n    /// Optional user-provided files, directories, symbols, or tests.\n    pub targets: Vec<String>,\n    /// Output structured JSON.\n    pub json: bool,\n    /// Output an agent-ready prompt.\n    pub agent_prompt: bool,\n    /// Skip audit side effects. Reserved for parity with query workflows.\n    pub no_audit: bool,\n    /// Fail if minimum context coverage is not met.\n    pub strict: bool,\n}\n\n/// Run local preflight and print the requested packet format.\npub fn handle_preflight(args: &PreflightArgs) -> Result<()> {\n    let packet = build_preflight_packet(args)?;\n    if args.strict && !minimum_bar_passes(&packet) {\n        return Err(anyhow!(\n            \"preflight did not meet the minimum context bar; rerun without --strict to inspect warnings\"\n        ));\n    }\n    if args.strict && !injection_policy_passes(&packet) {\n        return Err(anyhow!(\n            \"preflight packet quality gate recommended abstaining or requesting explicit targets; rerun without --strict to inspect packet_quality\"\n        ));\n    }\n    if args.agent_prompt {\n        println!(\"{}\", packet.to_agent_prompt());\n    } else if args.json {\n        println!(\"{}\", serde_json::to_string_pretty(&packet)?);\n    } else {\n        println!(\"{}\", packet.to_markdown());\n    }\n    Ok(())\n}\n\nfn build_preflight_packet(args: &PreflightArgs) -> Result<ContextPacket> {\n    let workspace = workspace_root();\n    let workspace_id = workspace_id(&workspace);\n    let packet_id = format!(\"preflight-{}\", uuid::Uuid::new_v4());\n    let generated_at = chrono::Utc::now();\n    let mut packet = ContextPacket::new(\n        packet_id.clone(),\n        workspace_id.clone(),\n        args.task.clone(),\n        generated_at,\n    );\n    packet.task.clone_from(&args.task);\n    packet.budget = ContextBudget {\n        max_units: DEFAULT_BUDGET_WORDS,\n        used_units: 0,\n        unit: \"words\".to_string(),\n        truncated: false,\nSource: src/cmd/preflight.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\n### Suggested Validation Commands\nSuggested Validation Commands: git diff --check\n- [preflight-validation-policy] Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo test --workspace --all-targets\n- [preflight-validation-policy] Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo clippy --workspace --all-targets -- -D warnings\n- [preflight-validation-policy] Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation",
+  "open_uncertainty": [
+    "Workspace has 0 changed and 1 untracked files; inspect before editing.",
+    "No persisted autoresearch finding matched this task."
+  ],
+  "retrieval_meta": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  }
+}

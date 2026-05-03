@@ -1,0 +1,375 @@
+{
+  "schema_version": 2,
+  "id": "preflight-ea0d985c-4342-4efa-9980-b58c3903b4b4",
+  "workspace_id": "layers",
+  "query": "Stale-context trap: update benchmark reporting language so broad query evidence cannot be reused as targeted-preflight proof. Ignore stale notes implying all Layers surfaces can be pooled.",
+  "created_at": "2026-05-03T01:41:40.705373Z",
+  "git_ref": "e3e3763",
+  "route": "preflight",
+  "confidence": "high",
+  "budget": {
+    "max_units": 1800,
+    "used_units": 1233,
+    "unit": "words",
+    "truncated": false
+  },
+  "sections": [
+    {
+      "id": "preflight_summary",
+      "title": "Preflight Summary",
+      "summary": "Preflight planning result.",
+      "items": [
+        {
+          "id": "research-summary-1",
+          "title": "Preflight classification",
+          "body": "Preflight classified this task as code-heavy. Explicit targets: src/cmd/workflow_benchmark.rs, benchmarks/workflows/CLAIM_GATES.md, benchmarks/workflows/README.md. Effective targets: src/cmd/workflow_benchmark.rs, benchmarks/workflows/CLAIM_GATES.md, benchmarks/workflows/README.md.",
+          "source": {
+            "kind": "preflight",
+            "uri": "local-planner"
+          },
+          "token_estimate": 16,
+          "selected_reason": "summarizes the local preflight plan before source collection",
+          "tags": [
+            "planning"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "workspace",
+      "title": "Workspace State",
+      "summary": "Current Git/worktree context that can affect safe edits.",
+      "items": [
+        {
+          "id": "workspace-state-1",
+          "title": "Git worktree state",
+          "body": "Branch: main\nHead: e3e3763\nDirty: true\nUntracked files:\n- docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/\n",
+          "source": {
+            "kind": "workspace",
+            "uri": "git status --porcelain=v1"
+          },
+          "token_estimate": 10,
+          "selected_reason": "dirty or divergent workspace state changes how agents should interpret context",
+          "tags": [
+            "workspace",
+            "git"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "title": "Project Memory",
+      "summary": "Relevant explicit project memory or memory-source warning.",
+      "items": [
+        {
+          "id": "memory-1",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"payload\":{\"rationale\":\"Broader OS/platform ambitions created drift; the highest-leverage immediate value is better deliberation, better memory continuity, and better structural grounding.\",\"slug\":\"narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"summary\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memoryport-based continuity, and GitNexus-based codebase understanding.\",\"title\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memor...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"scope\",\"strategy\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 48,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-2",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"payload\":{\"rationale\":\"Triumvirate is the destination architecture; Layers should accelerate and de-risk it by proving workflows, memory models, and graph-aware tooling before promotion.\",\"slug\":\"treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"summary\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-state system.\",\"title\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-st...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"triumvirate\",\"strategy\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 46,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-3",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"payload\":{\"rationale\":\"Structured records preserve auditability, editability, and schema stability while still allowing semantic recall via derived retrieval text and embeddings.\",\"slug\":\"canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"summary\":\"Canonical curated memories should be structured records, not vectors as source of truth; semantic embeddings are derived retrieval artifacts.\",\"title\":\"Canonical curated memories should be structured records, not vectors as source of truth\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"memoryport\",\"architecture\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 49,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-4",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"constraint\",\"id\":\"cm_constraint_layers_prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"payload\":{\"impact\":\"The user explicitly set the rule: if it can reasonably be built in Rust, build it in Rust; build software, not sandcastles.\",\"slug\":\"prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"summary\":\"Prefer Rust for durable systems; use scripting only for glue or temporary scaffolding.\",\"title\":\"Prefer Rust for durable systems\",\"type\":\"constraint\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"engineering\",\"rust\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 38,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-5",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 51,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "title": "Code and Impact Context",
+      "summary": "Local code context gathered without editing files.",
+      "items": [
+        {
+          "id": "code-1",
+          "title": "src/cmd/workflow_benchmark.rs",
+          "body": "//! Workflow benchmark telemetry analysis for comparing Layers vs baseline runs.\n\nuse std::{\n    collections::BTreeMap,\n    fmt::Write as _,\n    fs,\n    path::{Path, PathBuf},\n};\n\nuse anyhow::{Context as _, Result, bail};\nuse clap::Subcommand;\nuse serde::{Deserialize, Serialize};\n\n/// Workflow benchmark commands.\n#[derive(Debug, Subcommand)]\npub(crate) enum WorkflowBenchmarkCommands {\n    /// Analyze Layers-vs-baseline workflow telemetry from JSONL.\n    Analyze {\n        /// Path to workflow run telemetry JSONL.\n        path: PathBuf,\n        /// Output a structured JSON report.\n        #[arg(long)]\n        json: bool,\n    },\n    /// Validate preregistered workflow benchmark task specs.\n    ValidateTasks {\n        /// Task spec file or directory containing task spec JSON files.\n        path: PathBuf,\n        /// Output a structured JSON validation report.\n        #[arg(long)]\n        json: bool,\n    },\n}\n\n/// Handle workflow benchmark commands.\npub(crate) fn handle_workflow_benchmark(command: &WorkflowBenchmarkCommands) -> Result<()> {\n    match command {\n        WorkflowBenchmarkCommands::Analyze { path, json } => {\n            let runs = load_runs(path)?;\n            let report = analyze_runs_with_thresholds(&runs, ClaimThresholds::default())?;\n            println!(\"{}\", format_report(&report, *json)?);\n            Ok(())\n        }\n        WorkflowBenchmarkCommands::ValidateTasks { path, json } => {\n            let report = validate_task_specs(path)?;\n            println!(\"{}\", format_task_validation_report(&report, *json)?);\n            if report.invalid_count > 0 {\n                bail!(\n                    \"{} workflow task spec(s) failed validation\",\n                    report.invalid_count\n                );\n            }\n            Ok(())\n        }\n    }\n}\n\n#[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Ord, PartialOrd, Serialize)]\n#[serde(rename_all = \"snake_case\")]\nenum WorkflowVariant {\n    Baseline,\n    #[serde(alias = \"layers\")]\n    LayersTargetedPreflight,\n    LayersBroadQuery,\n    LayersMcpPreflight,\n}\n\nimpl WorkflowVariant {\n    fn is_layers(self) -> bool {\n        !matches!(self, Self::Baseline)\n    }\n}\n\n#[derive(Debug, Clone, Deserialize, Serialize)]\nstruct RetrievalQuality {\n    relevance: u8,\n    completeness: u8,\n    specificity: u8,\n    freshness: u8,\n    grounding: u8,",
+          "source": {
+            "kind": "file",
+            "uri": "src/cmd/workflow_benchmark.rs",
+            "repo_path": "src/cmd/workflow_benchmark.rs"
+          },
+          "token_estimate": 225,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        },
+        {
+          "id": "code-2",
+          "title": "benchmarks/workflows/CLAIM_GATES.md",
+          "body": "# Layers Workflow Benchmark Claim Gates v1\n\nThis file preregisters the first proof target for Layers-vs-baseline workflow benchmarks. Do not loosen these gates after seeing benchmark results. If a future change edits this file, the benchmark run must clearly state which gate version it used.\n\n## Preregistered claim\n\nTarget claim:\n\n> On code-heavy repo tasks, targeted Layers preflight maintains or improves verified success compared with no Layers while reducing context/time cost after overhead and avoiding stale or unnecessary context injection.\n\nThis does not claim that broad `layers query` is better than no Layers. Broad query, targeted preflight, and MCP preflight must be reported as separate surfaces.\n\n## Primary endpoint\n\nThe primary endpoint is verified task success.\n\nA claim can be supported only when the paired success delta for the claim variant is non-negative:\n\n```text\nsuccess_delta = layers_targeted_preflight_success_rate - baseline_success_rate\nmin_success_delta: 0.0\n```\n\nToken reduction, time savings, tool-call reduction, or subjective context quality cannot compensate for a negative success delta.\n\n## Minimum sample sizes\n\nThe first supported claim requires all of these:\n\n```text\nmin_paired_tasks: 30\nmin_code_heavy_paired_tasks: 20\nmin_negative_control_paired_tasks: 5\n```\n\nRuns below these thresholds are `inconclusive` unless a hard blocker makes the result `not_supported`.\n\n## Secondary endpoints\n\nThe targeted-preflight claim must also meet these cost/usefulness gates after accounting for Layers overhead:\n\n```text\nmin_token_reduction_ratio: 0.20\nmin_time_saved_ms: 0.0\n```\n\nReport these secondary metrics even when the claim is not supported:\n\n- wall-clock time delta\n- total token delta\n- tool-call delta\n- failed-command delta\n- human-intervention delta\n- context relevance/completeness/specificity/freshness/grounding/concision/noise scores\n- Layers overhead in milliseconds and tokens\n\n## Blocking safety and quality metrics\n\nAny of these block a supported claim:\n\n```text\nmax_missed_critical_context_rate: 0.05\nmax_hallucinated_or_stale_context_rate: 0.0\nmax_regression_rate: 0.0\nmax_context_caused_regression_rate: 0.0\n```\n\nStale or misleading context is a product failure, not a harmless retrieval miss. A run that succeeds despite stale context must still count against the stale-context gate.\n\n## Negative-control rules\n\nNegative controls test abstention. Layers should avoid injecting unnecessary context for tasks where repo/context assistance is not useful.\n\nRequired gates:\n\n```text\nmin_negative_control_abstention_rate: 0.95\nmax_unnecessary_context_injection_rate: 0.05\n```\n",
+          "source": {
+            "kind": "file",
+            "uri": "benchmarks/workflows/CLAIM_GATES.md",
+            "repo_path": "benchmarks/workflows/CLAIM_GATES.md"
+          },
+          "token_estimate": 334,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        },
+        {
+          "id": "code-3",
+          "title": "benchmarks/workflows/README.md",
+          "body": "# Layers Workflow Benchmarks\n\nThis directory contains the preregistered task specs, claim gates, schemas, fixtures, and run protocol for comparing Layers-assisted workflows against no-Layers baselines.\n\nThe first proof target is intentionally narrow: targeted Layers preflight for code-heavy repo tasks. Broad `layers query` and MCP preflight are separate benchmark surfaces and must not be averaged into the targeted-preflight claim.\n\n## Directory layout\n\n```text\nbenchmarks/workflows/\n  CLAIM_GATES.md\n  README.md\n  tasks/*.json\n  fixtures/*.json\n  schemas/*.json\n  templates/*.json\n  templates/*.md\n```\n\nGenerated dogfood proof artifacts belong under `docs/dogfood/<timestamp>-layers-vs-baseline-proof/`, not in this benchmark definition directory.\n\n## Task specs\n\nEach task spec is fixed before a proof run and should include:\n\n- `task_id`\n- `title`\n- `prompt`\n- `category`\n- `difficulty`\n- `surface_claim`\n- `negative_control`\n- `stale_context_trap`\n- `target_files`\n- `expected_relevant_files`\n- `expected_validation_commands`\n- `success_rubric`\n- `abstention_rubric` for negative controls\n\nCode-heavy tasks must name expected relevant files and validation commands. Negative controls must define what unnecessary context injection means.\n\n## Benchmark variants\n\nUse distinct variants:\n\n- `baseline`: no Layers packet.\n- `layers_targeted_preflight`: targeted `layers preflight --no-audit --json --strict --target ...`.\n- `layers_broad_query`: broad `layers query --json ...`; report separately.\n- `layers_mcp_preflight`: MCP stable preflight surface; report separately.\n\nLegacy `layers` records, if accepted for old dogfood artifacts, must not silently mix broad query and targeted preflight in new proof reports.\n\n## Run records\n\nWorkflow runs are recorded as JSONL and analyzed with:\n\n```sh\ncargo run -q -- workflow-benchmark analyze docs/dogfood/<run>/compare/workflow-runs.jsonl\ncargo run -q -- workflow-benchmark analyze docs/dogfood/<run>/compare/workflow-runs.jsonl --json\n```\n\nEvery task needs paired baseline and Layers records for the claim variant. The same agent/model/tool permissions/time budget should be used for both variants, with order randomized or otherwise documented.\n\n## Claim status\n\nReports must use one of three statuses:\n\n- `supported`: all preregistered gates pass.\n- `not_supported`: a hard blocker fails, such as lower verified success, stale context, regressions, failed negative controls, or missing artifacts.\n- `inconclusive`: sample size or uncertainty is insufficient but no hard blocker has failed.\n\nDo not state “definitive proof” unless the exact scoped claim passed the gates in `CLAIM_GATES.md` and raw artifacts are reviewable.\n\n## Validation\n\nAfter the validation command is implemented, validate the corpus with:\n\n```sh\ncargo run -q -- workflow-benchmark validate-tasks benchmarks/workflows/tasks\ncargo run -q -- workflow-benchmark validate-tasks benchmarks/workflows/tasks --json",
+          "source": {
+            "kind": "file",
+            "uri": "benchmarks/workflows/README.md",
+            "repo_path": "benchmarks/workflows/README.md"
+          },
+          "token_estimate": 363,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "validation",
+      "title": "Suggested Validation Commands",
+      "summary": "Commands an agent should run after using this research.",
+      "items": [
+        {
+          "id": "validation-1",
+          "title": "git diff --check",
+          "body": "Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 17,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-2",
+          "title": "cargo test --workspace --all-targets",
+          "body": "Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-3",
+          "title": "cargo clippy --workspace --all-targets -- -D warnings",
+          "body": "Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "dirty_worktree",
+      "message": "Workspace has 0 changed and 1 untracked files; inspect before editing."
+    },
+    {
+      "severity": "info",
+      "code": "autoresearch_uncertainty",
+      "message": "No persisted autoresearch finding matched this task."
+    },
+    {
+      "severity": "info",
+      "code": "injection_policy",
+      "message": "Packet quality gate recommends InjectCompact: packet is low-confidence or fallback-derived"
+    }
+  ],
+  "selection_trace": [
+    {
+      "item_id": "research-summary-1",
+      "reason": "summarizes the local preflight plan before source collection"
+    },
+    {
+      "item_id": "workspace-state-1",
+      "reason": "dirty or divergent workspace state changes how agents should interpret context"
+    },
+    {
+      "item_id": "memory-1",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-2",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-3",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-4",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-5",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "code-1",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "code-2",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "code-3",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "validation-1",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-2",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-3",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    }
+  ],
+  "retrieval": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  },
+  "provenance": {
+    "compiler": "layers-context-packet",
+    "compiler_version": "2",
+    "surface": "preflight",
+    "workspace_id": "layers",
+    "git_ref": "e3e3763",
+    "generated_at": "2026-05-03T01:41:40.705373Z",
+    "source_adapters": [
+      "file",
+      "memory",
+      "preflight",
+      "validation",
+      "workspace"
+    ]
+  },
+  "task": "Stale-context trap: update benchmark reporting language so broad query evidence cannot be reused as targeted-preflight proof. Ignore stale notes implying all Layers surfaces can be pooled.",
+  "low_confidence_fallback": false,
+  "scores": {
+    "injection_recommendation": "inject_compact",
+    "packet_quality": {
+      "hallucinated_or_stale_context": false,
+      "missed_critical_context": false,
+      "reasons": [
+        "packet is low-confidence or fallback-derived"
+      ],
+      "recommendation": "inject_compact",
+      "scores": {
+        "completeness": 5,
+        "concision": 5,
+        "freshness": 3,
+        "grounding": 5,
+        "noise_absence": 3,
+        "relevance": 5,
+        "specificity": 5
+      },
+      "target_coverage_ratio": 1.0,
+      "validation_coverage_ratio": 1.0,
+      "warning_penalty": 2.25
+    },
+    "preflight": {
+      "autoresearch_findings": 0,
+      "code_heavy": true,
+      "targets": 3,
+      "workspace_dirty": true
+    }
+  },
+  "why_retrieved": "Preflight compiles local pre-edit context from workspace state, persisted autoresearch findings, memory, code targets, and validation policy.",
+  "why_not_retrieved": "",
+  "evidence": "### Preflight Summary\nPreflight Summary: Preflight classification\n- [local-planner] Preflight classified this task as code-heavy. Explicit targets: src/cmd/workflow_benchmark.rs, benchmarks/workflows/CLAIM_GATES.md, benchmarks/workflows/README.md. Effective targets: src/cmd/workflow_benchmark.rs, benchmarks/workflows/CLAIM_GATES.md, benchmarks/workflows/README.md.\nSource: local-planner (preflight)\nSelected because: summarizes the local preflight plan before source collection\n\n### Workspace State\nWorkspace State: Git worktree state\n- [git status --porcelain=v1] Branch: main\nHead: e3e3763\nDirty: true\nUntracked files:\n- docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/\n\nSource: git status --porcelain=v1 (workspace)\nSelected because: dirty or divergent workspace state changes how agents should interpret context\n\n### Project Memory\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"payload\":{\"rationale\":\"Broader OS/platform ambitions created drift; the highest-leverage immediate value is better deliberation, better memory continuity, and better structural grounding.\",\"slug\":\"narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"summary\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memoryport-based continuity, and GitNexus-based codebase understanding.\",\"title\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memor...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"scope\",\"strategy\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"payload\":{\"rationale\":\"Triumvirate is the destination architecture; Layers should accelerate and de-risk it by proving workflows, memory models, and graph-aware tooling before promotion.\",\"slug\":\"treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"summary\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-state system.\",\"title\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-st...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"triumvirate\",\"strategy\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"payload\":{\"rationale\":\"Structured records preserve auditability, editability, and schema stability while still allowing semantic recall via derived retrieval text and embeddings.\",\"slug\":\"canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"summary\":\"Canonical curated memories should be structured records, not vectors as source of truth; semantic embeddings are derived retrieval artifacts.\",\"title\":\"Canonical curated memories should be structured records, not vectors as source of truth\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"memoryport\",\"architecture\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"constraint\",\"id\":\"cm_constraint_layers_prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"payload\":{\"impact\":\"The user explicitly set the rule: if it can reasonably be built in Rust, build it in Rust; build software, not sandcastles.\",\"slug\":\"prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"summary\":\"Prefer Rust for durable systems; use scripting only for glue or temporary scaffolding.\",\"title\":\"Prefer Rust for durable systems\",\"type\":\"constraint\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"engineering\",\"rust\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\n### Code and Impact Context\nCode and Impact Context: src/cmd/workflow_benchmark.rs\n- [src/cmd/workflow_benchmark.rs] //! Workflow benchmark telemetry analysis for comparing Layers vs baseline runs.\n\nuse std::{\n    collections::BTreeMap,\n    fmt::Write as _,\n    fs,\n    path::{Path, PathBuf},\n};\n\nuse anyhow::{Context as _, Result, bail};\nuse clap::Subcommand;\nuse serde::{Deserialize, Serialize};\n\n/// Workflow benchmark commands.\n#[derive(Debug, Subcommand)]\npub(crate) enum WorkflowBenchmarkCommands {\n    /// Analyze Layers-vs-baseline workflow telemetry from JSONL.\n    Analyze {\n        /// Path to workflow run telemetry JSONL.\n        path: PathBuf,\n        /// Output a structured JSON report.\n        #[arg(long)]\n        json: bool,\n    },\n    /// Validate preregistered workflow benchmark task specs.\n    ValidateTasks {\n        /// Task spec file or directory containing task spec JSON files.\n        path: PathBuf,\n        /// Output a structured JSON validation report.\n        #[arg(long)]\n        json: bool,\n    },\n}\n\n/// Handle workflow benchmark commands.\npub(crate) fn handle_workflow_benchmark(command: &WorkflowBenchmarkCommands) -> Result<()> {\n    match command {\n        WorkflowBenchmarkCommands::Analyze { path, json } => {\n            let runs = load_runs(path)?;\n            let report = analyze_runs_with_thresholds(&runs, ClaimThresholds::default())?;\n            println!(\"{}\", format_report(&report, *json)?);\n            Ok(())\n        }\n        WorkflowBenchmarkCommands::ValidateTasks { path, json } => {\n            let report = validate_task_specs(path)?;\n            println!(\"{}\", format_task_validation_report(&report, *json)?);\n            if report.invalid_count > 0 {\n                bail!(\n                    \"{} workflow task spec(s) failed validation\",\n                    report.invalid_count\n                );\n            }\n            Ok(())\n        }\n    }\n}\n\n#[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Ord, PartialOrd, Serialize)]\n#[serde(rename_all = \"snake_case\")]\nenum WorkflowVariant {\n    Baseline,\n    #[serde(alias = \"layers\")]\n    LayersTargetedPreflight,\n    LayersBroadQuery,\n    LayersMcpPreflight,\n}\n\nimpl WorkflowVariant {\n    fn is_layers(self) -> bool {\n        !matches!(self, Self::Baseline)\n    }\n}\n\n#[derive(Debug, Clone, Deserialize, Serialize)]\nstruct RetrievalQuality {\n    relevance: u8,\n    completeness: u8,\n    specificity: u8,\n    freshness: u8,\n    grounding: u8,\nSource: src/cmd/workflow_benchmark.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\nCode and Impact Context: benchmarks/workflows/CLAIM_GATES.md\n- [benchmarks/workflows/CLAIM_GATES.md] # Layers Workflow Benchmark Claim Gates v1\n\nThis file preregisters the first proof target for Layers-vs-baseline workflow benchmarks. Do not loosen these gates after seeing benchmark results. If a future change edits this file, the benchmark run must clearly state which gate version it used.\n\n## Preregistered claim\n\nTarget claim:\n\n> On code-heavy repo tasks, targeted Layers preflight maintains or improves verified success compared with no Layers while reducing context/time cost after overhead and avoiding stale or unnecessary context injection.\n\nThis does not claim that broad `layers query` is better than no Layers. Broad query, targeted preflight, and MCP preflight must be reported as separate surfaces.\n\n## Primary endpoint\n\nThe primary endpoint is verified task success.\n\nA claim can be supported only when the paired success delta for the claim variant is non-negative:\n\n```text\nsuccess_delta = layers_targeted_preflight_success_rate - baseline_success_rate\nmin_success_delta: 0.0\n```\n\nToken reduction, time savings, tool-call reduction, or subjective context quality cannot compensate for a negative success delta.\n\n## Minimum sample sizes\n\nThe first supported claim requires all of these:\n\n```text\nmin_paired_tasks: 30\nmin_code_heavy_paired_tasks: 20\nmin_negative_control_paired_tasks: 5\n```\n\nRuns below these thresholds are `inconclusive` unless a hard blocker makes the result `not_supported`.\n\n## Secondary endpoints\n\nThe targeted-preflight claim must also meet these cost/usefulness gates after accounting for Layers overhead:\n\n```text\nmin_token_reduction_ratio: 0.20\nmin_time_saved_ms: 0.0\n```\n\nReport these secondary metrics even when the claim is not supported:\n\n- wall-clock time delta\n- total token delta\n- tool-call delta\n- failed-command delta\n- human-intervention delta\n- context relevance/completeness/specificity/freshness/grounding/concision/noise scores\n- Layers overhead in milliseconds and tokens\n\n## Blocking safety and quality metrics\n\nAny of these block a supported claim:\n\n```text\nmax_missed_critical_context_rate: 0.05\nmax_hallucinated_or_stale_context_rate: 0.0\nmax_regression_rate: 0.0\nmax_context_caused_regression_rate: 0.0\n```\n\nStale or misleading context is a product failure, not a harmless retrieval miss. A run that succeeds despite stale context must still count against the stale-context gate.\n\n## Negative-control rules\n\nNegative controls test abstention. Layers should avoid injecting unnecessary context for tasks where repo/context assistance is not useful.\n\nRequired gates:\n\n```text\nmin_negative_control_abstention_rate: 0.95\nmax_unnecessary_context_injection_rate: 0.05\n```\n\nSource: benchmarks/workflows/CLAIM_GATES.md (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\nCode and Impact Context: benchmarks/workflows/README.md\n- [benchmarks/workflows/README.md] # Layers Workflow Benchmarks\n\nThis directory contains the preregistered task specs, claim gates, schemas, fixtures, and run protocol for comparing Layers-assisted workflows against no-Layers baselines.\n\nThe first proof target is intentionally narrow: targeted Layers preflight for code-heavy repo tasks. Broad `layers query` and MCP preflight are separate benchmark surfaces and must not be averaged into the targeted-preflight claim.\n\n## Directory layout\n\n```text\nbenchmarks/workflows/\n  CLAIM_GATES.md\n  README.md\n  tasks/*.json\n  fixtures/*.json\n  schemas/*.json\n  templates/*.json\n  templates/*.md\n```\n\nGenerated dogfood proof artifacts belong under `docs/dogfood/<timestamp>-layers-vs-baseline-proof/`, not in this benchmark definition directory.\n\n## Task specs\n\nEach task spec is fixed before a proof run and should include:\n\n- `task_id`\n- `title`\n- `prompt`\n- `category`\n- `difficulty`\n- `surface_claim`\n- `negative_control`\n- `stale_context_trap`\n- `target_files`\n- `expected_relevant_files`\n- `expected_validation_commands`\n- `success_rubric`\n- `abstention_rubric` for negative controls\n\nCode-heavy tasks must name expected relevant files and validation commands. Negative controls must define what unnecessary context injection means.\n\n## Benchmark variants\n\nUse distinct variants:\n\n- `baseline`: no Layers packet.\n- `layers_targeted_preflight`: targeted `layers preflight --no-audit --json --strict --target ...`.\n- `layers_broad_query`: broad `layers query --json ...`; report separately.\n- `layers_mcp_preflight`: MCP stable preflight surface; report separately.\n\nLegacy `layers` records, if accepted for old dogfood artifacts, must not silently mix broad query and targeted preflight in new proof reports.\n\n## Run records\n\nWorkflow runs are recorded as JSONL and analyzed with:\n\n```sh\ncargo run -q -- workflow-benchmark analyze docs/dogfood/<run>/compare/workflow-runs.jsonl\ncargo run -q -- workflow-benchmark analyze docs/dogfood/<run>/compare/workflow-runs.jsonl --json\n```\n\nEvery task needs paired baseline and Layers records for the claim variant. The same agent/model/tool permissions/time budget should be used for both variants, with order randomized or otherwise documented.\n\n## Claim status\n\nReports must use one of three statuses:\n\n- `supported`: all preregistered gates pass.\n- `not_supported`: a hard blocker fails, such as lower verified success, stale context, regressions, failed negative controls, or missing artifacts.\n- `inconclusive`: sample size or uncertainty is insufficient but no hard blocker has failed.\n\nDo not state “definitive proof” unless the exact scoped claim passed the gates in `CLAIM_GATES.md` and raw artifacts are reviewable.\n\n## Validation\n\nAfter the validation command is implemented, validate the corpus with:\n\n```sh\ncargo run -q -- workflow-benchmark validate-tasks benchmarks/workflows/tasks\ncargo run -q -- workflow-benchmark validate-tasks benchmarks/workflows/tasks --json\nSource: benchmarks/workflows/README.md (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\n### Suggested Validation Commands\nSuggested Validation Commands: git diff --check\n- [preflight-validation-policy] Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo test --workspace --all-targets\n- [preflight-validation-policy] Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo clippy --workspace --all-targets -- -D warnings\n- [preflight-validation-policy] Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation",
+  "open_uncertainty": [
+    "Workspace has 0 changed and 1 untracked files; inspect before editing.",
+    "No persisted autoresearch finding matched this task."
+  ],
+  "retrieval_meta": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  }
+}

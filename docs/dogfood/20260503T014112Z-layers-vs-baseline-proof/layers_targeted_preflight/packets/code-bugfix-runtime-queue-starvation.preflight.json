@@ -1,0 +1,375 @@
+{
+  "schema_version": 2,
+  "id": "preflight-8ccc97aa-2310-47e2-9273-58f888f091bc",
+  "workspace_id": "layers",
+  "query": "Diagnose and fix a runtime queue fairness regression where critical work can starve standard work beyond the configured ratio. Add a deterministic regression test.",
+  "created_at": "2026-05-03T01:41:24.166928Z",
+  "git_ref": "e3e3763",
+  "route": "preflight",
+  "confidence": "high",
+  "budget": {
+    "max_units": 1800,
+    "used_units": 1260,
+    "unit": "words",
+    "truncated": false
+  },
+  "sections": [
+    {
+      "id": "preflight_summary",
+      "title": "Preflight Summary",
+      "summary": "Preflight planning result.",
+      "items": [
+        {
+          "id": "research-summary-1",
+          "title": "Preflight classification",
+          "body": "Preflight classified this task as code-heavy. Explicit targets: crates/layers-runtime/src/queue.rs, crates/layers-runtime/src/agent_loop.rs, src/critical_path.rs. Effective targets: crates/layers-runtime/src/queue.rs, crates/layers-runtime/src/agent_loop.rs, src/critical_path.rs.",
+          "source": {
+            "kind": "preflight",
+            "uri": "local-planner"
+          },
+          "token_estimate": 16,
+          "selected_reason": "summarizes the local preflight plan before source collection",
+          "tags": [
+            "planning"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "workspace",
+      "title": "Workspace State",
+      "summary": "Current Git/worktree context that can affect safe edits.",
+      "items": [
+        {
+          "id": "workspace-state-1",
+          "title": "Git worktree state",
+          "body": "Branch: main\nHead: e3e3763\nDirty: true\nUntracked files:\n- docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/\n",
+          "source": {
+            "kind": "workspace",
+            "uri": "git status --porcelain=v1"
+          },
+          "token_estimate": 10,
+          "selected_reason": "dirty or divergent workspace state changes how agents should interpret context",
+          "tags": [
+            "workspace",
+            "git"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "title": "Project Memory",
+      "summary": "Relevant explicit project memory or memory-source warning.",
+      "items": [
+        {
+          "id": "memory-1",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"payload\":{\"rationale\":\"Broader OS/platform ambitions created drift; the highest-leverage immediate value is better deliberation, better memory continuity, and better structural grounding.\",\"slug\":\"narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"summary\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memoryport-based continuity, and GitNexus-based codebase understanding.\",\"title\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memor...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"scope\",\"strategy\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 48,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-2",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"payload\":{\"rationale\":\"Triumvirate is the destination architecture; Layers should accelerate and de-risk it by proving workflows, memory models, and graph-aware tooling before promotion.\",\"slug\":\"treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"summary\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-state system.\",\"title\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-st...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"triumvirate\",\"strategy\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 46,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-3",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"payload\":{\"rationale\":\"Structured records preserve auditability, editability, and schema stability while still allowing semantic recall via derived retrieval text and embeddings.\",\"slug\":\"canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"summary\":\"Canonical curated memories should be structured records, not vectors as source of truth; semantic embeddings are derived retrieval artifacts.\",\"title\":\"Canonical curated memories should be structured records, not vectors as source of truth\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"memoryport\",\"architecture\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 49,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-4",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 51,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-5",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"payload\":{\"rationale\":\"Graph-aware routing and context are already valuable; deeper operational use is the clearest way to reduce codebase guessing and breakage.\",\"slug\":\"gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"summary\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries toward workflow-operational use in planning, review, handoff, and postmortem packets.\",\"title\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries tow...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"gitnexus\",\"architecture\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 57,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "title": "Code and Impact Context",
+      "summary": "Local code context gathered without editing files.",
+      "items": [
+        {
+          "id": "code-1",
+          "title": "crates/layers-runtime/src/queue.rs",
+          "body": "//! Message queue: actor/mailbox model per session with multiple queue modes.\n\nuse std::collections::{HashMap, VecDeque};\nuse std::sync::Arc;\n\nuse serde::{Deserialize, Serialize};\nuse tokio::sync::{Mutex, RwLock, mpsc};\n\nuse layers_core::InboundMessage;\n\n// ---------------------------------------------------------------------------\n// Queue modes\n// ---------------------------------------------------------------------------\n\n/// How queued messages are handled when a run is already active.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]\npub enum QueueMode {\n    /// Coalesce queued messages into a follow-up turn after current run finishes.\n    #[default]\n    Collect,\n    /// Inject into current run at the next tool boundary.\n    Steer,\n    /// Enqueue for the next turn (no coalescing).\n    Followup,\n    /// Abort active run, run newest message immediately.\n    Interrupt,\n    /// Steer the current message + preserve backlog for followup.\n    SteerBacklog,\n}\n\n// ---------------------------------------------------------------------------\n// Queued entry\n// ---------------------------------------------------------------------------\n\n/// A message waiting in the session queue.\n#[derive(Debug, Clone)]\npub struct QueuedMessage {\n    pub message: InboundMessage,\n    pub mode: QueueMode,\n    pub queued_at: chrono::DateTime<chrono::Utc>,\n}\n\n// ---------------------------------------------------------------------------\n// Session queue (per-session mailbox)\n// ---------------------------------------------------------------------------\n\n/// Per-session mailbox that serializes runs and queues concurrent messages.\npub struct SessionQueue {\n    /// Pending messages waiting for the next run.\n    pending: Mutex<VecDeque<QueuedMessage>>,\n    /// Whether a run is currently active for this session.\n    active_run: Mutex<bool>,\n    /// Default queue mode for this session.\n    default_mode: QueueMode,\n    /// Channel to notify when a queued message should steer the active run.\n    steer_tx: Option<mpsc::Sender<QueuedMessage>>,\n}\n\nimpl SessionQueue {\n    pub fn new(default_mode: QueueMode) -> Self {\n        Self {\n            pending: Mutex::new(VecDeque::new()),\n            active_run: Mutex::new(false),\n            default_mode,\n            steer_tx: None,\n        }\n    }\n\n    /// Create a queue with a steer channel for injecting messages into active runs.\n    pub fn with_steer_channel(default_mode: QueueMode) -> (Self, mpsc::Receiver<QueuedMessage>) {\n        let (tx, rx) = mpsc::channel(64);\n        let queue = Self {\n            pending: Mutex::new(VecDeque::new()),\n            active_run: Mutex::new(false),\n            default_mode,\n            steer_tx: Some(tx),\n        };\n        (queue, rx)\n    }\n",
+          "source": {
+            "kind": "file",
+            "uri": "crates/layers-runtime/src/queue.rs",
+            "repo_path": "crates/layers-runtime/src/queue.rs"
+          },
+          "token_estimate": 276,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        },
+        {
+          "id": "code-2",
+          "title": "crates/layers-runtime/src/agent_loop.rs",
+          "body": "//! The main agent loop: intake → context → inference → tool exec → persist → loop.\n\nuse std::sync::Arc;\nuse std::time::Duration;\n\nuse chrono::{DateTime, Utc};\nuse serde::{Deserialize, Serialize};\nuse tokio_util::sync::CancellationToken;\nuse tracing::warn;\n\nuse layers_core::{\n    LayersError, Message, MessageContent, MessageRole, ModelProvider, ModelRef, ModelRequest,\n    Result, Session, SessionStore, TokenBudget, ToolContext,\n};\n\nuse crate::context::ContextAssembler;\nuse crate::failover::FailoverChain;\nuse crate::streaming::{StreamEvent, StreamSink};\nuse crate::system_prompt::SystemPromptBuilder;\nuse crate::tool_dispatch::ToolRegistry;\n\n// ---------------------------------------------------------------------------\n// Agent run configuration\n// ---------------------------------------------------------------------------\n\n/// Configurable limits for an agent run.\n#[derive(Debug, Clone)]\npub struct RunConfig {\n    /// Maximum tool-loop iterations before aborting. Default: 50.\n    pub max_tool_iterations: usize,\n    /// Overall run timeout. Default: 48 hours.\n    pub run_timeout: Duration,\n    /// LLM idle timeout (time waiting for model response). Default: 60s.\n    pub llm_idle_timeout: Duration,\n    /// How many times the same (tool, args) pair can repeat. Default: 3.\n    pub repeat_threshold: usize,\n}\n\nimpl Default for RunConfig {\n    fn default() -> Self {\n        Self {\n            max_tool_iterations: 50,\n            run_timeout: Duration::from_secs(48 * 3600),\n            llm_idle_timeout: Duration::from_secs(60),\n            repeat_threshold: 3,\n        }\n    }\n}\n\n// ---------------------------------------------------------------------------\n// Run status\n// ---------------------------------------------------------------------------\n\n/// Current status of an agent run.\n#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]\npub enum RunStatus {\n    /// Waiting for input.\n    Idle,\n    /// Processing: running inference or tool execution.\n    Running,\n    /// Completed normally.\n    Completed,\n    /// Cancelled by user or parent.\n    Cancelled,\n    /// Failed with error.\n    Failed(String),\n}\n\n// ---------------------------------------------------------------------------\n// AgentRun — tracks a single run\n// ---------------------------------------------------------------------------\n\n/// Tracks the state of one serialized run within a session.\npub struct AgentRun {\n    pub session_key: String,\n    pub model_ref: ModelRef,\n    pub cancel: CancellationToken,\n    pub status: RunStatus,\n    pub started_at: DateTime<Utc>,\n    pub tool_iterations: usize,",
+          "source": {
+            "kind": "file",
+            "uri": "crates/layers-runtime/src/agent_loop.rs",
+            "repo_path": "crates/layers-runtime/src/agent_loop.rs"
+          },
+          "token_estimate": 253,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        },
+        {
+          "id": "code-3",
+          "title": "src/critical_path.rs",
+          "body": "//! Critical-path routing V1.\n//!\n//! Implements weighted fair queueing with a reserved worker slot for\n//! critical-path tasks.  A task is `critical_path=true` iff it sits on\n//! the synchronous return path of a user-initiated prompt and the caller\n//! awaits the result before replying.\n//!\n//! Council decisions baked in:\n//! - 8:1 weighted dequeue ratio (critical : standard).\n//! - 1 reserved worker slot for the critical queue.\n//! - Bounded critical-queue depth with back-pressure.\n//! - Synchronous sub-tasks inherit `critical_path=true`; async/background\n//!   side-effects default to `false`.\n//! - Missing flags default to `false` for backward compatibility.\n\nuse std::collections::VecDeque;\nuse std::sync::{Arc, Condvar, Mutex, OnceLock};\nuse std::time::Instant;\n\nuse serde::{Deserialize, Serialize};\n\n// ---------------------------------------------------------------------------\n// Constants\n// ---------------------------------------------------------------------------\n\n/// Critical queue dequeues per scheduling round.\nconst CRITICAL_WEIGHT: usize = 8;\n/// Standard queue dequeues per scheduling round.\nconst STANDARD_WEIGHT: usize = 1;\n/// Default maximum depth for the critical queue before back-pressure kicks in.\nconst DEFAULT_CRITICAL_QUEUE_CAPACITY: usize = 64;\n/// Default total worker count (including the reserved critical slot).\nconst DEFAULT_TOTAL_WORKERS: usize = 4;\n/// The number of worker slots permanently reserved for critical work.\nconst RESERVED_CRITICAL_SLOTS: usize = 1;\n\n// ---------------------------------------------------------------------------\n// Classification helper\n// ---------------------------------------------------------------------------\n\n/// Returns `true` when the task sits on the synchronous return path of a\n/// user-initiated prompt and the caller awaits the result before replying.\n///\n/// The function inspects the envelope flag first (explicit caller intent),\n/// then falls back to heuristic detection based on the `route` string and\n/// whether there is a parent task flagged as critical.\npub fn is_critical_path(explicit_flag: Option<bool>, route: &str, parent_critical: bool) -> bool {\n    // 1. Explicit flag takes precedence (caller opted in/out).\n    if let Some(flag) = explicit_flag {\n        return flag;\n    }\n\n    // 2. Synchronous sub-tasks inherit from parent.\n    if parent_critical {\n        return true;\n    }\n\n    // 3. Routes that sit on the synchronous user-reply path.\n    matches!(\n        route,\n        \"direct\" | \"council_only\" | \"both\" | \"memory_only\" | \"graph_only\"\n    )\n}\n\n/// Determine whether a sub-task should inherit the critical-path flag.\n///\n/// - Synchronous children: inherit `true` from a critical parent.\n/// - Async / background side-effects: always `false`.\npub fn inherit_critical_path(parent_critical: bool, is_sync: bool) -> bool {\n    if is_sync { parent_critical } else { false }\n}\n\n// ---------------------------------------------------------------------------\n// Queue item\n// ---------------------------------------------------------------------------\n\n/// Priority tier for queue classification.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]\npub enum Priority {\n    /// On the synchronous return path — latency-sensitive.",
+          "source": {
+            "kind": "file",
+            "uri": "src/critical_path.rs",
+            "repo_path": "src/critical_path.rs"
+          },
+          "token_estimate": 401,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "validation",
+      "title": "Suggested Validation Commands",
+      "summary": "Commands an agent should run after using this research.",
+      "items": [
+        {
+          "id": "validation-1",
+          "title": "git diff --check",
+          "body": "Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 17,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-2",
+          "title": "cargo test --workspace --all-targets",
+          "body": "Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-3",
+          "title": "cargo clippy --workspace --all-targets -- -D warnings",
+          "body": "Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "dirty_worktree",
+      "message": "Workspace has 0 changed and 1 untracked files; inspect before editing."
+    },
+    {
+      "severity": "info",
+      "code": "autoresearch_uncertainty",
+      "message": "No persisted autoresearch finding matched this task."
+    },
+    {
+      "severity": "info",
+      "code": "injection_policy",
+      "message": "Packet quality gate recommends InjectCompact: packet is low-confidence or fallback-derived"
+    }
+  ],
+  "selection_trace": [
+    {
+      "item_id": "research-summary-1",
+      "reason": "summarizes the local preflight plan before source collection"
+    },
+    {
+      "item_id": "workspace-state-1",
+      "reason": "dirty or divergent workspace state changes how agents should interpret context"
+    },
+    {
+      "item_id": "memory-1",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-2",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-3",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-4",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-5",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "code-1",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "code-2",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "code-3",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "validation-1",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-2",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-3",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    }
+  ],
+  "retrieval": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  },
+  "provenance": {
+    "compiler": "layers-context-packet",
+    "compiler_version": "2",
+    "surface": "preflight",
+    "workspace_id": "layers",
+    "git_ref": "e3e3763",
+    "generated_at": "2026-05-03T01:41:24.166928Z",
+    "source_adapters": [
+      "file",
+      "memory",
+      "preflight",
+      "validation",
+      "workspace"
+    ]
+  },
+  "task": "Diagnose and fix a runtime queue fairness regression where critical work can starve standard work beyond the configured ratio. Add a deterministic regression test.",
+  "low_confidence_fallback": false,
+  "scores": {
+    "injection_recommendation": "inject_compact",
+    "packet_quality": {
+      "hallucinated_or_stale_context": false,
+      "missed_critical_context": false,
+      "reasons": [
+        "packet is low-confidence or fallback-derived"
+      ],
+      "recommendation": "inject_compact",
+      "scores": {
+        "completeness": 5,
+        "concision": 5,
+        "freshness": 3,
+        "grounding": 5,
+        "noise_absence": 3,
+        "relevance": 5,
+        "specificity": 5
+      },
+      "target_coverage_ratio": 1.0,
+      "validation_coverage_ratio": 1.0,
+      "warning_penalty": 2.25
+    },
+    "preflight": {
+      "autoresearch_findings": 0,
+      "code_heavy": true,
+      "targets": 3,
+      "workspace_dirty": true
+    }
+  },
+  "why_retrieved": "Preflight compiles local pre-edit context from workspace state, persisted autoresearch findings, memory, code targets, and validation policy.",
+  "why_not_retrieved": "",
+  "evidence": "### Preflight Summary\nPreflight Summary: Preflight classification\n- [local-planner] Preflight classified this task as code-heavy. Explicit targets: crates/layers-runtime/src/queue.rs, crates/layers-runtime/src/agent_loop.rs, src/critical_path.rs. Effective targets: crates/layers-runtime/src/queue.rs, crates/layers-runtime/src/agent_loop.rs, src/critical_path.rs.\nSource: local-planner (preflight)\nSelected because: summarizes the local preflight plan before source collection\n\n### Workspace State\nWorkspace State: Git worktree state\n- [git status --porcelain=v1] Branch: main\nHead: e3e3763\nDirty: true\nUntracked files:\n- docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/\n\nSource: git status --porcelain=v1 (workspace)\nSelected because: dirty or divergent workspace state changes how agents should interpret context\n\n### Project Memory\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"payload\":{\"rationale\":\"Broader OS/platform ambitions created drift; the highest-leverage immediate value is better deliberation, better memory continuity, and better structural grounding.\",\"slug\":\"narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"summary\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memoryport-based continuity, and GitNexus-based codebase understanding.\",\"title\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memor...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"scope\",\"strategy\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"payload\":{\"rationale\":\"Triumvirate is the destination architecture; Layers should accelerate and de-risk it by proving workflows, memory models, and graph-aware tooling before promotion.\",\"slug\":\"treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"summary\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-state system.\",\"title\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-st...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"triumvirate\",\"strategy\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"payload\":{\"rationale\":\"Structured records preserve auditability, editability, and schema stability while still allowing semantic recall via derived retrieval text and embeddings.\",\"slug\":\"canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"summary\":\"Canonical curated memories should be structured records, not vectors as source of truth; semantic embeddings are derived retrieval artifacts.\",\"title\":\"Canonical curated memories should be structured records, not vectors as source of truth\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"memoryport\",\"architecture\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"payload\":{\"rationale\":\"Graph-aware routing and context are already valuable; deeper operational use is the clearest way to reduce codebase guessing and breakage.\",\"slug\":\"gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"summary\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries toward workflow-operational use in planning, review, handoff, and postmortem packets.\",\"title\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries tow...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"gitnexus\",\"architecture\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\n### Code and Impact Context\nCode and Impact Context: crates/layers-runtime/src/queue.rs\n- [crates/layers-runtime/src/queue.rs] //! Message queue: actor/mailbox model per session with multiple queue modes.\n\nuse std::collections::{HashMap, VecDeque};\nuse std::sync::Arc;\n\nuse serde::{Deserialize, Serialize};\nuse tokio::sync::{Mutex, RwLock, mpsc};\n\nuse layers_core::InboundMessage;\n\n// ---------------------------------------------------------------------------\n// Queue modes\n// ---------------------------------------------------------------------------\n\n/// How queued messages are handled when a run is already active.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]\npub enum QueueMode {\n    /// Coalesce queued messages into a follow-up turn after current run finishes.\n    #[default]\n    Collect,\n    /// Inject into current run at the next tool boundary.\n    Steer,\n    /// Enqueue for the next turn (no coalescing).\n    Followup,\n    /// Abort active run, run newest message immediately.\n    Interrupt,\n    /// Steer the current message + preserve backlog for followup.\n    SteerBacklog,\n}\n\n// ---------------------------------------------------------------------------\n// Queued entry\n// ---------------------------------------------------------------------------\n\n/// A message waiting in the session queue.\n#[derive(Debug, Clone)]\npub struct QueuedMessage {\n    pub message: InboundMessage,\n    pub mode: QueueMode,\n    pub queued_at: chrono::DateTime<chrono::Utc>,\n}\n\n// ---------------------------------------------------------------------------\n// Session queue (per-session mailbox)\n// ---------------------------------------------------------------------------\n\n/// Per-session mailbox that serializes runs and queues concurrent messages.\npub struct SessionQueue {\n    /// Pending messages waiting for the next run.\n    pending: Mutex<VecDeque<QueuedMessage>>,\n    /// Whether a run is currently active for this session.\n    active_run: Mutex<bool>,\n    /// Default queue mode for this session.\n    default_mode: QueueMode,\n    /// Channel to notify when a queued message should steer the active run.\n    steer_tx: Option<mpsc::Sender<QueuedMessage>>,\n}\n\nimpl SessionQueue {\n    pub fn new(default_mode: QueueMode) -> Self {\n        Self {\n            pending: Mutex::new(VecDeque::new()),\n            active_run: Mutex::new(false),\n            default_mode,\n            steer_tx: None,\n        }\n    }\n\n    /// Create a queue with a steer channel for injecting messages into active runs.\n    pub fn with_steer_channel(default_mode: QueueMode) -> (Self, mpsc::Receiver<QueuedMessage>) {\n        let (tx, rx) = mpsc::channel(64);\n        let queue = Self {\n            pending: Mutex::new(VecDeque::new()),\n            active_run: Mutex::new(false),\n            default_mode,\n            steer_tx: Some(tx),\n        };\n        (queue, rx)\n    }\n\nSource: crates/layers-runtime/src/queue.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\nCode and Impact Context: crates/layers-runtime/src/agent_loop.rs\n- [crates/layers-runtime/src/agent_loop.rs] //! The main agent loop: intake → context → inference → tool exec → persist → loop.\n\nuse std::sync::Arc;\nuse std::time::Duration;\n\nuse chrono::{DateTime, Utc};\nuse serde::{Deserialize, Serialize};\nuse tokio_util::sync::CancellationToken;\nuse tracing::warn;\n\nuse layers_core::{\n    LayersError, Message, MessageContent, MessageRole, ModelProvider, ModelRef, ModelRequest,\n    Result, Session, SessionStore, TokenBudget, ToolContext,\n};\n\nuse crate::context::ContextAssembler;\nuse crate::failover::FailoverChain;\nuse crate::streaming::{StreamEvent, StreamSink};\nuse crate::system_prompt::SystemPromptBuilder;\nuse crate::tool_dispatch::ToolRegistry;\n\n// ---------------------------------------------------------------------------\n// Agent run configuration\n// ---------------------------------------------------------------------------\n\n/// Configurable limits for an agent run.\n#[derive(Debug, Clone)]\npub struct RunConfig {\n    /// Maximum tool-loop iterations before aborting. Default: 50.\n    pub max_tool_iterations: usize,\n    /// Overall run timeout. Default: 48 hours.\n    pub run_timeout: Duration,\n    /// LLM idle timeout (time waiting for model response). Default: 60s.\n    pub llm_idle_timeout: Duration,\n    /// How many times the same (tool, args) pair can repeat. Default: 3.\n    pub repeat_threshold: usize,\n}\n\nimpl Default for RunConfig {\n    fn default() -> Self {\n        Self {\n            max_tool_iterations: 50,\n            run_timeout: Duration::from_secs(48 * 3600),\n            llm_idle_timeout: Duration::from_secs(60),\n            repeat_threshold: 3,\n        }\n    }\n}\n\n// ---------------------------------------------------------------------------\n// Run status\n// ---------------------------------------------------------------------------\n\n/// Current status of an agent run.\n#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]\npub enum RunStatus {\n    /// Waiting for input.\n    Idle,\n    /// Processing: running inference or tool execution.\n    Running,\n    /// Completed normally.\n    Completed,\n    /// Cancelled by user or parent.\n    Cancelled,\n    /// Failed with error.\n    Failed(String),\n}\n\n// ---------------------------------------------------------------------------\n// AgentRun — tracks a single run\n// ---------------------------------------------------------------------------\n\n/// Tracks the state of one serialized run within a session.\npub struct AgentRun {\n    pub session_key: String,\n    pub model_ref: ModelRef,\n    pub cancel: CancellationToken,\n    pub status: RunStatus,\n    pub started_at: DateTime<Utc>,\n    pub tool_iterations: usize,\nSource: crates/layers-runtime/src/agent_loop.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\nCode and Impact Context: src/critical_path.rs\n- [src/critical_path.rs] //! Critical-path routing V1.\n//!\n//! Implements weighted fair queueing with a reserved worker slot for\n//! critical-path tasks.  A task is `critical_path=true` iff it sits on\n//! the synchronous return path of a user-initiated prompt and the caller\n//! awaits the result before replying.\n//!\n//! Council decisions baked in:\n//! - 8:1 weighted dequeue ratio (critical : standard).\n//! - 1 reserved worker slot for the critical queue.\n//! - Bounded critical-queue depth with back-pressure.\n//! - Synchronous sub-tasks inherit `critical_path=true`; async/background\n//!   side-effects default to `false`.\n//! - Missing flags default to `false` for backward compatibility.\n\nuse std::collections::VecDeque;\nuse std::sync::{Arc, Condvar, Mutex, OnceLock};\nuse std::time::Instant;\n\nuse serde::{Deserialize, Serialize};\n\n// ---------------------------------------------------------------------------\n// Constants\n// ---------------------------------------------------------------------------\n\n/// Critical queue dequeues per scheduling round.\nconst CRITICAL_WEIGHT: usize = 8;\n/// Standard queue dequeues per scheduling round.\nconst STANDARD_WEIGHT: usize = 1;\n/// Default maximum depth for the critical queue before back-pressure kicks in.\nconst DEFAULT_CRITICAL_QUEUE_CAPACITY: usize = 64;\n/// Default total worker count (including the reserved critical slot).\nconst DEFAULT_TOTAL_WORKERS: usize = 4;\n/// The number of worker slots permanently reserved for critical work.\nconst RESERVED_CRITICAL_SLOTS: usize = 1;\n\n// ---------------------------------------------------------------------------\n// Classification helper\n// ---------------------------------------------------------------------------\n\n/// Returns `true` when the task sits on the synchronous return path of a\n/// user-initiated prompt and the caller awaits the result before replying.\n///\n/// The function inspects the envelope flag first (explicit caller intent),\n/// then falls back to heuristic detection based on the `route` string and\n/// whether there is a parent task flagged as critical.\npub fn is_critical_path(explicit_flag: Option<bool>, route: &str, parent_critical: bool) -> bool {\n    // 1. Explicit flag takes precedence (caller opted in/out).\n    if let Some(flag) = explicit_flag {\n        return flag;\n    }\n\n    // 2. Synchronous sub-tasks inherit from parent.\n    if parent_critical {\n        return true;\n    }\n\n    // 3. Routes that sit on the synchronous user-reply path.\n    matches!(\n        route,\n        \"direct\" | \"council_only\" | \"both\" | \"memory_only\" | \"graph_only\"\n    )\n}\n\n/// Determine whether a sub-task should inherit the critical-path flag.\n///\n/// - Synchronous children: inherit `true` from a critical parent.\n/// - Async / background side-effects: always `false`.\npub fn inherit_critical_path(parent_critical: bool, is_sync: bool) -> bool {\n    if is_sync { parent_critical } else { false }\n}\n\n// ---------------------------------------------------------------------------\n// Queue item\n// ---------------------------------------------------------------------------\n\n/// Priority tier for queue classification.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]\npub enum Priority {\n    /// On the synchronous return path — latency-sensitive.\nSource: src/critical_path.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\n### Suggested Validation Commands\nSuggested Validation Commands: git diff --check\n- [preflight-validation-policy] Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo test --workspace --all-targets\n- [preflight-validation-policy] Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo clippy --workspace --all-targets -- -D warnings\n- [preflight-validation-policy] Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation",
+  "open_uncertainty": [
+    "Workspace has 0 changed and 1 untracked files; inspect before editing.",
+    "No persisted autoresearch finding matched this task."
+  ],
+  "retrieval_meta": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  }
+}

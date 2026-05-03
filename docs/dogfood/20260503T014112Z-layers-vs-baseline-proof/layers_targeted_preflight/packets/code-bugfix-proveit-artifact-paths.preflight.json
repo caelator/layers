@@ -1,0 +1,375 @@
+{
+  "schema_version": 2,
+  "id": "preflight-c74c3375-8262-430c-b546-522867406311",
+  "workspace_id": "layers",
+  "query": "Add path safety checks to proveit artifact storage so artifact names cannot escape the run directory through absolute paths, symlinks, or parent traversal. Add tests.",
+  "created_at": "2026-05-03T01:41:19.826490Z",
+  "git_ref": "e3e3763",
+  "route": "preflight",
+  "confidence": "high",
+  "budget": {
+    "max_units": 1800,
+    "used_units": 878,
+    "unit": "words",
+    "truncated": false
+  },
+  "sections": [
+    {
+      "id": "preflight_summary",
+      "title": "Preflight Summary",
+      "summary": "Preflight planning result.",
+      "items": [
+        {
+          "id": "research-summary-1",
+          "title": "Preflight classification",
+          "body": "Preflight classified this task as code-heavy. Explicit targets: src/proveit/artifact_store.rs, src/proveit/runner.rs, src/proveit/git.rs. Effective targets: src/proveit/artifact_store.rs, src/proveit/runner.rs, src/proveit/git.rs.",
+          "source": {
+            "kind": "preflight",
+            "uri": "local-planner"
+          },
+          "token_estimate": 16,
+          "selected_reason": "summarizes the local preflight plan before source collection",
+          "tags": [
+            "planning"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "workspace",
+      "title": "Workspace State",
+      "summary": "Current Git/worktree context that can affect safe edits.",
+      "items": [
+        {
+          "id": "workspace-state-1",
+          "title": "Git worktree state",
+          "body": "Branch: main\nHead: e3e3763\nDirty: true\nUntracked files:\n- docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/\n",
+          "source": {
+            "kind": "workspace",
+            "uri": "git status --porcelain=v1"
+          },
+          "token_estimate": 10,
+          "selected_reason": "dirty or divergent workspace state changes how agents should interpret context",
+          "tags": [
+            "workspace",
+            "git"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "title": "Project Memory",
+      "summary": "Relevant explicit project memory or memory-source warning.",
+      "items": [
+        {
+          "id": "memory-1",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"payload\":{\"rationale\":\"Structured records preserve auditability, editability, and schema stability while still allowing semantic recall via derived retrieval text and embeddings.\",\"slug\":\"canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"summary\":\"Canonical curated memories should be structured records, not vectors as source of truth; semantic embeddings are derived retrieval artifacts.\",\"title\":\"Canonical curated memories should be structured records, not vectors as source of truth\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"memoryport\",\"architecture\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 49,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-2",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 51,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-3",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"status\",\"id\":\"cm_status_layers_rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"payload\":{\"slug\":\"rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"state\":\"active\",\"summary\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis/types/util, with tests passing and validate passing (`replacement_ready: true`).\",\"title\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis...\",\"type\":\"status\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"rust\",\"status\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 21,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-4",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_curated-memory-records-should-be-first-class-and-should-include-at-minimum-decision-constraint-status-next-step-and-postmortem\",\"payload\":{\"rationale\":\"These are the record kinds that most directly reduce context drift and allow Layers to retrieve high-signal, decision-aware memory instead of inferring everything from raw artifacts.\",\"slug\":\"curated-memory-records-should-be-first-class-and-should-include-at-minimum-decision-constraint-status-next-step-and-postmortem\",\"summary\":\"Curated memory records should be first-class and should include at minimum: decision, constraint, status, next_step, and postmortem.\",\"title\":\"Curated memory records should be first-class and should include at minimum: decision, constra...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"records\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 54,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-5",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"next_step\",\"id\":\"cm_next_step_layers_implement-first-class-curated-memory-persistence-and-retrieval-preference-in-the-rust-repo-then-strengthen-gitnexus-backed-workflow-artifacts-for-planning-review-handoff-while-keeping-the-narrowed-layers-scope-intact\",\"payload\":{\"owner\":\"\",\"slug\":\"implement-first-class-curated-memory-persistence-and-retrieval-preference-in-the-rust-repo-then-strengthen-gitnexus-backed-workflow-artifacts-for-planning-review-handoff-while-keeping-the-narrowed-layers-scope-intact\",\"summary\":\"Implement first-class curated memory persistence and retrieval preference in the Rust repo, then strengthen GitNexus-backed workflow artifacts for planning/review/handoff while keeping the narrowed Layers scope intact.\",\"title\":\"Implement first-class curated memory persistence and retrieval preference in the Rust repo, t...\",\"type\":\"next_step\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"next-step\",\"priority\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 38,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "title": "Code and Impact Context",
+      "summary": "Local code context gathered without editing files.",
+      "items": [
+        {
+          "id": "code-1",
+          "title": "src/proveit/artifact_store.rs",
+          "body": "use std::fs;\nuse std::path::{Path, PathBuf};\n\nuse anyhow::{Context, Result};\nuse chrono::SecondsFormat;\n\nuse super::types::{FeatureVerdict, ProofRecord};\n\n/// Best-effort dual-write to blob store (`substrate::blob`).\n/// Failures are logged but never propagate — the primary write always succeeds.\nfn blob_dual_write(\n    content_type: &str,\n    key: &str,\n    data: &[u8],\n    preview: &str,\n    tags: &[(&str, &str)],\n) {\n    if let Err(e) = try_blob_put(content_type, key, data, preview, tags) {\n        eprintln!(\"warning: blob dual-write failed: {e}\");\n    }\n}\n\nfn try_blob_put(\n    content_type: &str,\n    _key: &str,\n    data: &[u8],\n    preview: &str,\n    tags: &[(&str, &str)],\n) -> Result<(), String> {\n    let home = dirs::home_dir().ok_or_else(|| \"could not determine home directory\".to_string())?;\n    let root = home.join(\".openclaw\").join(\"blobs\");\n\n    let mut store = substrate::blob::BlobStore::open(&root).map_err(|e| format!(\"{e}\"))?;\n\n    let ct =\n        substrate::blob::ContentType::new(content_type.to_string()).map_err(|e| format!(\"{e}\"))?;\n    let producer =\n        substrate::blob::ProducerId::new(\"maestro\".to_string()).map_err(|e| format!(\"{e}\"))?;\n    let timestamp = substrate::blob::now_timestamp_ms();\n\n    let mut extra = std::collections::BTreeMap::new();\n    for (k, v) in tags {\n        extra.insert(k.to_string(), v.to_string());\n    }\n\n    let envelope = substrate::blob::BlobEnvelope::new(\n        ct,\n        producer,\n        data.to_vec(),\n        Some(preview.to_string()),\n        extra,\n    );\n    store.put(&envelope).map_err(|e| format!(\"{e}\"))?;\n\n    let _ = timestamp; // suppress unused warning\n    Ok(())\n}\n\npub struct ArtifactStore {\n    workspace_root: PathBuf,\n}\n\nimpl ArtifactStore {\n    pub fn new(workspace_root: &Path) -> Self {\n        Self {\n            workspace_root: workspace_root.to_path_buf(),\n        }\n    }\n\n    pub fn write_proof(&self, record: &ProofRecord) -> Result<PathBuf> {\n        let directory = self\n            .workspace_root\n            .join(\".proveit\")\n            .join(\"artifacts\")\n            .join(&record.feature_id)\n            .join(&record.proof_id);\n        fs::create_dir_all(&directory)\n            .with_context(|| format!(\"failed to create {}\", directory.display()))?;\n\n        let timestamp = record",
+          "source": {
+            "kind": "file",
+            "uri": "src/proveit/artifact_store.rs",
+            "repo_path": "src/proveit/artifact_store.rs"
+          },
+          "token_estimate": 203,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        },
+        {
+          "id": "code-2",
+          "title": "src/proveit/runner.rs",
+          "body": "use std::fmt::Write;\nuse std::io::Read;\nuse std::path::Path;\nuse std::process::{Child, Command, Stdio};\nuse std::time::{Duration, Instant};\n\nuse anyhow::{Context, Result};\nuse chrono::Utc;\nuse sha2::{Digest, Sha256};\n\nuse super::git;\nuse super::types::{ArtifactExtractMode, ProofRecord, ProofSpec};\n\npub fn run_proof(\n    workspace_root: &Path,\n    feature_id: &str,\n    proof: &ProofSpec,\n) -> Result<ProofRecord> {\n    let started_at = Instant::now();\n    let commit_sha = git::head_sha(workspace_root)?;\n    let deadline = Instant::now() + Duration::from_secs(proof.timeout_secs);\n    let output = run_command_with_deadline(\n        || {\n            Command::new(\"sh\")\n                .args([\"-c\", &proof.command])\n                .current_dir(workspace_root)\n                .stdin(Stdio::null())\n                .stdout(Stdio::piped())\n                .stderr(Stdio::piped())\n                .spawn()\n        },\n        deadline,\n    )\n    .with_context(|| format!(\"proof {} failed to execute\", proof.id))?;\n\n    let stdout = String::from_utf8_lossy(&output.stdout).to_string();\n    let mut stderr = String::from_utf8_lossy(&output.stderr).to_string();\n    let mut passed = output.status.success();\n    let exit_code = output.status.code().unwrap_or(-1);\n\n    let (artifact, artifact_error) = match extract_artifact(proof.artifact_extract, &stdout) {\n        Ok(value) => (value, None),\n        Err(error) => {\n            passed = false;\n            if !stderr.is_empty() {\n                stderr.push('\\n');\n            }\n            let _ = write!(stderr, \"artifact extraction failed: {error:#}\");\n            (None, Some(error.to_string()))\n        }\n    };\n\n    Ok(ProofRecord {\n        proof_id: proof.id.clone(),\n        feature_id: feature_id.to_string(),\n        category: proof.category,\n        command: proof.command.clone(),\n        passed,\n        exit_code,\n        commit_sha,\n        timestamp: Utc::now(),\n        duration_ms: started_at.elapsed().as_millis() as u64,\n        stdout_hash: sha256(&stdout),\n        stderr_hash: sha256(&stderr),\n        stdout,\n        stderr,\n        artifact,\n        artifact_error,\n    })\n}\n\nfn extract_artifact(\n    mode: Option<ArtifactExtractMode>,\n    stdout: &str,\n) -> Result<Option<serde_json::Value>> {\n    let Some(mode) = mode else {\n        return Ok(None);\n    };\n\n    let trimmed = stdout.trim();",
+          "source": {
+            "kind": "file",
+            "uri": "src/proveit/runner.rs",
+            "repo_path": "src/proveit/runner.rs"
+          },
+          "token_estimate": 183,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        },
+        {
+          "id": "code-3",
+          "title": "src/proveit/git.rs",
+          "body": "use std::collections::BTreeSet;\nuse std::path::Path;\nuse std::process::Command;\n\nuse anyhow::{Context, Result};\n\npub fn head_sha(workspace_root: &Path) -> Result<String> {\n    run_git(workspace_root, [\"rev-parse\", \"HEAD\"]).map(|text| text.trim().to_string())\n}\n\npub fn changed_files_since(workspace_root: &Path, from_sha: &str) -> Result<Vec<String>> {\n    let head = head_sha(workspace_root)?;\n    if from_sha == head {\n        return Ok(Vec::new());\n    }\n\n    let output = run_git(\n        workspace_root,\n        [\"diff\", \"--name-only\", &format!(\"{from_sha}..HEAD\")],\n    )?;\n    Ok(output\n        .lines()\n        .map(str::trim)\n        .filter(|line| !line.is_empty())\n        .map(std::string::ToString::to_string)\n        .collect())\n}\n\npub fn worktree_changed_files(workspace_root: &Path) -> Result<Vec<String>> {\n    let output = run_git(\n        workspace_root,\n        [\"status\", \"--porcelain\", \"--untracked-files=all\"],\n    )?;\n\n    let mut files = BTreeSet::new();\n    for line in output\n        .lines()\n        .map(str::trim_end)\n        .filter(|line| !line.is_empty())\n    {\n        if line.len() < 4 {\n            continue;\n        }\n        let payload = line[3..].trim();\n        if let Some((before, after)) = payload.split_once(\" -> \") {\n            files.insert(before.trim().to_string());\n            files.insert(after.trim().to_string());\n        } else {\n            files.insert(payload.to_string());\n        }\n    }\n    Ok(files.into_iter().collect())\n}\n\npub fn parent_changed_files(workspace_root: &Path) -> Result<Vec<String>> {\n    match run_git(workspace_root, [\"rev-parse\", \"HEAD~1\"]) {\n        Ok(sha) => changed_files_since(workspace_root, sha.trim()),\n        Err(_) => Ok(Vec::new()),\n    }\n}\n\npub fn current_changed_files(workspace_root: &Path, from_sha: &str) -> Result<Vec<String>> {\n    let mut files = BTreeSet::new();\n    for file in changed_files_since(workspace_root, from_sha)? {\n        files.insert(file);\n    }\n    for file in worktree_changed_files(workspace_root)? {\n        files.insert(file);\n    }\n    Ok(files.into_iter().collect())\n}\n\nfn run_git<const N: usize>(workspace_root: &Path, args: [&str; N]) -> Result<String> {\n    let output = Command::new(\"git\")\n        .args(args)\n        .current_dir(workspace_root)\n        .output()\n        .with_context(|| format!(\"failed to run git {}\", args.join(\" \")))?;\n\n    if !output.status.success() {",
+          "source": {
+            "kind": "file",
+            "uri": "src/proveit/git.rs",
+            "repo_path": "src/proveit/git.rs"
+          },
+          "token_estimate": 200,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "validation",
+      "title": "Suggested Validation Commands",
+      "summary": "Commands an agent should run after using this research.",
+      "items": [
+        {
+          "id": "validation-1",
+          "title": "git diff --check",
+          "body": "Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 17,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-2",
+          "title": "cargo test --workspace --all-targets",
+          "body": "Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-3",
+          "title": "cargo clippy --workspace --all-targets -- -D warnings",
+          "body": "Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "dirty_worktree",
+      "message": "Workspace has 0 changed and 1 untracked files; inspect before editing."
+    },
+    {
+      "severity": "info",
+      "code": "autoresearch_uncertainty",
+      "message": "No persisted autoresearch finding matched this task."
+    },
+    {
+      "severity": "info",
+      "code": "injection_policy",
+      "message": "Packet quality gate recommends InjectCompact: packet is low-confidence or fallback-derived"
+    }
+  ],
+  "selection_trace": [
+    {
+      "item_id": "research-summary-1",
+      "reason": "summarizes the local preflight plan before source collection"
+    },
+    {
+      "item_id": "workspace-state-1",
+      "reason": "dirty or divergent workspace state changes how agents should interpret context"
+    },
+    {
+      "item_id": "memory-1",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-2",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-3",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-4",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-5",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "code-1",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "code-2",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "code-3",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "validation-1",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-2",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-3",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    }
+  ],
+  "retrieval": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  },
+  "provenance": {
+    "compiler": "layers-context-packet",
+    "compiler_version": "2",
+    "surface": "preflight",
+    "workspace_id": "layers",
+    "git_ref": "e3e3763",
+    "generated_at": "2026-05-03T01:41:19.826490Z",
+    "source_adapters": [
+      "file",
+      "memory",
+      "preflight",
+      "validation",
+      "workspace"
+    ]
+  },
+  "task": "Add path safety checks to proveit artifact storage so artifact names cannot escape the run directory through absolute paths, symlinks, or parent traversal. Add tests.",
+  "low_confidence_fallback": false,
+  "scores": {
+    "injection_recommendation": "inject_compact",
+    "packet_quality": {
+      "hallucinated_or_stale_context": false,
+      "missed_critical_context": false,
+      "reasons": [
+        "packet is low-confidence or fallback-derived"
+      ],
+      "recommendation": "inject_compact",
+      "scores": {
+        "completeness": 5,
+        "concision": 5,
+        "freshness": 3,
+        "grounding": 5,
+        "noise_absence": 3,
+        "relevance": 5,
+        "specificity": 5
+      },
+      "target_coverage_ratio": 1.0,
+      "validation_coverage_ratio": 1.0,
+      "warning_penalty": 2.25
+    },
+    "preflight": {
+      "autoresearch_findings": 0,
+      "code_heavy": true,
+      "targets": 3,
+      "workspace_dirty": true
+    }
+  },
+  "why_retrieved": "Preflight compiles local pre-edit context from workspace state, persisted autoresearch findings, memory, code targets, and validation policy.",
+  "why_not_retrieved": "",
+  "evidence": "### Preflight Summary\nPreflight Summary: Preflight classification\n- [local-planner] Preflight classified this task as code-heavy. Explicit targets: src/proveit/artifact_store.rs, src/proveit/runner.rs, src/proveit/git.rs. Effective targets: src/proveit/artifact_store.rs, src/proveit/runner.rs, src/proveit/git.rs.\nSource: local-planner (preflight)\nSelected because: summarizes the local preflight plan before source collection\n\n### Workspace State\nWorkspace State: Git worktree state\n- [git status --porcelain=v1] Branch: main\nHead: e3e3763\nDirty: true\nUntracked files:\n- docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/\n\nSource: git status --porcelain=v1 (workspace)\nSelected because: dirty or divergent workspace state changes how agents should interpret context\n\n### Project Memory\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"payload\":{\"rationale\":\"Structured records preserve auditability, editability, and schema stability while still allowing semantic recall via derived retrieval text and embeddings.\",\"slug\":\"canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"summary\":\"Canonical curated memories should be structured records, not vectors as source of truth; semantic embeddings are derived retrieval artifacts.\",\"title\":\"Canonical curated memories should be structured records, not vectors as source of truth\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"memoryport\",\"architecture\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"status\",\"id\":\"cm_status_layers_rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"payload\":{\"slug\":\"rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"state\":\"active\",\"summary\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis/types/util, with tests passing and validate passing (`replacement_ready: true`).\",\"title\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis...\",\"type\":\"status\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"rust\",\"status\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_curated-memory-records-should-be-first-class-and-should-include-at-minimum-decision-constraint-status-next-step-and-postmortem\",\"payload\":{\"rationale\":\"These are the record kinds that most directly reduce context drift and allow Layers to retrieve high-signal, decision-aware memory instead of inferring everything from raw artifacts.\",\"slug\":\"curated-memory-records-should-be-first-class-and-should-include-at-minimum-decision-constraint-status-next-step-and-postmortem\",\"summary\":\"Curated memory records should be first-class and should include at minimum: decision, constraint, status, next_step, and postmortem.\",\"title\":\"Curated memory records should be first-class and should include at minimum: decision, constra...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"records\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"next_step\",\"id\":\"cm_next_step_layers_implement-first-class-curated-memory-persistence-and-retrieval-preference-in-the-rust-repo-then-strengthen-gitnexus-backed-workflow-artifacts-for-planning-review-handoff-while-keeping-the-narrowed-layers-scope-intact\",\"payload\":{\"owner\":\"\",\"slug\":\"implement-first-class-curated-memory-persistence-and-retrieval-preference-in-the-rust-repo-then-strengthen-gitnexus-backed-workflow-artifacts-for-planning-review-handoff-while-keeping-the-narrowed-layers-scope-intact\",\"summary\":\"Implement first-class curated memory persistence and retrieval preference in the Rust repo, then strengthen GitNexus-backed workflow artifacts for planning/review/handoff while keeping the narrowed Layers scope intact.\",\"title\":\"Implement first-class curated memory persistence and retrieval preference in the Rust repo, t...\",\"type\":\"next_step\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"next-step\",\"priority\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\n### Code and Impact Context\nCode and Impact Context: src/proveit/artifact_store.rs\n- [src/proveit/artifact_store.rs] use std::fs;\nuse std::path::{Path, PathBuf};\n\nuse anyhow::{Context, Result};\nuse chrono::SecondsFormat;\n\nuse super::types::{FeatureVerdict, ProofRecord};\n\n/// Best-effort dual-write to blob store (`substrate::blob`).\n/// Failures are logged but never propagate — the primary write always succeeds.\nfn blob_dual_write(\n    content_type: &str,\n    key: &str,\n    data: &[u8],\n    preview: &str,\n    tags: &[(&str, &str)],\n) {\n    if let Err(e) = try_blob_put(content_type, key, data, preview, tags) {\n        eprintln!(\"warning: blob dual-write failed: {e}\");\n    }\n}\n\nfn try_blob_put(\n    content_type: &str,\n    _key: &str,\n    data: &[u8],\n    preview: &str,\n    tags: &[(&str, &str)],\n) -> Result<(), String> {\n    let home = dirs::home_dir().ok_or_else(|| \"could not determine home directory\".to_string())?;\n    let root = home.join(\".openclaw\").join(\"blobs\");\n\n    let mut store = substrate::blob::BlobStore::open(&root).map_err(|e| format!(\"{e}\"))?;\n\n    let ct =\n        substrate::blob::ContentType::new(content_type.to_string()).map_err(|e| format!(\"{e}\"))?;\n    let producer =\n        substrate::blob::ProducerId::new(\"maestro\".to_string()).map_err(|e| format!(\"{e}\"))?;\n    let timestamp = substrate::blob::now_timestamp_ms();\n\n    let mut extra = std::collections::BTreeMap::new();\n    for (k, v) in tags {\n        extra.insert(k.to_string(), v.to_string());\n    }\n\n    let envelope = substrate::blob::BlobEnvelope::new(\n        ct,\n        producer,\n        data.to_vec(),\n        Some(preview.to_string()),\n        extra,\n    );\n    store.put(&envelope).map_err(|e| format!(\"{e}\"))?;\n\n    let _ = timestamp; // suppress unused warning\n    Ok(())\n}\n\npub struct ArtifactStore {\n    workspace_root: PathBuf,\n}\n\nimpl ArtifactStore {\n    pub fn new(workspace_root: &Path) -> Self {\n        Self {\n            workspace_root: workspace_root.to_path_buf(),\n        }\n    }\n\n    pub fn write_proof(&self, record: &ProofRecord) -> Result<PathBuf> {\n        let directory = self\n            .workspace_root\n            .join(\".proveit\")\n            .join(\"artifacts\")\n            .join(&record.feature_id)\n            .join(&record.proof_id);\n        fs::create_dir_all(&directory)\n            .with_context(|| format!(\"failed to create {}\", directory.display()))?;\n\n        let timestamp = record\nSource: src/proveit/artifact_store.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\nCode and Impact Context: src/proveit/runner.rs\n- [src/proveit/runner.rs] use std::fmt::Write;\nuse std::io::Read;\nuse std::path::Path;\nuse std::process::{Child, Command, Stdio};\nuse std::time::{Duration, Instant};\n\nuse anyhow::{Context, Result};\nuse chrono::Utc;\nuse sha2::{Digest, Sha256};\n\nuse super::git;\nuse super::types::{ArtifactExtractMode, ProofRecord, ProofSpec};\n\npub fn run_proof(\n    workspace_root: &Path,\n    feature_id: &str,\n    proof: &ProofSpec,\n) -> Result<ProofRecord> {\n    let started_at = Instant::now();\n    let commit_sha = git::head_sha(workspace_root)?;\n    let deadline = Instant::now() + Duration::from_secs(proof.timeout_secs);\n    let output = run_command_with_deadline(\n        || {\n            Command::new(\"sh\")\n                .args([\"-c\", &proof.command])\n                .current_dir(workspace_root)\n                .stdin(Stdio::null())\n                .stdout(Stdio::piped())\n                .stderr(Stdio::piped())\n                .spawn()\n        },\n        deadline,\n    )\n    .with_context(|| format!(\"proof {} failed to execute\", proof.id))?;\n\n    let stdout = String::from_utf8_lossy(&output.stdout).to_string();\n    let mut stderr = String::from_utf8_lossy(&output.stderr).to_string();\n    let mut passed = output.status.success();\n    let exit_code = output.status.code().unwrap_or(-1);\n\n    let (artifact, artifact_error) = match extract_artifact(proof.artifact_extract, &stdout) {\n        Ok(value) => (value, None),\n        Err(error) => {\n            passed = false;\n            if !stderr.is_empty() {\n                stderr.push('\\n');\n            }\n            let _ = write!(stderr, \"artifact extraction failed: {error:#}\");\n            (None, Some(error.to_string()))\n        }\n    };\n\n    Ok(ProofRecord {\n        proof_id: proof.id.clone(),\n        feature_id: feature_id.to_string(),\n        category: proof.category,\n        command: proof.command.clone(),\n        passed,\n        exit_code,\n        commit_sha,\n        timestamp: Utc::now(),\n        duration_ms: started_at.elapsed().as_millis() as u64,\n        stdout_hash: sha256(&stdout),\n        stderr_hash: sha256(&stderr),\n        stdout,\n        stderr,\n        artifact,\n        artifact_error,\n    })\n}\n\nfn extract_artifact(\n    mode: Option<ArtifactExtractMode>,\n    stdout: &str,\n) -> Result<Option<serde_json::Value>> {\n    let Some(mode) = mode else {\n        return Ok(None);\n    };\n\n    let trimmed = stdout.trim();\nSource: src/proveit/runner.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\nCode and Impact Context: src/proveit/git.rs\n- [src/proveit/git.rs] use std::collections::BTreeSet;\nuse std::path::Path;\nuse std::process::Command;\n\nuse anyhow::{Context, Result};\n\npub fn head_sha(workspace_root: &Path) -> Result<String> {\n    run_git(workspace_root, [\"rev-parse\", \"HEAD\"]).map(|text| text.trim().to_string())\n}\n\npub fn changed_files_since(workspace_root: &Path, from_sha: &str) -> Result<Vec<String>> {\n    let head = head_sha(workspace_root)?;\n    if from_sha == head {\n        return Ok(Vec::new());\n    }\n\n    let output = run_git(\n        workspace_root,\n        [\"diff\", \"--name-only\", &format!(\"{from_sha}..HEAD\")],\n    )?;\n    Ok(output\n        .lines()\n        .map(str::trim)\n        .filter(|line| !line.is_empty())\n        .map(std::string::ToString::to_string)\n        .collect())\n}\n\npub fn worktree_changed_files(workspace_root: &Path) -> Result<Vec<String>> {\n    let output = run_git(\n        workspace_root,\n        [\"status\", \"--porcelain\", \"--untracked-files=all\"],\n    )?;\n\n    let mut files = BTreeSet::new();\n    for line in output\n        .lines()\n        .map(str::trim_end)\n        .filter(|line| !line.is_empty())\n    {\n        if line.len() < 4 {\n            continue;\n        }\n        let payload = line[3..].trim();\n        if let Some((before, after)) = payload.split_once(\" -> \") {\n            files.insert(before.trim().to_string());\n            files.insert(after.trim().to_string());\n        } else {\n            files.insert(payload.to_string());\n        }\n    }\n    Ok(files.into_iter().collect())\n}\n\npub fn parent_changed_files(workspace_root: &Path) -> Result<Vec<String>> {\n    match run_git(workspace_root, [\"rev-parse\", \"HEAD~1\"]) {\n        Ok(sha) => changed_files_since(workspace_root, sha.trim()),\n        Err(_) => Ok(Vec::new()),\n    }\n}\n\npub fn current_changed_files(workspace_root: &Path, from_sha: &str) -> Result<Vec<String>> {\n    let mut files = BTreeSet::new();\n    for file in changed_files_since(workspace_root, from_sha)? {\n        files.insert(file);\n    }\n    for file in worktree_changed_files(workspace_root)? {\n        files.insert(file);\n    }\n    Ok(files.into_iter().collect())\n}\n\nfn run_git<const N: usize>(workspace_root: &Path, args: [&str; N]) -> Result<String> {\n    let output = Command::new(\"git\")\n        .args(args)\n        .current_dir(workspace_root)\n        .output()\n        .with_context(|| format!(\"failed to run git {}\", args.join(\" \")))?;\n\n    if !output.status.success() {\nSource: src/proveit/git.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\n### Suggested Validation Commands\nSuggested Validation Commands: git diff --check\n- [preflight-validation-policy] Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo test --workspace --all-targets\n- [preflight-validation-policy] Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo clippy --workspace --all-targets -- -D warnings\n- [preflight-validation-policy] Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation",
+  "open_uncertainty": [
+    "Workspace has 0 changed and 1 untracked files; inspect before editing.",
+    "No persisted autoresearch finding matched this task."
+  ],
+  "retrieval_meta": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  }
+}

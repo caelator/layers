@@ -1,0 +1,356 @@
+{
+  "schema_version": 2,
+  "id": "preflight-dd0a9785-db54-4b0c-bdb6-baaf7bad40cc",
+  "workspace_id": "layers",
+  "query": "Make the tools registry reject duplicate tool names deterministically with a clear error, and add unit tests for duplicate and unique registrations.",
+  "created_at": "2026-05-03T01:41:21.969679Z",
+  "git_ref": "e3e3763",
+  "route": "preflight",
+  "confidence": "high",
+  "budget": {
+    "max_units": 1800,
+    "used_units": 545,
+    "unit": "words",
+    "truncated": false
+  },
+  "sections": [
+    {
+      "id": "preflight_summary",
+      "title": "Preflight Summary",
+      "summary": "Preflight planning result.",
+      "items": [
+        {
+          "id": "research-summary-1",
+          "title": "Preflight classification",
+          "body": "Preflight classified this task as code-heavy. Explicit targets: crates/layers-tools/src/registry.rs, crates/layers-tools/src/lib.rs. Effective targets: crates/layers-tools/src/registry.rs, crates/layers-tools/src/lib.rs.",
+          "source": {
+            "kind": "preflight",
+            "uri": "local-planner"
+          },
+          "token_estimate": 14,
+          "selected_reason": "summarizes the local preflight plan before source collection",
+          "tags": [
+            "planning"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "workspace",
+      "title": "Workspace State",
+      "summary": "Current Git/worktree context that can affect safe edits.",
+      "items": [
+        {
+          "id": "workspace-state-1",
+          "title": "Git worktree state",
+          "body": "Branch: main\nHead: e3e3763\nDirty: true\nUntracked files:\n- docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/\n",
+          "source": {
+            "kind": "workspace",
+            "uri": "git status --porcelain=v1"
+          },
+          "token_estimate": 10,
+          "selected_reason": "dirty or divergent workspace state changes how agents should interpret context",
+          "tags": [
+            "workspace",
+            "git"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "title": "Project Memory",
+      "summary": "Relevant explicit project memory or memory-source warning.",
+      "items": [
+        {
+          "id": "memory-1",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"payload\":{\"rationale\":\"Broader OS/platform ambitions created drift; the highest-leverage immediate value is better deliberation, better memory continuity, and better structural grounding.\",\"slug\":\"narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"summary\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memoryport-based continuity, and GitNexus-based codebase understanding.\",\"title\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memor...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"scope\",\"strategy\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 48,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-2",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"payload\":{\"rationale\":\"Triumvirate is the destination architecture; Layers should accelerate and de-risk it by proving workflows, memory models, and graph-aware tooling before promotion.\",\"slug\":\"treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"summary\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-state system.\",\"title\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-st...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"triumvirate\",\"strategy\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 46,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-3",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 51,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-4",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"payload\":{\"rationale\":\"Graph-aware routing and context are already valuable; deeper operational use is the clearest way to reduce codebase guessing and breakage.\",\"slug\":\"gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"summary\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries toward workflow-operational use in planning, review, handoff, and postmortem packets.\",\"title\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries tow...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"gitnexus\",\"architecture\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 57,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-5",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"status\",\"id\":\"cm_status_layers_rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"payload\":{\"slug\":\"rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"state\":\"active\",\"summary\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis/types/util, with tests passing and validate passing (`replacement_ready: true`).\",\"title\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis...\",\"type\":\"status\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"rust\",\"status\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 21,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "title": "Code and Impact Context",
+      "summary": "Local code context gathered without editing files.",
+      "items": [
+        {
+          "id": "code-1",
+          "title": "crates/layers-tools/src/registry.rs",
+          "body": "//! Extended tool registry with profile-based tool sets and schema generation.\n\nuse std::collections::HashMap;\nuse std::sync::Arc;\n\nuse tracing::debug;\n\nuse layers_core::{\n    LayersError, Result, Tool, ToolContext, ToolDefinition, ToolFunction, ToolOutput,\n};\n\n// ---------------------------------------------------------------------------\n// Tool profiles\n// ---------------------------------------------------------------------------\n\n/// Predefined tool profile sets that control which tools are available.\n#[derive(Debug, Clone, PartialEq, Eq, Default)]\npub enum ToolProfile {\n    /// Read-only essentials: read, session_status, memory_get.\n    Minimal,\n    /// Coding tools: minimal + exec, process, write, edit.\n    Coding,\n    /// Messaging tools: coding + sessions_send, sessions_history, cron.\n    Messaging,\n    /// All registered tools.\n    #[default]\n    Full,\n    /// Custom allow-list.\n    Custom(Vec<String>),\n}\n\nimpl ToolProfile {\n    /// Returns the set of tool names allowed by this profile, or `None` for Full.\n    fn allowed_names(&self) -> Option<Vec<&str>> {\n        match self {\n            Self::Minimal => Some(vec![\"read\", \"session_status\", \"memory_get\"]),\n            Self::Coding => Some(vec![\n                \"read\",\n                \"session_status\",\n                \"memory_get\",\n                \"exec\",\n                \"process\",\n                \"write\",\n                \"edit\",\n            ]),\n            Self::Messaging => Some(vec![\n                \"read\",\n                \"session_status\",\n                \"memory_get\",\n                \"exec\",\n                \"process\",\n                \"write\",\n                \"edit\",\n                \"sessions_send\",\n                \"sessions_history\",\n                \"cron_create\",\n                \"cron_list\",\n                \"cron_delete\",\n            ]),\n            Self::Full => None,\n            Self::Custom(names) => Some(names.iter().map(String::as_str).collect()),\n        }\n    }\n}\n\n// ---------------------------------------------------------------------------\n// Tool registry\n// ---------------------------------------------------------------------------\n\n/// Registry of tool implementations with allow/deny filtering and profiles.\npub struct ToolRegistry {\n    tools: HashMap<String, Arc<dyn Tool>>,\n    allow: Option<Vec<String>>,\n    deny: Vec<String>,\n    profile: ToolProfile,\n}\n\nimpl ToolRegistry {\n    #[must_use]\n    pub fn new() -> Self {",
+          "source": {
+            "kind": "file",
+            "uri": "crates/layers-tools/src/registry.rs",
+            "repo_path": "crates/layers-tools/src/registry.rs"
+          },
+          "token_estimate": 200,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        },
+        {
+          "id": "code-2",
+          "title": "crates/layers-tools/src/lib.rs",
+          "body": "//! Tool implementations: exec, filesystem, web, sessions, subagents, memory, media, cron.\n#![allow(clippy::doc_markdown)]\n\npub mod cron;\npub mod exec;\npub mod fs;\npub mod loop_detection;\npub mod media;\npub mod memory;\npub mod process;\npub mod registry;\npub mod sessions;\npub mod subagents;\npub mod web;",
+          "source": {
+            "kind": "file",
+            "uri": "crates/layers-tools/src/lib.rs",
+            "repo_path": "crates/layers-tools/src/lib.rs"
+          },
+          "token_estimate": 45,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "validation",
+      "title": "Suggested Validation Commands",
+      "summary": "Commands an agent should run after using this research.",
+      "items": [
+        {
+          "id": "validation-1",
+          "title": "git diff --check",
+          "body": "Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 17,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-2",
+          "title": "cargo test --workspace --all-targets",
+          "body": "Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-3",
+          "title": "cargo clippy --workspace --all-targets -- -D warnings",
+          "body": "Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "dirty_worktree",
+      "message": "Workspace has 0 changed and 1 untracked files; inspect before editing."
+    },
+    {
+      "severity": "info",
+      "code": "autoresearch_uncertainty",
+      "message": "No persisted autoresearch finding matched this task."
+    },
+    {
+      "severity": "info",
+      "code": "injection_policy",
+      "message": "Packet quality gate recommends InjectCompact: packet is low-confidence or fallback-derived"
+    }
+  ],
+  "selection_trace": [
+    {
+      "item_id": "research-summary-1",
+      "reason": "summarizes the local preflight plan before source collection"
+    },
+    {
+      "item_id": "workspace-state-1",
+      "reason": "dirty or divergent workspace state changes how agents should interpret context"
+    },
+    {
+      "item_id": "memory-1",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-2",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-3",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-4",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-5",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "code-1",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "code-2",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "validation-1",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-2",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-3",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    }
+  ],
+  "retrieval": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  },
+  "provenance": {
+    "compiler": "layers-context-packet",
+    "compiler_version": "2",
+    "surface": "preflight",
+    "workspace_id": "layers",
+    "git_ref": "e3e3763",
+    "generated_at": "2026-05-03T01:41:21.969679Z",
+    "source_adapters": [
+      "file",
+      "memory",
+      "preflight",
+      "validation",
+      "workspace"
+    ]
+  },
+  "task": "Make the tools registry reject duplicate tool names deterministically with a clear error, and add unit tests for duplicate and unique registrations.",
+  "low_confidence_fallback": false,
+  "scores": {
+    "injection_recommendation": "inject_compact",
+    "packet_quality": {
+      "hallucinated_or_stale_context": false,
+      "missed_critical_context": false,
+      "reasons": [
+        "packet is low-confidence or fallback-derived"
+      ],
+      "recommendation": "inject_compact",
+      "scores": {
+        "completeness": 5,
+        "concision": 5,
+        "freshness": 3,
+        "grounding": 5,
+        "noise_absence": 3,
+        "relevance": 5,
+        "specificity": 5
+      },
+      "target_coverage_ratio": 1.0,
+      "validation_coverage_ratio": 1.0,
+      "warning_penalty": 2.25
+    },
+    "preflight": {
+      "autoresearch_findings": 0,
+      "code_heavy": true,
+      "targets": 2,
+      "workspace_dirty": true
+    }
+  },
+  "why_retrieved": "Preflight compiles local pre-edit context from workspace state, persisted autoresearch findings, memory, code targets, and validation policy.",
+  "why_not_retrieved": "",
+  "evidence": "### Preflight Summary\nPreflight Summary: Preflight classification\n- [local-planner] Preflight classified this task as code-heavy. Explicit targets: crates/layers-tools/src/registry.rs, crates/layers-tools/src/lib.rs. Effective targets: crates/layers-tools/src/registry.rs, crates/layers-tools/src/lib.rs.\nSource: local-planner (preflight)\nSelected because: summarizes the local preflight plan before source collection\n\n### Workspace State\nWorkspace State: Git worktree state\n- [git status --porcelain=v1] Branch: main\nHead: e3e3763\nDirty: true\nUntracked files:\n- docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/\n\nSource: git status --porcelain=v1 (workspace)\nSelected because: dirty or divergent workspace state changes how agents should interpret context\n\n### Project Memory\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"payload\":{\"rationale\":\"Broader OS/platform ambitions created drift; the highest-leverage immediate value is better deliberation, better memory continuity, and better structural grounding.\",\"slug\":\"narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"summary\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memoryport-based continuity, and GitNexus-based codebase understanding.\",\"title\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memor...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"scope\",\"strategy\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"payload\":{\"rationale\":\"Triumvirate is the destination architecture; Layers should accelerate and de-risk it by proving workflows, memory models, and graph-aware tooling before promotion.\",\"slug\":\"treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"summary\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-state system.\",\"title\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-st...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"triumvirate\",\"strategy\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"payload\":{\"rationale\":\"Graph-aware routing and context are already valuable; deeper operational use is the clearest way to reduce codebase guessing and breakage.\",\"slug\":\"gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"summary\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries toward workflow-operational use in planning, review, handoff, and postmortem packets.\",\"title\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries tow...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"gitnexus\",\"architecture\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"status\",\"id\":\"cm_status_layers_rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"payload\":{\"slug\":\"rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"state\":\"active\",\"summary\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis/types/util, with tests passing and validate passing (`replacement_ready: true`).\",\"title\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis...\",\"type\":\"status\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"rust\",\"status\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\n### Code and Impact Context\nCode and Impact Context: crates/layers-tools/src/registry.rs\n- [crates/layers-tools/src/registry.rs] //! Extended tool registry with profile-based tool sets and schema generation.\n\nuse std::collections::HashMap;\nuse std::sync::Arc;\n\nuse tracing::debug;\n\nuse layers_core::{\n    LayersError, Result, Tool, ToolContext, ToolDefinition, ToolFunction, ToolOutput,\n};\n\n// ---------------------------------------------------------------------------\n// Tool profiles\n// ---------------------------------------------------------------------------\n\n/// Predefined tool profile sets that control which tools are available.\n#[derive(Debug, Clone, PartialEq, Eq, Default)]\npub enum ToolProfile {\n    /// Read-only essentials: read, session_status, memory_get.\n    Minimal,\n    /// Coding tools: minimal + exec, process, write, edit.\n    Coding,\n    /// Messaging tools: coding + sessions_send, sessions_history, cron.\n    Messaging,\n    /// All registered tools.\n    #[default]\n    Full,\n    /// Custom allow-list.\n    Custom(Vec<String>),\n}\n\nimpl ToolProfile {\n    /// Returns the set of tool names allowed by this profile, or `None` for Full.\n    fn allowed_names(&self) -> Option<Vec<&str>> {\n        match self {\n            Self::Minimal => Some(vec![\"read\", \"session_status\", \"memory_get\"]),\n            Self::Coding => Some(vec![\n                \"read\",\n                \"session_status\",\n                \"memory_get\",\n                \"exec\",\n                \"process\",\n                \"write\",\n                \"edit\",\n            ]),\n            Self::Messaging => Some(vec![\n                \"read\",\n                \"session_status\",\n                \"memory_get\",\n                \"exec\",\n                \"process\",\n                \"write\",\n                \"edit\",\n                \"sessions_send\",\n                \"sessions_history\",\n                \"cron_create\",\n                \"cron_list\",\n                \"cron_delete\",\n            ]),\n            Self::Full => None,\n            Self::Custom(names) => Some(names.iter().map(String::as_str).collect()),\n        }\n    }\n}\n\n// ---------------------------------------------------------------------------\n// Tool registry\n// ---------------------------------------------------------------------------\n\n/// Registry of tool implementations with allow/deny filtering and profiles.\npub struct ToolRegistry {\n    tools: HashMap<String, Arc<dyn Tool>>,\n    allow: Option<Vec<String>>,\n    deny: Vec<String>,\n    profile: ToolProfile,\n}\n\nimpl ToolRegistry {\n    #[must_use]\n    pub fn new() -> Self {\nSource: crates/layers-tools/src/registry.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\nCode and Impact Context: crates/layers-tools/src/lib.rs\n- [crates/layers-tools/src/lib.rs] //! Tool implementations: exec, filesystem, web, sessions, subagents, memory, media, cron.\n#![allow(clippy::doc_markdown)]\n\npub mod cron;\npub mod exec;\npub mod fs;\npub mod loop_detection;\npub mod media;\npub mod memory;\npub mod process;\npub mod registry;\npub mod sessions;\npub mod subagents;\npub mod web;\nSource: crates/layers-tools/src/lib.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\n### Suggested Validation Commands\nSuggested Validation Commands: git diff --check\n- [preflight-validation-policy] Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo test --workspace --all-targets\n- [preflight-validation-policy] Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo clippy --workspace --all-targets -- -D warnings\n- [preflight-validation-policy] Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation",
+  "open_uncertainty": [
+    "Workspace has 0 changed and 1 untracked files; inspect before editing.",
+    "No persisted autoresearch finding matched this task."
+  ],
+  "retrieval_meta": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  }
+}

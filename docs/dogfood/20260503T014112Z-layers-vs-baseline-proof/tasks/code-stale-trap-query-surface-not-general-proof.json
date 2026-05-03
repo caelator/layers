@@ -1,0 +1,36 @@
+{
+  "task_id": "code-stale-trap-query-surface-not-general-proof",
+  "title": "Avoid broad-query overclaim in reports",
+  "prompt": "Stale-context trap: update benchmark reporting language so broad query evidence cannot be reused as targeted-preflight proof. Ignore stale notes implying all Layers surfaces can be pooled.",
+  "category": "bugfix",
+  "difficulty": "medium",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": false,
+  "stale_context_trap": true,
+  "time_budget_minutes": 45,
+  "target_files": [
+    "src/cmd/workflow_benchmark.rs",
+    "benchmarks/workflows/CLAIM_GATES.md",
+    "benchmarks/workflows/README.md"
+  ],
+  "target_symbols": [
+    "WorkflowVariant",
+    "ClaimStatus"
+  ],
+  "expected_relevant_files": [
+    "src/cmd/workflow_benchmark.rs",
+    "benchmarks/workflows/CLAIM_GATES.md",
+    "benchmarks/workflows/README.md"
+  ],
+  "expected_validation_commands": [
+    "cargo test -q workflow_benchmark -- --nocapture",
+    "cargo check --workspace --all-targets"
+  ],
+  "success_rubric": {
+    "full_success": "The requested repository change is implemented with focused regression coverage and all listed validation commands pass.",
+    "partial_success": "The main behavior is implemented but validation is incomplete, coverage is weak, or minor follow-up is required.",
+    "failure": "The requested behavior remains missing, untested, or introduces regressions.",
+    "min_verification_quality": 4,
+    "primary_endpoint": "verified_success"
+  }
+}

@@ -1,0 +1,356 @@
+{
+  "schema_version": 2,
+  "id": "preflight-04d85ba7-9910-4c2f-beb9-a9ad6b2b559f",
+  "workspace_id": "layers",
+  "query": "Harden telemetry JSONL loading so malformed lines are skipped or reported without panics and without losing valid events before or after the bad line. Add regression tests.",
+  "created_at": "2026-05-03T01:41:26.400614Z",
+  "git_ref": "e3e3763",
+  "route": "preflight",
+  "confidence": "high",
+  "budget": {
+    "max_units": 1800,
+    "used_units": 1005,
+    "unit": "words",
+    "truncated": false
+  },
+  "sections": [
+    {
+      "id": "preflight_summary",
+      "title": "Preflight Summary",
+      "summary": "Preflight planning result.",
+      "items": [
+        {
+          "id": "research-summary-1",
+          "title": "Preflight classification",
+          "body": "Preflight classified this task as code-heavy. Explicit targets: src/plugins/telemetry/schema.rs, src/plugins/telemetry/aggregator.rs. Effective targets: src/plugins/telemetry/schema.rs, src/plugins/telemetry/aggregator.rs.",
+          "source": {
+            "kind": "preflight",
+            "uri": "local-planner"
+          },
+          "token_estimate": 14,
+          "selected_reason": "summarizes the local preflight plan before source collection",
+          "tags": [
+            "planning"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "workspace",
+      "title": "Workspace State",
+      "summary": "Current Git/worktree context that can affect safe edits.",
+      "items": [
+        {
+          "id": "workspace-state-1",
+          "title": "Git worktree state",
+          "body": "Branch: main\nHead: e3e3763\nDirty: true\nUntracked files:\n- docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/\n",
+          "source": {
+            "kind": "workspace",
+            "uri": "git status --porcelain=v1"
+          },
+          "token_estimate": 10,
+          "selected_reason": "dirty or divergent workspace state changes how agents should interpret context",
+          "tags": [
+            "workspace",
+            "git"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "title": "Project Memory",
+      "summary": "Relevant explicit project memory or memory-source warning.",
+      "items": [
+        {
+          "id": "memory-1",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"payload\":{\"rationale\":\"Triumvirate is the destination architecture; Layers should accelerate and de-risk it by proving workflows, memory models, and graph-aware tooling before promotion.\",\"slug\":\"treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"summary\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-state system.\",\"title\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-st...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"triumvirate\",\"strategy\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 46,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-2",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 51,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-3",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"status\",\"id\":\"cm_status_layers_rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"payload\":{\"slug\":\"rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"state\":\"active\",\"summary\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis/types/util, with tests passing and validate passing (`replacement_ready: true`).\",\"title\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis...\",\"type\":\"status\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"rust\",\"status\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 21,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-4",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_ai-council-jit-data-spine_treat-the-failed-jit-expert-data-spine-planning-run-and-the-council-v1-recovery-hardening-work-as-one-unified-project\",\"payload\":{\"rationale\":\"The user explicitly corrected the project structure; separating planning failure from tooling recovery created artificial fragmentation.\",\"slug\":\"treat-the-failed-jit-expert-data-spine-planning-run-and-the-council-v1-recovery-hardening-work-as-one-unified-project\",\"summary\":\"Treat the failed JIT expert/data-spine planning run and the council v1 recovery/hardening work as one unified project.\",\"title\":\"Treat the failed JIT expert/data-spine planning run and the council v1 recovery/hardening wor...\",\"type\":\"decision\"},\"project\":\"ai-council-jit-data-spine\",\"source\":\"distilled-import\",\"tags\":[\"ai-council\",\"jit-experts\",\"project-structure\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 44,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-5",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_ai-council-jit-data-spine_council-process-should-be-redesigned-as-staged-brainstorming-plus-adversarial-deliberation-with-explicit-role-persona-enforcement-rather-than-freeform-multi-model-mush\",\"payload\":{\"rationale\":\"Observed failures in the current council process included weak critique discipline, role drift, orchestration fragility, and unclear convergence.\",\"slug\":\"council-process-should-be-redesigned-as-staged-brainstorming-plus-adversarial-deliberation-with-explicit-role-persona-enforcement-rather-than-freeform-multi-model-mush\",\"summary\":\"Council process should be redesigned as staged brainstorming plus adversarial deliberation with explicit role/persona enforcement rather than freeform multi-model mush.\",\"title\":\"Council process should be redesigned as staged brainstorming plus adversarial deliberation wi...\",\"type\":\"decision\"},\"project\":\"ai-council-jit-data-spine\",\"source\":\"distilled-import\",\"tags\":[\"ai-council\",\"council\",\"workflow\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 48,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "title": "Code and Impact Context",
+      "summary": "Local code context gathered without editing files.",
+      "items": [
+        {
+          "id": "code-1",
+          "title": "src/plugins/telemetry/schema.rs",
+          "body": "//! Telemetry event schema for the integration telemetry plugin.\n//!\n//! Defines the structured event types that are recorded after each routing\n//! decision and plugin call. All events are serialized as JSON Lines (JSONL)\n//! and appended to `~/.memoryport/telemetry/events.jsonl`.\n//!\n//! Schema versioning is embedded in every event so consumers can handle\n//! forward compatibility gracefully.\n\nuse serde::{Deserialize, Serialize};\nuse std::path::PathBuf;\n\n/// Schema version embedded in every telemetry event.\n/// Bump when the event schema changes in a backwards-incompatible way.\npub const SCHEMA_VERSION: &str = \"1.0\";\n\n/// Well-known route labels used in telemetry events.\npub const ROUTE_LABELS: &[&str] = &[\"memory_only\", \"graph_only\", \"both\", \"neither\"];\n\n/// Quality assessment of a plugin call's result.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]\n#[serde(rename_all = \"lowercase\")]\npub enum ResultQuality {\n    /// The result was useful and directly answered the query.\n    Useful,\n    /// The result was neutral — neither helpful nor harmful.\n    Neutral,\n    /// The result was not useful or relevant.\n    Useless,\n}\n\n/// Outcome of the overall routing decision.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]\n#[serde(rename_all = \"lowercase\")]\npub enum RoutingOutcome {\n    /// The route succeeded and produced a useful result.\n    Success,\n    /// The route partially succeeded (some plugins worked, some failed).\n    Partial,\n    /// The route failed entirely.\n    Failure,\n}\n\n/// A record of a single plugin call within a routing decision.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct PluginCall {\n    /// Name of the plugin invoked (e.g., \"memoryport\", \"gitnexus\", \"council\").\n    pub plugin: String,\n    /// How long the call took in milliseconds.\n    pub latency_ms: u64,\n    /// Whether the call succeeded without error.\n    pub success: bool,\n    /// Human-readable quality assessment of the result.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub result_quality: Option<ResultQuality>,\n}\n\n/// A routing decision event — the primary telemetry record.\n///\n/// Emitted once per query after all plugin calls have resolved.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct RoutingDecisionEvent {\n    /// Schema version for forward compatibility.\n    pub schema_version: String,\n    /// ISO-8601 timestamp of the event.\n    pub timestamp: String,\n    /// Always `routing_decision` for this event type.\n    pub event_type: String,\n    /// SHA-256 fingerprint of the query text (hex-encoded, 64 chars).\n    pub query_fingerprint: String,\n    /// The route that was selected for this query.\n    pub chosen_route: String,\n    /// Confidence score assigned by the classifier (0.0–1.0).\n    pub route_confidence: f64,\n    /// Individual plugin call records.\n    pub plugin_calls: Vec<PluginCall>,\n    /// Total wall-clock time from query receipt to final response (ms).\n    pub end_to_end_latency_ms: u64,\n    /// Overall outcome of the routing decision.\n    pub outcome: RoutingOutcome,",
+          "source": {
+            "kind": "file",
+            "uri": "src/plugins/telemetry/schema.rs",
+            "repo_path": "src/plugins/telemetry/schema.rs"
+          },
+          "token_estimate": 401,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        },
+        {
+          "id": "code-2",
+          "title": "src/plugins/telemetry/aggregator.rs",
+          "body": "//! Health report aggregation for the integration telemetry plugin.\n//!\n//! Consumes a collection of [`RoutingDecisionEvent`] records and produces\n//! an [`IntegrationHealthReport`] that summarizes the health and performance\n//! of each plugin as well as overall routing metrics.\n\nuse crate::plugins::telemetry::schema::{RoutingDecisionEvent, RoutingOutcome, SCHEMA_VERSION};\nuse std::collections::HashMap;\n\n/// Per-plugin health metrics.\n#[derive(Debug, Clone)]\npub struct PluginHealth {\n    /// Total number of calls to this plugin.\n    pub calls: u64,\n    /// Number of calls that returned an error.\n    pub errors: u64,\n    /// Average latency across all successful calls (ms).\n    pub avg_latency_ms: f64,\n    /// Fraction of calls that succeeded (no error).\n    pub success_rate: f64,\n}\n\nimpl Default for PluginHealth {\n    fn default() -> Self {\n        Self {\n            calls: 0,\n            errors: 0,\n            avg_latency_ms: 0.0,\n            success_rate: 1.0,\n        }\n    }\n}\n\n/// Aggregated health report for all integrations.\n#[derive(Debug, Clone)]\npub struct IntegrationHealthReport {\n    /// Total number of routing decision events processed.\n    pub total_events: u64,\n    /// Per-plugin health breakdown.\n    pub plugin_health: HashMap<String, PluginHealth>,\n    /// Average end-to-end latency across all events (ms).\n    pub average_latency_ms: f64,\n    /// Fraction of events with outcome != success.\n    pub error_rate: f64,\n    /// Estimated routing accuracy: fraction of events where outcome == success.\n    pub routing_accuracy_estimate: f64,\n    /// Fraction of events where council was invoked and converged.\n    pub council_convergence_rate: f64,\n}\n\nimpl Default for IntegrationHealthReport {\n    fn default() -> Self {\n        Self {\n            total_events: 0,\n            plugin_health: HashMap::new(),\n            average_latency_ms: 0.0,\n            error_rate: 0.0,\n            routing_accuracy_estimate: 0.0,\n            council_convergence_rate: 0.0,\n        }\n    }\n}\n\n/// Aggregate a collection of events into a health report.\npub fn aggregate(events: &[RoutingDecisionEvent]) -> IntegrationHealthReport {\n    if events.is_empty() {\n        return IntegrationHealthReport::default();\n    }\n\n    let total_events = events.len() as u64;\n    let mut plugin_health: HashMap<String, PluginHealth> = HashMap::new();\n\n    // Track per-plugin totals for average computation\n    let mut plugin_latency_sum: HashMap<String, u64> = HashMap::new();\n    let mut total_latency_ms: u64 = 0;\n    let mut success_count: u64 = 0;\n    let mut partial_count: u64 = 0;\n    let mut failure_count: u64 = 0;\n    let mut council_converged: u64 = 0;\n    let mut council_total: u64 = 0;",
+          "source": {
+            "kind": "file",
+            "uri": "src/plugins/telemetry/aggregator.rs",
+            "repo_path": "src/plugins/telemetry/aggregator.rs"
+          },
+          "token_estimate": 317,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "validation",
+      "title": "Suggested Validation Commands",
+      "summary": "Commands an agent should run after using this research.",
+      "items": [
+        {
+          "id": "validation-1",
+          "title": "git diff --check",
+          "body": "Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 17,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-2",
+          "title": "cargo test --workspace --all-targets",
+          "body": "Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-3",
+          "title": "cargo clippy --workspace --all-targets -- -D warnings",
+          "body": "Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "dirty_worktree",
+      "message": "Workspace has 0 changed and 1 untracked files; inspect before editing."
+    },
+    {
+      "severity": "info",
+      "code": "autoresearch_uncertainty",
+      "message": "No persisted autoresearch finding matched this task."
+    },
+    {
+      "severity": "info",
+      "code": "injection_policy",
+      "message": "Packet quality gate recommends InjectCompact: packet is low-confidence or fallback-derived"
+    }
+  ],
+  "selection_trace": [
+    {
+      "item_id": "research-summary-1",
+      "reason": "summarizes the local preflight plan before source collection"
+    },
+    {
+      "item_id": "workspace-state-1",
+      "reason": "dirty or divergent workspace state changes how agents should interpret context"
+    },
+    {
+      "item_id": "memory-1",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-2",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-3",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-4",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-5",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "code-1",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "code-2",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "validation-1",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-2",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-3",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    }
+  ],
+  "retrieval": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  },
+  "provenance": {
+    "compiler": "layers-context-packet",
+    "compiler_version": "2",
+    "surface": "preflight",
+    "workspace_id": "layers",
+    "git_ref": "e3e3763",
+    "generated_at": "2026-05-03T01:41:26.400614Z",
+    "source_adapters": [
+      "file",
+      "memory",
+      "preflight",
+      "validation",
+      "workspace"
+    ]
+  },
+  "task": "Harden telemetry JSONL loading so malformed lines are skipped or reported without panics and without losing valid events before or after the bad line. Add regression tests.",
+  "low_confidence_fallback": false,
+  "scores": {
+    "injection_recommendation": "inject_compact",
+    "packet_quality": {
+      "hallucinated_or_stale_context": false,
+      "missed_critical_context": false,
+      "reasons": [
+        "packet is low-confidence or fallback-derived"
+      ],
+      "recommendation": "inject_compact",
+      "scores": {
+        "completeness": 5,
+        "concision": 5,
+        "freshness": 3,
+        "grounding": 5,
+        "noise_absence": 3,
+        "relevance": 5,
+        "specificity": 5
+      },
+      "target_coverage_ratio": 1.0,
+      "validation_coverage_ratio": 1.0,
+      "warning_penalty": 2.25
+    },
+    "preflight": {
+      "autoresearch_findings": 0,
+      "code_heavy": true,
+      "targets": 2,
+      "workspace_dirty": true
+    }
+  },
+  "why_retrieved": "Preflight compiles local pre-edit context from workspace state, persisted autoresearch findings, memory, code targets, and validation policy.",
+  "why_not_retrieved": "",
+  "evidence": "### Preflight Summary\nPreflight Summary: Preflight classification\n- [local-planner] Preflight classified this task as code-heavy. Explicit targets: src/plugins/telemetry/schema.rs, src/plugins/telemetry/aggregator.rs. Effective targets: src/plugins/telemetry/schema.rs, src/plugins/telemetry/aggregator.rs.\nSource: local-planner (preflight)\nSelected because: summarizes the local preflight plan before source collection\n\n### Workspace State\nWorkspace State: Git worktree state\n- [git status --porcelain=v1] Branch: main\nHead: e3e3763\nDirty: true\nUntracked files:\n- docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/\n\nSource: git status --porcelain=v1 (workspace)\nSelected because: dirty or divergent workspace state changes how agents should interpret context\n\n### Project Memory\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"payload\":{\"rationale\":\"Triumvirate is the destination architecture; Layers should accelerate and de-risk it by proving workflows, memory models, and graph-aware tooling before promotion.\",\"slug\":\"treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"summary\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-state system.\",\"title\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-st...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"triumvirate\",\"strategy\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"status\",\"id\":\"cm_status_layers_rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"payload\":{\"slug\":\"rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"state\":\"active\",\"summary\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis/types/util, with tests passing and validate passing (`replacement_ready: true`).\",\"title\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis...\",\"type\":\"status\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"rust\",\"status\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_ai-council-jit-data-spine_treat-the-failed-jit-expert-data-spine-planning-run-and-the-council-v1-recovery-hardening-work-as-one-unified-project\",\"payload\":{\"rationale\":\"The user explicitly corrected the project structure; separating planning failure from tooling recovery created artificial fragmentation.\",\"slug\":\"treat-the-failed-jit-expert-data-spine-planning-run-and-the-council-v1-recovery-hardening-work-as-one-unified-project\",\"summary\":\"Treat the failed JIT expert/data-spine planning run and the council v1 recovery/hardening work as one unified project.\",\"title\":\"Treat the failed JIT expert/data-spine planning run and the council v1 recovery/hardening wor...\",\"type\":\"decision\"},\"project\":\"ai-council-jit-data-spine\",\"source\":\"distilled-import\",\"tags\":[\"ai-council\",\"jit-experts\",\"project-structure\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_ai-council-jit-data-spine_council-process-should-be-redesigned-as-staged-brainstorming-plus-adversarial-deliberation-with-explicit-role-persona-enforcement-rather-than-freeform-multi-model-mush\",\"payload\":{\"rationale\":\"Observed failures in the current council process included weak critique discipline, role drift, orchestration fragility, and unclear convergence.\",\"slug\":\"council-process-should-be-redesigned-as-staged-brainstorming-plus-adversarial-deliberation-with-explicit-role-persona-enforcement-rather-than-freeform-multi-model-mush\",\"summary\":\"Council process should be redesigned as staged brainstorming plus adversarial deliberation with explicit role/persona enforcement rather than freeform multi-model mush.\",\"title\":\"Council process should be redesigned as staged brainstorming plus adversarial deliberation wi...\",\"type\":\"decision\"},\"project\":\"ai-council-jit-data-spine\",\"source\":\"distilled-import\",\"tags\":[\"ai-council\",\"council\",\"workflow\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\n### Code and Impact Context\nCode and Impact Context: src/plugins/telemetry/schema.rs\n- [src/plugins/telemetry/schema.rs] //! Telemetry event schema for the integration telemetry plugin.\n//!\n//! Defines the structured event types that are recorded after each routing\n//! decision and plugin call. All events are serialized as JSON Lines (JSONL)\n//! and appended to `~/.memoryport/telemetry/events.jsonl`.\n//!\n//! Schema versioning is embedded in every event so consumers can handle\n//! forward compatibility gracefully.\n\nuse serde::{Deserialize, Serialize};\nuse std::path::PathBuf;\n\n/// Schema version embedded in every telemetry event.\n/// Bump when the event schema changes in a backwards-incompatible way.\npub const SCHEMA_VERSION: &str = \"1.0\";\n\n/// Well-known route labels used in telemetry events.\npub const ROUTE_LABELS: &[&str] = &[\"memory_only\", \"graph_only\", \"both\", \"neither\"];\n\n/// Quality assessment of a plugin call's result.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]\n#[serde(rename_all = \"lowercase\")]\npub enum ResultQuality {\n    /// The result was useful and directly answered the query.\n    Useful,\n    /// The result was neutral — neither helpful nor harmful.\n    Neutral,\n    /// The result was not useful or relevant.\n    Useless,\n}\n\n/// Outcome of the overall routing decision.\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]\n#[serde(rename_all = \"lowercase\")]\npub enum RoutingOutcome {\n    /// The route succeeded and produced a useful result.\n    Success,\n    /// The route partially succeeded (some plugins worked, some failed).\n    Partial,\n    /// The route failed entirely.\n    Failure,\n}\n\n/// A record of a single plugin call within a routing decision.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct PluginCall {\n    /// Name of the plugin invoked (e.g., \"memoryport\", \"gitnexus\", \"council\").\n    pub plugin: String,\n    /// How long the call took in milliseconds.\n    pub latency_ms: u64,\n    /// Whether the call succeeded without error.\n    pub success: bool,\n    /// Human-readable quality assessment of the result.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub result_quality: Option<ResultQuality>,\n}\n\n/// A routing decision event — the primary telemetry record.\n///\n/// Emitted once per query after all plugin calls have resolved.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct RoutingDecisionEvent {\n    /// Schema version for forward compatibility.\n    pub schema_version: String,\n    /// ISO-8601 timestamp of the event.\n    pub timestamp: String,\n    /// Always `routing_decision` for this event type.\n    pub event_type: String,\n    /// SHA-256 fingerprint of the query text (hex-encoded, 64 chars).\n    pub query_fingerprint: String,\n    /// The route that was selected for this query.\n    pub chosen_route: String,\n    /// Confidence score assigned by the classifier (0.0–1.0).\n    pub route_confidence: f64,\n    /// Individual plugin call records.\n    pub plugin_calls: Vec<PluginCall>,\n    /// Total wall-clock time from query receipt to final response (ms).\n    pub end_to_end_latency_ms: u64,\n    /// Overall outcome of the routing decision.\n    pub outcome: RoutingOutcome,\nSource: src/plugins/telemetry/schema.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\nCode and Impact Context: src/plugins/telemetry/aggregator.rs\n- [src/plugins/telemetry/aggregator.rs] //! Health report aggregation for the integration telemetry plugin.\n//!\n//! Consumes a collection of [`RoutingDecisionEvent`] records and produces\n//! an [`IntegrationHealthReport`] that summarizes the health and performance\n//! of each plugin as well as overall routing metrics.\n\nuse crate::plugins::telemetry::schema::{RoutingDecisionEvent, RoutingOutcome, SCHEMA_VERSION};\nuse std::collections::HashMap;\n\n/// Per-plugin health metrics.\n#[derive(Debug, Clone)]\npub struct PluginHealth {\n    /// Total number of calls to this plugin.\n    pub calls: u64,\n    /// Number of calls that returned an error.\n    pub errors: u64,\n    /// Average latency across all successful calls (ms).\n    pub avg_latency_ms: f64,\n    /// Fraction of calls that succeeded (no error).\n    pub success_rate: f64,\n}\n\nimpl Default for PluginHealth {\n    fn default() -> Self {\n        Self {\n            calls: 0,\n            errors: 0,\n            avg_latency_ms: 0.0,\n            success_rate: 1.0,\n        }\n    }\n}\n\n/// Aggregated health report for all integrations.\n#[derive(Debug, Clone)]\npub struct IntegrationHealthReport {\n    /// Total number of routing decision events processed.\n    pub total_events: u64,\n    /// Per-plugin health breakdown.\n    pub plugin_health: HashMap<String, PluginHealth>,\n    /// Average end-to-end latency across all events (ms).\n    pub average_latency_ms: f64,\n    /// Fraction of events with outcome != success.\n    pub error_rate: f64,\n    /// Estimated routing accuracy: fraction of events where outcome == success.\n    pub routing_accuracy_estimate: f64,\n    /// Fraction of events where council was invoked and converged.\n    pub council_convergence_rate: f64,\n}\n\nimpl Default for IntegrationHealthReport {\n    fn default() -> Self {\n        Self {\n            total_events: 0,\n            plugin_health: HashMap::new(),\n            average_latency_ms: 0.0,\n            error_rate: 0.0,\n            routing_accuracy_estimate: 0.0,\n            council_convergence_rate: 0.0,\n        }\n    }\n}\n\n/// Aggregate a collection of events into a health report.\npub fn aggregate(events: &[RoutingDecisionEvent]) -> IntegrationHealthReport {\n    if events.is_empty() {\n        return IntegrationHealthReport::default();\n    }\n\n    let total_events = events.len() as u64;\n    let mut plugin_health: HashMap<String, PluginHealth> = HashMap::new();\n\n    // Track per-plugin totals for average computation\n    let mut plugin_latency_sum: HashMap<String, u64> = HashMap::new();\n    let mut total_latency_ms: u64 = 0;\n    let mut success_count: u64 = 0;\n    let mut partial_count: u64 = 0;\n    let mut failure_count: u64 = 0;\n    let mut council_converged: u64 = 0;\n    let mut council_total: u64 = 0;\nSource: src/plugins/telemetry/aggregator.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\n### Suggested Validation Commands\nSuggested Validation Commands: git diff --check\n- [preflight-validation-policy] Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo test --workspace --all-targets\n- [preflight-validation-policy] Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo clippy --workspace --all-targets -- -D warnings\n- [preflight-validation-policy] Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation",
+  "open_uncertainty": [
+    "Workspace has 0 changed and 1 untracked files; inspect before editing.",
+    "No persisted autoresearch finding matched this task."
+  ],
+  "retrieval_meta": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  }
+}

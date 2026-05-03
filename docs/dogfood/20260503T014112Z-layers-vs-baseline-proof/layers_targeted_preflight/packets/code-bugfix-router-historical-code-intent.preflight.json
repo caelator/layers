@@ -1,0 +1,374 @@
+{
+  "schema_version": 2,
+  "id": "preflight-4bb96662-3563-410c-afd3-4847c3b4c0bb",
+  "workspace_id": "layers",
+  "query": "Fix routing so historical or prior-decision questions that mention code terms remain memory-eligible unless they clearly request edit/debug/action work. Add benchmark-style routing tests.",
+  "created_at": "2026-05-03T01:41:23.078675Z",
+  "git_ref": "e3e3763",
+  "route": "preflight",
+  "confidence": "high",
+  "budget": {
+    "max_units": 1800,
+    "used_units": 896,
+    "unit": "words",
+    "truncated": false
+  },
+  "sections": [
+    {
+      "id": "preflight_summary",
+      "title": "Preflight Summary",
+      "summary": "Preflight planning result.",
+      "items": [
+        {
+          "id": "research-summary-1",
+          "title": "Preflight classification",
+          "body": "Preflight classified this task as code-heavy. Explicit targets: src/router.rs, src/cmd/query.rs. Effective targets: src/router.rs, src/cmd/query.rs, edit/debug/action.",
+          "source": {
+            "kind": "preflight",
+            "uri": "local-planner"
+          },
+          "token_estimate": 15,
+          "selected_reason": "summarizes the local preflight plan before source collection",
+          "tags": [
+            "planning"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "workspace",
+      "title": "Workspace State",
+      "summary": "Current Git/worktree context that can affect safe edits.",
+      "items": [
+        {
+          "id": "workspace-state-1",
+          "title": "Git worktree state",
+          "body": "Branch: main\nHead: e3e3763\nDirty: true\nUntracked files:\n- docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/\n",
+          "source": {
+            "kind": "workspace",
+            "uri": "git status --porcelain=v1"
+          },
+          "token_estimate": 10,
+          "selected_reason": "dirty or divergent workspace state changes how agents should interpret context",
+          "tags": [
+            "workspace",
+            "git"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "title": "Project Memory",
+      "summary": "Relevant explicit project memory or memory-source warning.",
+      "items": [
+        {
+          "id": "memory-1",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"payload\":{\"rationale\":\"Broader OS/platform ambitions created drift; the highest-leverage immediate value is better deliberation, better memory continuity, and better structural grounding.\",\"slug\":\"narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"summary\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memoryport-based continuity, and GitNexus-based codebase understanding.\",\"title\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memor...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"scope\",\"strategy\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 48,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-2",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"payload\":{\"rationale\":\"Triumvirate is the destination architecture; Layers should accelerate and de-risk it by proving workflows, memory models, and graph-aware tooling before promotion.\",\"slug\":\"treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"summary\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-state system.\",\"title\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-st...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"triumvirate\",\"strategy\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 46,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-3",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"payload\":{\"rationale\":\"Structured records preserve auditability, editability, and schema stability while still allowing semantic recall via derived retrieval text and embeddings.\",\"slug\":\"canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"summary\":\"Canonical curated memories should be structured records, not vectors as source of truth; semantic embeddings are derived retrieval artifacts.\",\"title\":\"Canonical curated memories should be structured records, not vectors as source of truth\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"memoryport\",\"architecture\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 49,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-4",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 51,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-5",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"payload\":{\"rationale\":\"Graph-aware routing and context are already valuable; deeper operational use is the clearest way to reduce codebase guessing and breakage.\",\"slug\":\"gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"summary\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries toward workflow-operational use in planning, review, handoff, and postmortem packets.\",\"title\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries tow...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"gitnexus\",\"architecture\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 57,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "title": "Code and Impact Context",
+      "summary": "Local code context gathered without editing files.",
+      "items": [
+        {
+          "id": "code-1",
+          "title": "src/router.rs",
+          "body": "/// Route-correction feedback loop for Layers query.\n///\n/// When the caller tells Layers \"that was the wrong route\", a [`RouteCorrection`]\n/// is recorded to `~/.layers/route-corrections.jsonl`.  On every [`classify()`]\n/// call the correction file is loaded and used to adjust signal scores so that\n/// repeatedly-corrected patterns are demoted.\nuse crate::config::workspace_root;\nuse serde::{Deserialize, Serialize};\nuse std::collections::HashMap;\nuse std::fmt;\nuse std::io::Write;\nuse std::path::PathBuf;\nuse std::sync::{Mutex, OnceLock};\n\n/// A single route correction record.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct RouteCorrection {\n    /// The task text that was originally classified.\n    pub task: String,\n    /// The route the system predicted.\n    pub predicted: Route,\n    /// The route the human or caller indicated was correct.\n    pub actual: Route,\n    /// When the correction was recorded (ISO-8601).\n    pub timestamp: String,\n}\n\nimpl RouteCorrection {\n    pub fn new(task: String, predicted: Route, actual: Route) -> Self {\n        Self {\n            task,\n            predicted,\n            actual,\n            timestamp: crate::util::iso_now(),\n        }\n    }\n}\n\n/// Returns the path to the route-corrections JSONL file.\npub fn corrections_path() -> PathBuf {\n    workspace_root()\n        .join(\".layers\")\n        .join(\"route-corrections.jsonl\")\n}\n\n/// Load all corrections from the corrections file.\n/// Returns an empty vec if the file does not exist yet.\npub fn load_corrections() -> Vec<RouteCorrection> {\n    let path = corrections_path();\n    if !path.exists() {\n        return Vec::new();\n    }\n    let Ok(content) = std::fs::read_to_string(&path) else {\n        return Vec::new();\n    };\n    content\n        .lines()\n        .filter_map(|line| serde_json::from_str(line).ok())\n        .collect()\n}\n\n/// Record a route correction (append-only to JSONL).\npub fn record_correction(correction: &RouteCorrection) -> std::io::Result<()> {\n    let path = corrections_path();\n    if let Some(parent) = path.parent() {\n        std::fs::create_dir_all(parent)?;\n    }\n    let line = serde_json::to_string(correction)?;\n    let mut file = std::fs::OpenOptions::new()\n        .create(true)\n        .append(true)\n        .open(&path)?;\n    // Write the full record + newline in a single atomic write to avoid\n    // leaving a partial line in the JSONL if the process crashes mid-write.\n    writeln!(file, \"{line}\")?;\n    Ok(())\n}\n\n/// In-memory correction cache — populated once per process from the JSONL file\n/// and reloadable after feedback is recorded.",
+          "source": {
+            "kind": "file",
+            "uri": "src/router.rs",
+            "repo_path": "src/router.rs"
+          },
+          "token_estimate": 307,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        },
+        {
+          "id": "code-2",
+          "title": "src/cmd/query.rs",
+          "body": "use anyhow::Result;\nuse layers_compiler::{CompileMode, CompileRequest, ContextCompiler};\nuse layers_core::{\n    ContextBudget, ContextItem, ContextPacket, ContextWarning, InjectionRecommendation,\n    PacketQualityReport, RetrievalReport, SuccessRubric, TaskCategory, TaskSpec,\n};\nuse serde_json::json;\nuse std::path::Path;\nuse std::time::Instant;\n\nuse crate::cmd::autoresearch::{AutoresearchPacketBridgeOptions, add_autoresearch_to_packet};\nuse crate::cmd::telemetry::PluginResult;\nuse crate::config::{CONTEXT_PAYLOAD_SCHEMA_VERSION, memoryport_dir, workspace_root};\nuse crate::context_packet_compiler::query_plan::{\n    BroadQueryPlan, QueryInjectionPolicy, looks_code_heavy,\n};\nuse crate::context_packet_compiler::{\n    add_workspace_section, cited_item, code_impact_section, collect_workspace_state,\n    context_section, gitnexus_impact_section, repo_source, source, workspace_id,\n};\nuse crate::feedback::{\n    FailureKind, HardErrorKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind, emit_failure,\n    load_route_weights, read_recent_failures, route_corrections_path,\n};\nuse crate::graph;\nuse crate::memory;\nuse crate::plugins::telemetry::schema::fingerprint_query;\nuse crate::quality;\nuse crate::router::{self, Confidence, Route};\nuse crate::uc;\nuse crate::util::{append_jsonl, iso_now};\n\nconst MAX_MEMORY_RECORDS: usize = 3;\nconst MAX_GITNEXUS_FACTS: usize = 5;\nconst MAX_OUTPUT_WORDS: usize = 1200;\n\n/// A structured context payload suitable for passing to the council binary.\n#[derive(Debug, serde::Serialize)]\npub struct ContextPayload {\n    pub schema_version: u32,\n    pub task: String,\n    pub route: String,\n    pub confidence: String,\n    pub memory_results: Vec<RetrievalItem>,\n    pub graph_results: Vec<RetrievalItem>,\n    pub retrieval_meta: RetrievalMeta,\n    /// Whether this context payload is on the critical path.\n    #[serde(default)]\n    pub critical_path: bool,\n}\n\n#[derive(Debug, serde::Serialize)]\npub struct RetrievalItem {\n    pub source: String,\n    pub text: String,\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub timestamp: Option<String>,\n}\n\n#[derive(Debug, serde::Serialize)]\npub struct RetrievalMeta {\n    pub memory_source: String,\n    pub memory_latency_ms: u64,\n    pub graph_latency_ms: u64,\n    pub fallback_reason: Option<String>,\n}\n\npub fn handle_query(\n    task: &str,\n    json_out: bool,\n    agent_prompt: bool,\n    no_audit: bool,\n    uc_min_results: usize,\n) -> Result<()> {\n    let t0 = Instant::now();\n    let route_result = router::classify(task);\n\n    // ── Route-weight override ────────────────────────────────────────────────\n    // Load quality-based route weights BEFORE acting on the routing decision.\n    // If the chosen route has accumulated enough soft/hard failures (weight < -0.3),",
+          "source": {
+            "kind": "file",
+            "uri": "src/cmd/query.rs",
+            "repo_path": "src/cmd/query.rs"
+          },
+          "token_estimate": 243,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "validation",
+      "title": "Suggested Validation Commands",
+      "summary": "Commands an agent should run after using this research.",
+      "items": [
+        {
+          "id": "validation-1",
+          "title": "git diff --check",
+          "body": "Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 17,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-2",
+          "title": "cargo test --workspace --all-targets",
+          "body": "Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-3",
+          "title": "cargo clippy --workspace --all-targets -- -D warnings",
+          "body": "Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-4",
+          "title": "./target/debug/layers query --no-audit --json \"What should I know before editing src/cmd/query.rs?\" | python3 -m json.tool >/dev/null",
+          "body": "Reason: ContextPacket and query changes must keep machine-readable JSON valid\nRequired: true\nExpected signal: JSON parses successfully",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 17,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "dirty_worktree",
+      "message": "Workspace has 0 changed and 1 untracked files; inspect before editing."
+    },
+    {
+      "severity": "info",
+      "code": "autoresearch_uncertainty",
+      "message": "No persisted autoresearch finding matched this task."
+    },
+    {
+      "severity": "info",
+      "code": "injection_policy",
+      "message": "Packet quality gate recommends InjectCompact: packet is low-confidence or fallback-derived"
+    }
+  ],
+  "selection_trace": [
+    {
+      "item_id": "research-summary-1",
+      "reason": "summarizes the local preflight plan before source collection"
+    },
+    {
+      "item_id": "workspace-state-1",
+      "reason": "dirty or divergent workspace state changes how agents should interpret context"
+    },
+    {
+      "item_id": "memory-1",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-2",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-3",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-4",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-5",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "code-1",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "code-2",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "validation-1",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-2",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-3",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-4",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    }
+  ],
+  "retrieval": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  },
+  "provenance": {
+    "compiler": "layers-context-packet",
+    "compiler_version": "2",
+    "surface": "preflight",
+    "workspace_id": "layers",
+    "git_ref": "e3e3763",
+    "generated_at": "2026-05-03T01:41:23.078675Z",
+    "source_adapters": [
+      "file",
+      "memory",
+      "preflight",
+      "validation",
+      "workspace"
+    ]
+  },
+  "task": "Fix routing so historical or prior-decision questions that mention code terms remain memory-eligible unless they clearly request edit/debug/action work. Add benchmark-style routing tests.",
+  "low_confidence_fallback": false,
+  "scores": {
+    "injection_recommendation": "inject_compact",
+    "packet_quality": {
+      "hallucinated_or_stale_context": false,
+      "missed_critical_context": false,
+      "reasons": [
+        "packet is low-confidence or fallback-derived"
+      ],
+      "recommendation": "inject_compact",
+      "scores": {
+        "completeness": 5,
+        "concision": 5,
+        "freshness": 3,
+        "grounding": 5,
+        "noise_absence": 3,
+        "relevance": 5,
+        "specificity": 5
+      },
+      "target_coverage_ratio": 1.0,
+      "validation_coverage_ratio": 1.0,
+      "warning_penalty": 2.25
+    },
+    "preflight": {
+      "autoresearch_findings": 0,
+      "code_heavy": true,
+      "targets": 3,
+      "workspace_dirty": true
+    }
+  },
+  "why_retrieved": "Preflight compiles local pre-edit context from workspace state, persisted autoresearch findings, memory, code targets, and validation policy.",
+  "why_not_retrieved": "",
+  "evidence": "### Preflight Summary\nPreflight Summary: Preflight classification\n- [local-planner] Preflight classified this task as code-heavy. Explicit targets: src/router.rs, src/cmd/query.rs. Effective targets: src/router.rs, src/cmd/query.rs, edit/debug/action.\nSource: local-planner (preflight)\nSelected because: summarizes the local preflight plan before source collection\n\n### Workspace State\nWorkspace State: Git worktree state\n- [git status --porcelain=v1] Branch: main\nHead: e3e3763\nDirty: true\nUntracked files:\n- docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/\n\nSource: git status --porcelain=v1 (workspace)\nSelected because: dirty or divergent workspace state changes how agents should interpret context\n\n### Project Memory\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"payload\":{\"rationale\":\"Broader OS/platform ambitions created drift; the highest-leverage immediate value is better deliberation, better memory continuity, and better structural grounding.\",\"slug\":\"narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"summary\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memoryport-based continuity, and GitNexus-based codebase understanding.\",\"title\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memor...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"scope\",\"strategy\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"payload\":{\"rationale\":\"Triumvirate is the destination architecture; Layers should accelerate and de-risk it by proving workflows, memory models, and graph-aware tooling before promotion.\",\"slug\":\"treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"summary\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-state system.\",\"title\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-st...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"triumvirate\",\"strategy\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"payload\":{\"rationale\":\"Structured records preserve auditability, editability, and schema stability while still allowing semantic recall via derived retrieval text and embeddings.\",\"slug\":\"canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"summary\":\"Canonical curated memories should be structured records, not vectors as source of truth; semantic embeddings are derived retrieval artifacts.\",\"title\":\"Canonical curated memories should be structured records, not vectors as source of truth\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"memoryport\",\"architecture\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"payload\":{\"rationale\":\"Graph-aware routing and context are already valuable; deeper operational use is the clearest way to reduce codebase guessing and breakage.\",\"slug\":\"gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"summary\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries toward workflow-operational use in planning, review, handoff, and postmortem packets.\",\"title\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries tow...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"gitnexus\",\"architecture\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\n### Code and Impact Context\nCode and Impact Context: src/router.rs\n- [src/router.rs] /// Route-correction feedback loop for Layers query.\n///\n/// When the caller tells Layers \"that was the wrong route\", a [`RouteCorrection`]\n/// is recorded to `~/.layers/route-corrections.jsonl`.  On every [`classify()`]\n/// call the correction file is loaded and used to adjust signal scores so that\n/// repeatedly-corrected patterns are demoted.\nuse crate::config::workspace_root;\nuse serde::{Deserialize, Serialize};\nuse std::collections::HashMap;\nuse std::fmt;\nuse std::io::Write;\nuse std::path::PathBuf;\nuse std::sync::{Mutex, OnceLock};\n\n/// A single route correction record.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct RouteCorrection {\n    /// The task text that was originally classified.\n    pub task: String,\n    /// The route the system predicted.\n    pub predicted: Route,\n    /// The route the human or caller indicated was correct.\n    pub actual: Route,\n    /// When the correction was recorded (ISO-8601).\n    pub timestamp: String,\n}\n\nimpl RouteCorrection {\n    pub fn new(task: String, predicted: Route, actual: Route) -> Self {\n        Self {\n            task,\n            predicted,\n            actual,\n            timestamp: crate::util::iso_now(),\n        }\n    }\n}\n\n/// Returns the path to the route-corrections JSONL file.\npub fn corrections_path() -> PathBuf {\n    workspace_root()\n        .join(\".layers\")\n        .join(\"route-corrections.jsonl\")\n}\n\n/// Load all corrections from the corrections file.\n/// Returns an empty vec if the file does not exist yet.\npub fn load_corrections() -> Vec<RouteCorrection> {\n    let path = corrections_path();\n    if !path.exists() {\n        return Vec::new();\n    }\n    let Ok(content) = std::fs::read_to_string(&path) else {\n        return Vec::new();\n    };\n    content\n        .lines()\n        .filter_map(|line| serde_json::from_str(line).ok())\n        .collect()\n}\n\n/// Record a route correction (append-only to JSONL).\npub fn record_correction(correction: &RouteCorrection) -> std::io::Result<()> {\n    let path = corrections_path();\n    if let Some(parent) = path.parent() {\n        std::fs::create_dir_all(parent)?;\n    }\n    let line = serde_json::to_string(correction)?;\n    let mut file = std::fs::OpenOptions::new()\n        .create(true)\n        .append(true)\n        .open(&path)?;\n    // Write the full record + newline in a single atomic write to avoid\n    // leaving a partial line in the JSONL if the process crashes mid-write.\n    writeln!(file, \"{line}\")?;\n    Ok(())\n}\n\n/// In-memory correction cache — populated once per process from the JSONL file\n/// and reloadable after feedback is recorded.\nSource: src/router.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\nCode and Impact Context: src/cmd/query.rs\n- [src/cmd/query.rs] use anyhow::Result;\nuse layers_compiler::{CompileMode, CompileRequest, ContextCompiler};\nuse layers_core::{\n    ContextBudget, ContextItem, ContextPacket, ContextWarning, InjectionRecommendation,\n    PacketQualityReport, RetrievalReport, SuccessRubric, TaskCategory, TaskSpec,\n};\nuse serde_json::json;\nuse std::path::Path;\nuse std::time::Instant;\n\nuse crate::cmd::autoresearch::{AutoresearchPacketBridgeOptions, add_autoresearch_to_packet};\nuse crate::cmd::telemetry::PluginResult;\nuse crate::config::{CONTEXT_PAYLOAD_SCHEMA_VERSION, memoryport_dir, workspace_root};\nuse crate::context_packet_compiler::query_plan::{\n    BroadQueryPlan, QueryInjectionPolicy, looks_code_heavy,\n};\nuse crate::context_packet_compiler::{\n    add_workspace_section, cited_item, code_impact_section, collect_workspace_state,\n    context_section, gitnexus_impact_section, repo_source, source, workspace_id,\n};\nuse crate::feedback::{\n    FailureKind, HardErrorKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind, emit_failure,\n    load_route_weights, read_recent_failures, route_corrections_path,\n};\nuse crate::graph;\nuse crate::memory;\nuse crate::plugins::telemetry::schema::fingerprint_query;\nuse crate::quality;\nuse crate::router::{self, Confidence, Route};\nuse crate::uc;\nuse crate::util::{append_jsonl, iso_now};\n\nconst MAX_MEMORY_RECORDS: usize = 3;\nconst MAX_GITNEXUS_FACTS: usize = 5;\nconst MAX_OUTPUT_WORDS: usize = 1200;\n\n/// A structured context payload suitable for passing to the council binary.\n#[derive(Debug, serde::Serialize)]\npub struct ContextPayload {\n    pub schema_version: u32,\n    pub task: String,\n    pub route: String,\n    pub confidence: String,\n    pub memory_results: Vec<RetrievalItem>,\n    pub graph_results: Vec<RetrievalItem>,\n    pub retrieval_meta: RetrievalMeta,\n    /// Whether this context payload is on the critical path.\n    #[serde(default)]\n    pub critical_path: bool,\n}\n\n#[derive(Debug, serde::Serialize)]\npub struct RetrievalItem {\n    pub source: String,\n    pub text: String,\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub timestamp: Option<String>,\n}\n\n#[derive(Debug, serde::Serialize)]\npub struct RetrievalMeta {\n    pub memory_source: String,\n    pub memory_latency_ms: u64,\n    pub graph_latency_ms: u64,\n    pub fallback_reason: Option<String>,\n}\n\npub fn handle_query(\n    task: &str,\n    json_out: bool,\n    agent_prompt: bool,\n    no_audit: bool,\n    uc_min_results: usize,\n) -> Result<()> {\n    let t0 = Instant::now();\n    let route_result = router::classify(task);\n\n    // ── Route-weight override ────────────────────────────────────────────────\n    // Load quality-based route weights BEFORE acting on the routing decision.\n    // If the chosen route has accumulated enough soft/hard failures (weight < -0.3),\nSource: src/cmd/query.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\n### Suggested Validation Commands\nSuggested Validation Commands: git diff --check\n- [preflight-validation-policy] Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo test --workspace --all-targets\n- [preflight-validation-policy] Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo clippy --workspace --all-targets -- -D warnings\n- [preflight-validation-policy] Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: ./target/debug/layers query --no-audit --json \"What should I know before editing src/cmd/query.rs?\" | python3 -m json.tool >/dev/null\n- [preflight-validation-policy] Reason: ContextPacket and query changes must keep machine-readable JSON valid\nRequired: true\nExpected signal: JSON parses successfully\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation",
+  "open_uncertainty": [
+    "Workspace has 0 changed and 1 untracked files; inspect before editing.",
+    "No persisted autoresearch finding matched this task."
+  ],
+  "retrieval_meta": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  }
+}

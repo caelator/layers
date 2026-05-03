@@ -1,0 +1,375 @@
+{
+  "schema_version": 2,
+  "id": "preflight-6e15e540-fe90-4b83-9bca-a65ff6470307",
+  "workspace_id": "layers",
+  "query": "Audit provider budget accounting for saturating arithmetic and f64/u64 conversions. Add a regression test for very large token counters without panics or wraparound.",
+  "created_at": "2026-05-03T01:41:28.573698Z",
+  "git_ref": "e3e3763",
+  "route": "preflight",
+  "confidence": "high",
+  "budget": {
+    "max_units": 1800,
+    "used_units": 1314,
+    "unit": "words",
+    "truncated": false
+  },
+  "sections": [
+    {
+      "id": "preflight_summary",
+      "title": "Preflight Summary",
+      "summary": "Preflight planning result.",
+      "items": [
+        {
+          "id": "research-summary-1",
+          "title": "Preflight classification",
+          "body": "Preflight classified this task as code-heavy. Explicit targets: src/provider/accounting.rs, src/provider/tokenizer.rs, crates/layers-providers/src/token_accounting.rs. Effective targets: src/provider/accounting.rs, src/provider/tokenizer.rs, crates/layers-providers/src/token_accounting.rs, f64/u64.",
+          "source": {
+            "kind": "preflight",
+            "uri": "local-planner"
+          },
+          "token_estimate": 17,
+          "selected_reason": "summarizes the local preflight plan before source collection",
+          "tags": [
+            "planning"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "workspace",
+      "title": "Workspace State",
+      "summary": "Current Git/worktree context that can affect safe edits.",
+      "items": [
+        {
+          "id": "workspace-state-1",
+          "title": "Git worktree state",
+          "body": "Branch: main\nHead: e3e3763\nDirty: true\nUntracked files:\n- docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/\n",
+          "source": {
+            "kind": "workspace",
+            "uri": "git status --porcelain=v1"
+          },
+          "token_estimate": 10,
+          "selected_reason": "dirty or divergent workspace state changes how agents should interpret context",
+          "tags": [
+            "workspace",
+            "git"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "title": "Project Memory",
+      "summary": "Relevant explicit project memory or memory-source warning.",
+      "items": [
+        {
+          "id": "memory-1",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"payload\":{\"rationale\":\"Structured records preserve auditability, editability, and schema stability while still allowing semantic recall via derived retrieval text and embeddings.\",\"slug\":\"canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"summary\":\"Canonical curated memories should be structured records, not vectors as source of truth; semantic embeddings are derived retrieval artifacts.\",\"title\":\"Canonical curated memories should be structured records, not vectors as source of truth\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"memoryport\",\"architecture\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 49,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-2",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"payload\":{\"rationale\":\"Graph-aware routing and context are already valuable; deeper operational use is the clearest way to reduce codebase guessing and breakage.\",\"slug\":\"gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"summary\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries toward workflow-operational use in planning, review, handoff, and postmortem packets.\",\"title\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries tow...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"gitnexus\",\"architecture\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 57,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-3",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"status\",\"id\":\"cm_status_layers_rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"payload\":{\"slug\":\"rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"state\":\"active\",\"summary\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis/types/util, with tests passing and validate passing (`replacement_ready: true`).\",\"title\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis...\",\"type\":\"status\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"rust\",\"status\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 21,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-4",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_curated-memory-records-should-be-first-class-and-should-include-at-minimum-decision-constraint-status-next-step-and-postmortem\",\"payload\":{\"rationale\":\"These are the record kinds that most directly reduce context drift and allow Layers to retrieve high-signal, decision-aware memory instead of inferring everything from raw artifacts.\",\"slug\":\"curated-memory-records-should-be-first-class-and-should-include-at-minimum-decision-constraint-status-next-step-and-postmortem\",\"summary\":\"Curated memory records should be first-class and should include at minimum: decision, constraint, status, next_step, and postmortem.\",\"title\":\"Curated memory records should be first-class and should include at minimum: decision, constra...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"records\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 54,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-5",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_ai-council-jit-data-spine_treat-the-failed-jit-expert-data-spine-planning-run-and-the-council-v1-recovery-hardening-work-as-one-unified-project\",\"payload\":{\"rationale\":\"The user explicitly corrected the project structure; separating planning failure from tooling recovery created artificial fragmentation.\",\"slug\":\"treat-the-failed-jit-expert-data-spine-planning-run-and-the-council-v1-recovery-hardening-work-as-one-unified-project\",\"summary\":\"Treat the failed JIT expert/data-spine planning run and the council v1 recovery/hardening work as one unified project.\",\"title\":\"Treat the failed JIT expert/data-spine planning run and the council v1 recovery/hardening wor...\",\"type\":\"decision\"},\"project\":\"ai-council-jit-data-spine\",\"source\":\"distilled-import\",\"tags\":[\"ai-council\",\"jit-experts\",\"project-structure\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 44,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "title": "Code and Impact Context",
+      "summary": "Local code context gathered without editing files.",
+      "items": [
+        {
+          "id": "code-1",
+          "title": "src/provider/accounting.rs",
+          "body": "//! Token accounting — budget enforcement and usage ledger.\n//!\n//! After each [`Provider::complete`](super::Provider::complete) call the\n//! caller forwards the [`TokenUsage`](super::TokenUsage) to a\n//! [`TokenAccounting`] hook.  The hook can enforce budgets, log usage, or\n//! feed metrics to the telemetry plugin — without coupling the provider\n//! itself to any particular accounting policy.\n//!\n//! [`TokenLedger`] is the default concrete implementation: it tracks\n//! cumulative usage per model, enforces an optional per-run budget, and\n//! produces a serializable summary suitable for appending to council\n//! trace records.\n\nuse std::collections::HashMap;\n\nuse serde::{Deserialize, Serialize};\n\nuse super::TokenUsage;\n\n// ---------------------------------------------------------------------------\n// UsageEvent — the unit of accounting\n// ---------------------------------------------------------------------------\n\n/// A single token-usage observation forwarded from a provider completion.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct UsageEvent {\n    /// Model that produced the completion.\n    pub model: String,\n    /// Council stage that requested the completion (e.g. `\"gemini\"`, `\"claude\"`).\n    pub stage: String,\n    /// Token counts.\n    pub usage: TokenUsage,\n    /// ISO-8601 timestamp of the completion.\n    pub timestamp: String,\n}\n\n// ---------------------------------------------------------------------------\n// TokenBudget\n// ---------------------------------------------------------------------------\n\n/// An optional ceiling on total token consumption for a run.\n#[derive(Debug, Clone, Copy, Serialize, Deserialize)]\npub struct TokenBudget {\n    /// Maximum total (input + output) tokens allowed.\n    pub max_total_tokens: u64,\n}\n\nimpl TokenBudget {\n    #[must_use]\n    pub fn new(max_total_tokens: u64) -> Self {\n        Self { max_total_tokens }\n    }\n\n    /// How many tokens remain given `consumed` so far.\n    #[must_use]\n    pub fn remaining(&self, consumed: u64) -> u64 {\n        self.max_total_tokens.saturating_sub(consumed)\n    }\n\n    /// Whether the budget would be exceeded by an additional `requested`.\n    #[must_use]\n    pub fn would_exceed(&self, consumed: u64, requested: u64) -> bool {\n        consumed.saturating_add(requested) > self.max_total_tokens\n    }\n}\n\n// ---------------------------------------------------------------------------\n// TokenAccounting trait\n// ---------------------------------------------------------------------------\n\n/// Hook invoked after every provider completion.\n///\n/// Implementations decide what to *do* with the usage data: enforce budgets,\n/// write to a ledger file, send to telemetry, etc.\npub trait TokenAccounting: Send + Sync {\n    /// Record a completed usage event.\n    ///\n    /// Returns `Err` if the budget is exhausted and the caller should stop\n    /// issuing further completions.\n    fn record(&mut self, event: &UsageEvent) -> Result<(), BudgetExceeded>;",
+          "source": {
+            "kind": "file",
+            "uri": "src/provider/accounting.rs",
+            "repo_path": "src/provider/accounting.rs"
+          },
+          "token_estimate": 338,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        },
+        {
+          "id": "code-2",
+          "title": "src/provider/tokenizer.rs",
+          "body": "//! Tokenizer trait and built-in estimators.\n//!\n//! Provider implementations expose a [`Tokenizer`] so callers can estimate\n//! token counts *before* submitting a request.  This enables:\n//!\n//! - **Pre-flight budget checks**: reject prompts that would exceed the\n//!   remaining budget before consuming any API quota.\n//! - **Context-window fitting**: truncate or summarise context to stay\n//!   within the model's window.\n//! - **Cost forecasting**: display estimated cost before expensive runs.\n//!\n//! When a provider-specific tokenizer (e.g. tiktoken for `OpenAI`, or the\n//! Claude tokenizer) is not available, [`CharEstimateTokenizer`] provides a\n//! reasonable heuristic (≈ 4 characters per token for English text).\n\nuse super::{InputMessage, Request};\n\n// ---------------------------------------------------------------------------\n// Trait\n// ---------------------------------------------------------------------------\n\n/// Estimate token counts for text or structured requests.\n///\n/// Implementations may be exact (using the model's actual tokenizer) or\n/// heuristic (character-ratio estimation).  The [`is_exact`](Tokenizer::is_exact)\n/// method lets callers decide how much margin to add.\npub trait Tokenizer: Send + Sync {\n    /// Whether this tokenizer produces exact counts for the target model.\n    fn is_exact(&self) -> bool;\n\n    /// Estimate the number of tokens in a raw text string.\n    fn count_text(&self, text: &str) -> u64;\n\n    /// Estimate the total input tokens for a full [`Request`].\n    ///\n    /// The default implementation sums per-message estimates plus a small\n    /// overhead for message framing (role tags, separators).  Provider-\n    /// specific implementations can override this for higher accuracy.\n    fn count_request(&self, request: &Request) -> u64 {\n        let mut total: u64 = 0;\n        for msg in &request.input {\n            // ~4 tokens for message framing (role, separators).\n            total = total.saturating_add(4);\n            total = total.saturating_add(self.count_text(&msg.content));\n        }\n        // +2 for the reply priming tokens.\n        total.saturating_add(2)\n    }\n\n    /// Estimate tokens for a single [`InputMessage`].\n    fn count_message(&self, message: &InputMessage) -> u64 {\n        self.count_text(&message.content).saturating_add(4)\n    }\n}\n\n// ---------------------------------------------------------------------------\n// CharEstimateTokenizer\n// ---------------------------------------------------------------------------\n\n/// Character-ratio tokenizer — ≈ `chars_per_token` characters map to one token.\n///\n/// This is intentionally conservative (defaults to 4.0 for English) so that\n/// budget pre-flight checks over-estimate rather than under-estimate.\n///\n/// Use this as the fallback when a model-specific tokenizer is unavailable.\n#[derive(Debug, Clone)]\npub struct CharEstimateTokenizer {\n    chars_per_token: f64,\n}\n\nimpl CharEstimateTokenizer {\n    /// Default ratio suitable for English text with the major LLM tokenizers.\n    const DEFAULT_CHARS_PER_TOKEN: f64 = 4.0;\n\n    /// Create a tokenizer with the default 4-chars-per-token ratio.\n    #[must_use]\n    pub fn new() -> Self {\n        Self {\n            chars_per_token: Self::DEFAULT_CHARS_PER_TOKEN,\n        }",
+          "source": {
+            "kind": "file",
+            "uri": "src/provider/tokenizer.rs",
+            "repo_path": "src/provider/tokenizer.rs"
+          },
+          "token_estimate": 387,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        },
+        {
+          "id": "code-3",
+          "title": "crates/layers-providers/src/token_accounting.rs",
+          "body": "//! Token accounting and budget enforcement.\n//!\n//! Provides a [`TokenAccountant`] that tracks cumulative token usage per session\n//! and enforces budgets before provider calls. This is the internal \"hooks\" layer\n//! that sits between the runtime and the provider — every request passes through\n//! budget validation, and every response records usage.\n\nuse std::collections::HashMap;\nuse std::sync::Arc;\n\nuse parking_lot::RwLock;\nuse tracing::{debug, warn};\n\nuse layers_core::error::{LayersError, Result};\nuse layers_core::traits::{ModelProvider, Tokenizer};\nuse layers_core::types::*;\n\n// ---------------------------------------------------------------------------\n// Usage snapshot\n// ---------------------------------------------------------------------------\n\n/// Cumulative token usage for a single session.\n#[derive(Debug, Clone, Default)]\npub struct UsageSnapshot {\n    /// Total prompt tokens consumed across all requests.\n    pub prompt_tokens: usize,\n    /// Total completion tokens consumed across all requests.\n    pub completion_tokens: usize,\n    /// Total reasoning tokens (extended thinking) consumed.\n    pub reasoning_tokens: usize,\n    /// Total cache-read tokens (prompt caching savings).\n    pub cache_read_tokens: usize,\n    /// Number of provider calls recorded.\n    pub request_count: usize,\n}\n\nimpl UsageSnapshot {\n    /// Merge a single-request `Usage` into this snapshot.\n    pub fn record(&mut self, usage: &Usage) {\n        self.prompt_tokens += usage.prompt_tokens;\n        self.completion_tokens += usage.completion_tokens;\n        self.reasoning_tokens += usage.reasoning_tokens.unwrap_or(0);\n        self.cache_read_tokens += usage.cache_read_tokens.unwrap_or(0);\n        self.request_count += 1;\n    }\n\n    /// Total tokens (prompt + completion + reasoning).\n    pub fn total(&self) -> usize {\n        self.prompt_tokens + self.completion_tokens + self.reasoning_tokens\n    }\n}\n\n// ---------------------------------------------------------------------------\n// Accounting key\n// ---------------------------------------------------------------------------\n\n/// Key for looking up usage by session and agent.\n#[derive(Debug, Clone, Hash, Eq, PartialEq)]\npub struct AccountingKey {\n    pub session_id: String,\n    pub agent_id: String,\n}\n\nimpl AccountingKey {\n    pub fn new(session_id: impl Into<String>, agent_id: impl Into<String>) -> Self {\n        Self {\n            session_id: session_id.into(),\n            agent_id: agent_id.into(),\n        }\n    }\n}\n\n// ---------------------------------------------------------------------------\n// Budget check result\n// ---------------------------------------------------------------------------\n\n/// Result of a pre-flight budget check.\n#[derive(Debug, Clone)]\npub struct BudgetCheck {\n    /// Estimated input tokens for the pending request.",
+          "source": {
+            "kind": "file",
+            "uri": "crates/layers-providers/src/token_accounting.rs",
+            "repo_path": "crates/layers-providers/src/token_accounting.rs"
+          },
+          "token_estimate": 284,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "validation",
+      "title": "Suggested Validation Commands",
+      "summary": "Commands an agent should run after using this research.",
+      "items": [
+        {
+          "id": "validation-1",
+          "title": "git diff --check",
+          "body": "Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 17,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-2",
+          "title": "cargo test --workspace --all-targets",
+          "body": "Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-3",
+          "title": "cargo clippy --workspace --all-targets -- -D warnings",
+          "body": "Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "dirty_worktree",
+      "message": "Workspace has 0 changed and 1 untracked files; inspect before editing."
+    },
+    {
+      "severity": "info",
+      "code": "autoresearch_uncertainty",
+      "message": "No persisted autoresearch finding matched this task."
+    },
+    {
+      "severity": "info",
+      "code": "injection_policy",
+      "message": "Packet quality gate recommends InjectCompact: packet is low-confidence or fallback-derived"
+    }
+  ],
+  "selection_trace": [
+    {
+      "item_id": "research-summary-1",
+      "reason": "summarizes the local preflight plan before source collection"
+    },
+    {
+      "item_id": "workspace-state-1",
+      "reason": "dirty or divergent workspace state changes how agents should interpret context"
+    },
+    {
+      "item_id": "memory-1",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-2",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-3",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-4",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-5",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "code-1",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "code-2",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "code-3",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "validation-1",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-2",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-3",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    }
+  ],
+  "retrieval": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  },
+  "provenance": {
+    "compiler": "layers-context-packet",
+    "compiler_version": "2",
+    "surface": "preflight",
+    "workspace_id": "layers",
+    "git_ref": "e3e3763",
+    "generated_at": "2026-05-03T01:41:28.573698Z",
+    "source_adapters": [
+      "file",
+      "memory",
+      "preflight",
+      "validation",
+      "workspace"
+    ]
+  },
+  "task": "Audit provider budget accounting for saturating arithmetic and f64/u64 conversions. Add a regression test for very large token counters without panics or wraparound.",
+  "low_confidence_fallback": false,
+  "scores": {
+    "injection_recommendation": "inject_compact",
+    "packet_quality": {
+      "hallucinated_or_stale_context": false,
+      "missed_critical_context": false,
+      "reasons": [
+        "packet is low-confidence or fallback-derived"
+      ],
+      "recommendation": "inject_compact",
+      "scores": {
+        "completeness": 5,
+        "concision": 5,
+        "freshness": 3,
+        "grounding": 5,
+        "noise_absence": 3,
+        "relevance": 5,
+        "specificity": 5
+      },
+      "target_coverage_ratio": 1.0,
+      "validation_coverage_ratio": 1.0,
+      "warning_penalty": 2.25
+    },
+    "preflight": {
+      "autoresearch_findings": 0,
+      "code_heavy": true,
+      "targets": 4,
+      "workspace_dirty": true
+    }
+  },
+  "why_retrieved": "Preflight compiles local pre-edit context from workspace state, persisted autoresearch findings, memory, code targets, and validation policy.",
+  "why_not_retrieved": "",
+  "evidence": "### Preflight Summary\nPreflight Summary: Preflight classification\n- [local-planner] Preflight classified this task as code-heavy. Explicit targets: src/provider/accounting.rs, src/provider/tokenizer.rs, crates/layers-providers/src/token_accounting.rs. Effective targets: src/provider/accounting.rs, src/provider/tokenizer.rs, crates/layers-providers/src/token_accounting.rs, f64/u64.\nSource: local-planner (preflight)\nSelected because: summarizes the local preflight plan before source collection\n\n### Workspace State\nWorkspace State: Git worktree state\n- [git status --porcelain=v1] Branch: main\nHead: e3e3763\nDirty: true\nUntracked files:\n- docs/dogfood/20260503T014112Z-layers-vs-baseline-proof/\n\nSource: git status --porcelain=v1 (workspace)\nSelected because: dirty or divergent workspace state changes how agents should interpret context\n\n### Project Memory\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"payload\":{\"rationale\":\"Structured records preserve auditability, editability, and schema stability while still allowing semantic recall via derived retrieval text and embeddings.\",\"slug\":\"canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"summary\":\"Canonical curated memories should be structured records, not vectors as source of truth; semantic embeddings are derived retrieval artifacts.\",\"title\":\"Canonical curated memories should be structured records, not vectors as source of truth\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"memoryport\",\"architecture\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"payload\":{\"rationale\":\"Graph-aware routing and context are already valuable; deeper operational use is the clearest way to reduce codebase guessing and breakage.\",\"slug\":\"gitnexus-is-a-first-class-structural-provider-and-should-evolve-from-ad-hoc-graph-queries-toward-workflow-operational-use-in-planning-review-handoff-and-postmortem-packets\",\"summary\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries toward workflow-operational use in planning, review, handoff, and postmortem packets.\",\"title\":\"GitNexus is a first-class structural provider and should evolve from ad hoc graph queries tow...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"gitnexus\",\"architecture\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"status\",\"id\":\"cm_status_layers_rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"payload\":{\"slug\":\"rust-layers-implementation-is-modularized-into-commands-config-graph-memory-routing-synthesis-types-util-with-tests-passing-and-validate-passing-replacement-ready-true\",\"state\":\"active\",\"summary\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis/types/util, with tests passing and validate passing (`replacement_ready: true`).\",\"title\":\"Rust Layers implementation is modularized into commands/config/graph/memory/routing/synthesis...\",\"type\":\"status\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"rust\",\"status\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_curated-memory-records-should-be-first-class-and-should-include-at-minimum-decision-constraint-status-next-step-and-postmortem\",\"payload\":{\"rationale\":\"These are the record kinds that most directly reduce context drift and allow Layers to retrieve high-signal, decision-aware memory instead of inferring everything from raw artifacts.\",\"slug\":\"curated-memory-records-should-be-first-class-and-should-include-at-minimum-decision-constraint-status-next-step-and-postmortem\",\"summary\":\"Curated memory records should be first-class and should include at minimum: decision, constraint, status, next_step, and postmortem.\",\"title\":\"Curated memory records should be first-class and should include at minimum: decision, constra...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"records\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_ai-council-jit-data-spine_treat-the-failed-jit-expert-data-spine-planning-run-and-the-council-v1-recovery-hardening-work-as-one-unified-project\",\"payload\":{\"rationale\":\"The user explicitly corrected the project structure; separating planning failure from tooling recovery created artificial fragmentation.\",\"slug\":\"treat-the-failed-jit-expert-data-spine-planning-run-and-the-council-v1-recovery-hardening-work-as-one-unified-project\",\"summary\":\"Treat the failed JIT expert/data-spine planning run and the council v1 recovery/hardening work as one unified project.\",\"title\":\"Treat the failed JIT expert/data-spine planning run and the council v1 recovery/hardening wor...\",\"type\":\"decision\"},\"project\":\"ai-council-jit-data-spine\",\"source\":\"distilled-import\",\"tags\":[\"ai-council\",\"jit-experts\",\"project-structure\"]}\nSource: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\n### Code and Impact Context\nCode and Impact Context: src/provider/accounting.rs\n- [src/provider/accounting.rs] //! Token accounting — budget enforcement and usage ledger.\n//!\n//! After each [`Provider::complete`](super::Provider::complete) call the\n//! caller forwards the [`TokenUsage`](super::TokenUsage) to a\n//! [`TokenAccounting`] hook.  The hook can enforce budgets, log usage, or\n//! feed metrics to the telemetry plugin — without coupling the provider\n//! itself to any particular accounting policy.\n//!\n//! [`TokenLedger`] is the default concrete implementation: it tracks\n//! cumulative usage per model, enforces an optional per-run budget, and\n//! produces a serializable summary suitable for appending to council\n//! trace records.\n\nuse std::collections::HashMap;\n\nuse serde::{Deserialize, Serialize};\n\nuse super::TokenUsage;\n\n// ---------------------------------------------------------------------------\n// UsageEvent — the unit of accounting\n// ---------------------------------------------------------------------------\n\n/// A single token-usage observation forwarded from a provider completion.\n#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct UsageEvent {\n    /// Model that produced the completion.\n    pub model: String,\n    /// Council stage that requested the completion (e.g. `\"gemini\"`, `\"claude\"`).\n    pub stage: String,\n    /// Token counts.\n    pub usage: TokenUsage,\n    /// ISO-8601 timestamp of the completion.\n    pub timestamp: String,\n}\n\n// ---------------------------------------------------------------------------\n// TokenBudget\n// ---------------------------------------------------------------------------\n\n/// An optional ceiling on total token consumption for a run.\n#[derive(Debug, Clone, Copy, Serialize, Deserialize)]\npub struct TokenBudget {\n    /// Maximum total (input + output) tokens allowed.\n    pub max_total_tokens: u64,\n}\n\nimpl TokenBudget {\n    #[must_use]\n    pub fn new(max_total_tokens: u64) -> Self {\n        Self { max_total_tokens }\n    }\n\n    /// How many tokens remain given `consumed` so far.\n    #[must_use]\n    pub fn remaining(&self, consumed: u64) -> u64 {\n        self.max_total_tokens.saturating_sub(consumed)\n    }\n\n    /// Whether the budget would be exceeded by an additional `requested`.\n    #[must_use]\n    pub fn would_exceed(&self, consumed: u64, requested: u64) -> bool {\n        consumed.saturating_add(requested) > self.max_total_tokens\n    }\n}\n\n// ---------------------------------------------------------------------------\n// TokenAccounting trait\n// ---------------------------------------------------------------------------\n\n/// Hook invoked after every provider completion.\n///\n/// Implementations decide what to *do* with the usage data: enforce budgets,\n/// write to a ledger file, send to telemetry, etc.\npub trait TokenAccounting: Send + Sync {\n    /// Record a completed usage event.\n    ///\n    /// Returns `Err` if the budget is exhausted and the caller should stop\n    /// issuing further completions.\n    fn record(&mut self, event: &UsageEvent) -> Result<(), BudgetExceeded>;\nSource: src/provider/accounting.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\nCode and Impact Context: src/provider/tokenizer.rs\n- [src/provider/tokenizer.rs] //! Tokenizer trait and built-in estimators.\n//!\n//! Provider implementations expose a [`Tokenizer`] so callers can estimate\n//! token counts *before* submitting a request.  This enables:\n//!\n//! - **Pre-flight budget checks**: reject prompts that would exceed the\n//!   remaining budget before consuming any API quota.\n//! - **Context-window fitting**: truncate or summarise context to stay\n//!   within the model's window.\n//! - **Cost forecasting**: display estimated cost before expensive runs.\n//!\n//! When a provider-specific tokenizer (e.g. tiktoken for `OpenAI`, or the\n//! Claude tokenizer) is not available, [`CharEstimateTokenizer`] provides a\n//! reasonable heuristic (≈ 4 characters per token for English text).\n\nuse super::{InputMessage, Request};\n\n// ---------------------------------------------------------------------------\n// Trait\n// ---------------------------------------------------------------------------\n\n/// Estimate token counts for text or structured requests.\n///\n/// Implementations may be exact (using the model's actual tokenizer) or\n/// heuristic (character-ratio estimation).  The [`is_exact`](Tokenizer::is_exact)\n/// method lets callers decide how much margin to add.\npub trait Tokenizer: Send + Sync {\n    /// Whether this tokenizer produces exact counts for the target model.\n    fn is_exact(&self) -> bool;\n\n    /// Estimate the number of tokens in a raw text string.\n    fn count_text(&self, text: &str) -> u64;\n\n    /// Estimate the total input tokens for a full [`Request`].\n    ///\n    /// The default implementation sums per-message estimates plus a small\n    /// overhead for message framing (role tags, separators).  Provider-\n    /// specific implementations can override this for higher accuracy.\n    fn count_request(&self, request: &Request) -> u64 {\n        let mut total: u64 = 0;\n        for msg in &request.input {\n            // ~4 tokens for message framing (role, separators).\n            total = total.saturating_add(4);\n            total = total.saturating_add(self.count_text(&msg.content));\n        }\n        // +2 for the reply priming tokens.\n        total.saturating_add(2)\n    }\n\n    /// Estimate tokens for a single [`InputMessage`].\n    fn count_message(&self, message: &InputMessage) -> u64 {\n        self.count_text(&message.content).saturating_add(4)\n    }\n}\n\n// ---------------------------------------------------------------------------\n// CharEstimateTokenizer\n// ---------------------------------------------------------------------------\n\n/// Character-ratio tokenizer — ≈ `chars_per_token` characters map to one token.\n///\n/// This is intentionally conservative (defaults to 4.0 for English) so that\n/// budget pre-flight checks over-estimate rather than under-estimate.\n///\n/// Use this as the fallback when a model-specific tokenizer is unavailable.\n#[derive(Debug, Clone)]\npub struct CharEstimateTokenizer {\n    chars_per_token: f64,\n}\n\nimpl CharEstimateTokenizer {\n    /// Default ratio suitable for English text with the major LLM tokenizers.\n    const DEFAULT_CHARS_PER_TOKEN: f64 = 4.0;\n\n    /// Create a tokenizer with the default 4-chars-per-token ratio.\n    #[must_use]\n    pub fn new() -> Self {\n        Self {\n            chars_per_token: Self::DEFAULT_CHARS_PER_TOKEN,\n        }\nSource: src/provider/tokenizer.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\nCode and Impact Context: crates/layers-providers/src/token_accounting.rs\n- [crates/layers-providers/src/token_accounting.rs] //! Token accounting and budget enforcement.\n//!\n//! Provides a [`TokenAccountant`] that tracks cumulative token usage per session\n//! and enforces budgets before provider calls. This is the internal \"hooks\" layer\n//! that sits between the runtime and the provider — every request passes through\n//! budget validation, and every response records usage.\n\nuse std::collections::HashMap;\nuse std::sync::Arc;\n\nuse parking_lot::RwLock;\nuse tracing::{debug, warn};\n\nuse layers_core::error::{LayersError, Result};\nuse layers_core::traits::{ModelProvider, Tokenizer};\nuse layers_core::types::*;\n\n// ---------------------------------------------------------------------------\n// Usage snapshot\n// ---------------------------------------------------------------------------\n\n/// Cumulative token usage for a single session.\n#[derive(Debug, Clone, Default)]\npub struct UsageSnapshot {\n    /// Total prompt tokens consumed across all requests.\n    pub prompt_tokens: usize,\n    /// Total completion tokens consumed across all requests.\n    pub completion_tokens: usize,\n    /// Total reasoning tokens (extended thinking) consumed.\n    pub reasoning_tokens: usize,\n    /// Total cache-read tokens (prompt caching savings).\n    pub cache_read_tokens: usize,\n    /// Number of provider calls recorded.\n    pub request_count: usize,\n}\n\nimpl UsageSnapshot {\n    /// Merge a single-request `Usage` into this snapshot.\n    pub fn record(&mut self, usage: &Usage) {\n        self.prompt_tokens += usage.prompt_tokens;\n        self.completion_tokens += usage.completion_tokens;\n        self.reasoning_tokens += usage.reasoning_tokens.unwrap_or(0);\n        self.cache_read_tokens += usage.cache_read_tokens.unwrap_or(0);\n        self.request_count += 1;\n    }\n\n    /// Total tokens (prompt + completion + reasoning).\n    pub fn total(&self) -> usize {\n        self.prompt_tokens + self.completion_tokens + self.reasoning_tokens\n    }\n}\n\n// ---------------------------------------------------------------------------\n// Accounting key\n// ---------------------------------------------------------------------------\n\n/// Key for looking up usage by session and agent.\n#[derive(Debug, Clone, Hash, Eq, PartialEq)]\npub struct AccountingKey {\n    pub session_id: String,\n    pub agent_id: String,\n}\n\nimpl AccountingKey {\n    pub fn new(session_id: impl Into<String>, agent_id: impl Into<String>) -> Self {\n        Self {\n            session_id: session_id.into(),\n            agent_id: agent_id.into(),\n        }\n    }\n}\n\n// ---------------------------------------------------------------------------\n// Budget check result\n// ---------------------------------------------------------------------------\n\n/// Result of a pre-flight budget check.\n#[derive(Debug, Clone)]\npub struct BudgetCheck {\n    /// Estimated input tokens for the pending request.\nSource: crates/layers-providers/src/token_accounting.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\n### Suggested Validation Commands\nSuggested Validation Commands: git diff --check\n- [preflight-validation-policy] Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo test --workspace --all-targets\n- [preflight-validation-policy] Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo clippy --workspace --all-targets -- -D warnings\n- [preflight-validation-policy] Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation",
+  "open_uncertainty": [
+    "Workspace has 0 changed and 1 untracked files; inspect before editing.",
+    "No persisted autoresearch finding matched this task."
+  ],
+  "retrieval_meta": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  }
+}
