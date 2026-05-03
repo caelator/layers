@@ -41,14 +41,23 @@ The preregistered targeted-preflight claim is not supported by this run. This ru
 ## Phase 9 review addendum
 `PHASE9_REVIEW.md` records the independent artifact/static review. It passed the artifact set for credibility and safety as a deliberately `not_supported` protocol run, and failed any product-performance claim.
 
-Additional Phase 9 findings to carry into the product-fix loop:
-- Analyzer claim thresholds currently report `min_paired_tasks: 1`, which is weaker than preregistered `CLAIM_GATES.md`; align analyzer gates with preregistered gates before relying on analyzer status for a future effectiveness run.
-- Negative-control targeted-preflight rows include some context-relevant token accounting despite explicit abstention artifacts; clean this up so abstained runs do not appear to consume useful context.
+Additional Phase 9 findings carried into Phase 10:
+- Analyzer claim thresholds reported `min_paired_tasks: 1`, which was weaker than preregistered `CLAIM_GATES.md`.
+- Negative-control targeted-preflight rows included some context-relevant token accounting despite explicit abstention artifacts.
+
+## Phase 10 product-fix addendum
+`PHASE10_PRODUCT_FIXES.md` records the first product-fix loop.
+
+Completed in this pass:
+- Analyzer default claim thresholds now mirror preregistered `CLAIM_GATES.md` sample and safety gates, including minimum paired tasks, minimum code-heavy paired tasks, minimum negative-control paired tasks, negative-control abstention, unnecessary-context injection, and context-caused regression gates.
+- Analyzer claim JSON now reports `code_heavy_paired_task_count` and `negative_control_paired_task_count`.
+- The Phase 8/9 report artifacts were regenerated with the fixed analyzer.
+
+Updated analyzer status remains `not_supported` with 31 paired tasks, 24 code-heavy paired tasks, 6 negative-control paired tasks, and hard blockers on net time saved, token reduction, and missed critical context.
 
 ## Next product fixes
 1. Add an automated benchmark runner that can launch isolated coding-agent runs per task/variant in throwaway worktrees.
 2. Add machine-readable transcript/run-record capture from actual agent sessions.
-3. Align analyzer claim thresholds with preregistered `CLAIM_GATES.md`, including minimum paired tasks and minimum code-heavy paired tasks.
-4. Clean up negative-control token accounting for abstained targeted-preflight runs.
-5. Add packet validation/inspection subcommands specifically for preflight JSON packets if the packet schema differs from context-packet validation.
-6. Rerun Phase 8 with real agent execution before making any product-performance claim.
+3. Clean up negative-control token accounting for abstained targeted-preflight runs.
+4. Add packet validation/inspection subcommands specifically for preflight JSON packets if the packet schema differs from context-packet validation.
+5. Rerun Phase 8 with real agent execution before making any product-performance claim.

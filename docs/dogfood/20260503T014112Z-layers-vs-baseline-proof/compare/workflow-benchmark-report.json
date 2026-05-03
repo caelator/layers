@@ -168,14 +168,18 @@
   "claim": {
     "status": "not_supported",
     "thresholds": {
-      "min_paired_tasks": 1,
+      "min_paired_tasks": 30,
+      "min_code_heavy_paired_tasks": 20,
+      "min_negative_control_paired_tasks": 5,
       "min_success_delta": 0.0,
       "min_time_saved_ms": 0.0,
-      "min_token_reduction_ratio": 0.0,
-      "max_missed_critical_context_rate": 0.0,
+      "min_token_reduction_ratio": 0.2,
+      "max_missed_critical_context_rate": 0.05,
       "max_hallucinated_or_stale_context_rate": 0.0,
       "max_regression_rate": 0.0,
-      "min_negative_control_abstention_rate": 1.0
+      "max_context_caused_regression_rate": 0.0,
+      "min_negative_control_abstention_rate": 0.95,
+      "max_unnecessary_context_injection_rate": 0.05
     },
     "blocking_metrics": [
       "net_time_saved_ms",
@@ -183,6 +187,8 @@
       "missed_critical_context_rate"
     ],
     "uncertainty_notes": [],
+    "code_heavy_paired_task_count": 24,
+    "negative_control_paired_task_count": 6,
     "negative_control_abstention_rate": 1.0,
     "unnecessary_context_injection_rate": 0.0,
     "context_caused_regression_rate": 0.0

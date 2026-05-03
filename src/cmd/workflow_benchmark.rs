@@ -214,26 +214,34 @@ struct BenchmarkReport {
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 struct ClaimThresholds {
     min_paired_tasks: usize,
+    min_code_heavy_paired_tasks: usize,
+    min_negative_control_paired_tasks: usize,
     min_success_delta: f64,
     min_time_saved_ms: f64,
     min_token_reduction_ratio: f64,
     max_missed_critical_context_rate: f64,
     max_hallucinated_or_stale_context_rate: f64,
     max_regression_rate: f64,
+    max_context_caused_regression_rate: f64,
     min_negative_control_abstention_rate: f64,
+    max_unnecessary_context_injection_rate: f64,
 }
 
 impl Default for ClaimThresholds {
     fn default() -> Self {
         Self {
-            min_paired_tasks: 1,
+            min_paired_tasks: 30,
+            min_code_heavy_paired_tasks: 20,
+            min_negative_control_paired_tasks: 5,
             min_success_delta: 0.0,
             min_time_saved_ms: 0.0,
-            min_token_reduction_ratio: 0.0,
-            max_missed_critical_context_rate: 0.0,
+            min_token_reduction_ratio: 0.20,
+            max_missed_critical_context_rate: 0.05,
             max_hallucinated_or_stale_context_rate: 0.0,
             max_regression_rate: 0.0,
-            min_negative_control_abstention_rate: 1.0,
+            max_context_caused_regression_rate: 0.0,
+            min_negative_control_abstention_rate: 0.95,
+            max_unnecessary_context_injection_rate: 0.05,
         }
     }
 }
@@ -252,6 +260,8 @@ struct ClaimReport {
     thresholds: ClaimThresholds,
     blocking_metrics: Vec<String>,
     uncertainty_notes: Vec<String>,
+    code_heavy_paired_task_count: usize,
+    negative_control_paired_task_count: usize,
     negative_control_abstention_rate: f64,
     unnecessary_context_injection_rate: f64,
     context_caused_regression_rate: f64,
@@ -753,7 +763,7 @@ fn analyze_runs_with_thresholds(
         })
         .collect();
     let negative_control_abstention_rate = if negative_control_layers.is_empty() {
-        0.0
+        1.0
     } else {
         negative_control_layers
             .iter()
@@ -768,9 +778,22 @@ fn analyze_runs_with_thresholds(
         run.context_caused_regressions
     });
 
+    let code_heavy_paired_task_count = code_heavy_paired_task_count(runs, comparison.variant);
+    let negative_control_paired_task_count =
+        paired_task_category_count(runs, comparison.variant, |category| {
+            category == "negative_control"
+        });
+
     let mut blocking_metrics = Vec::new();
+    let mut sample_size_metrics = Vec::new();
     if comparison.paired_task_count < thresholds.min_paired_tasks {
-        blocking_metrics.push("paired_task_count".to_string());
+        sample_size_metrics.push("paired_task_count".to_string());
+    }
+    if code_heavy_paired_task_count < thresholds.min_code_heavy_paired_tasks {
+        sample_size_metrics.push("code_heavy_paired_task_count".to_string());
+    }
+    if negative_control_paired_task_count < thresholds.min_negative_control_paired_tasks {
+        sample_size_metrics.push("negative_control_paired_task_count".to_string());
     }
     if comparison.success_delta < thresholds.min_success_delta {
         blocking_metrics.push("success_delta".to_string());
@@ -795,10 +818,10 @@ fn analyze_runs_with_thresholds(
     if negative_control_abstention_rate < thresholds.min_negative_control_abstention_rate {
         blocking_metrics.push("negative_control_abstention_rate".to_string());
     }
-    if unnecessary_context_injection_rate > 0.0 {
+    if unnecessary_context_injection_rate > thresholds.max_unnecessary_context_injection_rate {
         blocking_metrics.push("unnecessary_context_injection_rate".to_string());
     }
-    if context_caused_regression_rate > 0.0 {
+    if context_caused_regression_rate > thresholds.max_context_caused_regression_rate {
         blocking_metrics.push("context_caused_regression_rate".to_string());
     }
 
@@ -809,23 +832,88 @@ fn analyze_runs_with_thresholds(
             comparison.paired_task_count, thresholds.min_paired_tasks
         ));
     }
+    if code_heavy_paired_task_count < thresholds.min_code_heavy_paired_tasks {
+        uncertainty_notes.push(format!(
+            "code_heavy_paired_task_count {} is below minimum {}",
+            code_heavy_paired_task_count, thresholds.min_code_heavy_paired_tasks
+        ));
+    }
+    if negative_control_paired_task_count < thresholds.min_negative_control_paired_tasks {
+        uncertainty_notes.push(format!(
+            "negative_control_paired_task_count {} is below minimum {}",
+            negative_control_paired_task_count, thresholds.min_negative_control_paired_tasks
+        ));
+    }
+    let has_hard_blockers = !blocking_metrics.is_empty();
+    blocking_metrics.extend(sample_size_metrics);
 
     report.claim = Some(ClaimReport {
-        status: if !uncertainty_notes.is_empty() {
-            ClaimStatus::Inconclusive
-        } else if blocking_metrics.is_empty() {
-            ClaimStatus::Supported
-        } else {
+        status: if has_hard_blockers {
             ClaimStatus::NotSupported
+        } else if !uncertainty_notes.is_empty() {
+            ClaimStatus::Inconclusive
+        } else {
+            ClaimStatus::Supported
         },
         thresholds,
         blocking_metrics,
         uncertainty_notes,
+        code_heavy_paired_task_count,
+        negative_control_paired_task_count,
         negative_control_abstention_rate,
         unnecessary_context_injection_rate,
         context_caused_regression_rate,
     });
     Ok(report)
+}
+
+fn code_heavy_paired_task_count(runs: &[WorkflowRun], layers_variant: WorkflowVariant) -> usize {
+    paired_task_category_count(runs, layers_variant, is_code_heavy_category)
+}
+
+fn paired_task_category_count(
+    runs: &[WorkflowRun],
+    layers_variant: WorkflowVariant,
+    predicate: impl Fn(&str) -> bool,
+) -> usize {
+    let mut baseline_categories = BTreeMap::new();
+    let mut layers_categories = BTreeMap::new();
+
+    for run in runs {
+        if run.variant == WorkflowVariant::Baseline {
+            baseline_categories
+                .entry(run.task_id.as_str())
+                .or_insert(run.task_category.as_str());
+        } else if run.variant == layers_variant {
+            layers_categories
+                .entry(run.task_id.as_str())
+                .or_insert(run.task_category.as_str());
+        }
+    }
+
+    baseline_categories
+        .iter()
+        .filter(|(task_id, baseline_category)| {
+            layers_categories
+                .get(*task_id)
+                .is_some_and(|layers_category| {
+                    predicate(baseline_category) || predicate(layers_category)
+                })
+        })
+        .count()
+}
+
+fn is_code_heavy_category(category: &str) -> bool {
+    matches!(
+        category,
+        "bugfix"
+            | "small_bugfix"
+            | "feature"
+            | "refactor"
+            | "debugging"
+            | "dirty_repo"
+            | "context_overload"
+    )
 }
 
 fn aggregate_variant(variant: WorkflowVariant, runs: &[&WorkflowRun]) -> Option<VariantAggregate> {
@@ -1253,6 +1341,23 @@ mod tests {
             )
     }
 
+    fn permissive_claim_thresholds() -> ClaimThresholds {
+        ClaimThresholds {
+            min_paired_tasks: 1,
+            min_code_heavy_paired_tasks: 1,
+            min_negative_control_paired_tasks: 0,
+            min_success_delta: 0.0,
+            min_time_saved_ms: 0.0,
+            min_token_reduction_ratio: 0.0,
+            max_missed_critical_context_rate: 0.0,
+            max_hallucinated_or_stale_context_rate: 0.0,
+            max_regression_rate: 0.0,
+            max_context_caused_regression_rate: 0.0,
+            min_negative_control_abstention_rate: 1.0,
+            max_unnecessary_context_injection_rate: 0.0,
+        }
+    }
+
     #[test]
     fn parses_valid_jsonl_runs() {
         let dir = tempfile::tempdir().expect("tempdir");
@@ -1383,6 +1488,19 @@ mod tests {
     }
 
     #[test]
+    fn default_claim_thresholds_match_preregistered_gates() {
+        let thresholds = ClaimThresholds::default();
+
+        assert_eq!(thresholds.min_paired_tasks, 30);
+        assert_eq!(thresholds.min_code_heavy_paired_tasks, 20);
+        assert_eq!(thresholds.min_negative_control_paired_tasks, 5);
+        assert_approx_eq(thresholds.min_token_reduction_ratio, 0.20);
+        assert_approx_eq(thresholds.min_negative_control_abstention_rate, 0.95);
+        assert_approx_eq(thresholds.max_unnecessary_context_injection_rate, 0.05);
+        assert_approx_eq(thresholds.max_context_caused_regression_rate, 0.0);
+    }
+
+    #[test]
     fn claim_is_inconclusive_when_sample_size_is_too_small() {
         let runs = vec![
             parse_run(&valid_run("task-1", "baseline", 1_000, 2_000)).expect("baseline"),
@@ -1396,7 +1514,8 @@ mod tests {
         ];
         let thresholds = ClaimThresholds {
             min_paired_tasks: 2,
-            ..ClaimThresholds::default()
+            min_code_heavy_paired_tasks: 2,
+            ..permissive_claim_thresholds()
         };
 
         let report = analyze_runs_with_thresholds(&runs, thresholds).expect("analysis");
@@ -1408,6 +1527,12 @@ mod tests {
                 .uncertainty_notes
                 .iter()
                 .any(|note| note.contains("paired_task_count"))
+        );
+        assert!(
+            claim
+                .uncertainty_notes
+                .iter()
+                .any(|note| note.contains("code_heavy_paired_task_count"))
         );
         assert!(
             report
@@ -1487,7 +1612,7 @@ mod tests {
             parse_run(&negative_control_run("neg-1", "layers", true)).expect("layers neg"),
         ];
         let report =
-            analyze_runs_with_thresholds(&runs, ClaimThresholds::default()).expect("analysis");
+            analyze_runs_with_thresholds(&runs, permissive_claim_thresholds()).expect("analysis");
         let claim = report.claim.expect("claim report");
         assert_eq!(claim.status, ClaimStatus::Supported);
     }
@@ -1501,7 +1626,7 @@ mod tests {
             parse_run(&layer_run).expect("layers"),
         ];
         let report =
-            analyze_runs_with_thresholds(&runs, ClaimThresholds::default()).expect("analysis");
+            analyze_runs_with_thresholds(&runs, permissive_claim_thresholds()).expect("analysis");
         let claim = report.claim.expect("claim report");
         assert_eq!(claim.status, ClaimStatus::NotSupported);
         assert!(
@@ -1521,7 +1646,7 @@ mod tests {
             parse_run(&negative_control_run("neg-1", "layers", false)).expect("layers neg"),
         ];
         let report =
-            analyze_runs_with_thresholds(&runs, ClaimThresholds::default()).expect("analysis");
+            analyze_runs_with_thresholds(&runs, permissive_claim_thresholds()).expect("analysis");
         let claim = report.claim.expect("claim report");
         assert_eq!(claim.status, ClaimStatus::NotSupported);
         assert!(
@@ -1539,7 +1664,7 @@ mod tests {
             parse_run(&valid_run("task-1", "layers", 700, 1_500)).expect("layers"),
         ];
         let report =
-            analyze_runs_with_thresholds(&runs, ClaimThresholds::default()).expect("analysis");
+            analyze_runs_with_thresholds(&runs, permissive_claim_thresholds()).expect("analysis");
         let claim = report.claim.expect("claim report");
 
         assert!(claim.negative_control_abstention_rate.is_finite());
