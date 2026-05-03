@@ -1574,6 +1574,58 @@ mod tests {
     }
 
     #[test]
+    fn run_protocol_artifacts_define_reproducible_benchmark_runs() {
+        let protocol = fs::read_to_string("benchmarks/workflows/RUN_PROTOCOL.md")
+            .expect("run protocol should exist");
+        for required in [
+            "Checkout/reset procedure",
+            "Agent/model used",
+            "Tool permissions",
+            "Time budget",
+            "Randomized order",
+            "Baseline prompt format",
+            "Targeted preflight prompt format",
+            "Saving packet artifacts",
+            "Scoring success",
+            "Tokens, tool calls, and time",
+            "Missed critical context",
+            "Stale context",
+            "Unnecessary context injection",
+        ] {
+            assert!(
+                protocol.contains(required),
+                "run protocol should cover {required}"
+            );
+        }
+
+        let run_template =
+            fs::read_to_string("benchmarks/workflows/templates/workflow-run-record.json")
+                .expect("workflow run record template should exist");
+        let run = parse_run(&run_template).expect("workflow run record template should parse");
+        assert_eq!(run.variant, WorkflowVariant::LayersTargetedPreflight);
+        assert_eq!(run.task_id, "<task_id>");
+
+        let transcript_template =
+            fs::read_to_string("benchmarks/workflows/templates/transcript-template.md")
+                .expect("transcript template should exist");
+        for heading in [
+            "# Workflow Benchmark Transcript",
+            "## Setup",
+            "## Prompt",
+            "## Packet Artifacts",
+            "## Timeline",
+            "## Validation",
+            "## Scoring Notes",
+            "## Context Quality Classification",
+        ] {
+            assert!(
+                transcript_template.contains(heading),
+                "transcript template should contain {heading}"
+            );
+        }
+    }
+
+    #[test]
     fn rejects_task_spec_missing_success_rubric() {
         let err = load_task_spec(Path::new(
             "benchmarks/workflows/fixtures/invalid-task-spec-missing-rubric.json",
