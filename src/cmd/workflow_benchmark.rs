@@ -1,6 +1,6 @@
 //! Workflow benchmark telemetry analysis for comparing Layers vs baseline runs.
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     fmt::Write as _,
     fs,
     path::{Component, Path, PathBuf},
@@ -40,6 +40,14 @@ pub(crate) enum WorkflowBenchmarkCommands {
         #[arg(long, default_value = ".")]
         repo_root: PathBuf,
         /// Output a structured JSON retrieval corpus.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Score a retrieval eval corpus with the deterministic lexical baseline.
+    RetrievalEvalLexical {
+        /// Retrieval eval corpus JSON produced by `retrieval-eval-corpus`.
+        path: PathBuf,
+        /// Output a structured JSON retrieval report.
         #[arg(long)]
         json: bool,
     },
@@ -122,6 +130,25 @@ pub(crate) fn handle_workflow_benchmark(command: &WorkflowBenchmarkCommands) -> 
                 println!("pairs: {}", corpus.pairs.len());
                 println!("documents: {}", corpus.documents.len());
                 println!("negative_controls: {}", corpus.negative_control_count);
+            }
+            Ok(())
+        }
+        WorkflowBenchmarkCommands::RetrievalEvalLexical { path, json } => {
+            let corpus = load_retrieval_eval_corpus(path)?;
+            let report = evaluate_lexical_retrieval(&corpus)?;
+            if *json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&report)
+                        .context("failed to serialize lexical retrieval report")?
+                );
+            } else {
+                println!("Workflow lexical retrieval eval");
+                println!("pairs: {}", report.pair_count);
+                println!("documents: {}", report.document_count);
+                println!("recall@5: {:.4}", report.recall_at_5);
+                println!("recall@10: {:.4}", report.recall_at_10);
+                println!("mrr: {:.4}", report.mrr);
             }
             Ok(())
         }
@@ -392,14 +419,14 @@ struct RetrievalEvalConfig {
     repo_root: PathBuf,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 struct RetrievalEvalCorpus {
     pairs: Vec<RetrievalEvalPair>,
     documents: Vec<RetrievalEvalDocument>,
     negative_control_count: usize,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 struct RetrievalEvalPair {
     task_id: String,
     query: String,
@@ -408,12 +435,33 @@ struct RetrievalEvalPair {
     stale_context_trap: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 struct RetrievalEvalDocument {
     id: String,
     source_kind: String,
     path: Option<String>,
     text: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct LexicalRetrievalReport {
+    pair_count: usize,
+    document_count: usize,
+    negative_control_count: usize,
+    recall_at_5: f64,
+    recall_at_10: f64,
+    mrr: f64,
+    negative_control_injection_rate: f64,
+    per_pair: Vec<LexicalPairReport>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct LexicalPairReport {
+    task_id: String,
+    top_document_ids: Vec<String>,
+    first_relevant_rank: Option<usize>,
+    recall_at_5: f64,
+    recall_at_10: f64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -733,6 +781,122 @@ fn add_file_document(
 
 fn file_document_id(repo_path: &str) -> String {
     format!("file:{repo_path}")
+}
+
+fn load_retrieval_eval_corpus(path: &Path) -> Result<RetrievalEvalCorpus> {
+    let content = fs::read_to_string(path)
+        .with_context(|| format!("failed to read retrieval eval corpus: {}", path.display()))?;
+    serde_json::from_str(&content).with_context(|| {
+        format!(
+            "retrieval eval corpus is not valid JSON: {}",
+            path.display()
+        )
+    })
+}
+
+fn evaluate_lexical_retrieval(corpus: &RetrievalEvalCorpus) -> Result<LexicalRetrievalReport> {
+    if corpus.pairs.is_empty() {
+        bail!("retrieval eval corpus must contain at least one non-negative-control pair");
+    }
+    if corpus.documents.is_empty() {
+        bail!("retrieval eval corpus must contain at least one document");
+    }
+
+    let mut per_pair = Vec::with_capacity(corpus.pairs.len());
+    for pair in &corpus.pairs {
+        let ranked = rank_documents_lexically(&pair.query, &corpus.documents);
+        let relevant = pair.relevant_ids.iter().cloned().collect::<BTreeSet<_>>();
+        let top_document_ids = ranked
+            .iter()
+            .take(10)
+            .map(|(document_id, _score)| document_id.clone())
+            .collect::<Vec<_>>();
+        let first_relevant_rank = ranked
+            .iter()
+            .position(|(document_id, _score)| relevant.contains(document_id))
+            .map(|idx| idx + 1);
+        per_pair.push(LexicalPairReport {
+            task_id: pair.task_id.clone(),
+            top_document_ids,
+            first_relevant_rank,
+            recall_at_5: recall_at(&ranked, &relevant, 5),
+            recall_at_10: recall_at(&ranked, &relevant, 10),
+        });
+    }
+
+    let pair_count = per_pair.len();
+    let recall_at_5 = per_pair.iter().map(|pair| pair.recall_at_5).sum::<f64>() / pair_count as f64;
+    let recall_at_10 =
+        per_pair.iter().map(|pair| pair.recall_at_10).sum::<f64>() / pair_count as f64;
+    let mrr = per_pair
+        .iter()
+        .map(|pair| {
+            pair.first_relevant_rank
+                .map_or(0.0, |rank| 1.0 / rank as f64)
+        })
+        .sum::<f64>()
+        / pair_count as f64;
+
+    Ok(LexicalRetrievalReport {
+        pair_count,
+        document_count: corpus.documents.len(),
+        negative_control_count: corpus.negative_control_count,
+        recall_at_5,
+        recall_at_10,
+        mrr,
+        negative_control_injection_rate: 0.0,
+        per_pair,
+    })
+}
+
+fn rank_documents_lexically(
+    query: &str,
+    documents: &[RetrievalEvalDocument],
+) -> Vec<(String, usize)> {
+    let query_terms = lexical_terms(query);
+    let mut scored = documents
+        .iter()
+        .map(|document| {
+            let haystack = format!(
+                "{}\n{}\n{}",
+                document.path.as_deref().unwrap_or_default(),
+                document.source_kind,
+                document.text
+            );
+            (document.id.clone(), lexical_score(&query_terms, &haystack))
+        })
+        .collect::<Vec<_>>();
+    scored.sort_by(|left, right| right.1.cmp(&left.1).then_with(|| left.0.cmp(&right.0)));
+    scored
+}
+
+fn recall_at(ranked: &[(String, usize)], relevant: &BTreeSet<String>, k: usize) -> f64 {
+    if relevant.is_empty() {
+        return 0.0;
+    }
+    let hits = ranked
+        .iter()
+        .take(k)
+        .filter(|(document_id, _score)| relevant.contains(document_id))
+        .count();
+    hits as f64 / relevant.len() as f64
+}
+
+fn lexical_score(query_terms: &BTreeSet<String>, text: &str) -> usize {
+    let text_terms = lexical_terms(text);
+    query_terms
+        .iter()
+        .filter(|term| text_terms.contains(*term))
+        .count()
+}
+
+fn lexical_terms(text: &str) -> BTreeSet<String> {
+    text.split(|ch: char| !ch.is_alphanumeric() && ch != '_')
+        .filter_map(|term| {
+            let term = term.to_lowercase();
+            (term.len() >= 3).then_some(term)
+        })
+        .collect()
 }
 
 fn plan_runner_artifacts(config: &RunnerPlanConfig) -> Result<RunnerPlan> {
@@ -2600,6 +2764,49 @@ mod tests {
         assert!(corpus.documents.iter().any(|document| document.id
             == "file:src/memory_index/retrieval.rs"
             && document.path.as_deref() == Some("src/memory_index/retrieval.rs")));
+    }
+
+    #[test]
+    fn lexical_retrieval_reports_recall_and_mrr() {
+        let corpus = RetrievalEvalCorpus {
+            pairs: vec![RetrievalEvalPair {
+                task_id: "memory-task".to_string(),
+                query: "memory retrieval fallback tags".to_string(),
+                relevant_ids: vec!["file:src/memory_index/retrieval.rs".to_string()],
+                category: "refactor".to_string(),
+                stale_context_trap: false,
+            }],
+            documents: vec![
+                RetrievalEvalDocument {
+                    id: "file:src/memory_index/retrieval.rs".to_string(),
+                    source_kind: "file".to_string(),
+                    path: Some("src/memory_index/retrieval.rs".to_string()),
+                    text: "retrieval fallback tags for memory index".to_string(),
+                },
+                RetrievalEvalDocument {
+                    id: "file:src/router.rs".to_string(),
+                    source_kind: "file".to_string(),
+                    path: Some("src/router.rs".to_string()),
+                    text: "route classification".to_string(),
+                },
+            ],
+            negative_control_count: 2,
+        };
+
+        let report = evaluate_lexical_retrieval(&corpus).expect("lexical eval");
+
+        assert_eq!(report.pair_count, 1);
+        assert_eq!(report.document_count, 2);
+        assert_eq!(report.negative_control_count, 2);
+        assert_approx_eq(report.recall_at_5, 1.0);
+        assert_approx_eq(report.recall_at_10, 1.0);
+        assert_approx_eq(report.mrr, 1.0);
+        assert_eq!(
+            report.per_pair[0].top_document_ids[0],
+            "file:src/memory_index/retrieval.rs"
+        );
+        assert_eq!(report.per_pair[0].first_relevant_rank, Some(1));
+        assert_approx_eq(report.negative_control_injection_rate, 0.0);
     }
 
     #[test]

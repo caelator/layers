@@ -1109,4 +1109,28 @@ mod tests {
         assert_eq!(repo_root, PathBuf::from("/repo/layers"));
         assert!(json);
     }
+
+    #[test]
+    fn parses_workflow_benchmark_retrieval_eval_lexical_command() {
+        let cli = Cli::try_parse_from([
+            "layers",
+            "workflow-benchmark",
+            "retrieval-eval-lexical",
+            "target/retrieval-proof/retrieval-eval-corpus.json",
+            "--json",
+        ])
+        .expect("workflow benchmark retrieval-eval-lexical should parse");
+
+        let Commands::WorkflowBenchmark { command } = cli.command else {
+            panic!("expected workflow benchmark command");
+        };
+        let WorkflowBenchmarkCommands::RetrievalEvalLexical { path, json } = command else {
+            panic!("expected workflow benchmark retrieval-eval-lexical command");
+        };
+        assert_eq!(
+            path,
+            PathBuf::from("target/retrieval-proof/retrieval-eval-corpus.json")
+        );
+        assert!(json);
+    }
 }
