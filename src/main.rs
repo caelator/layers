@@ -1080,4 +1080,33 @@ mod tests {
         assert!(keep_worktrees);
         assert!(json);
     }
+
+    #[test]
+    fn parses_workflow_benchmark_retrieval_eval_corpus_command() {
+        let cli = Cli::try_parse_from([
+            "layers",
+            "workflow-benchmark",
+            "retrieval-eval-corpus",
+            "benchmarks/workflows/tasks",
+            "--repo-root",
+            "/repo/layers",
+            "--json",
+        ])
+        .expect("workflow benchmark retrieval-eval-corpus should parse");
+
+        let Commands::WorkflowBenchmark { command } = cli.command else {
+            panic!("expected workflow benchmark command");
+        };
+        let WorkflowBenchmarkCommands::RetrievalEvalCorpus {
+            path,
+            repo_root,
+            json,
+        } = command
+        else {
+            panic!("expected workflow benchmark retrieval-eval-corpus command");
+        };
+        assert_eq!(path, PathBuf::from("benchmarks/workflows/tasks"));
+        assert_eq!(repo_root, PathBuf::from("/repo/layers"));
+        assert!(json);
+    }
 }

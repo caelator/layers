@@ -32,6 +32,17 @@ pub(crate) enum WorkflowBenchmarkCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Export task/file relevance data for retrieval evaluation.
+    RetrievalEvalCorpus {
+        /// Task spec file or directory containing task spec JSON files.
+        path: PathBuf,
+        /// Repository root containing expected relevant files.
+        #[arg(long, default_value = ".")]
+        repo_root: PathBuf,
+        /// Output a structured JSON retrieval corpus.
+        #[arg(long)]
+        json: bool,
+    },
     /// Plan isolated paired coding-agent benchmark runs without executing them.
     PlanRun {
         /// Task spec file or directory containing task spec JSON files.
@@ -88,6 +99,29 @@ pub(crate) fn handle_workflow_benchmark(command: &WorkflowBenchmarkCommands) -> 
                     "{} workflow task spec(s) failed validation",
                     report.invalid_count
                 );
+            }
+            Ok(())
+        }
+        WorkflowBenchmarkCommands::RetrievalEvalCorpus {
+            path,
+            repo_root,
+            json,
+        } => {
+            let corpus = build_retrieval_eval_corpus(&RetrievalEvalConfig {
+                task_path: path.clone(),
+                repo_root: repo_root.clone(),
+            })?;
+            if *json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&corpus)
+                        .context("failed to serialize retrieval eval corpus")?
+                );
+            } else {
+                println!("Workflow retrieval eval corpus");
+                println!("pairs: {}", corpus.pairs.len());
+                println!("documents: {}", corpus.documents.len());
+                println!("negative_controls: {}", corpus.negative_control_count);
             }
             Ok(())
         }
@@ -352,6 +386,36 @@ struct RunnerExecutionConfig {
     keep_worktrees: bool,
 }
 
+#[derive(Debug, Clone)]
+struct RetrievalEvalConfig {
+    task_path: PathBuf,
+    repo_root: PathBuf,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct RetrievalEvalCorpus {
+    pairs: Vec<RetrievalEvalPair>,
+    documents: Vec<RetrievalEvalDocument>,
+    negative_control_count: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct RetrievalEvalPair {
+    task_id: String,
+    query: String,
+    relevant_ids: Vec<String>,
+    category: String,
+    stale_context_trap: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct RetrievalEvalDocument {
+    id: String,
+    source_kind: String,
+    path: Option<String>,
+    text: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 struct RunnerExecutionSummary {
     total_runs: usize,
@@ -596,6 +660,79 @@ fn collect_task_spec_paths_recursive(dir: &Path, paths: &mut Vec<PathBuf>) -> Re
         }
     }
     Ok(())
+}
+
+fn build_retrieval_eval_corpus(config: &RetrievalEvalConfig) -> Result<RetrievalEvalCorpus> {
+    let mut task_paths = collect_task_spec_paths(&config.task_path)?;
+    task_paths.sort();
+
+    let mut pairs = Vec::new();
+    let mut documents_by_id = BTreeMap::<String, RetrievalEvalDocument>::new();
+    let mut negative_control_count = 0usize;
+
+    for task_path in task_paths {
+        let spec = load_task_spec_unchecked(&task_path)?;
+        validate_task_spec(&spec)
+            .with_context(|| format!("invalid task spec: {}", task_path.display()))?;
+        if spec.negative_control {
+            negative_control_count += 1;
+            continue;
+        }
+
+        let relevant_ids = spec
+            .expected_relevant_files
+            .iter()
+            .map(|path| file_document_id(path))
+            .collect::<Vec<_>>();
+        for path in &spec.expected_relevant_files {
+            add_file_document(&mut documents_by_id, &config.repo_root, path)?;
+        }
+        pairs.push(RetrievalEvalPair {
+            task_id: spec.task_id,
+            query: spec.prompt,
+            relevant_ids,
+            category: spec.category,
+            stale_context_trap: spec.stale_context_trap,
+        });
+    }
+
+    Ok(RetrievalEvalCorpus {
+        pairs,
+        documents: documents_by_id.into_values().collect(),
+        negative_control_count,
+    })
+}
+
+fn add_file_document(
+    documents_by_id: &mut BTreeMap<String, RetrievalEvalDocument>,
+    repo_root: &Path,
+    repo_path: &str,
+) -> Result<()> {
+    let id = file_document_id(repo_path);
+    if documents_by_id.contains_key(&id) {
+        return Ok(());
+    }
+    let absolute_path = repo_root.join(repo_path);
+    let text = fs::read_to_string(&absolute_path).with_context(|| {
+        format!(
+            "failed to read retrieval eval document: {}",
+            absolute_path.display()
+        )
+    })?;
+    documents_by_id.insert(
+        id.clone(),
+        RetrievalEvalDocument {
+            id,
+            source_kind: "file".to_string(),
+            path: Some(repo_path.to_string()),
+            text,
+        },
+    );
+    Ok(())
+}
+
+fn file_document_id(repo_path: &str) -> String {
+    format!("file:{repo_path}")
 }
 
 fn plan_runner_artifacts(config: &RunnerPlanConfig) -> Result<RunnerPlan> {
@@ -2393,6 +2530,76 @@ mod tests {
             min_negative_control_abstention_rate: 1.0,
             max_unnecessary_context_injection_rate: 0.0,
         }
+    }
+
+    fn write_task_spec(path: &Path, task_id: &str, negative_control: bool) {
+        let expected_files = if negative_control {
+            "[]".to_string()
+        } else {
+            r#"["src/memory_index/retrieval.rs"]"#.to_string()
+        };
+        let target_files = expected_files.clone();
+        let abstention = if negative_control {
+            r#", "abstention_rubric": "Do not inject repository context for this task.""#
+        } else {
+            ""
+        };
+        fs::write(
+            path,
+            format!(
+                r#"{{
+  "task_id": "{task_id}",
+  "title": "Retrieval eval fixture",
+  "prompt": "Refactor memory index retrieval fallback tags.",
+  "category": "refactor",
+  "difficulty": "medium",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": {negative_control},
+  "stale_context_trap": false,
+  "target_files": {target_files},
+  "expected_relevant_files": {expected_files},
+  "expected_validation_commands": ["cargo test -q memory_index -- --nocapture"],
+  "success_rubric": {{
+    "full_success": "Implemented and verified.",
+    "partial_success": "Mostly implemented.",
+    "failure": "Not implemented.",
+    "min_verification_quality": 4,
+    "primary_endpoint": "verified_success"
+  }}{abstention}
+}}"#
+            ),
+        )
+        .expect("write task spec");
+    }
+
+    #[test]
+    fn builds_retrieval_eval_corpus_from_task_specs_and_repo_files() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let tasks_dir = dir.path().join("tasks");
+        fs::create_dir(&tasks_dir).expect("create tasks dir");
+        write_task_spec(&tasks_dir.join("code-task.json"), "code-task", false);
+        write_task_spec(&tasks_dir.join("negative-task.json"), "negative-task", true);
+
+        let corpus = build_retrieval_eval_corpus(&RetrievalEvalConfig {
+            task_path: tasks_dir,
+            repo_root: PathBuf::from(env!("CARGO_MANIFEST_DIR")),
+        })
+        .expect("retrieval eval corpus should build");
+
+        assert_eq!(corpus.pairs.len(), 1);
+        assert_eq!(corpus.negative_control_count, 1);
+        assert_eq!(corpus.pairs[0].task_id, "code-task");
+        assert_eq!(
+            corpus.pairs[0].query,
+            "Refactor memory index retrieval fallback tags."
+        );
+        assert_eq!(
+            corpus.pairs[0].relevant_ids,
+            vec!["file:src/memory_index/retrieval.rs".to_string()]
+        );
+        assert!(corpus.documents.iter().any(|document| document.id
+            == "file:src/memory_index/retrieval.rs"
+            && document.path.as_deref() == Some("src/memory_index/retrieval.rs")));
     }
 
     #[test]
