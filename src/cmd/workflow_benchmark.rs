@@ -51,6 +51,23 @@ pub(crate) enum WorkflowBenchmarkCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Score a retrieval eval corpus with an OpenAI-compatible embeddings endpoint.
+    RetrievalEvalEmbeddings {
+        /// Retrieval eval corpus JSON produced by `retrieval-eval-corpus`.
+        path: PathBuf,
+        /// OpenAI-compatible embeddings endpoint, such as `TurboCALM` `/v1/embeddings`.
+        #[arg(long, default_value = "http://127.0.0.1:8000/v1/embeddings")]
+        endpoint: String,
+        /// Embedding model name to request.
+        #[arg(long, default_value = "turbocalm-local")]
+        model: String,
+        /// Number of texts to send per embedding request.
+        #[arg(long, default_value_t = 16)]
+        batch_size: usize,
+        /// Output a structured JSON retrieval report.
+        #[arg(long)]
+        json: bool,
+    },
     /// Plan isolated paired coding-agent benchmark runs without executing them.
     PlanRun {
         /// Task spec file or directory containing task spec JSON files.
@@ -144,6 +161,41 @@ pub(crate) fn handle_workflow_benchmark(command: &WorkflowBenchmarkCommands) -> 
                 );
             } else {
                 println!("Workflow lexical retrieval eval");
+                println!("pairs: {}", report.pair_count);
+                println!("documents: {}", report.document_count);
+                println!("recall@5: {:.4}", report.recall_at_5);
+                println!("recall@10: {:.4}", report.recall_at_10);
+                println!("mrr: {:.4}", report.mrr);
+            }
+            Ok(())
+        }
+        WorkflowBenchmarkCommands::RetrievalEvalEmbeddings {
+            path,
+            endpoint,
+            model,
+            batch_size,
+            json,
+        } => {
+            let corpus = load_retrieval_eval_corpus(path)?;
+            let report = evaluate_embedding_retrieval(
+                &corpus,
+                &OpenAiEmbeddingClient,
+                &EmbeddingRetrievalConfig {
+                    endpoint: endpoint.clone(),
+                    model: model.clone(),
+                    batch_size: *batch_size,
+                },
+            )?;
+            if *json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&report)
+                        .context("failed to serialize embeddings retrieval report")?
+                );
+            } else {
+                println!("Workflow embeddings retrieval eval");
+                println!("endpoint: {}", report.endpoint);
+                println!("model: {}", report.model);
                 println!("pairs: {}", report.pair_count);
                 println!("documents: {}", report.document_count);
                 println!("recall@5: {:.4}", report.recall_at_5);
@@ -453,6 +505,126 @@ struct LexicalRetrievalReport {
     mrr: f64,
     negative_control_injection_rate: f64,
     per_pair: Vec<LexicalPairReport>,
+}
+
+#[derive(Debug, Clone)]
+struct EmbeddingRetrievalConfig {
+    endpoint: String,
+    model: String,
+    batch_size: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct EmbeddingRetrievalReport {
+    endpoint: String,
+    model: String,
+    pair_count: usize,
+    document_count: usize,
+    negative_control_count: usize,
+    recall_at_5: f64,
+    recall_at_10: f64,
+    mrr: f64,
+    negative_control_injection_rate: f64,
+    per_pair: Vec<LexicalPairReport>,
+}
+
+trait EmbeddingClient {
+    fn embed(&self, texts: &[String], config: &EmbeddingRetrievalConfig) -> Result<Vec<Vec<f64>>>;
+}
+
+struct OpenAiEmbeddingClient;
+
+#[derive(Debug, Deserialize)]
+struct OpenAiEmbeddingResponse {
+    data: Vec<OpenAiEmbeddingData>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiEmbeddingData {
+    embedding: EmbeddingPayload,
+    index: usize,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum EmbeddingPayload {
+    Pooled(Vec<f64>),
+    Chunked(Vec<Vec<f64>>),
+}
+
+impl EmbeddingPayload {
+    fn into_pooled(self) -> Vec<f64> {
+        match self {
+            Self::Pooled(values) => values,
+            Self::Chunked(chunks) => average_embedding_chunks(&chunks),
+        }
+    }
+}
+
+impl EmbeddingClient for OpenAiEmbeddingClient {
+    fn embed(&self, texts: &[String], config: &EmbeddingRetrievalConfig) -> Result<Vec<Vec<f64>>> {
+        if texts.is_empty() {
+            return Ok(Vec::new());
+        }
+        let batch_size = config.batch_size.max(1);
+        let mut embeddings = Vec::with_capacity(texts.len());
+        let agent = ureq::AgentBuilder::new()
+            .timeout_connect(Duration::from_secs(5))
+            .timeout_read(Duration::from_secs(60))
+            .build();
+        for chunk in texts.chunks(batch_size) {
+            let request = serde_json::json!({
+                "input": chunk,
+                "model": config.model,
+            });
+            let response = agent
+                .post(&config.endpoint)
+                .set("content-type", "application/json")
+                .send_string(&request.to_string())
+                .with_context(|| {
+                    format!(
+                        "failed to call embeddings endpoint {}; is the sidecar running?",
+                        config.endpoint
+                    )
+                })?;
+            let mut body: OpenAiEmbeddingResponse = serde_json::from_reader(response.into_reader())
+                .context("failed to parse embeddings endpoint response")?;
+            body.data.sort_by_key(|item| item.index);
+            embeddings.extend(
+                body.data
+                    .into_iter()
+                    .map(|item| item.embedding.into_pooled()),
+            );
+        }
+        if embeddings.len() != texts.len() {
+            bail!(
+                "embeddings endpoint returned {} embeddings for {} texts",
+                embeddings.len(),
+                texts.len()
+            );
+        }
+        Ok(embeddings)
+    }
+}
+
+#[cfg(test)]
+struct StaticEmbeddingClient {
+    vectors_by_text: BTreeMap<String, Vec<f64>>,
+}
+
+#[cfg(test)]
+impl EmbeddingClient for StaticEmbeddingClient {
+    fn embed(&self, texts: &[String], _config: &EmbeddingRetrievalConfig) -> Result<Vec<Vec<f64>>> {
+        texts
+            .iter()
+            .map(|text| {
+                self.vectors_by_text
+                    .get(text)
+                    .cloned()
+                    .with_context(|| format!("missing static embedding for {text:?}"))
+            })
+            .collect()
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -849,6 +1021,171 @@ fn evaluate_lexical_retrieval(corpus: &RetrievalEvalCorpus) -> Result<LexicalRet
     })
 }
 
+fn evaluate_embedding_retrieval(
+    corpus: &RetrievalEvalCorpus,
+    client: &dyn EmbeddingClient,
+    config: &EmbeddingRetrievalConfig,
+) -> Result<EmbeddingRetrievalReport> {
+    if corpus.pairs.is_empty() {
+        bail!("retrieval eval corpus must contain at least one non-negative-control pair");
+    }
+    if corpus.documents.is_empty() {
+        bail!("retrieval eval corpus must contain at least one document");
+    }
+
+    let document_texts = corpus
+        .documents
+        .iter()
+        .map(|document| document.text.clone())
+        .collect::<Vec<_>>();
+    let document_embeddings = client
+        .embed(&document_texts, config)
+        .context("failed to embed retrieval eval documents")?;
+    validate_embedding_count(
+        "document",
+        document_embeddings.len(),
+        corpus.documents.len(),
+    )?;
+
+    let mut per_pair = Vec::with_capacity(corpus.pairs.len());
+    for pair in &corpus.pairs {
+        let query_embeddings = client
+            .embed(std::slice::from_ref(&pair.query), config)
+            .with_context(|| format!("failed to embed query for task {}", pair.task_id))?;
+        validate_embedding_count("query", query_embeddings.len(), 1)?;
+        let ranked = rank_documents_by_embedding(
+            &query_embeddings[0],
+            &corpus.documents,
+            &document_embeddings,
+        )?;
+        let relevant = pair.relevant_ids.iter().cloned().collect::<BTreeSet<_>>();
+        let top_document_ids = ranked
+            .iter()
+            .take(10)
+            .map(|(document_id, _score)| document_id.clone())
+            .collect::<Vec<_>>();
+        let first_relevant_rank = ranked
+            .iter()
+            .position(|(document_id, _score)| relevant.contains(document_id))
+            .map(|idx| idx + 1);
+        per_pair.push(LexicalPairReport {
+            task_id: pair.task_id.clone(),
+            top_document_ids,
+            first_relevant_rank,
+            recall_at_5: recall_at(&ranked, &relevant, 5),
+            recall_at_10: recall_at(&ranked, &relevant, 10),
+        });
+    }
+
+    let pair_count = per_pair.len();
+    let recall_at_5 = per_pair.iter().map(|pair| pair.recall_at_5).sum::<f64>() / pair_count as f64;
+    let recall_at_10 =
+        per_pair.iter().map(|pair| pair.recall_at_10).sum::<f64>() / pair_count as f64;
+    let mrr = per_pair
+        .iter()
+        .map(|pair| {
+            pair.first_relevant_rank
+                .map_or(0.0, |rank| 1.0 / rank as f64)
+        })
+        .sum::<f64>()
+        / pair_count as f64;
+
+    Ok(EmbeddingRetrievalReport {
+        endpoint: config.endpoint.clone(),
+        model: config.model.clone(),
+        pair_count,
+        document_count: corpus.documents.len(),
+        negative_control_count: corpus.negative_control_count,
+        recall_at_5,
+        recall_at_10,
+        mrr,
+        negative_control_injection_rate: 0.0,
+        per_pair,
+    })
+}
+
+fn validate_embedding_count(label: &str, actual: usize, expected: usize) -> Result<()> {
+    if actual != expected {
+        bail!("expected {expected} {label} embeddings, got {actual}");
+    }
+    Ok(())
+}
+
+fn rank_documents_by_embedding(
+    query_embedding: &[f64],
+    documents: &[RetrievalEvalDocument],
+    document_embeddings: &[Vec<f64>],
+) -> Result<Vec<(String, f64)>> {
+    if documents.len() != document_embeddings.len() {
+        bail!(
+            "document count {} does not match embedding count {}",
+            documents.len(),
+            document_embeddings.len()
+        );
+    }
+    let mut scored = documents
+        .iter()
+        .zip(document_embeddings.iter())
+        .map(|(document, embedding)| {
+            Ok((
+                document.id.clone(),
+                cosine_similarity(query_embedding, embedding).with_context(|| {
+                    format!("failed to score document embedding for {}", document.id)
+                })?,
+            ))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    scored.sort_by(|left, right| {
+        right
+            .1
+            .total_cmp(&left.1)
+            .then_with(|| left.0.cmp(&right.0))
+    });
+    Ok(scored)
+}
+
+fn cosine_similarity(left: &[f64], right: &[f64]) -> Result<f64> {
+    if left.len() != right.len() {
+        bail!(
+            "embedding dimension mismatch: {} vs {}",
+            left.len(),
+            right.len()
+        );
+    }
+    let dot = left
+        .iter()
+        .zip(right.iter())
+        .map(|(left, right)| left * right)
+        .sum::<f64>();
+    let left_norm = left.iter().map(|value| value * value).sum::<f64>().sqrt();
+    let right_norm = right.iter().map(|value| value * value).sum::<f64>().sqrt();
+    if left_norm == 0.0 || right_norm == 0.0 {
+        return Ok(0.0);
+    }
+    Ok(dot / (left_norm * right_norm))
+}
+
+fn average_embedding_chunks(chunks: &[Vec<f64>]) -> Vec<f64> {
+    let Some(first) = chunks.first() else {
+        return Vec::new();
+    };
+    let dimensions = first.len();
+    let mut pooled = vec![0.0; dimensions];
+    let mut counted_chunks = 0usize;
+    for chunk in chunks.iter().filter(|chunk| chunk.len() == dimensions) {
+        counted_chunks += 1;
+        for (idx, value) in chunk.iter().enumerate() {
+            pooled[idx] += value;
+        }
+    }
+    if counted_chunks > 0 {
+        for value in &mut pooled {
+            *value /= counted_chunks as f64;
+        }
+    }
+    pooled
+}
+
 fn rank_documents_lexically(
     query: &str,
     documents: &[RetrievalEvalDocument],
@@ -870,7 +1207,7 @@ fn rank_documents_lexically(
     scored
 }
 
-fn recall_at(ranked: &[(String, usize)], relevant: &BTreeSet<String>, k: usize) -> f64 {
+fn recall_at<S>(ranked: &[(String, S)], relevant: &BTreeSet<String>, k: usize) -> f64 {
     if relevant.is_empty() {
         return 0.0;
     }
@@ -2766,9 +3103,8 @@ mod tests {
             && document.path.as_deref() == Some("src/memory_index/retrieval.rs")));
     }
 
-    #[test]
-    fn lexical_retrieval_reports_recall_and_mrr() {
-        let corpus = RetrievalEvalCorpus {
+    fn simple_retrieval_eval_corpus() -> RetrievalEvalCorpus {
+        RetrievalEvalCorpus {
             pairs: vec![RetrievalEvalPair {
                 task_id: "memory-task".to_string(),
                 query: "memory retrieval fallback tags".to_string(),
@@ -2791,7 +3127,12 @@ mod tests {
                 },
             ],
             negative_control_count: 2,
-        };
+        }
+    }
+
+    #[test]
+    fn lexical_retrieval_reports_recall_and_mrr() {
+        let corpus = simple_retrieval_eval_corpus();
 
         let report = evaluate_lexical_retrieval(&corpus).expect("lexical eval");
 
@@ -2807,6 +3148,44 @@ mod tests {
         );
         assert_eq!(report.per_pair[0].first_relevant_rank, Some(1));
         assert_approx_eq(report.negative_control_injection_rate, 0.0);
+    }
+
+    #[test]
+    fn embedding_retrieval_reports_recall_and_model_metadata() {
+        let corpus = simple_retrieval_eval_corpus();
+        let client = StaticEmbeddingClient {
+            vectors_by_text: BTreeMap::from([
+                ("memory retrieval fallback tags".to_string(), vec![1.0, 0.0]),
+                (
+                    "retrieval fallback tags for memory index".to_string(),
+                    vec![0.9, 0.1],
+                ),
+                ("route classification".to_string(), vec![0.0, 1.0]),
+            ]),
+        };
+
+        let report = evaluate_embedding_retrieval(
+            &corpus,
+            &client,
+            &EmbeddingRetrievalConfig {
+                endpoint: "http://127.0.0.1:8000/v1/embeddings".to_string(),
+                model: "turbocalm-local".to_string(),
+                batch_size: 16,
+            },
+        )
+        .expect("embedding eval");
+
+        assert_eq!(report.model, "turbocalm-local");
+        assert_eq!(report.endpoint, "http://127.0.0.1:8000/v1/embeddings");
+        assert_eq!(report.pair_count, 1);
+        assert_eq!(report.document_count, 2);
+        assert_approx_eq(report.recall_at_5, 1.0);
+        assert_approx_eq(report.recall_at_10, 1.0);
+        assert_approx_eq(report.mrr, 1.0);
+        assert_eq!(
+            report.per_pair[0].top_document_ids[0],
+            "file:src/memory_index/retrieval.rs"
+        );
     }
 
     #[test]

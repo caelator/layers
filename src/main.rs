@@ -1133,4 +1133,44 @@ mod tests {
         );
         assert!(json);
     }
+
+    #[test]
+    fn parses_workflow_benchmark_retrieval_eval_embeddings_command() {
+        let cli = Cli::try_parse_from([
+            "layers",
+            "workflow-benchmark",
+            "retrieval-eval-embeddings",
+            "target/retrieval-proof/retrieval-eval-corpus.json",
+            "--endpoint",
+            "http://127.0.0.1:8000/v1/embeddings",
+            "--model",
+            "turbocalm-local",
+            "--batch-size",
+            "8",
+            "--json",
+        ])
+        .expect("workflow benchmark retrieval-eval-embeddings should parse");
+
+        let Commands::WorkflowBenchmark { command } = cli.command else {
+            panic!("expected workflow benchmark command");
+        };
+        let WorkflowBenchmarkCommands::RetrievalEvalEmbeddings {
+            path,
+            endpoint,
+            model,
+            batch_size,
+            json,
+        } = command
+        else {
+            panic!("expected workflow benchmark retrieval-eval-embeddings command");
+        };
+        assert_eq!(
+            path,
+            PathBuf::from("target/retrieval-proof/retrieval-eval-corpus.json")
+        );
+        assert_eq!(endpoint, "http://127.0.0.1:8000/v1/embeddings");
+        assert_eq!(model, "turbocalm-local");
+        assert_eq!(batch_size, 8);
+        assert!(json);
+    }
 }
