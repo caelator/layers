@@ -1159,6 +1159,40 @@ mod tests {
     }
 
     #[test]
+    fn parses_workflow_benchmark_retrieval_eval_compare_command() {
+        let cli = Cli::try_parse_from([
+            "layers",
+            "workflow-benchmark",
+            "retrieval-eval-compare",
+            "target/retrieval-proof/lexical-report.json",
+            "target/retrieval-proof/retrieval-eval-embeddings-turbocalm-smoke.json",
+            "--json",
+        ])
+        .expect("workflow benchmark retrieval-eval-compare should parse");
+
+        let Commands::WorkflowBenchmark { command } = cli.command else {
+            panic!("expected workflow benchmark command");
+        };
+        let WorkflowBenchmarkCommands::RetrievalEvalCompare {
+            baseline,
+            candidate,
+            json,
+        } = command
+        else {
+            panic!("expected workflow benchmark retrieval-eval-compare command");
+        };
+        assert_eq!(
+            baseline,
+            PathBuf::from("target/retrieval-proof/lexical-report.json")
+        );
+        assert_eq!(
+            candidate,
+            PathBuf::from("target/retrieval-proof/retrieval-eval-embeddings-turbocalm-smoke.json")
+        );
+        assert!(json);
+    }
+
+    #[test]
     fn parses_workflow_benchmark_retrieval_eval_embeddings_command() {
         let cli = Cli::try_parse_from([
             "layers",

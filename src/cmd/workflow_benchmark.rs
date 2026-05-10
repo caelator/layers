@@ -59,6 +59,16 @@ pub(crate) enum WorkflowBenchmarkCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Compare a candidate retrieval report against a lexical baseline before integration.
+    RetrievalEvalCompare {
+        /// Baseline lexical retrieval report JSON.
+        baseline: PathBuf,
+        /// Candidate semantic or hybrid retrieval report JSON.
+        candidate: PathBuf,
+        /// Output a structured JSON candidate claim.
+        #[arg(long)]
+        json: bool,
+    },
     /// Score a retrieval eval corpus with an OpenAI-compatible embeddings endpoint.
     RetrievalEvalEmbeddings {
         /// Retrieval eval corpus JSON produced by `retrieval-eval-corpus`.
@@ -184,6 +194,24 @@ pub(crate) fn handle_workflow_benchmark(command: &WorkflowBenchmarkCommands) -> 
             println!("{}", format_retrieval_proof_claim(&claim, *json)?);
             if claim.status != RetrievalProofStatus::Supported {
                 bail!("retrieval proof claim is not supported");
+            }
+            Ok(())
+        }
+        WorkflowBenchmarkCommands::RetrievalEvalCompare {
+            baseline,
+            candidate,
+            json,
+        } => {
+            let baseline_report = load_json_value(baseline, "baseline retrieval report")?;
+            let candidate_report = load_json_value(candidate, "candidate retrieval report")?;
+            let claim = evaluate_retrieval_candidate_claim(
+                &baseline_report,
+                &candidate_report,
+                RetrievalCandidateThresholds::default(),
+            )?;
+            println!("{}", format_retrieval_candidate_claim(&claim, *json)?);
+            if claim.status != RetrievalProofStatus::Supported {
+                bail!("retrieval candidate claim is not supported");
             }
             Ok(())
         }
@@ -611,6 +639,67 @@ impl From<RetrievalProofThresholds> for RetrievalProofThresholdReport {
             min_recall_at_10: thresholds.min_recall_at_10,
             min_mrr: thresholds.min_mrr,
             max_negative_control_injection_rate: thresholds.max_negative_control_injection_rate,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct RetrievalCandidateThresholds {
+    min_relative_recall_at_10_lift: f64,
+    min_relative_mrr_lift: f64,
+    max_negative_control_injection_rate_delta: f64,
+}
+
+impl Default for RetrievalCandidateThresholds {
+    fn default() -> Self {
+        Self {
+            min_relative_recall_at_10_lift: 0.25,
+            min_relative_mrr_lift: 0.10,
+            max_negative_control_injection_rate_delta: 0.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct RetrievalCandidateClaim {
+    status: RetrievalProofStatus,
+    baseline: RetrievalReportMetrics,
+    candidate: RetrievalReportMetrics,
+    thresholds: RetrievalCandidateThresholdReport,
+    recall_at_10_delta: f64,
+    recall_at_10_relative_lift: f64,
+    mrr_delta: f64,
+    mrr_relative_lift: f64,
+    negative_control_injection_rate_delta: f64,
+    blocking_metrics: Vec<String>,
+    uncertainty_notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct RetrievalReportMetrics {
+    pair_count: usize,
+    document_count: usize,
+    negative_control_count: usize,
+    recall_at_5: f64,
+    recall_at_10: f64,
+    mrr: f64,
+    negative_control_injection_rate: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct RetrievalCandidateThresholdReport {
+    min_relative_recall_at_10_lift: f64,
+    min_relative_mrr_lift: f64,
+    max_negative_control_injection_rate_delta: f64,
+}
+
+impl From<RetrievalCandidateThresholds> for RetrievalCandidateThresholdReport {
+    fn from(thresholds: RetrievalCandidateThresholds) -> Self {
+        Self {
+            min_relative_recall_at_10_lift: thresholds.min_relative_recall_at_10_lift,
+            min_relative_mrr_lift: thresholds.min_relative_mrr_lift,
+            max_negative_control_injection_rate_delta: thresholds
+                .max_negative_control_injection_rate_delta,
         }
     }
 }
@@ -1060,32 +1149,47 @@ fn load_json_value(path: &Path, label: &str) -> Result<serde_json::Value> {
         .with_context(|| format!("{label} is not valid JSON: {}", path.display()))
 }
 
-fn evaluate_retrieval_proof_claim(
-    report: &serde_json::Value,
-    thresholds: RetrievalProofThresholds,
-) -> Result<RetrievalProofClaim> {
-    let pair_count = required_usize_field(report, "pair_count")?;
-    let document_count = required_usize_field(report, "document_count")?;
-    let negative_control_count = required_usize_field(report, "negative_control_count")?;
-    let recall_at_5 = required_f64_field(report, "recall_at_5")?;
-    let recall_at_10 = required_f64_field(report, "recall_at_10")?;
-    let mrr = required_f64_field(report, "mrr")?;
-    let negative_control_injection_rate =
-        required_f64_field(report, "negative_control_injection_rate")?;
-
+fn parse_retrieval_report_metrics(report: &serde_json::Value) -> Result<RetrievalReportMetrics> {
+    let metrics = RetrievalReportMetrics {
+        pair_count: required_usize_field(report, "pair_count")?,
+        document_count: required_usize_field(report, "document_count")?,
+        negative_control_count: required_usize_field(report, "negative_control_count")?,
+        recall_at_5: required_f64_field(report, "recall_at_5")?,
+        recall_at_10: required_f64_field(report, "recall_at_10")?,
+        mrr: required_f64_field(report, "mrr")?,
+        negative_control_injection_rate: required_f64_field(
+            report,
+            "negative_control_injection_rate",
+        )?,
+    };
     for (name, value) in [
-        ("recall_at_5", recall_at_5),
-        ("recall_at_10", recall_at_10),
-        ("mrr", mrr),
+        ("recall_at_5", metrics.recall_at_5),
+        ("recall_at_10", metrics.recall_at_10),
+        ("mrr", metrics.mrr),
         (
             "negative_control_injection_rate",
-            negative_control_injection_rate,
+            metrics.negative_control_injection_rate,
         ),
     ] {
         if !(0.0..=1.0).contains(&value) {
             bail!("retrieval report field {name} must be in [0, 1], got {value}");
         }
     }
+    Ok(metrics)
+}
+
+fn evaluate_retrieval_proof_claim(
+    report: &serde_json::Value,
+    thresholds: RetrievalProofThresholds,
+) -> Result<RetrievalProofClaim> {
+    let metrics = parse_retrieval_report_metrics(report)?;
+    let pair_count = metrics.pair_count;
+    let document_count = metrics.document_count;
+    let negative_control_count = metrics.negative_control_count;
+    let recall_at_5 = metrics.recall_at_5;
+    let recall_at_10 = metrics.recall_at_10;
+    let mrr = metrics.mrr;
+    let negative_control_injection_rate = metrics.negative_control_injection_rate;
 
     let mut blocking_metrics = Vec::new();
     let mut uncertainty_notes = Vec::new();
@@ -1136,6 +1240,137 @@ fn evaluate_retrieval_proof_claim(
         blocking_metrics,
         uncertainty_notes,
     })
+}
+
+fn evaluate_retrieval_candidate_claim(
+    baseline_report: &serde_json::Value,
+    candidate_report: &serde_json::Value,
+    thresholds: RetrievalCandidateThresholds,
+) -> Result<RetrievalCandidateClaim> {
+    let baseline = parse_retrieval_report_metrics(baseline_report)
+        .context("failed to parse baseline retrieval report")?;
+    let candidate = parse_retrieval_report_metrics(candidate_report)
+        .context("failed to parse candidate retrieval report")?;
+
+    let recall_at_10_delta = candidate.recall_at_10 - baseline.recall_at_10;
+    let recall_at_10_relative_lift = relative_lift(candidate.recall_at_10, baseline.recall_at_10);
+    let mrr_delta = candidate.mrr - baseline.mrr;
+    let mrr_relative_lift = relative_lift(candidate.mrr, baseline.mrr);
+    let negative_control_injection_rate_delta =
+        candidate.negative_control_injection_rate - baseline.negative_control_injection_rate;
+
+    let mut blocking_metrics = Vec::new();
+    let mut uncertainty_notes = Vec::new();
+    if candidate.pair_count != baseline.pair_count {
+        uncertainty_notes.push(format!(
+            "candidate pair_count {} differs from baseline pair_count {}",
+            candidate.pair_count, baseline.pair_count
+        ));
+    }
+    if candidate.document_count != baseline.document_count {
+        uncertainty_notes.push(format!(
+            "candidate document_count {} differs from baseline document_count {}",
+            candidate.document_count, baseline.document_count
+        ));
+    }
+    if candidate.negative_control_count != baseline.negative_control_count {
+        uncertainty_notes.push(format!(
+            "candidate negative_control_count {} differs from baseline negative_control_count {}",
+            candidate.negative_control_count, baseline.negative_control_count
+        ));
+    }
+    if recall_at_10_relative_lift < thresholds.min_relative_recall_at_10_lift {
+        blocking_metrics.push("recall_at_10_relative_lift".to_string());
+    }
+    if mrr_relative_lift < thresholds.min_relative_mrr_lift {
+        blocking_metrics.push("mrr_relative_lift".to_string());
+    }
+    if negative_control_injection_rate_delta > thresholds.max_negative_control_injection_rate_delta
+    {
+        blocking_metrics.push("negative_control_injection_rate_delta".to_string());
+    }
+
+    let status = if blocking_metrics.is_empty() && uncertainty_notes.is_empty() {
+        RetrievalProofStatus::Supported
+    } else if blocking_metrics.is_empty() {
+        RetrievalProofStatus::Inconclusive
+    } else {
+        RetrievalProofStatus::NotSupported
+    };
+
+    Ok(RetrievalCandidateClaim {
+        status,
+        baseline,
+        candidate,
+        thresholds: thresholds.into(),
+        recall_at_10_delta,
+        recall_at_10_relative_lift,
+        mrr_delta,
+        mrr_relative_lift,
+        negative_control_injection_rate_delta,
+        blocking_metrics,
+        uncertainty_notes,
+    })
+}
+
+fn relative_lift(candidate: f64, baseline: f64) -> f64 {
+    if baseline == 0.0 {
+        if candidate > 0.0 { 1.0 } else { 0.0 }
+    } else {
+        (candidate - baseline) / baseline
+    }
+}
+
+fn format_retrieval_candidate_claim(claim: &RetrievalCandidateClaim, json: bool) -> Result<String> {
+    if json {
+        return serde_json::to_string_pretty(claim)
+            .context("failed to serialize retrieval candidate claim");
+    }
+    let mut output = String::new();
+    writeln!(&mut output, "Workflow retrieval candidate claim")?;
+    writeln!(&mut output, "status: {:?}", claim.status)?;
+    writeln!(
+        &mut output,
+        "baseline_recall@10: {:.4}",
+        claim.baseline.recall_at_10
+    )?;
+    writeln!(
+        &mut output,
+        "candidate_recall@10: {:.4}",
+        claim.candidate.recall_at_10
+    )?;
+    writeln!(
+        &mut output,
+        "recall@10_relative_lift: {:.4}",
+        claim.recall_at_10_relative_lift
+    )?;
+    writeln!(&mut output, "baseline_mrr: {:.4}", claim.baseline.mrr)?;
+    writeln!(&mut output, "candidate_mrr: {:.4}", claim.candidate.mrr)?;
+    writeln!(
+        &mut output,
+        "mrr_relative_lift: {:.4}",
+        claim.mrr_relative_lift
+    )?;
+    writeln!(
+        &mut output,
+        "negative_control_injection_rate_delta: {:.4}",
+        claim.negative_control_injection_rate_delta
+    )?;
+    if !claim.blocking_metrics.is_empty() {
+        writeln!(
+            &mut output,
+            "blocking_metrics: {}",
+            claim.blocking_metrics.join(", ")
+        )?;
+    }
+    if !claim.uncertainty_notes.is_empty() {
+        writeln!(
+            &mut output,
+            "uncertainty_notes: {}",
+            claim.uncertainty_notes.join("; ")
+        )?;
+    }
+    Ok(output)
 }
 
 fn required_usize_field(report: &serde_json::Value, field: &str) -> Result<usize> {
@@ -3480,6 +3715,83 @@ mod tests {
                 .blocking_metrics
                 .iter()
                 .any(|metric| metric == "negative_control_injection_rate")
+        );
+    }
+
+    #[test]
+    fn retrieval_candidate_claim_requires_material_lift_over_lexical() {
+        let lexical = serde_json::json!({
+            "pair_count": 25,
+            "document_count": 46,
+            "negative_control_count": 6,
+            "recall_at_5": 0.57,
+            "recall_at_10": 0.64,
+            "mrr": 0.60,
+            "negative_control_injection_rate": 0.0
+        });
+        let candidate = serde_json::json!({
+            "pair_count": 25,
+            "document_count": 46,
+            "negative_control_count": 6,
+            "recall_at_5": 0.72,
+            "recall_at_10": 0.82,
+            "mrr": 0.68,
+            "negative_control_injection_rate": 0.0
+        });
+
+        let claim = evaluate_retrieval_candidate_claim(
+            &lexical,
+            &candidate,
+            RetrievalCandidateThresholds::default(),
+        )
+        .expect("candidate claim");
+
+        assert_eq!(claim.status, RetrievalProofStatus::Supported);
+        assert_approx_eq(claim.recall_at_10_relative_lift, 0.28125);
+        assert_approx_eq(claim.mrr_relative_lift, 0.133_333_333_333_333_44);
+        assert!(claim.blocking_metrics.is_empty());
+    }
+
+    #[test]
+    fn retrieval_candidate_claim_blocks_underperforming_semantic_report() {
+        let lexical = serde_json::json!({
+            "pair_count": 25,
+            "document_count": 46,
+            "negative_control_count": 6,
+            "recall_at_5": 0.57,
+            "recall_at_10": 0.65,
+            "mrr": 0.64,
+            "negative_control_injection_rate": 0.0
+        });
+        let candidate = serde_json::json!({
+            "pair_count": 25,
+            "document_count": 46,
+            "negative_control_count": 6,
+            "recall_at_5": 0.09,
+            "recall_at_10": 0.28,
+            "mrr": 0.14,
+            "negative_control_injection_rate": 0.0
+        });
+
+        let claim = evaluate_retrieval_candidate_claim(
+            &lexical,
+            &candidate,
+            RetrievalCandidateThresholds::default(),
+        )
+        .expect("candidate claim");
+
+        assert_eq!(claim.status, RetrievalProofStatus::NotSupported);
+        assert!(
+            claim
+                .blocking_metrics
+                .iter()
+                .any(|metric| metric == "recall_at_10_relative_lift")
+        );
+        assert!(
+            claim
+                .blocking_metrics
+                .iter()
+                .any(|metric| metric == "mrr_relative_lift")
         );
     }
 
