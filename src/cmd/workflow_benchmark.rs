@@ -51,6 +51,14 @@ pub(crate) enum WorkflowBenchmarkCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Evaluate whether a retrieval report proves benefit over no injected context.
+    RetrievalEvalClaim {
+        /// Retrieval report JSON produced by `retrieval-eval-lexical` or `retrieval-eval-embeddings`.
+        path: PathBuf,
+        /// Output a structured JSON proof claim.
+        #[arg(long)]
+        json: bool,
+    },
     /// Score a retrieval eval corpus with an OpenAI-compatible embeddings endpoint.
     RetrievalEvalEmbeddings {
         /// Retrieval eval corpus JSON produced by `retrieval-eval-corpus`.
@@ -166,6 +174,16 @@ pub(crate) fn handle_workflow_benchmark(command: &WorkflowBenchmarkCommands) -> 
                 println!("recall@5: {:.4}", report.recall_at_5);
                 println!("recall@10: {:.4}", report.recall_at_10);
                 println!("mrr: {:.4}", report.mrr);
+            }
+            Ok(())
+        }
+        WorkflowBenchmarkCommands::RetrievalEvalClaim { path, json } => {
+            let report = load_json_value(path, "retrieval report")?;
+            let claim =
+                evaluate_retrieval_proof_claim(&report, RetrievalProofThresholds::default())?;
+            println!("{}", format_retrieval_proof_claim(&claim, *json)?);
+            if claim.status != RetrievalProofStatus::Supported {
+                bail!("retrieval proof claim is not supported");
             }
             Ok(())
         }
@@ -526,6 +544,75 @@ struct EmbeddingRetrievalReport {
     mrr: f64,
     negative_control_injection_rate: f64,
     per_pair: Vec<LexicalPairReport>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct RetrievalProofThresholds {
+    min_pair_count: usize,
+    min_negative_control_count: usize,
+    min_recall_at_10: f64,
+    min_mrr: f64,
+    max_negative_control_injection_rate: f64,
+}
+
+impl Default for RetrievalProofThresholds {
+    fn default() -> Self {
+        Self {
+            min_pair_count: 10,
+            min_negative_control_count: 5,
+            min_recall_at_10: 0.50,
+            min_mrr: 0.20,
+            max_negative_control_injection_rate: 0.05,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+enum RetrievalProofStatus {
+    Supported,
+    NotSupported,
+    Inconclusive,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct RetrievalProofClaim {
+    status: RetrievalProofStatus,
+    baseline: String,
+    thresholds: RetrievalProofThresholdReport,
+    pair_count: usize,
+    document_count: usize,
+    negative_control_count: usize,
+    recall_at_5: f64,
+    recall_at_10: f64,
+    mrr: f64,
+    negative_control_injection_rate: f64,
+    recall_at_5_delta: f64,
+    recall_at_10_delta: f64,
+    mrr_delta: f64,
+    blocking_metrics: Vec<String>,
+    uncertainty_notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct RetrievalProofThresholdReport {
+    min_pair_count: usize,
+    min_negative_control_count: usize,
+    min_recall_at_10: f64,
+    min_mrr: f64,
+    max_negative_control_injection_rate: f64,
+}
+
+impl From<RetrievalProofThresholds> for RetrievalProofThresholdReport {
+    fn from(thresholds: RetrievalProofThresholds) -> Self {
+        Self {
+            min_pair_count: thresholds.min_pair_count,
+            min_negative_control_count: thresholds.min_negative_control_count,
+            min_recall_at_10: thresholds.min_recall_at_10,
+            min_mrr: thresholds.min_mrr,
+            max_negative_control_injection_rate: thresholds.max_negative_control_injection_rate,
+        }
+    }
 }
 
 trait EmbeddingClient {
@@ -964,6 +1051,163 @@ fn load_retrieval_eval_corpus(path: &Path) -> Result<RetrievalEvalCorpus> {
             path.display()
         )
     })
+}
+
+fn load_json_value(path: &Path, label: &str) -> Result<serde_json::Value> {
+    let content = fs::read_to_string(path)
+        .with_context(|| format!("failed to read {label}: {}", path.display()))?;
+    serde_json::from_str(&content)
+        .with_context(|| format!("{label} is not valid JSON: {}", path.display()))
+}
+
+fn evaluate_retrieval_proof_claim(
+    report: &serde_json::Value,
+    thresholds: RetrievalProofThresholds,
+) -> Result<RetrievalProofClaim> {
+    let pair_count = required_usize_field(report, "pair_count")?;
+    let document_count = required_usize_field(report, "document_count")?;
+    let negative_control_count = required_usize_field(report, "negative_control_count")?;
+    let recall_at_5 = required_f64_field(report, "recall_at_5")?;
+    let recall_at_10 = required_f64_field(report, "recall_at_10")?;
+    let mrr = required_f64_field(report, "mrr")?;
+    let negative_control_injection_rate =
+        required_f64_field(report, "negative_control_injection_rate")?;
+
+    for (name, value) in [
+        ("recall_at_5", recall_at_5),
+        ("recall_at_10", recall_at_10),
+        ("mrr", mrr),
+        (
+            "negative_control_injection_rate",
+            negative_control_injection_rate,
+        ),
+    ] {
+        if !(0.0..=1.0).contains(&value) {
+            bail!("retrieval report field {name} must be in [0, 1], got {value}");
+        }
+    }
+
+    let mut blocking_metrics = Vec::new();
+    let mut uncertainty_notes = Vec::new();
+    if pair_count < thresholds.min_pair_count {
+        uncertainty_notes.push(format!(
+            "pair_count {pair_count} is below required {}",
+            thresholds.min_pair_count
+        ));
+    }
+    if negative_control_count < thresholds.min_negative_control_count {
+        uncertainty_notes.push(format!(
+            "negative_control_count {negative_control_count} is below required {}",
+            thresholds.min_negative_control_count
+        ));
+    }
+    if recall_at_10 < thresholds.min_recall_at_10 {
+        blocking_metrics.push("recall_at_10".to_string());
+    }
+    if mrr < thresholds.min_mrr {
+        blocking_metrics.push("mrr".to_string());
+    }
+    if negative_control_injection_rate > thresholds.max_negative_control_injection_rate {
+        blocking_metrics.push("negative_control_injection_rate".to_string());
+    }
+
+    let status = if blocking_metrics.is_empty() && uncertainty_notes.is_empty() {
+        RetrievalProofStatus::Supported
+    } else if blocking_metrics.is_empty() {
+        RetrievalProofStatus::Inconclusive
+    } else {
+        RetrievalProofStatus::NotSupported
+    };
+
+    Ok(RetrievalProofClaim {
+        status,
+        baseline: "no_context".to_string(),
+        thresholds: thresholds.into(),
+        pair_count,
+        document_count,
+        negative_control_count,
+        recall_at_5,
+        recall_at_10,
+        mrr,
+        negative_control_injection_rate,
+        recall_at_5_delta: recall_at_5,
+        recall_at_10_delta: recall_at_10,
+        mrr_delta: mrr,
+        blocking_metrics,
+        uncertainty_notes,
+    })
+}
+
+fn required_usize_field(report: &serde_json::Value, field: &str) -> Result<usize> {
+    let value = report
+        .get(field)
+        .with_context(|| format!("retrieval report missing {field}"))?;
+    let raw = value
+        .as_u64()
+        .with_context(|| format!("retrieval report field {field} must be an integer"))?;
+    usize::try_from(raw).with_context(|| format!("retrieval report field {field} is too large"))
+}
+
+fn required_f64_field(report: &serde_json::Value, field: &str) -> Result<f64> {
+    let value = report
+        .get(field)
+        .with_context(|| format!("retrieval report missing {field}"))?;
+    let raw = value
+        .as_f64()
+        .with_context(|| format!("retrieval report field {field} must be a number"))?;
+    if !raw.is_finite() {
+        bail!("retrieval report field {field} must be finite");
+    }
+    Ok(raw)
+}
+
+fn format_retrieval_proof_claim(claim: &RetrievalProofClaim, json: bool) -> Result<String> {
+    if json {
+        return serde_json::to_string_pretty(claim)
+            .context("failed to serialize retrieval proof claim");
+    }
+    let mut output = String::new();
+    writeln!(&mut output, "Workflow retrieval proof claim")?;
+    writeln!(&mut output, "status: {:?}", claim.status)?;
+    writeln!(&mut output, "baseline: {}", claim.baseline)?;
+    writeln!(&mut output, "pairs: {}", claim.pair_count)?;
+    writeln!(&mut output, "documents: {}", claim.document_count)?;
+    writeln!(
+        &mut output,
+        "negative_controls: {}",
+        claim.negative_control_count
+    )?;
+    writeln!(
+        &mut output,
+        "recall@5_delta: {:.4}",
+        claim.recall_at_5_delta
+    )?;
+    writeln!(
+        &mut output,
+        "recall@10_delta: {:.4}",
+        claim.recall_at_10_delta
+    )?;
+    writeln!(&mut output, "mrr_delta: {:.4}", claim.mrr_delta)?;
+    writeln!(
+        &mut output,
+        "negative_control_injection_rate: {:.4}",
+        claim.negative_control_injection_rate
+    )?;
+    if !claim.blocking_metrics.is_empty() {
+        writeln!(
+            &mut output,
+            "blocking_metrics: {}",
+            claim.blocking_metrics.join(", ")
+        )?;
+    }
+    if !claim.uncertainty_notes.is_empty() {
+        writeln!(
+            &mut output,
+            "uncertainty_notes: {}",
+            claim.uncertainty_notes.join("; ")
+        )?;
+    }
+    Ok(output)
 }
 
 fn evaluate_lexical_retrieval(corpus: &RetrievalEvalCorpus) -> Result<LexicalRetrievalReport> {
@@ -3185,6 +3429,57 @@ mod tests {
         assert_eq!(
             report.per_pair[0].top_document_ids[0],
             "file:src/memory_index/retrieval.rs"
+        );
+    }
+
+    #[test]
+    fn retrieval_claim_supports_report_better_than_no_context() {
+        let report = serde_json::json!({
+            "pair_count": 25,
+            "document_count": 46,
+            "negative_control_count": 6,
+            "recall_at_5": 0.57,
+            "recall_at_10": 0.65,
+            "mrr": 0.64,
+            "negative_control_injection_rate": 0.0
+        });
+
+        let claim = evaluate_retrieval_proof_claim(&report, RetrievalProofThresholds::default())
+            .expect("retrieval proof claim");
+
+        assert_eq!(claim.status, RetrievalProofStatus::Supported);
+        assert_eq!(claim.baseline, "no_context");
+        assert_approx_eq(claim.recall_at_10_delta, 0.65);
+        assert!(claim.blocking_metrics.is_empty());
+    }
+
+    #[test]
+    fn retrieval_claim_blocks_weak_recall_or_negative_control_injection() {
+        let report = serde_json::json!({
+            "pair_count": 25,
+            "document_count": 46,
+            "negative_control_count": 6,
+            "recall_at_5": 0.09,
+            "recall_at_10": 0.28,
+            "mrr": 0.14,
+            "negative_control_injection_rate": 0.20
+        });
+
+        let claim = evaluate_retrieval_proof_claim(&report, RetrievalProofThresholds::default())
+            .expect("retrieval proof claim");
+
+        assert_eq!(claim.status, RetrievalProofStatus::NotSupported);
+        assert!(
+            claim
+                .blocking_metrics
+                .iter()
+                .any(|metric| metric == "recall_at_10")
+        );
+        assert!(
+            claim
+                .blocking_metrics
+                .iter()
+                .any(|metric| metric == "negative_control_injection_rate")
         );
     }
 
