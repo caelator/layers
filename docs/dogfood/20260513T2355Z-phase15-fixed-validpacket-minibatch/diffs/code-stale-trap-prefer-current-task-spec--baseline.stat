@@ -1,0 +1,5 @@
+ crates/layers-core/src/packet_quality.rs |  4 ++
+ crates/layers-core/src/task_spec.rs      | 74 ++++++++++++++++++++++----------
+ src/cmd/preflight.rs                     |  2 +
+ src/cmd/query.rs                         |  2 +
+ 4 files changed, 59 insertions(+), 23 deletions(-)

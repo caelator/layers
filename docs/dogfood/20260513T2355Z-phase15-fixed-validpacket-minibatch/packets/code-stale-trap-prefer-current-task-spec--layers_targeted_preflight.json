@@ -1,0 +1,350 @@
+{
+  "schema_version": 2,
+  "id": "preflight-5c3cbba9-5fb4-46e0-85a9-862dc63613c4",
+  "workspace_id": "code-stale-trap-prefer-current-task-spec--layers_targeted_preflight",
+  "query": "Prefer current task_spec schema over stale docs\n\nStale-context trap: update code using the current TaskSpec validation rules, not older docs that allowed missing expected relevant files. The correct solution must inspect current schema and validator before editing.",
+  "created_at": "2026-05-14T00:13:47.212070Z",
+  "git_ref": "fd8e021",
+  "route": "preflight",
+  "confidence": "high",
+  "budget": {
+    "max_units": 1800,
+    "used_units": 793,
+    "unit": "words",
+    "truncated": false
+  },
+  "sections": [
+    {
+      "id": "preflight_summary",
+      "title": "Preflight Summary",
+      "summary": "Preflight planning result.",
+      "items": [
+        {
+          "id": "research-summary-1",
+          "title": "Preflight classification",
+          "body": "Preflight classified this task as code-heavy. Explicit targets: src/cmd/workflow_benchmark.rs, benchmarks/workflows/schemas/task-spec.schema.json, TaskSpec, validate_task_spec. Effective targets: src/cmd/workflow_benchmark.rs, benchmarks/workflows/schemas/task-spec.schema.json, TaskSpec, validate_task_spec.",
+          "source": {
+            "kind": "preflight",
+            "uri": "local-planner"
+          },
+          "token_estimate": 18,
+          "selected_reason": "summarizes the local preflight plan before source collection",
+          "tags": [
+            "planning"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "workspace",
+      "title": "Workspace State",
+      "summary": "Current Git/worktree context that can affect safe edits.",
+      "items": [
+        {
+          "id": "workspace-state-1",
+          "title": "Git worktree state",
+          "body": "Branch: unknown\nHead: fd8e021\nDirty: false\n",
+          "source": {
+            "kind": "workspace",
+            "uri": "git status --porcelain=v1"
+          },
+          "token_estimate": 6,
+          "selected_reason": "dirty or divergent workspace state changes how agents should interpret context",
+          "tags": [
+            "workspace",
+            "git"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "title": "Project Memory",
+      "summary": "Relevant explicit project memory or memory-source warning.",
+      "items": [
+        {
+          "id": "memory-1",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"payload\":{\"rationale\":\"Broader OS/platform ambitions created drift; the highest-leverage immediate value is better deliberation, better memory continuity, and better structural grounding.\",\"slug\":\"narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"summary\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memoryport-based continuity, and GitNexus-based codebase understanding.\",\"title\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memor...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"scope\",\"strategy\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 48,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-2",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"payload\":{\"rationale\":\"Triumvirate is the destination architecture; Layers should accelerate and de-risk it by proving workflows, memory models, and graph-aware tooling before promotion.\",\"slug\":\"treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"summary\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-state system.\",\"title\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-st...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"triumvirate\",\"strategy\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 46,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-3",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"payload\":{\"rationale\":\"Structured records preserve auditability, editability, and schema stability while still allowing semantic recall via derived retrieval text and embeddings.\",\"slug\":\"canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"summary\":\"Canonical curated memories should be structured records, not vectors as source of truth; semantic embeddings are derived retrieval artifacts.\",\"title\":\"Canonical curated memories should be structured records, not vectors as source of truth\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"memoryport\",\"architecture\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 49,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-4",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"constraint\",\"id\":\"cm_constraint_layers_prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"payload\":{\"impact\":\"The user explicitly set the rule: if it can reasonably be built in Rust, build it in Rust; build software, not sandcastles.\",\"slug\":\"prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"summary\":\"Prefer Rust for durable systems; use scripting only for glue or temporary scaffolding.\",\"title\":\"Prefer Rust for durable systems\",\"type\":\"constraint\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"engineering\",\"rust\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 38,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-5",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 51,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "title": "Code and Impact Context",
+      "summary": "Local code context gathered without editing files.",
+      "items": [
+        {
+          "id": "code-1",
+          "title": "src/cmd/workflow_benchmark.rs",
+          "body": "//! Workflow benchmark telemetry analysis for comparing Layers vs baseline runs.\nuse std::{\n    collections::{BTreeMap, BTreeSet},\n    fmt::Write as _,\n    fs,\n    path::{Component, Path, PathBuf},\n    process::{Command, Stdio},\n    thread,\n    time::{Duration, Instant},\n};\n\nuse anyhow::{Context as _, Result, bail};\nuse clap::Subcommand;\nuse serde::{Deserialize, Serialize};\n\n/// Workflow benchmark commands.\n#[derive(Debug, Subcommand)]\npub(crate) enum WorkflowBenchmarkCommands {\n    /// Analyze Layers-vs-baseline workflow telemetry from JSONL.\n    Analyze {\n        /// Path to workflow run telemetry JSONL.\n        path: PathBuf,\n        /// Output a structured JSON report.\n        #[arg(long)]\n        json: bool,\n    },\n    /// Validate preregistered workflow benchmark task specs.\n    ValidateTasks {\n        /// Task spec file or directory containing task spec JSON files.\n        path: PathBuf,\n        /// Output a structured JSON validation report.\n        #[arg(long)]\n        json: bool,\n    },\n    /// Export task/file relevance data for retrieval evaluation.\n    RetrievalEvalCorpus {\n        /// Task spec file or directory containing task spec JSON files.\n        path: PathBuf,\n        /// Repository root containing expected relevant files.\n        #[arg(long, default_value = \".\")]\n        repo_root: PathBuf,\n        /// Output a structured JSON retrieval corpus.\n        #[arg(long)]\n        json: bool,\n    },\n    /// Score a retrieval eval corpus with the deterministic lexical baseline.\n    RetrievalEvalLexical {\n        /// Retrieval eval corpus JSON produced by `retrieval-eval-corpus`.\n        path: PathBuf,\n        /// Output a structured JSON retrieval report.\n        #[arg(long)]\n        json: bool,\n    },\n    /// Evaluate whether a retrieval report proves benefit over no injected context.\n    RetrievalEvalClaim {\n        /// Retrieval report JSON produced by `retrieval-eval-lexical` or `retrieval-eval-embeddings`.\n        path: PathBuf,\n        /// Output a structured JSON proof claim.\n        #[arg(long)]\n        json: bool,\n    },\n    /// Compare a candidate retrieval report against a lexical baseline before integration.\n    RetrievalEvalCompare {\n        /// Baseline lexical retrieval report JSON.\n        baseline: PathBuf,\n        /// Candidate semantic or hybrid retrieval report JSON.\n        candidate: PathBuf,\n        /// Output a structured JSON candidate claim.\n        #[arg(long)]\n        json: bool,\n    },\n    /// Score a retrieval eval corpus with an OpenAI-compatible embeddings endpoint.\n    RetrievalEvalEmbeddings {\n        /// Retrieval eval corpus JSON produced by `retrieval-eval-corpus`.\n        path: PathBuf,\n        /// OpenAI-compatible embeddings endpoint, such as `TurboCALM` `/v1/embeddings`.\n        #[arg(long, default_value = \"http://127.0.0.1:8000/v1/embeddings\")]\n        endpoint: String,\n        /// Embedding model name to request.\n        #[arg(long, default_value = \"turbocalm-local\")]",
+          "source": {
+            "kind": "file",
+            "uri": "src/cmd/workflow_benchmark.rs",
+            "repo_path": "src/cmd/workflow_benchmark.rs"
+          },
+          "token_estimate": 317,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        },
+        {
+          "id": "code-2",
+          "title": "benchmarks/workflows/schemas/task-spec.schema.json",
+          "body": "{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"https://layers.local/benchmarks/workflows/task-spec.schema.json\",\n  \"title\": \"Layers workflow benchmark task spec\",\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"required\": [\n    \"task_id\",\n    \"title\",\n    \"prompt\",\n    \"category\",\n    \"expected_validation_commands\",\n    \"success_rubric\"\n  ],\n  \"allOf\": [\n    {\n      \"if\": {\n        \"not\": { \"required\": [\"negative_control\"] }\n      },\n      \"then\": {\n        \"required\": [\"target_files\", \"expected_relevant_files\"],\n        \"properties\": {\n          \"target_files\": { \"$ref\": \"#/$defs/non_empty_strings_required\" },\n          \"expected_relevant_files\": { \"$ref\": \"#/$defs/non_empty_strings_required\" }\n        }\n      }\n    },\n    {\n      \"if\": {\n        \"properties\": { \"negative_control\": { \"const\": false } },\n        \"required\": [\"negative_control\"]\n      },\n      \"then\": {\n        \"required\": [\"target_files\", \"expected_relevant_files\"],\n        \"properties\": {\n          \"target_files\": { \"$ref\": \"#/$defs/non_empty_strings_required\" },\n          \"expected_relevant_files\": { \"$ref\": \"#/$defs/non_empty_strings_required\" }\n        }\n      }\n    },\n    {\n      \"if\": {\n        \"properties\": { \"stale_context_trap\": { \"const\": true } },\n        \"required\": [\"stale_context_trap\"]\n      },\n      \"then\": {\n        \"required\": [\"expected_relevant_files\"],\n        \"properties\": {\n          \"expected_relevant_files\": { \"$ref\": \"#/$defs/non_empty_strings_required\" }\n        }\n      }\n    },\n    {\n      \"if\": {\n        \"properties\": { \"negative_control\": { \"const\": true } },\n        \"required\": [\"negative_control\"],\n        \"anyOf\": [\n          {\n            \"properties\": {\n              \"target_files\": {\n                \"type\": \"array\",\n                \"minItems\": 1\n              }\n            },\n            \"required\": [\"target_files\"]\n          },\n          {\n            \"properties\": {\n              \"expected_relevant_files\": {\n                \"type\": \"array\",\n                \"minItems\": 1\n              }\n            },\n            \"required\": [\"expected_relevant_files\"]\n          }\n        ]\n      },\n      \"then\": {\n        \"required\": [\"abstention_rubric\"]\n      }",
+          "source": {
+            "kind": "file",
+            "uri": "benchmarks/workflows/schemas/task-spec.schema.json",
+            "repo_path": "benchmarks/workflows/schemas/task-spec.schema.json"
+          },
+          "token_estimate": 167,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "validation",
+      "title": "Suggested Validation Commands",
+      "summary": "Commands an agent should run after using this research.",
+      "items": [
+        {
+          "id": "validation-1",
+          "title": "git diff --check",
+          "body": "Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 17,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-2",
+          "title": "cargo test --workspace --all-targets",
+          "body": "Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-3",
+          "title": "cargo clippy --workspace --all-targets -- -D warnings",
+          "body": "Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "severity": "info",
+      "code": "autoresearch_uncertainty",
+      "message": "No persisted autoresearch finding matched this task."
+    },
+    {
+      "severity": "info",
+      "code": "injection_policy",
+      "message": "Packet quality gate recommends InjectFull: packet is low-confidence or fallback-derived"
+    }
+  ],
+  "selection_trace": [
+    {
+      "item_id": "research-summary-1",
+      "reason": "summarizes the local preflight plan before source collection"
+    },
+    {
+      "item_id": "workspace-state-1",
+      "reason": "dirty or divergent workspace state changes how agents should interpret context"
+    },
+    {
+      "item_id": "memory-1",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-2",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-3",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-4",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-5",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "code-1",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "code-2",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "validation-1",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-2",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-3",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    }
+  ],
+  "retrieval": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  },
+  "provenance": {
+    "compiler": "layers-context-packet",
+    "compiler_version": "2",
+    "surface": "preflight",
+    "workspace_id": "code-stale-trap-prefer-current-task-spec--layers_targeted_preflight",
+    "git_ref": "fd8e021",
+    "generated_at": "2026-05-14T00:13:47.212070Z",
+    "source_adapters": [
+      "file",
+      "memory",
+      "preflight",
+      "validation",
+      "workspace"
+    ]
+  },
+  "task": "Prefer current task_spec schema over stale docs\n\nStale-context trap: update code using the current TaskSpec validation rules, not older docs that allowed missing expected relevant files. The correct solution must inspect current schema and validator before editing.",
+  "low_confidence_fallback": false,
+  "scores": {
+    "injection_recommendation": "inject_full",
+    "packet_quality": {
+      "hallucinated_or_stale_context": false,
+      "missed_critical_context": false,
+      "reasons": [
+        "packet is low-confidence or fallback-derived"
+      ],
+      "recommendation": "inject_full",
+      "scores": {
+        "completeness": 5,
+        "concision": 5,
+        "freshness": 4,
+        "grounding": 5,
+        "noise_absence": 4,
+        "relevance": 5,
+        "specificity": 5
+      },
+      "target_coverage_ratio": 1.0,
+      "validation_coverage_ratio": 1.0,
+      "warning_penalty": 1.25
+    },
+    "preflight": {
+      "autoresearch_findings": 0,
+      "code_heavy": true,
+      "targets": 4,
+      "workspace_dirty": false
+    }
+  },
+  "why_retrieved": "Preflight compiles local pre-edit context from workspace state, persisted autoresearch findings, memory, code targets, and validation policy.",
+  "why_not_retrieved": "",
+  "evidence": "### Preflight Summary\nPreflight Summary: Preflight classification\n- [local-planner] Preflight classified this task as code-heavy. Explicit targets: src/cmd/workflow_benchmark.rs, benchmarks/workflows/schemas/task-spec.schema.json, TaskSpec, validate_task_spec. Effective targets: src/cmd/workflow_benchmark.rs, benchmarks/workflows/schemas/task-spec.schema.json, TaskSpec, validate_task_spec.\nSource: local-planner (preflight)\nSelected because: summarizes the local preflight plan before source collection\n\n### Workspace State\nWorkspace State: Git worktree state\n- [git status --porcelain=v1] Branch: unknown\nHead: fd8e021\nDirty: false\n\nSource: git status --porcelain=v1 (workspace)\nSelected because: dirty or divergent workspace state changes how agents should interpret context\n\n### Project Memory\nProject Memory: Curated memory match\n- [/Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"payload\":{\"rationale\":\"Broader OS/platform ambitions created drift; the highest-leverage immediate value is better deliberation, better memory continuity, and better structural grounding.\",\"slug\":\"narrow-layers-scope-for-now-to-three-core-functions-councils-with-gemini-claude-codex-memoryport-based-continuity-and-gitnexus-based-codebase-understanding\",\"summary\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memoryport-based continuity, and GitNexus-based codebase understanding.\",\"title\":\"Narrow Layers scope for now to three core functions: councils with Gemini/Claude/Codex, Memor...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"scope\",\"strategy\"]}\nSource: /Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"payload\":{\"rationale\":\"Triumvirate is the destination architecture; Layers should accelerate and de-risk it by proving workflows, memory models, and graph-aware tooling before promotion.\",\"slug\":\"treat-layers-as-builder-tooling-proving-ground-for-triumvirate-rather-than-a-competing-end-state-system\",\"summary\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-state system.\",\"title\":\"Treat Layers as builder tooling/proving ground for Triumvirate rather than a competing end-st...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"triumvirate\",\"strategy\"]}\nSource: /Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"payload\":{\"rationale\":\"Structured records preserve auditability, editability, and schema stability while still allowing semantic recall via derived retrieval text and embeddings.\",\"slug\":\"canonical-curated-memories-should-be-structured-records-not-vectors-as-source-of-truth-semantic-embeddings-are-derived-retrieval-artifacts\",\"summary\":\"Canonical curated memories should be structured records, not vectors as source of truth; semantic embeddings are derived retrieval artifacts.\",\"title\":\"Canonical curated memories should be structured records, not vectors as source of truth\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memory\",\"memoryport\",\"architecture\"]}\nSource: /Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"constraint\",\"id\":\"cm_constraint_layers_prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"payload\":{\"impact\":\"The user explicitly set the rule: if it can reasonably be built in Rust, build it in Rust; build software, not sandcastles.\",\"slug\":\"prefer-rust-for-durable-systems-use-scripting-only-for-glue-or-temporary-scaffolding\",\"summary\":\"Prefer Rust for durable systems; use scripting only for glue or temporary scaffolding.\",\"title\":\"Prefer Rust for durable systems\",\"type\":\"constraint\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"engineering\",\"rust\"]}\nSource: /Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\nProject Memory: Curated memory match\n- [/Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight/memoryport/curated-memory.jsonl] {\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"payload\":{\"rationale\":\"Ambient config resolution was unreliable; explicit config made retrieval work correctly with Ollama-backed embeddings.\",\"slug\":\"memoryport-should-be-integrated-through-the-real-semantic-retrieval-path-using-explicit-config-uc-c-memoryport-uc-toml-and-only-fall-back-to-local-jsonl-records-when-needed\",\"summary\":\"Memoryport should be integrated through the real semantic retrieval path using explicit config (`uc -c ~/.memoryport/uc.toml`) and only fall back to local JSONL records when needed.\",\"title\":\"Memoryport should be integrated through the real semantic retrieval path using explicit confi...\",\"type\":\"decision\"},\"project\":\"layers\",\"source\":\"distilled-import\",\"tags\":[\"layers\",\"memoryport\",\"integration\"]}\nSource: /Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight/memoryport/curated-memory.jsonl (memory)\nSelected because: curated memory shares terms with the preflight task\n\n### Code and Impact Context\nCode and Impact Context: src/cmd/workflow_benchmark.rs\n- [src/cmd/workflow_benchmark.rs] //! Workflow benchmark telemetry analysis for comparing Layers vs baseline runs.\nuse std::{\n    collections::{BTreeMap, BTreeSet},\n    fmt::Write as _,\n    fs,\n    path::{Component, Path, PathBuf},\n    process::{Command, Stdio},\n    thread,\n    time::{Duration, Instant},\n};\n\nuse anyhow::{Context as _, Result, bail};\nuse clap::Subcommand;\nuse serde::{Deserialize, Serialize};\n\n/// Workflow benchmark commands.\n#[derive(Debug, Subcommand)]\npub(crate) enum WorkflowBenchmarkCommands {\n    /// Analyze Layers-vs-baseline workflow telemetry from JSONL.\n    Analyze {\n        /// Path to workflow run telemetry JSONL.\n        path: PathBuf,\n        /// Output a structured JSON report.\n        #[arg(long)]\n        json: bool,\n    },\n    /// Validate preregistered workflow benchmark task specs.\n    ValidateTasks {\n        /// Task spec file or directory containing task spec JSON files.\n        path: PathBuf,\n        /// Output a structured JSON validation report.\n        #[arg(long)]\n        json: bool,\n    },\n    /// Export task/file relevance data for retrieval evaluation.\n    RetrievalEvalCorpus {\n        /// Task spec file or directory containing task spec JSON files.\n        path: PathBuf,\n        /// Repository root containing expected relevant files.\n        #[arg(long, default_value = \".\")]\n        repo_root: PathBuf,\n        /// Output a structured JSON retrieval corpus.\n        #[arg(long)]\n        json: bool,\n    },\n    /// Score a retrieval eval corpus with the deterministic lexical baseline.\n    RetrievalEvalLexical {\n        /// Retrieval eval corpus JSON produced by `retrieval-eval-corpus`.\n        path: PathBuf,\n        /// Output a structured JSON retrieval report.\n        #[arg(long)]\n        json: bool,\n    },\n    /// Evaluate whether a retrieval report proves benefit over no injected context.\n    RetrievalEvalClaim {\n        /// Retrieval report JSON produced by `retrieval-eval-lexical` or `retrieval-eval-embeddings`.\n        path: PathBuf,\n        /// Output a structured JSON proof claim.\n        #[arg(long)]\n        json: bool,\n    },\n    /// Compare a candidate retrieval report against a lexical baseline before integration.\n    RetrievalEvalCompare {\n        /// Baseline lexical retrieval report JSON.\n        baseline: PathBuf,\n        /// Candidate semantic or hybrid retrieval report JSON.\n        candidate: PathBuf,\n        /// Output a structured JSON candidate claim.\n        #[arg(long)]\n        json: bool,\n    },\n    /// Score a retrieval eval corpus with an OpenAI-compatible embeddings endpoint.\n    RetrievalEvalEmbeddings {\n        /// Retrieval eval corpus JSON produced by `retrieval-eval-corpus`.\n        path: PathBuf,\n        /// OpenAI-compatible embeddings endpoint, such as `TurboCALM` `/v1/embeddings`.\n        #[arg(long, default_value = \"http://127.0.0.1:8000/v1/embeddings\")]\n        endpoint: String,\n        /// Embedding model name to request.\n        #[arg(long, default_value = \"turbocalm-local\")]\nSource: src/cmd/workflow_benchmark.rs (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\nCode and Impact Context: benchmarks/workflows/schemas/task-spec.schema.json\n- [benchmarks/workflows/schemas/task-spec.schema.json] {\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"https://layers.local/benchmarks/workflows/task-spec.schema.json\",\n  \"title\": \"Layers workflow benchmark task spec\",\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"required\": [\n    \"task_id\",\n    \"title\",\n    \"prompt\",\n    \"category\",\n    \"expected_validation_commands\",\n    \"success_rubric\"\n  ],\n  \"allOf\": [\n    {\n      \"if\": {\n        \"not\": { \"required\": [\"negative_control\"] }\n      },\n      \"then\": {\n        \"required\": [\"target_files\", \"expected_relevant_files\"],\n        \"properties\": {\n          \"target_files\": { \"$ref\": \"#/$defs/non_empty_strings_required\" },\n          \"expected_relevant_files\": { \"$ref\": \"#/$defs/non_empty_strings_required\" }\n        }\n      }\n    },\n    {\n      \"if\": {\n        \"properties\": { \"negative_control\": { \"const\": false } },\n        \"required\": [\"negative_control\"]\n      },\n      \"then\": {\n        \"required\": [\"target_files\", \"expected_relevant_files\"],\n        \"properties\": {\n          \"target_files\": { \"$ref\": \"#/$defs/non_empty_strings_required\" },\n          \"expected_relevant_files\": { \"$ref\": \"#/$defs/non_empty_strings_required\" }\n        }\n      }\n    },\n    {\n      \"if\": {\n        \"properties\": { \"stale_context_trap\": { \"const\": true } },\n        \"required\": [\"stale_context_trap\"]\n      },\n      \"then\": {\n        \"required\": [\"expected_relevant_files\"],\n        \"properties\": {\n          \"expected_relevant_files\": { \"$ref\": \"#/$defs/non_empty_strings_required\" }\n        }\n      }\n    },\n    {\n      \"if\": {\n        \"properties\": { \"negative_control\": { \"const\": true } },\n        \"required\": [\"negative_control\"],\n        \"anyOf\": [\n          {\n            \"properties\": {\n              \"target_files\": {\n                \"type\": \"array\",\n                \"minItems\": 1\n              }\n            },\n            \"required\": [\"target_files\"]\n          },\n          {\n            \"properties\": {\n              \"expected_relevant_files\": {\n                \"type\": \"array\",\n                \"minItems\": 1\n              }\n            },\n            \"required\": [\"expected_relevant_files\"]\n          }\n        ]\n      },\n      \"then\": {\n        \"required\": [\"abstention_rubric\"]\n      }\nSource: benchmarks/workflows/schemas/task-spec.schema.json (file)\nSelected because: explicit or inferred target file should be inspected before editing\n\n### Suggested Validation Commands\nSuggested Validation Commands: git diff --check\n- [preflight-validation-policy] Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo test --workspace --all-targets\n- [preflight-validation-policy] Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation\n\nSuggested Validation Commands: cargo clippy --workspace --all-targets -- -D warnings\n- [preflight-validation-policy] Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt\nSource: preflight-validation-policy (validation)\nSelected because: validation commands prevent context-only research from becoming unverified implementation",
+  "open_uncertainty": [
+    "No persisted autoresearch finding matched this task."
+  ],
+  "retrieval_meta": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0,
+    "fallback_reason": "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
+  }
+}

@@ -1,0 +1,210 @@
+diff --git a/src/cmd/workflow_benchmark.rs b/src/cmd/workflow_benchmark.rs
+index ff60aa2..2daa5d3 100644
+--- a/src/cmd/workflow_benchmark.rs
++++ b/src/cmd/workflow_benchmark.rs
+@@ -333,6 +333,17 @@ impl WorkflowVariant {
+     }
+ }
+
++impl std::fmt::Display for WorkflowVariant {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        match self {
++            Self::Baseline => write!(f, "Baseline"),
++            Self::LayersTargetedPreflight => write!(f, "Layers (targeted-preflight)"),
++            Self::LayersBroadQuery => write!(f, "Layers (broad-query)"),
++            Self::LayersMcpPreflight => write!(f, "Layers (mcp-preflight)"),
++        }
++    }
++}
++
+ #[derive(Debug, Clone, Deserialize, Serialize)]
+ struct RetrievalQuality {
+     relevance: u8,
+@@ -844,9 +855,23 @@ struct BenchmarkReport {
+     paired_task_count: usize,
+     variants: Vec<VariantAggregate>,
+     baseline: Option<VariantAggregate>,
++    /// Legacy singular Layers summary (targeted-preflight).
+     layers: Option<VariantAggregate>,
++    /// Explicit Layers (targeted-preflight) surface aggregate.
++    layers_targeted_preflight: Option<VariantAggregate>,
++    /// Explicit Layers (broad-query) surface aggregate.
++    layers_broad_query: Option<VariantAggregate>,
++    /// Explicit Layers (mcp-preflight) surface aggregate.
++    layers_mcp_preflight: Option<VariantAggregate>,
+     comparisons: Vec<PairedComparison>,
++    /// Legacy singular comparison (targeted-preflight).
+     comparison: Option<PairedComparison>,
++    /// Explicit Layers (targeted-preflight) vs baseline comparison.
++    comparison_targeted_preflight: Option<PairedComparison>,
++    /// Explicit Layers (broad-query) vs baseline comparison.
++    comparison_broad_query: Option<PairedComparison>,
++    /// Explicit Layers (mcp-preflight) vs baseline comparison.
++    comparison_mcp_preflight: Option<PairedComparison>,
+     #[serde(skip_serializing_if = "Option::is_none")]
+     claim: Option<ClaimReport>,
+ }
+@@ -2860,6 +2885,15 @@ fn analyze_runs(runs: &[WorkflowRun]) -> Result<BenchmarkReport> {
+         .iter()
+         .filter(|run| run.variant == WorkflowVariant::LayersTargetedPreflight)
+         .collect();
++    let broad_layers_runs: Vec<&WorkflowRun> = runs
++        .iter()
++        .filter(|run| run.variant == WorkflowVariant::LayersBroadQuery)
++        .collect();
++    let mcp_layers_runs: Vec<&WorkflowRun> = runs
++        .iter()
++        .filter(|run| run.variant == WorkflowVariant::LayersMcpPreflight)
++        .collect();
++
+     if baseline_runs.is_empty() {
+         bail!("workflow benchmark requires at least one baseline run");
+     }
+@@ -2888,8 +2922,29 @@ fn analyze_runs(runs: &[WorkflowRun]) -> Result<BenchmarkReport> {
+             WorkflowVariant::LayersTargetedPreflight,
+             &targeted_layers_runs,
+         ),
+-        comparisons,
+-        comparison: Some(comparison),
++        layers_targeted_preflight: aggregate_variant(
++            WorkflowVariant::LayersTargetedPreflight,
++            &targeted_layers_runs,
++        ),
++        layers_broad_query: aggregate_variant(WorkflowVariant::LayersBroadQuery, &broad_layers_runs),
++        layers_mcp_preflight: aggregate_variant(
++            WorkflowVariant::LayersMcpPreflight,
++            &mcp_layers_runs,
++        ),
++        comparisons: comparisons.clone(),
++        comparison: Some(comparison.clone()),
++        comparison_targeted_preflight: comparisons
++            .iter()
++            .find(|c| c.variant == WorkflowVariant::LayersTargetedPreflight)
++            .cloned(),
++        comparison_broad_query: comparisons
++            .iter()
++            .find(|c| c.variant == WorkflowVariant::LayersBroadQuery)
++            .cloned(),
++        comparison_mcp_preflight: comparisons
++            .iter()
++            .find(|c| c.variant == WorkflowVariant::LayersMcpPreflight)
++            .cloned(),
+         claim: None,
+     })
+ }
+@@ -3313,51 +3368,56 @@ fn format_report(report: &BenchmarkReport, json: bool) -> Result<String> {
+     writeln!(output, "=========================")?;
+     writeln!(output, "Runs: {}", report.run_count)?;
+     writeln!(output, "Paired tasks: {}", report.paired_task_count)?;
++
+     if let Some(baseline) = &report.baseline {
+-        write_variant_summary(&mut output, "Baseline", baseline)?;
++        write_variant_summary(&mut output, baseline)?;
+     }
+-    if let Some(layers) = &report.layers {
+-        write_variant_summary(&mut output, "Layers", layers)?;
++
++    for aggregate in &report.variants {
++        if aggregate.variant.is_layers() {
++            write_variant_summary(&mut output, aggregate)?;
++        }
+     }
+-    if let Some(comparison) = &report.comparison {
++
++    if !report.comparisons.is_empty() {
+         writeln!(output, "\nPaired net benefit")?;
+-        writeln!(
+-            output,
+-            "- Net time saved per task: {:.1} ms",
+-            comparison.net_time_saved_ms
+-        )?;
+-        writeln!(
+-            output,
+-            "- Net tokens saved per task: {:.1}",
+-            comparison.net_tokens_saved
+-        )?;
+-        writeln!(output, "- Speedup: {:.3}x", comparison.speedup)?;
+-        writeln!(
+-            output,
+-            "- Token reduction ratio: {:.3}",
+-            comparison.token_reduction_ratio
+-        )?;
+-        writeln!(output, "- Success delta: {:.3}", comparison.success_delta)?;
+-        writeln!(
+-            output,
+-            "- Human intervention delta: {:.3}",
+-            comparison.human_intervention_delta
+-        )?;
+-        writeln!(
+-            output,
+-            "- Layers overhead: {:.1} ms / {:.1} tokens",
+-            comparison.layers_overhead_ms, comparison.layers_overhead_tokens
+-        )?;
++        for comparison in &report.comparisons {
++            writeln!(output, "\n{}", comparison.variant)?;
++            writeln!(
++                output,
++                "- Net time saved per task: {:.1} ms",
++                comparison.net_time_saved_ms
++            )?;
++            writeln!(
++                output,
++                "- Net tokens saved per task: {:.1}",
++                comparison.net_tokens_saved
++            )?;
++            writeln!(output, "- Speedup: {:.3}x", comparison.speedup)?;
++            writeln!(
++                output,
++                "- Token reduction ratio: {:.3}",
++                comparison.token_reduction_ratio
++            )?;
++            writeln!(output, "- Success delta: {:.3}", comparison.success_delta)?;
++            writeln!(
++                output,
++                "- Human intervention delta: {:.3}",
++                comparison.human_intervention_delta
++            )?;
++            writeln!(
++                output,
++                "- Layers overhead: {:.1} ms / {:.1} tokens",
++                comparison.layers_overhead_ms, comparison.layers_overhead_tokens
++            )?;
++        }
+     }
++
+     Ok(output)
+ }
+
+-fn write_variant_summary(
+-    output: &mut String,
+-    name: &str,
+-    aggregate: &VariantAggregate,
+-) -> Result<()> {
+-    writeln!(output, "\n{name}")?;
++fn write_variant_summary(output: &mut String, aggregate: &VariantAggregate) -> Result<()> {
++    writeln!(output, "\n{}", aggregate.variant)?;
+     writeln!(output, "- Runs: {}", aggregate.run_count)?;
+     writeln!(output, "- Success rate: {:.3}", aggregate.success_rate)?;
+     writeln!(
+@@ -4112,15 +4172,17 @@ mod tests {
+     }
+
+     #[test]
+-    fn emits_human_report_with_core_benchmark_fields() {
++    fn reports_layers_surfaces_explicitly_in_human_report() {
+         let runs = vec![
+             parse_run(&valid_run("task-1", "baseline", 1_000, 2_000)).expect("baseline"),
+-            parse_run(&valid_run("task-1", "layers", 700, 1_500)).expect("layers"),
++            parse_run(&valid_run("task-1", "layers_targeted_preflight", 700, 1_500)).expect("targeted"),
++            parse_run(&valid_run("task-1", "layers_broad_query", 1_200, 2_400)).expect("broad"),
+         ];
+         let output = format_report(&analyze_runs(&runs).expect("analysis"), false).expect("human");
+-        assert!(output.contains("Workflow benchmark report"));
++
++        assert!(output.contains("Layers (targeted-preflight)"));
++        assert!(output.contains("Layers (broad-query)"));
+         assert!(output.contains("Paired net benefit"));
+-        assert!(output.contains("Context relevant/waste ratios"));
+     }
+
+     #[test]

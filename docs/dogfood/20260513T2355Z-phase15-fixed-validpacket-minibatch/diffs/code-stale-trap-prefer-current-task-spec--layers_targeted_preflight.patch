@@ -1,0 +1,157 @@
+diff --git a/crates/layers-core/src/packet_quality.rs b/crates/layers-core/src/packet_quality.rs
+index 10a8e83..5856945 100644
+--- a/crates/layers-core/src/packet_quality.rs
++++ b/crates/layers-core/src/packet_quality.rs
+@@ -463,6 +463,7 @@ mod tests {
+             expected_relevant_files: Vec::new(),
+             expected_validation_commands: Vec::new(),
+             negative_control: true,
++            stale_context_trap: false,
+             success_rubric: crate::SuccessRubric::default(),
+         };
+
+@@ -483,6 +484,7 @@ mod tests {
+             expected_relevant_files: vec![PathBuf::from("src/main.rs")],
+             expected_validation_commands: vec!["cargo test".to_string()],
+             negative_control: false,
++            stale_context_trap: false,
+             success_rubric: crate::SuccessRubric::default(),
+         }
+     }
+diff --git a/crates/layers-core/src/task_spec.rs b/crates/layers-core/src/task_spec.rs
+index 3618005..a926a44 100644
+--- a/crates/layers-core/src/task_spec.rs
++++ b/crates/layers-core/src/task_spec.rs
+@@ -23,6 +23,8 @@ pub struct TaskSpec {
+     #[serde(default)]
+     pub negative_control: bool,
+     #[serde(default)]
++    pub stale_context_trap: bool,
++    #[serde(default)]
+     pub success_rubric: SuccessRubric,
+ }
+
+@@ -104,15 +106,19 @@ impl TaskSpec {
+             errors.push("success_rubric.full_success must not be empty".to_string());
+         }
+
+-        if self.category.is_code_heavy()
+-            && !self.negative_control
+-            && self.target_files.is_empty()
+-            && self.expected_relevant_files.is_empty()
+-            && self.target_symbols.is_empty()
+-        {
+-            errors.push(
+-                "code-heavy task should include target_files, target_symbols, or expected_relevant_files".to_string(),
+-            );
++        if !self.negative_control {
++            if self.target_files.is_empty() {
++                errors.push("non-negative control task must include target_files".to_string());
++            }
++            if self.expected_relevant_files.is_empty() {
++                errors.push(
++                    "non-negative control task must include expected_relevant_files".to_string(),
++                );
++            }
++        }
++
++        if self.stale_context_trap && self.expected_relevant_files.is_empty() {
++            errors.push("stale_context_trap tasks must declare expected_relevant_files".to_string());
+         }
+
+         if self.negative_control && self.category != TaskCategory::NegativeControl {
+@@ -145,6 +151,7 @@ mod tests {
+               "title":"Inspect benchmark CLI wiring",
+               "prompt":"Inspect the workflow-benchmark command wiring.",
+               "category":"orientation",
++              "target_files":["src/main.rs"],
+               "expected_relevant_files":["src/main.rs"],
+               "expected_validation_commands":["cargo test -q workflow_benchmark"]
+             }"#,
+@@ -163,11 +170,12 @@ mod tests {
+             prompt: "Do work".to_string(),
+             category: TaskCategory::Planning,
+             repo_root: None,
+-            target_files: Vec::new(),
++            target_files: vec![PathBuf::from("src/main.rs")],
+             target_symbols: Vec::new(),
+-            expected_relevant_files: Vec::new(),
++            expected_relevant_files: vec![PathBuf::from("src/main.rs")],
+             expected_validation_commands: Vec::new(),
+             negative_control: false,
++            stale_context_trap: false,
+             success_rubric: SuccessRubric {
+                 min_verification_quality: 6,
+                 ..SuccessRubric::default()
+@@ -195,6 +203,7 @@ mod tests {
+             expected_relevant_files: Vec::new(),
+             expected_validation_commands: Vec::new(),
+             negative_control: true,
++            stale_context_trap: false,
+             success_rubric: SuccessRubric::default(),
+         };
+
+@@ -211,9 +220,10 @@ mod tests {
+             repo_root: None,
+             target_files: vec![PathBuf::from("src/main.rs")],
+             target_symbols: Vec::new(),
+-            expected_relevant_files: Vec::new(),
++            expected_relevant_files: vec![PathBuf::from("src/main.rs")],
+             expected_validation_commands: Vec::new(),
+             negative_control: false,
++            stale_context_trap: false,
+             success_rubric: SuccessRubric::default(),
+         };
+
+@@ -221,6 +231,27 @@ mod tests {
+         assert!(errors.iter().any(|error| error.contains("prompt")));
+     }
+
++    #[test]
++    fn stale_context_trap_requires_expected_relevant_files() {
++        let task = TaskSpec {
++            task_id: "stale-trap-1".to_string(),
++            title: "Stale trap".to_string(),
++            prompt: "Do work".to_string(),
++            category: TaskCategory::Bugfix,
++            repo_root: None,
++            target_files: vec![PathBuf::from("src/main.rs")],
++            target_symbols: Vec::new(),
++            expected_relevant_files: Vec::new(),
++            expected_validation_commands: Vec::new(),
++            negative_control: false,
++            stale_context_trap: true,
++            success_rubric: SuccessRubric::default(),
++        };
++
++        let errors = task.validate().expect_err("stale trap should require expected_relevant_files");
++        assert!(errors.iter().any(|error| error.contains("expected_relevant_files")));
++    }
++
+     #[test]
+     fn benchmark_task_examples_validate() {
+         let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+diff --git a/src/cmd/preflight.rs b/src/cmd/preflight.rs
+index aa10233..6765f8c 100644
+--- a/src/cmd/preflight.rs
++++ b/src/cmd/preflight.rs
+@@ -219,6 +219,7 @@ fn task_spec_for_preflight(args: &PreflightArgs, code_heavy: bool, targets: &[St
+             .map(|command| command.command)
+             .collect(),
+         negative_control: false,
++        stale_context_trap: false,
+         success_rubric: SuccessRubric::default(),
+     }
+ }
+diff --git a/src/cmd/query.rs b/src/cmd/query.rs
+index ec5d8ad..1a60da8 100644
+--- a/src/cmd/query.rs
++++ b/src/cmd/query.rs
+@@ -878,6 +878,7 @@ fn task_spec_for_query(
+         expected_relevant_files: targets,
+         expected_validation_commands: Vec::new(),
+         negative_control: false,
++        stale_context_trap: false,
+         success_rubric: SuccessRubric::default(),
+     }
+ }

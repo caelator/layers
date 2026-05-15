@@ -1,0 +1,9 @@
+# Workflow Benchmark Validation Log
+run_id: negative-control-simple-json-validity--layers_targeted_preflight
+
+Validation command: python3 - <<'PY'
+import json; json.loads('{"ok": true, "count": 3}'); print('yes')
+PY
+exit_status: 0
+stdout:
+yes

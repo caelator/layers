@@ -123,6 +123,14 @@ pub(crate) enum WorkflowBenchmarkCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Finalize a runner output directory into reproducible reports and audits.
+    FinalizeRun {
+        /// Runner output directory containing compare/workflow-runs.jsonl.
+        run_dir: PathBuf,
+        /// Output the structured finalization summary JSON to stdout.
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 /// Handle workflow benchmark commands.
@@ -314,6 +322,34 @@ pub(crate) fn handle_workflow_benchmark(command: &WorkflowBenchmarkCommands) -> 
             }
             Ok(())
         }
+        WorkflowBenchmarkCommands::FinalizeRun { run_dir, json } => {
+            let summary = finalize_workflow_benchmark_run(run_dir)?;
+            if *json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&summary)
+                        .context("failed to serialize workflow benchmark finalize-run summary")?
+                );
+            } else {
+                println!("Workflow benchmark finalized");
+                println!("artifact_root: {}", summary.artifact_root.display());
+                println!("workflow_records: {}", summary.workflow_records);
+                println!(
+                    "packet_validation_failures: {}",
+                    summary.packet_validation_failures
+                );
+                println!(
+                    "missing_required_artifacts: {}",
+                    summary.missing_required_artifacts.len()
+                );
+                println!("secret_scan_findings: {}", summary.secret_scan_findings);
+                println!("final_report: {}", summary.final_report_path.display());
+            }
+            if summary.has_blocking_findings() {
+                bail!("workflow benchmark finalization found blocking issues");
+            }
+            Ok(())
+        }
     }
 }
 
@@ -330,6 +366,15 @@ enum WorkflowVariant {
 impl WorkflowVariant {
     fn is_layers(self) -> bool {
         !matches!(self, Self::Baseline)
+    }
+
+    fn as_runner_variant(self) -> &'static str {
+        match self {
+            Self::Baseline => "baseline",
+            Self::LayersTargetedPreflight => "layers_targeted_preflight",
+            Self::LayersBroadQuery => "layers_broad_query",
+            Self::LayersMcpPreflight => "layers_mcp_preflight",
+        }
     }
 }
 
@@ -488,12 +533,18 @@ struct RunnerPlan {
 struct RunnerRunPlan {
     task_id: String,
     task_category: String,
+    #[serde(default)]
+    negative_control: bool,
     variant: String,
     run_id: String,
     worktree_path: PathBuf,
     prompt_path: PathBuf,
     transcript_path: PathBuf,
     validation_log_path: PathBuf,
+    #[serde(default)]
+    diff_stat_path: PathBuf,
+    #[serde(default)]
+    diff_patch_path: PathBuf,
     #[serde(skip_serializing_if = "Option::is_none")]
     packet_artifact_path: Option<PathBuf>,
     requires_layers_preflight: bool,
@@ -502,6 +553,10 @@ struct RunnerRunPlan {
     model: Option<String>,
     time_budget_minutes: u64,
     expected_validation_commands: Vec<String>,
+    #[serde(default)]
+    preflight_query: String,
+    #[serde(default)]
+    preflight_targets: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -812,7 +867,7 @@ struct LexicalPairReport {
     recall_at_10: f64,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 struct RunnerExecutionSummary {
     total_runs: usize,
     completed_runs: usize,
@@ -822,7 +877,7 @@ struct RunnerExecutionSummary {
     runs: Vec<RunnerRunExecution>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 struct RunnerRunExecution {
     run_id: String,
     task_id: String,
@@ -830,12 +885,42 @@ struct RunnerRunExecution {
     worktree_path: PathBuf,
     transcript_path: PathBuf,
     validation_log_path: PathBuf,
+    #[serde(default)]
+    diff_stat_path: PathBuf,
+    #[serde(default)]
+    diff_patch_path: PathBuf,
     #[serde(skip_serializing_if = "Option::is_none")]
     packet_artifact_path: Option<PathBuf>,
     agent_exit_code: Option<i32>,
     validation_exit_codes: Vec<Option<i32>>,
     wall_time_ms: u64,
     completed: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct FinalizeRunSummary {
+    artifact_root: PathBuf,
+    run_records_path: PathBuf,
+    report_json_path: PathBuf,
+    report_markdown_path: PathBuf,
+    final_report_path: PathBuf,
+    workflow_records: usize,
+    expected_runs: usize,
+    completed_runs: usize,
+    failed_runs: usize,
+    packet_artifacts: usize,
+    packet_validation_failures: usize,
+    missing_required_artifacts: Vec<String>,
+    secret_scan_findings: usize,
+    claim_status: Option<ClaimStatus>,
+}
+
+impl FinalizeRunSummary {
+    fn has_blocking_findings(&self) -> bool {
+        self.packet_validation_failures > 0
+            || !self.missing_required_artifacts.is_empty()
+            || self.secret_scan_findings > 0
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1879,8 +1964,9 @@ fn execute_runner_run(
             fs::create_dir_all(parent)
                 .with_context(|| format!("failed to create {}", parent.display()))?;
         }
+        let preflight_command = build_layers_preflight_command(&config.preflight_command, run)?;
         let preflight = run_shell_command(
-            &config.preflight_command,
+            &preflight_command,
             &run.worktree_path,
             run.time_budget_minutes,
         )?;
@@ -1905,6 +1991,13 @@ fn execute_runner_run(
                 output_text(&preflight.stderr)
             )?;
         }
+        writeln!(&mut transcript)?;
+    } else if run.variant == "layers_targeted_preflight" {
+        writeln!(&mut transcript, "## Targeted Preflight Abstention")?;
+        writeln!(
+            &mut transcript,
+            "No Layers preflight command was executed because this run abstains from targeted-preflight context."
+        )?;
         writeln!(&mut transcript)?;
     } else {
         writeln!(&mut transcript, "## Baseline Isolation")?;
@@ -2001,6 +2094,8 @@ fn execute_runner_run(
     fs::write(&run.validation_log_path, validation_log)
         .with_context(|| format!("failed to write {}", run.validation_log_path.display()))?;
 
+    save_runner_git_diffs(run)?;
+
     let validation_ok = validation_exit_codes
         .iter()
         .all(|code| code.is_some_and(|code| code == 0));
@@ -2013,6 +2108,8 @@ fn execute_runner_run(
         worktree_path: run.worktree_path.clone(),
         transcript_path: run.transcript_path.clone(),
         validation_log_path: run.validation_log_path.clone(),
+        diff_stat_path: run.diff_stat_path.clone(),
+        diff_patch_path: run.diff_patch_path.clone(),
         packet_artifact_path: run.packet_artifact_path.clone(),
         agent_exit_code,
         validation_exit_codes,
@@ -2028,6 +2125,94 @@ fn execute_runner_run(
     Ok(execution)
 }
 
+fn save_runner_git_diffs(run: &RunnerRunPlan) -> Result<()> {
+    if let Some(parent) = run.diff_stat_path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
+    if let Some(parent) = run.diff_patch_path.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
+
+    let _ = runner_git_command()
+        .arg("-C")
+        .arg(&run.worktree_path)
+        .args(["add", "-N", "."])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+
+    let stat = runner_git_command()
+        .arg("-C")
+        .arg(&run.worktree_path)
+        .args(["diff", "--stat", "HEAD"])
+        .output();
+    let patch = runner_git_command()
+        .arg("-C")
+        .arg(&run.worktree_path)
+        .args(["diff", "--binary", "HEAD"])
+        .output();
+
+    match stat {
+        Ok(output) if output.status.success() => fs::write(&run.diff_stat_path, output.stdout)
+            .with_context(|| format!("failed to write {}", run.diff_stat_path.display()))?,
+        Ok(output) => fs::write(
+            &run.diff_stat_path,
+            format!(
+                "git diff --stat failed with status {}\n{}",
+                output.status.code().unwrap_or(-1),
+                output_text(&output.stderr)
+            ),
+        )
+        .with_context(|| format!("failed to write {}", run.diff_stat_path.display()))?,
+        Err(err) => fs::write(
+            &run.diff_stat_path,
+            format!("failed to run git diff --stat: {err}\n"),
+        )
+        .with_context(|| format!("failed to write {}", run.diff_stat_path.display()))?,
+    }
+
+    match patch {
+        Ok(output) if output.status.success() => fs::write(&run.diff_patch_path, output.stdout)
+            .with_context(|| format!("failed to write {}", run.diff_patch_path.display()))?,
+        Ok(output) => fs::write(
+            &run.diff_patch_path,
+            format!(
+                "git diff --binary failed with status {}\n{}",
+                output.status.code().unwrap_or(-1),
+                output_text(&output.stderr)
+            ),
+        )
+        .with_context(|| format!("failed to write {}", run.diff_patch_path.display()))?,
+        Err(err) => fs::write(
+            &run.diff_patch_path,
+            format!("failed to run git diff --binary: {err}\n"),
+        )
+        .with_context(|| format!("failed to write {}", run.diff_patch_path.display()))?,
+    }
+    Ok(())
+}
+
+fn runner_git_command() -> Command {
+    let mut command = Command::new("git");
+    for key in [
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_CONFIG",
+        "GIT_CONFIG_COUNT",
+        "GIT_DIR",
+        "GIT_INDEX_FILE",
+        "GIT_NAMESPACE",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_PREFIX",
+        "GIT_QUARANTINE_PATH",
+        "GIT_WORK_TREE",
+    ] {
+        command.env_remove(key);
+    }
+    command
+}
+
 fn prepare_isolated_worktree(repo_root: &Path, worktree_path: &Path) -> Result<()> {
     if repo_root.join(".git").exists() {
         cleanup_git_worktree_registration(repo_root, worktree_path);
@@ -2041,7 +2226,7 @@ fn prepare_isolated_worktree(repo_root: &Path, worktree_path: &Path) -> Result<(
             fs::create_dir_all(parent)
                 .with_context(|| format!("failed to create {}", parent.display()))?;
         }
-        let status = Command::new("git")
+        let output = runner_git_command()
             .arg("-C")
             .arg(repo_root)
             .arg("worktree")
@@ -2050,11 +2235,15 @@ fn prepare_isolated_worktree(repo_root: &Path, worktree_path: &Path) -> Result<(
             .arg(worktree_path)
             .arg("HEAD")
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
+            .stderr(Stdio::piped())
+            .output()
             .context("failed to spawn git worktree add")?;
-        if !status.success() {
-            bail!("git worktree add failed with status {status}");
+        if !output.status.success() {
+            bail!(
+                "git worktree add failed with status {}: {}",
+                output.status,
+                output_text(&output.stderr)
+            );
         }
     } else {
         fs::create_dir_all(worktree_path)
@@ -2076,7 +2265,7 @@ fn cleanup_isolated_worktree(repo_root: &Path, worktree_path: &Path) -> Result<(
 }
 
 fn cleanup_git_worktree_registration(repo_root: &Path, worktree_path: &Path) {
-    let _ = Command::new("git")
+    let _ = runner_git_command()
         .arg("-C")
         .arg(repo_root)
         .arg("worktree")
@@ -2086,7 +2275,7 @@ fn cleanup_git_worktree_registration(repo_root: &Path, worktree_path: &Path) {
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status();
-    let _ = Command::new("git")
+    let _ = runner_git_command()
         .arg("-C")
         .arg(repo_root)
         .arg("worktree")
@@ -2227,8 +2416,12 @@ fn build_execution_run_record(
         missed_critical_context: 0,
         hallucinated_or_stale_context: 0,
         regressions: 0,
-        negative_control_abstained: false,
-        unnecessary_context_injections: 0,
+        negative_control_abstained: run.negative_control
+            && run.variant == "layers_targeted_preflight"
+            && !run.requires_layers_preflight,
+        unnecessary_context_injections: u64::from(
+            run.negative_control && run.requires_layers_preflight,
+        ),
         context_caused_regressions: 0,
     })
 }
@@ -2245,6 +2438,8 @@ fn normalize_runner_plan_paths(plan: &mut RunnerPlan) -> Result<()> {
         run.prompt_path = absolutize_path(&run.prompt_path)?;
         run.transcript_path = absolutize_path(&run.transcript_path)?;
         run.validation_log_path = absolutize_path(&run.validation_log_path)?;
+        run.diff_stat_path = absolutize_path(&run.diff_stat_path)?;
+        run.diff_patch_path = absolutize_path(&run.diff_patch_path)?;
         if let Some(packet_path) = &run.packet_artifact_path {
             run.packet_artifact_path = Some(absolutize_path(packet_path)?);
         }
@@ -2326,6 +2521,16 @@ fn validate_runner_plan_for_execution(plan: &RunnerPlan) -> Result<()> {
             &output_dir,
             "validation_log_path",
         )?;
+        ensure_path_within(
+            &normalize_path(&run.diff_stat_path),
+            &output_dir,
+            "diff_stat_path",
+        )?;
+        ensure_path_within(
+            &normalize_path(&run.diff_patch_path),
+            &output_dir,
+            "diff_patch_path",
+        )?;
 
         if run.requires_layers_preflight {
             if run.variant != "layers_targeted_preflight" {
@@ -2395,8 +2600,50 @@ fn output_text(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
 
+fn build_layers_preflight_command(preflight_command: &str, run: &RunnerRunPlan) -> Result<String> {
+    let current_exe = std::env::current_exe().context("failed to resolve current executable")?;
+    Ok(build_layers_preflight_command_with_exe(
+        preflight_command,
+        &current_exe,
+        run,
+    ))
+}
+
+fn build_layers_preflight_command_with_exe(
+    preflight_command: &str,
+    current_exe: &Path,
+    run: &RunnerRunPlan,
+) -> String {
+    let mut command = resolve_layers_preflight_command_with_exe(preflight_command, current_exe);
+    for target in &run.preflight_targets {
+        command.push_str(" --target ");
+        command.push_str(&shell_quote_arg(target));
+    }
+    if !run.preflight_query.is_empty() {
+        command.push(' ');
+        command.push_str(&shell_quote_arg(&run.preflight_query));
+    }
+    command
+}
+
+fn resolve_layers_preflight_command_with_exe(
+    preflight_command: &str,
+    current_exe: &Path,
+) -> String {
+    if preflight_command == "layers" {
+        shell_quote(current_exe)
+    } else if let Some(rest) = preflight_command.strip_prefix("layers ") {
+        format!("{} {rest}", shell_quote(current_exe))
+    } else {
+        preflight_command.to_owned()
+    }
+}
+
 fn shell_quote(path: &Path) -> String {
-    let value = path.display().to_string();
+    shell_quote_arg(&path.display().to_string())
+}
+
+fn shell_quote_arg(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
 }
 
@@ -2414,16 +2661,20 @@ fn build_runner_run_plan(
     let task_slug = safe_path_slug(&spec.task_id);
     let variant_slug = safe_path_slug(variant);
     let run_id = format!("{task_slug}--{variant_slug}");
-    let requires_layers_preflight = variant == "layers_targeted_preflight";
+    let requires_layers_preflight =
+        variant == "layers_targeted_preflight" && !spec.negative_control;
     RunnerRunPlan {
         task_id: spec.task_id.clone(),
         task_category: spec.category.clone(),
+        negative_control: spec.negative_control,
         variant: variant.to_owned(),
         run_id: run_id.clone(),
         worktree_path: worktree_root.join(&run_id),
         prompt_path: output_dir.join("prompts").join(format!("{run_id}.md")),
         transcript_path: output_dir.join("transcripts").join(format!("{run_id}.md")),
         validation_log_path: output_dir.join("validation").join(format!("{run_id}.log")),
+        diff_stat_path: output_dir.join("diffs").join(format!("{run_id}.stat")),
+        diff_patch_path: output_dir.join("diffs").join(format!("{run_id}.patch")),
         packet_artifact_path: requires_layers_preflight
             .then(|| output_dir.join("packets").join(format!("{run_id}.json"))),
         requires_layers_preflight,
@@ -2431,6 +2682,18 @@ fn build_runner_run_plan(
         model: config.model.clone(),
         time_budget_minutes: spec.time_budget_minutes.unwrap_or(30),
         expected_validation_commands: spec.expected_validation_commands.clone(),
+        preflight_query: format!(
+            "{}
+
+{}",
+            spec.title, spec.prompt
+        ),
+        preflight_targets: spec
+            .target_files
+            .iter()
+            .chain(spec.target_symbols.iter())
+            .cloned()
+            .collect(),
     }
 }
 
@@ -2470,6 +2733,16 @@ fn write_runner_prompt(run: &RunnerRunPlan, spec: &TaskSpec) -> Result<()> {
         writeln!(
             &mut prompt,
             "Use only the harness-captured targeted-preflight context for this variant; do not mix broad-query or MCP-preflight artifacts."
+        )?;
+    } else if run.variant == "layers_targeted_preflight" && spec.negative_control {
+        writeln!(&mut prompt, "## Negative-control abstention")?;
+        writeln!(
+            &mut prompt,
+            "Do not use Layers preflight context, broad query context, MCP context, repository files, or generated packet artifacts for this context-free negative-control task."
+        )?;
+        writeln!(
+            &mut prompt,
+            "Answer directly from the prompt and run only the minimal validation command if needed."
         )?;
     } else {
         writeln!(&mut prompt, "## Baseline isolation")?;
@@ -2522,6 +2795,11 @@ fn write_transcript_stub(run: &RunnerRunPlan, spec: &TaskSpec) -> Result<()> {
             &mut transcript,
             "Targeted packet: {}",
             packet_path.display()
+        )?;
+    } else if run.variant == "layers_targeted_preflight" && spec.negative_control {
+        writeln!(
+            &mut transcript,
+            "Negative-control targeted-preflight run: abstained from Layers packet generation."
         )?;
     } else {
         writeln!(
@@ -3300,6 +3578,490 @@ fn average_task_runs(runs: &[&WorkflowRun]) -> TaskRunAverage {
             .count() as f64
             / count,
     }
+}
+
+fn finalize_workflow_benchmark_run(run_dir: &Path) -> Result<FinalizeRunSummary> {
+    let artifact_root = absolutize_path(run_dir)?;
+    let compare_dir = artifact_root.join("compare");
+    let run_records_path = compare_dir.join("workflow-runs.jsonl");
+    let execution_report_path = compare_dir.join("runner-execution-report.json");
+    let report_json_path = compare_dir.join("workflow-benchmark-report.json");
+    let report_markdown_path = compare_dir.join("workflow-benchmark-report.md");
+    let final_report_path = artifact_root.join("PHASE15_FIXED_REPORT.md");
+
+    let runs = load_runs(&run_records_path)?;
+    let report = analyze_runs_with_thresholds(&runs, ClaimThresholds::default())?;
+    fs::write(
+        &report_json_path,
+        format!("{}\n", format_report(&report, true)?),
+    )
+    .with_context(|| format!("failed to write {}", report_json_path.display()))?;
+    fs::write(&report_markdown_path, format_report(&report, false)?)
+        .with_context(|| format!("failed to write {}", report_markdown_path.display()))?;
+
+    let execution_summary_result = load_runner_execution_summary(&execution_report_path);
+    let mut missing_required_artifacts = Vec::new();
+    let mut expected_runs = runs.len();
+    let mut completed_runs = runs.len();
+    let mut failed_runs = 0;
+    let mut packet_artifacts = 0;
+    let mut packet_validation_failures = 0;
+
+    match execution_summary_result {
+        Ok(summary) => {
+            expected_runs = summary.total_runs;
+            completed_runs = summary.completed_runs;
+            failed_runs = summary.failed_runs;
+            if summary.total_runs != runs.len() {
+                missing_required_artifacts.push(format!(
+                    "workflow record count mismatch: records={} runner_total={}",
+                    runs.len(),
+                    summary.total_runs
+                ));
+            }
+            if summary.runs.len() != summary.total_runs {
+                missing_required_artifacts.push(format!(
+                    "runner execution entry count mismatch: entries={} runner_total={}",
+                    summary.runs.len(),
+                    summary.total_runs
+                ));
+            }
+            if summary.failed_runs > 0
+                || summary.completed_runs != summary.total_runs
+                || summary.completed_runs.saturating_add(summary.failed_runs) != summary.total_runs
+            {
+                missing_required_artifacts.push(format!(
+                    "runner execution incomplete: total_runs={} completed_runs={} failed_runs={}",
+                    summary.total_runs, summary.completed_runs, summary.failed_runs
+                ));
+            }
+            if !artifact_path_matches(&summary.run_records_path, &run_records_path) {
+                missing_required_artifacts.push(format!(
+                    "runner run_records_path does not match expected path: reported={} expected={}",
+                    summary.run_records_path.display(),
+                    run_records_path.display()
+                ));
+            }
+            if !artifact_path_matches(&summary.execution_report_path, &execution_report_path) {
+                missing_required_artifacts.push(format!(
+                    "runner execution_report_path does not match expected path: reported={} expected={}",
+                    summary.execution_report_path.display(),
+                    execution_report_path.display()
+                ));
+            }
+            let mut workflow_run_counts = std::collections::BTreeMap::new();
+            let mut workflow_records_by_run_id = std::collections::BTreeMap::new();
+            for run in &runs {
+                let run_id = format!("{}--{}", run.task_id, run.variant.as_runner_variant());
+                *workflow_run_counts.entry(run_id.clone()).or_insert(0usize) += 1;
+                workflow_records_by_run_id.insert(run_id, run);
+            }
+            let mut execution_run_counts = std::collections::BTreeMap::new();
+            for run in &summary.runs {
+                *execution_run_counts
+                    .entry(run.run_id.clone())
+                    .or_insert(0usize) += 1;
+            }
+            let duplicate_workflow_records: Vec<_> = workflow_run_counts
+                .iter()
+                .filter_map(|(run_id, count)| (*count > 1).then_some(format!("{run_id} ({count})")))
+                .collect();
+            if !duplicate_workflow_records.is_empty() {
+                missing_required_artifacts.push(format!(
+                    "duplicate workflow records: {}",
+                    duplicate_workflow_records.join(", ")
+                ));
+            }
+            let duplicate_execution_entries: Vec<_> = execution_run_counts
+                .iter()
+                .filter_map(|(run_id, count)| (*count > 1).then_some(format!("{run_id} ({count})")))
+                .collect();
+            if !duplicate_execution_entries.is_empty() {
+                missing_required_artifacts.push(format!(
+                    "duplicate runner execution entries: {}",
+                    duplicate_execution_entries.join(", ")
+                ));
+            }
+            for run_id in workflow_run_counts.keys() {
+                if !execution_run_counts.contains_key(run_id) {
+                    missing_required_artifacts.push(format!(
+                        "workflow record missing runner execution entry: {run_id}"
+                    ));
+                }
+            }
+            for run_id in execution_run_counts.keys() {
+                if !workflow_run_counts.contains_key(run_id) {
+                    missing_required_artifacts.push(format!(
+                        "runner execution entry missing workflow record: {run_id}"
+                    ));
+                }
+            }
+            for run in &summary.runs {
+                if !run.completed {
+                    missing_required_artifacts.push(format!(
+                        "runner execution entry not completed for {}",
+                        run.run_id
+                    ));
+                }
+                if run.agent_exit_code != Some(0) {
+                    missing_required_artifacts.push(format!(
+                        "agent exit code was not successful for {}: {:?}",
+                        run.run_id, run.agent_exit_code
+                    ));
+                }
+                if run.validation_exit_codes.is_empty() {
+                    missing_required_artifacts.push(format!(
+                        "validation exit evidence missing for {}",
+                        run.run_id
+                    ));
+                }
+                for exit_code in &run.validation_exit_codes {
+                    if *exit_code != Some(0) {
+                        missing_required_artifacts.push(format!(
+                            "validation exit code was not successful for {}: {:?}",
+                            run.run_id, exit_code
+                        ));
+                    }
+                }
+                for (label, path) in [
+                    ("transcript", &run.transcript_path),
+                    ("validation_log", &run.validation_log_path),
+                    ("diff_stat", &run.diff_stat_path),
+                    ("diff_patch", &run.diff_patch_path),
+                ] {
+                    if path.as_os_str().is_empty() || !path.exists() {
+                        missing_required_artifacts.push(format!(
+                            "{} missing for {}: {}",
+                            label,
+                            run.run_id,
+                            path.display()
+                        ));
+                    } else if !artifact_path_is_within_root(path, &artifact_root) {
+                        missing_required_artifacts.push(format!(
+                            "{} outside artifact root for {}: {}",
+                            label,
+                            run.run_id,
+                            path.display()
+                        ));
+                    } else if matches!(label, "diff_stat" | "diff_patch") {
+                        if diff_artifact_is_empty_placeholder(path)? {
+                            let empty_diff_expected = workflow_records_by_run_id
+                                .get(&run.run_id)
+                                .is_some_and(|record| record.task_category == "negative_control");
+                            if !empty_diff_expected {
+                                missing_required_artifacts.push(format!(
+                                    "{} is empty placeholder for {}: {}",
+                                    label,
+                                    run.run_id,
+                                    path.display()
+                                ));
+                            }
+                        } else if diff_artifact_contains_failure(path)? {
+                            missing_required_artifacts.push(format!(
+                                "{} contains git diff failure for {}: {}",
+                                label,
+                                run.run_id,
+                                path.display()
+                            ));
+                        }
+                    }
+                }
+                if run.variant == WorkflowVariant::LayersTargetedPreflight.as_runner_variant() {
+                    match workflow_records_by_run_id.get(&run.run_id) {
+                        Some(record) if record.task_category == "negative_control" => {
+                            if !record.negative_control_abstained {
+                                missing_required_artifacts.push(format!(
+                                    "negative-control targeted-preflight run did not record abstention for {}",
+                                    run.run_id
+                                ));
+                            }
+                            if record.unnecessary_context_injections != 0 {
+                                missing_required_artifacts.push(format!(
+                                    "negative-control targeted-preflight run recorded unnecessary context injection for {}: {}",
+                                    run.run_id, record.unnecessary_context_injections
+                                ));
+                            }
+                            if run.packet_artifact_path.is_some() {
+                                missing_required_artifacts.push(format!(
+                                    "negative-control targeted-preflight run unexpectedly produced packet artifact for {}",
+                                    run.run_id
+                                ));
+                            }
+                            let expected_packet_artifact_path = artifact_root
+                                .join("packets")
+                                .join(format!("{}.json", run.run_id));
+                            if expected_packet_artifact_path.exists() {
+                                missing_required_artifacts.push(format!(
+                                    "negative-control targeted-preflight run produced stray packet artifact for {}: {}",
+                                    run.run_id,
+                                    expected_packet_artifact_path.display()
+                                ));
+                            }
+                        }
+                        _ if run.packet_artifact_path.is_none() => {
+                            missing_required_artifacts.push(format!(
+                                "packet_artifact_path missing for targeted-preflight run {}",
+                                run.run_id
+                            ));
+                            packet_validation_failures += 1;
+                        }
+                        _ => {}
+                    }
+                }
+                if let Some(packet_path) = &run.packet_artifact_path {
+                    packet_artifacts += 1;
+                    if !packet_path.exists() {
+                        missing_required_artifacts.push(format!(
+                            "packet missing for {}: {}",
+                            run.run_id,
+                            packet_path.display()
+                        ));
+                        packet_validation_failures += 1;
+                    } else if !artifact_path_is_within_root(packet_path, &artifact_root) {
+                        packet_validation_failures += 1;
+                        missing_required_artifacts.push(format!(
+                            "packet outside artifact root for {}: {}",
+                            run.run_id,
+                            packet_path.display()
+                        ));
+                    } else if let Err(error) = validate_packet_artifact(packet_path) {
+                        packet_validation_failures += 1;
+                        missing_required_artifacts.push(format!(
+                            "packet validation failed for {}: {error:#}",
+                            packet_path.display()
+                        ));
+                    }
+                }
+            }
+        }
+        Err(error) => {
+            missing_required_artifacts.push(format!(
+                "runner execution report missing or unreadable: {} ({error:#})",
+                execution_report_path.display()
+            ));
+        }
+    }
+
+    let secret_scan_findings = scan_artifacts_for_secret_shapes(&artifact_root)?;
+    let claim_status = report.claim.as_ref().map(|claim| claim.status);
+    if let Some(claim) = &report.claim {
+        if claim.status == ClaimStatus::NotSupported {
+            let details = if claim.blocking_metrics.is_empty() {
+                "no blocking metrics reported".to_owned()
+            } else {
+                claim.blocking_metrics.join(", ")
+            };
+            missing_required_artifacts.push(format!("benchmark claim not supported: {details}"));
+        }
+    }
+    let summary = FinalizeRunSummary {
+        artifact_root: artifact_root.clone(),
+        run_records_path,
+        report_json_path,
+        report_markdown_path,
+        final_report_path: final_report_path.clone(),
+        workflow_records: runs.len(),
+        expected_runs,
+        completed_runs,
+        failed_runs,
+        packet_artifacts,
+        packet_validation_failures,
+        missing_required_artifacts,
+        secret_scan_findings,
+        claim_status,
+    };
+    write_final_run_report(&summary, &report)?;
+    Ok(summary)
+}
+
+fn load_runner_execution_summary(path: &Path) -> Result<RunnerExecutionSummary> {
+    let content =
+        fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
+    serde_json::from_str(&content).with_context(|| format!("failed to parse {}", path.display()))
+}
+
+fn artifact_path_matches(reported: &Path, expected: &Path) -> bool {
+    match (reported.canonicalize(), expected.canonicalize()) {
+        (Ok(reported), Ok(expected)) => reported == expected,
+        _ => reported == expected,
+    }
+}
+
+fn artifact_path_is_within_root(path: &Path, artifact_root: &Path) -> bool {
+    match (path.canonicalize(), artifact_root.canonicalize()) {
+        (Ok(path), Ok(root)) => path.starts_with(root),
+        _ => false,
+    }
+}
+
+fn diff_artifact_is_empty_placeholder(path: &Path) -> Result<bool> {
+    let content =
+        fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
+    Ok(content.trim().is_empty())
+}
+
+fn diff_artifact_contains_failure(path: &Path) -> Result<bool> {
+    let content =
+        fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
+    Ok(content.contains("git diff --stat failed")
+        || content.contains("git diff --binary failed")
+        || content.contains("failed to run git diff --stat")
+        || content.contains("failed to run git diff --binary"))
+}
+
+fn validate_packet_artifact(path: &Path) -> Result<()> {
+    let current_exe = std::env::current_exe().context("failed to resolve current executable")?;
+    let output = Command::new(current_exe)
+        .args(["packet", "validate"])
+        .arg(path)
+        .output()
+        .with_context(|| format!("failed to run packet validation for {}", path.display()))?;
+    if !output.status.success() {
+        bail!(
+            "packet validate exited {:?}: {}{}",
+            output.status.code(),
+            output_text(&output.stdout),
+            output_text(&output.stderr)
+        );
+    }
+    Ok(())
+}
+
+fn scan_artifacts_for_secret_shapes(root: &Path) -> Result<usize> {
+    let mut findings = 0;
+    scan_artifacts_for_secret_shapes_inner(root, &mut findings)?;
+    Ok(findings)
+}
+
+fn scan_artifacts_for_secret_shapes_inner(path: &Path, findings: &mut usize) -> Result<()> {
+    let metadata =
+        fs::symlink_metadata(path).with_context(|| format!("failed to stat {}", path.display()))?;
+    if metadata.file_type().is_symlink() {
+        return Ok(());
+    }
+    if metadata.is_dir() {
+        for entry in
+            fs::read_dir(path).with_context(|| format!("failed to read {}", path.display()))?
+        {
+            scan_artifacts_for_secret_shapes_inner(&entry?.path(), findings)?;
+        }
+        return Ok(());
+    }
+    if metadata.len() > 2_000_000 {
+        return Ok(());
+    }
+    let Ok(content) = fs::read_to_string(path) else {
+        return Ok(());
+    };
+    if contains_secret_shape(&content) {
+        *findings += 1;
+    }
+    Ok(())
+}
+
+fn contains_secret_shape(content: &str) -> bool {
+    content.contains("BEGIN PRIVATE KEY")
+        || content.contains("AWS_SECRET_ACCESS_KEY")
+        || contains_prefixed_token_shape(content, "sk-", 16)
+        || contains_prefixed_token_shape(content, "ghp_", 20)
+        || contains_prefixed_token_shape(content, "github_pat_", 20)
+}
+
+fn contains_prefixed_token_shape(content: &str, prefix: &str, min_suffix_len: usize) -> bool {
+    let mut rest = content;
+    while let Some(index) = rest.find(prefix) {
+        let suffix_start = index + prefix.len();
+        let suffix_len = rest[suffix_start..]
+            .chars()
+            .take_while(|ch| ch.is_ascii_alphanumeric() || *ch == '_')
+            .count();
+        if suffix_len >= min_suffix_len {
+            return true;
+        }
+        rest = &rest[suffix_start..];
+    }
+    false
+}
+
+fn write_final_run_report(summary: &FinalizeRunSummary, report: &BenchmarkReport) -> Result<()> {
+    let mut output = String::new();
+    writeln!(output, "# Phase 15 Fixed Workflow Benchmark Final Report")?;
+    writeln!(output)?;
+    writeln!(
+        output,
+        "- Artifact root: `{}`",
+        summary.artifact_root.display()
+    )?;
+    writeln!(output, "- Workflow records: {}", summary.workflow_records)?;
+    writeln!(
+        output,
+        "- Expected/completed/failed runs: {} / {} / {}",
+        summary.expected_runs, summary.completed_runs, summary.failed_runs
+    )?;
+    writeln!(output, "- Packet artifacts: {}", summary.packet_artifacts)?;
+    writeln!(
+        output,
+        "- Packet validation failures: {}",
+        summary.packet_validation_failures
+    )?;
+    writeln!(
+        output,
+        "- Missing required artifacts: {}",
+        summary.missing_required_artifacts.len()
+    )?;
+    writeln!(
+        output,
+        "- Secret-shaped artifact findings: {}",
+        summary.secret_scan_findings
+    )?;
+    if let Some(claim) = &report.claim {
+        writeln!(output, "- Claim status: {:?}", claim.status)?;
+        if !claim.blocking_metrics.is_empty() {
+            writeln!(
+                output,
+                "- Blocking metrics: {}",
+                claim.blocking_metrics.join(", ")
+            )?;
+        }
+        if !claim.uncertainty_notes.is_empty() {
+            writeln!(
+                output,
+                "- Uncertainty notes: {}",
+                claim.uncertainty_notes.join("; ")
+            )?;
+        }
+    }
+    if let Some(comparison) = &report.comparison {
+        writeln!(output)?;
+        writeln!(output, "## Paired comparison")?;
+        writeln!(output, "- Paired tasks: {}", report.paired_task_count)?;
+        writeln!(output, "- Speedup: {:.3}x", comparison.speedup)?;
+        writeln!(
+            output,
+            "- Net time saved per task: {:.1} ms",
+            comparison.net_time_saved_ms
+        )?;
+        writeln!(
+            output,
+            "- Token reduction ratio: {:.3}",
+            comparison.token_reduction_ratio
+        )?;
+        writeln!(output, "- Success delta: {:.3}", comparison.success_delta)?;
+        writeln!(
+            output,
+            "- Context quality delta: {:.3}",
+            comparison.context_quality_delta
+        )?;
+    }
+    if !summary.missing_required_artifacts.is_empty() {
+        writeln!(output)?;
+        writeln!(output, "## Blocking artifact findings")?;
+        for finding in &summary.missing_required_artifacts {
+            writeln!(output, "- {finding}")?;
+        }
+    }
+    fs::write(&summary.final_report_path, output)
+        .with_context(|| format!("failed to write {}", summary.final_report_path.display()))
 }
 
 fn format_report(report: &BenchmarkReport, json: bool) -> Result<String> {
@@ -4363,6 +5125,191 @@ mod tests {
     }
 
     #[test]
+    fn runner_preserves_git_diffs_before_cleanup() {
+        let output = tempfile::tempdir().expect("temp output dir");
+        let repo = tempfile::tempdir().expect("temp repo dir");
+        fs::write(repo.path().join("tracked.txt"), "original\n").expect("tracked file written");
+        runner_git_command()
+            .arg("-C")
+            .arg(repo.path())
+            .arg("init")
+            .status()
+            .expect("git init spawned");
+        runner_git_command()
+            .arg("-C")
+            .arg(repo.path())
+            .args(["config", "user.email", "phase15@example.invalid"])
+            .status()
+            .expect("git config email spawned");
+        runner_git_command()
+            .arg("-C")
+            .arg(repo.path())
+            .args(["config", "user.name", "Phase 15"])
+            .status()
+            .expect("git config name spawned");
+        runner_git_command()
+            .arg("-C")
+            .arg(repo.path())
+            .args(["add", "tracked.txt"])
+            .status()
+            .expect("git add spawned");
+        runner_git_command()
+            .arg("-C")
+            .arg(repo.path())
+            .args(["commit", "-m", "seed"])
+            .status()
+            .expect("git commit spawned");
+
+        let task_dir = output.path().join("tasks");
+        fs::create_dir_all(&task_dir).expect("task dir");
+        let task_path = task_dir.join("phase15-diff-task.json");
+        fs::write(
+            &task_path,
+            r#"{
+  "task_id": "phase15-diff-task",
+  "title": "Preserve runner diffs",
+  "prompt": "Change tracked.txt to contain changed and create agent-output.txt.",
+  "category": "bugfix",
+  "difficulty": "small",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": false,
+  "stale_context_trap": false,
+  "time_budget_minutes": 1,
+  "target_files": ["tracked.txt"],
+  "target_symbols": [],
+  "expected_relevant_files": ["tracked.txt"],
+  "expected_validation_commands": ["grep changed tracked.txt", "test -f agent-output.txt"],
+  "success_rubric": {
+    "full_success": "tracked.txt is changed and agent-output.txt exists.",
+    "partial_success": "Only one artifact was written.",
+    "failure": "No requested artifact was written.",
+    "min_verification_quality": 4,
+    "primary_endpoint": "verified_success"
+  }
+}
+"#,
+        )
+        .expect("task written");
+        let config = RunnerPlanConfig {
+            task_path,
+            output_dir: output.path().join("phase15-run"),
+            repo_root: repo.path().to_path_buf(),
+            agent_command: "python3 -c \"from pathlib import Path; Path('tracked.txt').write_text('changed\\n'); Path('agent-output.txt').write_text('done')\"".to_owned(),
+            model: None,
+            seed: 15,
+        };
+        let plan = plan_runner_artifacts(&config).expect("runner plan artifacts");
+        let execution = execute_runner_plan(&RunnerExecutionConfig {
+            plan_path: plan.plan_path.clone(),
+            preflight_command: "python3 -c \"print('{}')\"".to_owned(),
+            keep_worktrees: false,
+        })
+        .expect("runner execution");
+
+        for run in &plan.runs {
+            assert!(
+                !run.worktree_path.exists(),
+                "worktree cleaned for {}",
+                run.run_id
+            );
+        }
+        for run in &execution.runs {
+            let diff_stat_path = &run.diff_stat_path;
+            let diff_patch_path = &run.diff_patch_path;
+            assert!(
+                diff_stat_path.exists(),
+                "diff stat exists for {}",
+                run.run_id
+            );
+            assert!(
+                diff_patch_path.exists(),
+                "diff patch exists for {}",
+                run.run_id
+            );
+            assert!(
+                fs::read_to_string(diff_stat_path)
+                    .expect("diff stat readable")
+                    .contains("tracked.txt")
+            );
+            assert!(
+                fs::read_to_string(diff_patch_path)
+                    .expect("diff patch readable")
+                    .contains("+changed")
+            );
+        }
+    }
+
+    #[test]
+    fn negative_control_targeted_preflight_abstains_from_packet_generation() {
+        let output = tempfile::tempdir().expect("temp output dir");
+        let config = RunnerPlanConfig {
+            task_path: PathBuf::from(
+                "benchmarks/workflows/tasks/negative-control-count-letters.json",
+            ),
+            output_dir: output.path().join("phase15-run"),
+            repo_root: PathBuf::from("/repo/layers"),
+            agent_command: "gemini -p".to_owned(),
+            model: None,
+            seed: 15,
+        };
+
+        let plan = plan_runner_artifacts(&config).expect("runner plan artifacts");
+        let targeted = plan
+            .runs
+            .iter()
+            .find(|run| run.variant == "layers_targeted_preflight")
+            .expect("targeted run");
+        assert!(
+            !targeted.requires_layers_preflight,
+            "negative controls should abstain from targeted preflight"
+        );
+        assert!(targeted.packet_artifact_path.is_none());
+        let targeted_prompt = fs::read_to_string(&targeted.prompt_path).expect("prompt readable");
+        assert!(targeted_prompt.contains("Negative-control abstention"));
+        assert!(targeted_prompt.contains("Do not use Layers preflight context"));
+
+        let execution = RunnerRunExecution {
+            run_id: targeted.run_id.clone(),
+            task_id: targeted.task_id.clone(),
+            variant: targeted.variant.clone(),
+            worktree_path: targeted.worktree_path.clone(),
+            transcript_path: targeted.transcript_path.clone(),
+            validation_log_path: targeted.validation_log_path.clone(),
+            diff_stat_path: targeted.diff_stat_path.clone(),
+            diff_patch_path: targeted.diff_patch_path.clone(),
+            packet_artifact_path: targeted.packet_artifact_path.clone(),
+            agent_exit_code: Some(0),
+            validation_exit_codes: vec![Some(0)],
+            wall_time_ms: 100,
+            completed: true,
+        };
+        let record = build_execution_run_record(targeted, &execution).expect("run record");
+        assert!(record.negative_control_abstained);
+        assert_eq!(record.unnecessary_context_injections, 0);
+    }
+
+    #[test]
+    fn layers_preflight_command_uses_current_executable_for_harness_runs() {
+        let current_exe = PathBuf::from("/tmp/layers test/bin/layers");
+
+        assert_eq!(
+            resolve_layers_preflight_command_with_exe(
+                "layers preflight --no-audit --json --strict --target src/lib.rs fix bug",
+                &current_exe,
+            ),
+            "'/tmp/layers test/bin/layers' preflight --no-audit --json --strict --target src/lib.rs fix bug"
+        );
+        assert_eq!(
+            resolve_layers_preflight_command_with_exe("layers", &current_exe),
+            "'/tmp/layers test/bin/layers'"
+        );
+        assert_eq!(
+            resolve_layers_preflight_command_with_exe("python3 tools/preflight.py", &current_exe),
+            "python3 tools/preflight.py"
+        );
+    }
+
+    #[test]
     fn runner_prompts_keep_baseline_free_of_layers_context() {
         let output = tempfile::tempdir().expect("temp output dir");
         let config = RunnerPlanConfig {
@@ -4626,5 +5573,669 @@ mod tests {
                     .iter()
                     .any(|error| error.contains("success_rubric"))
         }));
+    }
+    #[test]
+    fn preflight_command_includes_targets_and_query() {
+        let config = RunnerPlanConfig {
+            task_path: PathBuf::from("tasks"),
+            output_dir: PathBuf::from("out"),
+            repo_root: PathBuf::from("."),
+            agent_command: "true".to_owned(),
+            model: Some("gemini".to_owned()),
+            seed: 7,
+        };
+        let spec = valid_task_spec_for_validation_tests();
+        let run = build_runner_run_plan(
+            &config,
+            &spec,
+            "layers_targeted_preflight",
+            Path::new("out"),
+            Path::new("worktrees"),
+        );
+
+        assert!(run.requires_layers_preflight);
+        assert!(run.preflight_query.contains("Valid code task"));
+        assert!(run.preflight_query.contains("Prompt"));
+        assert!(run.preflight_targets.contains(&"src/lib.rs".to_owned()));
+        assert!(
+            run.preflight_targets
+                .contains(&"validate_task_spec".to_owned())
+        );
+
+        let command = build_layers_preflight_command_with_exe(
+            "layers preflight --json --strict",
+            Path::new("/tmp/layers bin/layers"),
+            &run,
+        );
+        assert!(command.starts_with("'/tmp/layers bin/layers' preflight --json --strict"));
+        assert!(command.contains(" --target 'src/lib.rs'"));
+        assert!(command.contains(" --target 'validate_task_spec'"));
+        assert!(command.contains("'Valid code task"));
+    }
+
+    #[test]
+    fn finalize_run_writes_reports_and_detects_complete_artifacts() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path();
+        let compare = root.join("compare");
+        fs::create_dir_all(&compare).expect("compare dir");
+        let transcript_dir = root.join("transcripts");
+        let validation_dir = root.join("validation");
+        let diff_dir = root.join("diffs");
+        fs::create_dir_all(&transcript_dir).expect("transcripts dir");
+        fs::create_dir_all(&validation_dir).expect("validation dir");
+        fs::create_dir_all(&diff_dir).expect("diff dir");
+
+        let run_records = format!(
+            "{}
+{}
+",
+            valid_run("task-1", "baseline", 1_000, 2_000),
+            valid_run("task-1", "layers_targeted_preflight", 800, 1_500)
+        );
+        fs::write(compare.join("workflow-runs.jsonl"), run_records).expect("run records");
+
+        let mut executions = Vec::new();
+        for (run_id, task_id, variant) in [
+            ("task-1--baseline", "task-1", "baseline"),
+            (
+                "task-1--layers_targeted_preflight",
+                "task-1",
+                "layers_targeted_preflight",
+            ),
+        ] {
+            let transcript_path = transcript_dir.join(format!("{run_id}.md"));
+            let validation_log_path = validation_dir.join(format!("{run_id}.log"));
+            let diff_stat_path = diff_dir.join(format!("{run_id}.stat"));
+            let diff_patch_path = diff_dir.join(format!("{run_id}.patch"));
+            fs::write(&transcript_path, "transcript").expect("transcript");
+            fs::write(&validation_log_path, "validation").expect("validation");
+            fs::write(&diff_stat_path, "stat").expect("stat");
+            fs::write(&diff_patch_path, "patch").expect("patch");
+            let packet_artifact_path = (variant == "layers_targeted_preflight")
+                .then(|| write_valid_packet_artifact(root, run_id));
+            executions.push(RunnerRunExecution {
+                run_id: run_id.to_owned(),
+                task_id: task_id.to_owned(),
+                variant: variant.to_owned(),
+                worktree_path: root.join("worktrees").join(run_id),
+                transcript_path,
+                validation_log_path,
+                diff_stat_path,
+                diff_patch_path,
+                packet_artifact_path,
+                agent_exit_code: Some(0),
+                validation_exit_codes: vec![Some(0)],
+                wall_time_ms: 1_000,
+                completed: true,
+            });
+        }
+        let execution_summary = RunnerExecutionSummary {
+            total_runs: 2,
+            completed_runs: 2,
+            failed_runs: 0,
+            run_records_path: compare.join("workflow-runs.jsonl"),
+            execution_report_path: compare.join("runner-execution-report.json"),
+            runs: executions,
+        };
+        fs::write(
+            compare.join("runner-execution-report.json"),
+            serde_json::to_string_pretty(&execution_summary).expect("summary json"),
+        )
+        .expect("execution summary");
+
+        let summary = finalize_workflow_benchmark_run(root).expect("finalize run");
+
+        assert_eq!(summary.workflow_records, 2);
+        assert_eq!(summary.expected_runs, 2);
+        assert_eq!(summary.completed_runs, 2);
+        assert_eq!(summary.packet_validation_failures, 0);
+        assert_eq!(summary.secret_scan_findings, 0);
+        assert!(summary.missing_required_artifacts.is_empty());
+        assert!(summary.report_json_path.exists());
+        assert!(summary.report_markdown_path.exists());
+        assert!(summary.final_report_path.exists());
+    }
+
+    #[test]
+    fn finalize_run_blocks_incomplete_execution_summary_and_failed_diff_artifacts() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path();
+        let compare = root.join("compare");
+        let transcript_dir = root.join("transcripts");
+        let validation_dir = root.join("validation");
+        let diff_dir = root.join("diffs");
+        fs::create_dir_all(&compare).expect("compare dir");
+        fs::create_dir_all(&transcript_dir).expect("transcripts dir");
+        fs::create_dir_all(&validation_dir).expect("validation dir");
+        fs::create_dir_all(&diff_dir).expect("diff dir");
+        fs::write(
+            compare.join("workflow-runs.jsonl"),
+            format!(
+                "{}\n{}\n",
+                valid_run("task-1", "baseline", 1_000, 2_000),
+                valid_run("task-1", "layers_targeted_preflight", 800, 1_500)
+            ),
+        )
+        .expect("run records");
+
+        let transcript_path = transcript_dir.join("task-1--baseline.md");
+        let validation_log_path = validation_dir.join("task-1--baseline.log");
+        let diff_stat_path = diff_dir.join("task-1--baseline.stat");
+        let diff_patch_path = diff_dir.join("task-1--baseline.patch");
+        fs::write(&transcript_path, "transcript").expect("transcript");
+        fs::write(&validation_log_path, "validation").expect("validation");
+        fs::write(&diff_stat_path, "git diff --stat failed with status 129").expect("stat");
+        fs::write(&diff_patch_path, "patch").expect("patch");
+
+        let execution_summary = RunnerExecutionSummary {
+            total_runs: 3,
+            completed_runs: 1,
+            failed_runs: 1,
+            run_records_path: compare.join("workflow-runs.jsonl"),
+            execution_report_path: compare.join("runner-execution-report.json"),
+            runs: vec![RunnerRunExecution {
+                run_id: "task-1--baseline".to_owned(),
+                task_id: "task-1".to_owned(),
+                variant: "baseline".to_owned(),
+                worktree_path: root.join("worktrees/task-1--baseline"),
+                transcript_path,
+                validation_log_path,
+                diff_stat_path,
+                diff_patch_path,
+                packet_artifact_path: None,
+                agent_exit_code: Some(1),
+                validation_exit_codes: vec![Some(0)],
+                wall_time_ms: 1_000,
+                completed: false,
+            }],
+        };
+        fs::write(
+            compare.join("runner-execution-report.json"),
+            serde_json::to_string_pretty(&execution_summary).expect("summary json"),
+        )
+        .expect("execution summary");
+
+        let summary = finalize_workflow_benchmark_run(root).expect("finalize run");
+
+        assert!(summary.has_blocking_findings());
+        assert!(
+            summary
+                .missing_required_artifacts
+                .iter()
+                .any(|finding| finding.contains("workflow record count mismatch"))
+        );
+        assert!(
+            summary
+                .missing_required_artifacts
+                .iter()
+                .any(|finding| finding.contains("runner execution entry count mismatch"))
+        );
+        assert!(
+            summary
+                .missing_required_artifacts
+                .iter()
+                .any(|finding| finding.contains("failed_runs=1"))
+        );
+        assert!(
+            summary
+                .missing_required_artifacts
+                .iter()
+                .any(|finding| finding.contains("diff_stat contains git diff failure"))
+        );
+    }
+
+    #[test]
+    fn finalize_run_blocks_unsafe_paths_duplicate_ids_and_nonzero_exits() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path().join("run");
+        let outside = tmp.path().join("outside");
+        let compare = root.join("compare");
+        let artifact_dir = root.join("artifacts");
+        fs::create_dir_all(&compare).expect("compare dir");
+        fs::create_dir_all(&artifact_dir).expect("artifact dir");
+        fs::create_dir_all(&outside).expect("outside dir");
+        fs::write(
+            compare.join("workflow-runs.jsonl"),
+            format!(
+                "{}\n{}\n{}\n",
+                valid_run("task-1", "baseline", 1_200, 2_200),
+                valid_run("task-1", "baseline", 1_100, 2_100),
+                valid_run("task-1", "layers_targeted_preflight", 1_000, 2_000)
+            ),
+        )
+        .expect("duplicate run records");
+
+        let outside_transcript = outside.join("transcript.md");
+        fs::write(&outside_transcript, "transcript").expect("outside transcript");
+        let validation_log_path = artifact_dir.join("validation.log");
+        let diff_stat_path = artifact_dir.join("diff.stat");
+        let diff_patch_path = artifact_dir.join("diff.patch");
+        fs::write(&validation_log_path, "validation").expect("validation");
+        fs::write(&diff_stat_path, "stat").expect("stat");
+        fs::write(&diff_patch_path, "patch").expect("patch");
+
+        let execution_summary = RunnerExecutionSummary {
+            total_runs: 2,
+            completed_runs: 1,
+            failed_runs: 0,
+            run_records_path: outside.join("workflow-runs.jsonl"),
+            execution_report_path: compare.join("runner-execution-report.json"),
+            runs: vec![
+                RunnerRunExecution {
+                    run_id: "task-1--baseline".to_owned(),
+                    task_id: "task-1".to_owned(),
+                    variant: "baseline".to_owned(),
+                    worktree_path: root.join("worktrees/task-1--baseline"),
+                    transcript_path: outside_transcript,
+                    validation_log_path: validation_log_path.clone(),
+                    diff_stat_path: diff_stat_path.clone(),
+                    diff_patch_path: diff_patch_path.clone(),
+                    packet_artifact_path: None,
+                    agent_exit_code: Some(1),
+                    validation_exit_codes: vec![Some(2)],
+                    wall_time_ms: 1_000,
+                    completed: false,
+                },
+                RunnerRunExecution {
+                    run_id: "task-1--baseline".to_owned(),
+                    task_id: "task-1".to_owned(),
+                    variant: "baseline".to_owned(),
+                    worktree_path: root.join("worktrees/task-1--baseline-duplicate"),
+                    transcript_path: artifact_dir.join("transcript-2.md"),
+                    validation_log_path,
+                    diff_stat_path,
+                    diff_patch_path,
+                    packet_artifact_path: None,
+                    agent_exit_code: Some(0),
+                    validation_exit_codes: vec![Some(0)],
+                    wall_time_ms: 1_000,
+                    completed: true,
+                },
+            ],
+        };
+        fs::write(artifact_dir.join("transcript-2.md"), "transcript").expect("transcript");
+        fs::write(
+            compare.join("runner-execution-report.json"),
+            serde_json::to_string_pretty(&execution_summary).expect("summary json"),
+        )
+        .expect("execution summary");
+
+        let summary = finalize_workflow_benchmark_run(&root).expect("finalize run");
+
+        assert!(summary.has_blocking_findings());
+        assert!(
+            summary
+                .missing_required_artifacts
+                .iter()
+                .any(|finding| finding.contains("runner execution incomplete"))
+        );
+        assert!(
+            summary
+                .missing_required_artifacts
+                .iter()
+                .any(|finding| finding.contains("duplicate workflow records"))
+        );
+        assert!(
+            summary
+                .missing_required_artifacts
+                .iter()
+                .any(|finding| finding.contains("duplicate runner execution entries"))
+        );
+        assert!(
+            summary
+                .missing_required_artifacts
+                .iter()
+                .any(|finding| finding.contains("outside artifact root"))
+        );
+        assert!(
+            summary
+                .missing_required_artifacts
+                .iter()
+                .any(|finding| finding.contains("agent exit code was not successful"))
+        );
+        assert!(
+            summary
+                .missing_required_artifacts
+                .iter()
+                .any(|finding| finding.contains("validation exit code was not successful"))
+        );
+        assert!(summary.missing_required_artifacts.iter().any(|finding| {
+            finding.contains("runner run_records_path does not match expected path")
+        }));
+    }
+
+    #[test]
+    fn finalize_run_blocks_unsupported_benchmark_claim() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path();
+        let compare = root.join("compare");
+        let artifact_dir = root.join("artifacts");
+        fs::create_dir_all(&compare).expect("compare dir");
+        fs::create_dir_all(&artifact_dir).expect("artifact dir");
+        fs::write(
+            compare.join("workflow-runs.jsonl"),
+            format!(
+                "{}\n{}\n",
+                valid_run("task-1", "baseline", 1_000, 2_000),
+                valid_run("task-1", "layers", 900, 1_900)
+            ),
+        )
+        .expect("run records");
+
+        let execution_summary = RunnerExecutionSummary {
+            total_runs: 2,
+            completed_runs: 2,
+            failed_runs: 0,
+            run_records_path: compare.join("workflow-runs.jsonl"),
+            execution_report_path: compare.join("runner-execution-report.json"),
+            runs: vec![
+                successful_runner_execution(root, "task-1--baseline", "task-1", "baseline"),
+                successful_runner_execution(root, "task-1--layers", "task-1", "layers"),
+            ],
+        };
+        write_runner_execution_summary(&compare, &execution_summary);
+
+        let summary = finalize_workflow_benchmark_run(root).expect("finalize run");
+
+        assert_eq!(summary.claim_status, Some(ClaimStatus::NotSupported));
+        assert!(summary.has_blocking_findings());
+        assert!(summary.missing_required_artifacts.iter().any(|finding| {
+            finding.contains("benchmark claim not supported")
+                && finding.contains("paired_task_count")
+        }));
+    }
+
+    #[test]
+    fn finalize_run_requires_targeted_preflight_packet_artifact_path() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path();
+        let compare = root.join("compare");
+        fs::create_dir_all(&compare).expect("compare dir");
+        fs::write(
+            compare.join("workflow-runs.jsonl"),
+            format!(
+                "{}\n{}\n",
+                valid_run("task-1", "baseline", 1_000, 2_000),
+                valid_run("task-1", "layers_targeted_preflight", 900, 1_900)
+            ),
+        )
+        .expect("run records");
+
+        let execution_summary = RunnerExecutionSummary {
+            total_runs: 2,
+            completed_runs: 2,
+            failed_runs: 0,
+            run_records_path: compare.join("workflow-runs.jsonl"),
+            execution_report_path: compare.join("runner-execution-report.json"),
+            runs: vec![
+                successful_runner_execution(root, "task-1--baseline", "task-1", "baseline"),
+                successful_runner_execution(
+                    root,
+                    "task-1--layers_targeted_preflight",
+                    "task-1",
+                    "layers_targeted_preflight",
+                ),
+            ],
+        };
+        write_runner_execution_summary(&compare, &execution_summary);
+
+        let summary = finalize_workflow_benchmark_run(root).expect("finalize run");
+
+        assert!(summary.has_blocking_findings());
+        assert!(summary.missing_required_artifacts.iter().any(|finding| {
+            finding.contains("packet_artifact_path missing")
+                && finding.contains("task-1--layers_targeted_preflight")
+        }));
+    }
+
+    #[test]
+    fn finalize_run_requires_validation_exit_evidence() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path();
+        let compare = root.join("compare");
+        fs::create_dir_all(&compare).expect("compare dir");
+        fs::write(
+            compare.join("workflow-runs.jsonl"),
+            format!(
+                "{}\n{}\n",
+                valid_run("task-1", "baseline", 1_000, 2_000),
+                valid_run("task-1", "layers", 900, 1_900)
+            ),
+        )
+        .expect("run records");
+
+        let mut baseline =
+            successful_runner_execution(root, "task-1--baseline", "task-1", "baseline");
+        baseline.validation_exit_codes.clear();
+        let execution_summary = RunnerExecutionSummary {
+            total_runs: 2,
+            completed_runs: 2,
+            failed_runs: 0,
+            run_records_path: compare.join("workflow-runs.jsonl"),
+            execution_report_path: compare.join("runner-execution-report.json"),
+            runs: vec![
+                baseline,
+                successful_runner_execution(root, "task-1--layers", "task-1", "layers"),
+            ],
+        };
+        write_runner_execution_summary(&compare, &execution_summary);
+
+        let summary = finalize_workflow_benchmark_run(root).expect("finalize run");
+
+        assert!(summary.has_blocking_findings());
+        assert!(summary.missing_required_artifacts.iter().any(|finding| {
+            finding.contains("validation exit evidence missing")
+                && finding.contains("task-1--baseline")
+        }));
+    }
+
+    #[test]
+    fn finalize_run_blocks_empty_diff_artifacts() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path();
+        let compare = root.join("compare");
+        fs::create_dir_all(&compare).expect("compare dir");
+        fs::write(
+            compare.join("workflow-runs.jsonl"),
+            format!(
+                "{}\n{}\n",
+                valid_run("task-1", "baseline", 1_000, 2_000),
+                valid_run("task-1", "layers", 900, 1_900)
+            ),
+        )
+        .expect("run records");
+
+        let baseline = successful_runner_execution(root, "task-1--baseline", "task-1", "baseline");
+        fs::write(&baseline.diff_stat_path, "   \n\t\n").expect("empty stat placeholder");
+        fs::write(&baseline.diff_patch_path, "").expect("empty patch placeholder");
+        let execution_summary = RunnerExecutionSummary {
+            total_runs: 2,
+            completed_runs: 2,
+            failed_runs: 0,
+            run_records_path: compare.join("workflow-runs.jsonl"),
+            execution_report_path: compare.join("runner-execution-report.json"),
+            runs: vec![
+                baseline,
+                successful_runner_execution(root, "task-1--layers", "task-1", "layers"),
+            ],
+        };
+        write_runner_execution_summary(&compare, &execution_summary);
+
+        let summary = finalize_workflow_benchmark_run(root).expect("finalize run");
+
+        assert!(summary.has_blocking_findings());
+        assert!(summary.missing_required_artifacts.iter().any(|finding| {
+            finding.contains("diff_stat is empty placeholder")
+                && finding.contains("task-1--baseline")
+        }));
+        assert!(summary.missing_required_artifacts.iter().any(|finding| {
+            finding.contains("diff_patch is empty placeholder")
+                && finding.contains("task-1--baseline")
+        }));
+    }
+
+    #[test]
+    fn finalize_run_allows_empty_diff_artifacts_for_negative_controls() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path();
+        let compare = root.join("compare");
+        fs::create_dir_all(&compare).expect("compare dir");
+        fs::write(
+            compare.join("workflow-runs.jsonl"),
+            format!(
+                "{}\n{}\n",
+                negative_control_run("task-1", "baseline", true),
+                negative_control_run("task-1", "layers_targeted_preflight", true)
+            ),
+        )
+        .expect("run records");
+
+        let baseline = successful_runner_execution(root, "task-1--baseline", "task-1", "baseline");
+        let targeted = successful_runner_execution(
+            root,
+            "task-1--layers_targeted_preflight",
+            "task-1",
+            "layers_targeted_preflight",
+        );
+        for run in [&baseline, &targeted] {
+            fs::write(&run.diff_stat_path, "\n").expect("empty stat placeholder");
+            fs::write(&run.diff_patch_path, "").expect("empty patch placeholder");
+        }
+        let execution_summary = RunnerExecutionSummary {
+            total_runs: 2,
+            completed_runs: 2,
+            failed_runs: 0,
+            run_records_path: compare.join("workflow-runs.jsonl"),
+            execution_report_path: compare.join("runner-execution-report.json"),
+            runs: vec![baseline, targeted],
+        };
+        write_runner_execution_summary(&compare, &execution_summary);
+
+        let summary = finalize_workflow_benchmark_run(root).expect("finalize run");
+
+        assert!(
+            !summary
+                .missing_required_artifacts
+                .iter()
+                .any(|finding| finding.contains("is empty placeholder"))
+        );
+    }
+
+    #[test]
+    fn finalize_run_blocks_stray_negative_control_packet_artifact() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path();
+        let compare = root.join("compare");
+        fs::create_dir_all(&compare).expect("compare dir");
+        fs::write(
+            compare.join("workflow-runs.jsonl"),
+            format!(
+                "{}\n{}\n",
+                negative_control_run("task-1", "baseline", true),
+                negative_control_run("task-1", "layers_targeted_preflight", true)
+            ),
+        )
+        .expect("run records");
+        write_valid_packet_artifact(root, "task-1--layers_targeted_preflight");
+
+        let execution_summary = RunnerExecutionSummary {
+            total_runs: 2,
+            completed_runs: 2,
+            failed_runs: 0,
+            run_records_path: compare.join("workflow-runs.jsonl"),
+            execution_report_path: compare.join("runner-execution-report.json"),
+            runs: vec![
+                successful_runner_execution(root, "task-1--baseline", "task-1", "baseline"),
+                successful_runner_execution(
+                    root,
+                    "task-1--layers_targeted_preflight",
+                    "task-1",
+                    "layers_targeted_preflight",
+                ),
+            ],
+        };
+        write_runner_execution_summary(&compare, &execution_summary);
+
+        let summary = finalize_workflow_benchmark_run(root).expect("finalize run");
+
+        assert!(summary.has_blocking_findings());
+        assert!(summary.missing_required_artifacts.iter().any(|finding| {
+            finding
+                .contains("negative-control targeted-preflight run produced stray packet artifact")
+                && finding.contains("task-1--layers_targeted_preflight")
+        }));
+    }
+
+    fn write_valid_packet_artifact(root: &Path, run_id: &str) -> PathBuf {
+        let packet_dir = root.join("packets");
+        fs::create_dir_all(&packet_dir).expect("packet dir");
+        let packet_path = packet_dir.join(format!("{run_id}.json"));
+        fs::write(
+            &packet_path,
+            include_str!("../../docs/examples/context-packet-v2-minimal.json"),
+        )
+        .expect("packet artifact");
+        packet_path
+    }
+
+    fn successful_runner_execution(
+        root: &Path,
+        run_id: &str,
+        task_id: &str,
+        variant: &str,
+    ) -> RunnerRunExecution {
+        let artifact_dir = root.join("artifacts");
+        fs::create_dir_all(&artifact_dir).expect("artifact dir");
+        let transcript_path = artifact_dir.join(format!("{run_id}.md"));
+        let validation_log_path = artifact_dir.join(format!("{run_id}.log"));
+        let diff_stat_path = artifact_dir.join(format!("{run_id}.stat"));
+        let diff_patch_path = artifact_dir.join(format!("{run_id}.patch"));
+        fs::write(&transcript_path, "transcript").expect("transcript");
+        fs::write(&validation_log_path, "validation").expect("validation");
+        fs::write(&diff_stat_path, " src/lib.rs | 1 +\n").expect("stat");
+        fs::write(&diff_patch_path, "diff --git a/src/lib.rs b/src/lib.rs\n").expect("patch");
+        RunnerRunExecution {
+            run_id: run_id.to_owned(),
+            task_id: task_id.to_owned(),
+            variant: variant.to_owned(),
+            worktree_path: root.join("worktrees").join(run_id),
+            transcript_path,
+            validation_log_path,
+            diff_stat_path,
+            diff_patch_path,
+            packet_artifact_path: None,
+            agent_exit_code: Some(0),
+            validation_exit_codes: vec![Some(0)],
+            wall_time_ms: 1_000,
+            completed: true,
+        }
+    }
+
+    fn write_runner_execution_summary(compare: &Path, execution_summary: &RunnerExecutionSummary) {
+        fs::write(
+            compare.join("runner-execution-report.json"),
+            serde_json::to_string_pretty(execution_summary).expect("summary json"),
+        )
+        .expect("execution summary");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn secret_scan_skips_symlinks_in_artifact_tree() {
+        use std::os::unix::fs::symlink;
+
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path().join("artifacts");
+        let outside = tmp.path().join("outside-secret.txt");
+        fs::create_dir_all(&root).expect("artifact dir");
+        let outside_secret_shape = format!("{}{}", "sk-abc", "...wxyz");
+        fs::write(&outside, outside_secret_shape).expect("outside secret");
+        symlink(&outside, root.join("linked-secret.txt")).expect("symlink");
+
+        assert_eq!(
+            scan_artifacts_for_secret_shapes(&root).expect("secret scan"),
+            0
+        );
     }
 }

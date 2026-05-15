@@ -1,0 +1,244 @@
+# Workflow Benchmark Validation Log
+run_id: code-stale-trap-prefer-current-task-spec--baseline
+
+Validation command: cargo test -q workflow_benchmark -- --nocapture
+exit_status: 0
+stdout:
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 102 filtered out; finished in 0.00s
+
+
+running 45 tests
+.............................................
+test result: ok. 45 passed; 0 failed; 0 ignored; 0 measured; 289 filtered out; finished in 0.75s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 28 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+
+
+Validation command: cargo run -q -- workflow-benchmark validate-tasks benchmarks/workflows/tasks --json
+exit_status: 0
+stdout:
+{
+  "checked_count": 31,
+  "valid_count": 31,
+  "invalid_count": 0,
+  "results": [
+    {
+      "path": "benchmarks/workflows/tasks/code-bugfix-context-routing.json",
+      "task_id": "code-bugfix-context-routing",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-bugfix-council-circuit-exit-gate.json",
+      "task_id": "code-bugfix-council-circuit-exit-gate",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-bugfix-mcp-client-error-redaction.json",
+      "task_id": "code-bugfix-mcp-client-error-redaction",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-bugfix-preflight-strict-low-relevance.json",
+      "task_id": "code-bugfix-preflight-strict-low-relevance",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-bugfix-proveit-artifact-paths.json",
+      "task_id": "code-bugfix-proveit-artifact-paths",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-bugfix-provider-budget-overflow.json",
+      "task_id": "code-bugfix-provider-budget-overflow",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-bugfix-query-target-traversal.json",
+      "task_id": "code-bugfix-query-target-traversal",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-bugfix-router-historical-code-intent.json",
+      "task_id": "code-bugfix-router-historical-code-intent",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-bugfix-runtime-queue-starvation.json",
+      "task_id": "code-bugfix-runtime-queue-starvation",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-bugfix-telemetry-malformed-jsonl-skip.json",
+      "task_id": "code-bugfix-telemetry-malformed-jsonl-skip",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-bugfix-workflow-benchmark-duplicate-pairing.json",
+      "task_id": "code-bugfix-workflow-benchmark-duplicate-pairing",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-docs-architecture-context-spine.json",
+      "task_id": "code-docs-architecture-context-spine",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-feature-config-secret-redaction-nested.json",
+      "task_id": "code-feature-config-secret-redaction-nested",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-feature-daemon-heartbeat-stale-detection.json",
+      "task_id": "code-feature-daemon-heartbeat-stale-detection",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-feature-mcp-preflight-stable-registry.json",
+      "task_id": "code-feature-mcp-preflight-stable-registry",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-feature-packet-validate-warnings-json.json",
+      "task_id": "code-feature-packet-validate-warnings-json",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-feature-quality-abstain-low-specificity.json",
+      "task_id": "code-feature-quality-abstain-low-specificity",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-feature-remember-reject-empty-records.json",
+      "task_id": "code-feature-remember-reject-empty-records",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-feature-session-monitor-threshold-env.json",
+      "task_id": "code-feature-session-monitor-threshold-env",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-feature-tools-registry-duplicate-names.json",
+      "task_id": "code-feature-tools-registry-duplicate-names",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-feature-workflow-benchmark-human-surfaces.json",
+      "task_id": "code-feature-workflow-benchmark-human-surfaces",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-refactor-context-compiler-packet-finalize.json",
+      "task_id": "code-refactor-context-compiler-packet-finalize",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-refactor-memory-index-fallback-tags.json",
+      "task_id": "code-refactor-memory-index-fallback-tags",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-stale-trap-prefer-current-task-spec.json",
+      "task_id": "code-stale-trap-prefer-current-task-spec",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/code-stale-trap-query-surface-not-general-proof.json",
+      "task_id": "code-stale-trap-query-surface-not-general-proof",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/negative-control-basic-unit-conversion.json",
+      "task_id": "negative-control-basic-unit-conversion",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/negative-control-count-letters.json",
+      "task_id": "negative-control-count-letters",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/negative-control-iso-date-format.json",
+      "task_id": "negative-control-iso-date-format",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/negative-control-simple-json-validity.json",
+      "task_id": "negative-control-simple-json-validity",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/negative-control-sort-three-words.json",
+      "task_id": "negative-control-sort-three-words",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "benchmarks/workflows/tasks/negative-control-trivial-arithmetic.json",
+      "task_id": "negative-control-trivial-arithmetic",
+      "valid": true,
+      "errors": []
+    }
+  ]
+}

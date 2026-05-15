@@ -1,0 +1,221 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 6fdce7f..50cdc03 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -3361,6 +3361,7 @@ dependencies = [
+  "layers-compiler",
+  "layers-core",
+  "layers-tools",
++ "regex",
+  "serde",
+  "serde_json",
+  "tokio",
+diff --git a/crates/layers-mcp/Cargo.toml b/crates/layers-mcp/Cargo.toml
+index 736128b..1a6500f 100644
+--- a/crates/layers-mcp/Cargo.toml
++++ b/crates/layers-mcp/Cargo.toml
+@@ -13,5 +13,6 @@ serde_json = "1"
+ tokio = { version = "1", features = ["rt", "sync", "time", "process", "io-util"] }
+ tracing = "0.1"
+ async-trait = "0.1"
++regex = "1"
+ uuid = { version = "1", features = ["v4"] }
+ chrono = { version = "0.4", features = ["serde"] }
+diff --git a/crates/layers-mcp/src/client.rs b/crates/layers-mcp/src/client.rs
+index 693d6fb..2223698 100644
+--- a/crates/layers-mcp/src/client.rs
++++ b/crates/layers-mcp/src/client.rs
+@@ -11,6 +11,8 @@ use tracing::{debug, error, warn};
+
+ use layers_core::{LayersError, McpServerConfig, Result, Tool, ToolContext, ToolOutput};
+
++use crate::types::redact_secrets;
++
+ // ---------------------------------------------------------------------------
+ // JSON-RPC types
+ // ---------------------------------------------------------------------------
+@@ -255,12 +257,12 @@ impl McpClient {
+         }
+
+         let response: JsonRpcResponse = serde_json::from_str(&response_line)
+-            .map_err(|e| LayersError::Tool(format!("invalid JSON-RPC response: {e}")))?;
++            .map_err(|e| LayersError::Tool(redact_secrets(&format!("invalid JSON-RPC response: {e}"))))?;
+
+         if let Some(err) = response.error {
+             return Err(LayersError::Tool(format!(
+                 "MCP server error: {}",
+-                err.message
++                redact_secrets(&err.message)
+             )));
+         }
+
+diff --git a/crates/layers-mcp/src/server.rs b/crates/layers-mcp/src/server.rs
+index 44b8a67..c3a435e 100644
+--- a/crates/layers-mcp/src/server.rs
++++ b/crates/layers-mcp/src/server.rs
+@@ -14,6 +14,8 @@ use tracing::{debug, error, warn};
+ use layers_core::{Result, ToolContext};
+ use layers_tools::registry::ToolRegistry;
+
++use crate::types::redact_secrets;
++
+ // ---------------------------------------------------------------------------
+ // Dangerous-tool patterns
+ // ---------------------------------------------------------------------------
+@@ -248,7 +250,7 @@ impl McpServer {
+                         result: None,
+                         error: Some(JsonRpcError {
+                             code: -32700,
+-                            message: format!("Parse error: {e}"),
++                            message: redact_secrets(&format!("Parse error: {e}")),
+                         }),
+                     };
+                     let mut resp_line = serde_json::to_string(&response).unwrap_or_default();
+@@ -400,7 +402,7 @@ impl McpServer {
+             Err(e) => {
+                 let content = vec![serde_json::json!({
+                     "type": "text",
+-                    "text": e.to_string()
++                    "text": redact_secrets(&e.to_string())
+                 })];
+                 Ok(serde_json::json!({
+                     "content": content,
+@@ -786,6 +788,58 @@ mod tests {
+
+     // -- Config serde ----------------------------------------------------------
+
++    #[tokio::test]
++    async fn server_loop_redacts_parse_errors() {
++        let registry = make_registry();
++        let config = McpServerConfig::default();
++        let _server = McpServer::new(registry, config);
++
++        // Simulate an error message that happens to contain secret-like data
++        let error_msg = r#"Parse error: invalid character at line 1, near {"api_key":"sk-leak"}"#;
++        let message = redact_secrets(error_msg);
++
++        assert!(!message.contains("sk-leak"), "Secret leaked in parse error: {}", message);
++        assert!(message.contains("[REDACTED]"));
++    }
++
++    #[tokio::test]
++    async fn tools_call_redacts_secrets_in_errors() {
++        struct SecretLeakTool;
++        #[async_trait]
++        impl Tool for SecretLeakTool {
++            fn name(&self) -> &str { "leak_secrets" }
++            fn description(&self) -> &str { "Leaks secrets in error" }
++            fn schema(&self) -> serde_json::Value { serde_json::json!({"type": "object"}) }
++            async fn execute(&self, args: serde_json::Value, _ctx: ToolContext) -> layers_core::Result<ToolOutput> {
++                Err(layers_core::LayersError::Tool(format!("Failed with args: {}", args)))
++            }
++        }
++
++        let mut reg = ToolRegistry::new();
++        reg.register(Arc::new(SecretLeakTool));
++        let registry = Arc::new(reg);
++        let config = McpServerConfig {
++            allowlisted_tools: vec!["leak_secrets".to_string()],
++            ..Default::default()
++        };
++        let server = McpServer::new(registry, config);
++
++        let params = serde_json::json!({
++            "name": "leak_secrets",
++            "arguments": {
++                "api_key": "sk-12345",
++                "normal_field": "safe"
++            }
++        });
++
++        let result = server.handle_tools_call(Some(&params)).await.unwrap();
++        assert_eq!(result["isError"], true);
++        let text = result["content"][0]["text"].as_str().unwrap();
++
++        // This is what we want to fail currently (it should be redacted)
++        assert!(!text.contains("sk-12345"), "Secret leaked in error message: {}", text);
++    }
++
+     #[test]
+     fn config_default_serde() {
+         let json = "{}";
+diff --git a/crates/layers-mcp/src/types.rs b/crates/layers-mcp/src/types.rs
+index 30d583b..4d1712e 100644
+--- a/crates/layers-mcp/src/types.rs
++++ b/crates/layers-mcp/src/types.rs
+@@ -131,6 +131,56 @@ pub struct InitializeResult {
+     pub server_info: McpServerInfo,
+ }
+
++/// Redact secret-like fields in a string (e.g., error messages).
++///
++/// This looks for common secret-like keys in JSON-like structures and masks their values.
++#[must_use]
++pub fn redact_secrets(input: &str) -> String {
++    // Simple regex-based redaction for common secret-like patterns in JSON.
++    // Matches "key": "value" or "key": value
++    // Keywords: api_key, apikey, secret, token, password, auth, credential, access_key, private_key
++    let patterns = [
++        "api_key",
++        "apikey",
++        "secret",
++        "token",
++        "password",
++        "auth",
++        "credential",
++        "access_key",
++        "private_key",
++    ];
++
++    let mut redacted = input.to_string();
++
++    for key in patterns {
++        // 1. Redact quoted values: "key": "value"
++        let re_quoted = format!(r#"(?i)("{}")\s*:\s*"[^"]*""#, key);
++        if let Ok(re) = regex::Regex::new(&re_quoted) {
++            redacted = re.replace_all(&redacted, r#"$1: "[REDACTED]""#).to_string();
++        }
++
++        // 2. Redact unquoted values: "key": value (but not if it was already redacted to "[REDACTED]")
++        // We look for values that don't start with a quote and aren't null/true/false.
++        let re_unquoted = format!(r#"(?i)("{}")\s*:\s*([^"\s,\}}\]]+)"#, key);
++        if let Ok(re) = regex::Regex::new(&re_unquoted) {
++            redacted = re
++                .replace_all(&redacted, |caps: &regex::Captures| {
++                    let val = &caps[2];
++                    if val == "null" || val == "true" || val == "false" || val == "[REDACTED]" {
++                        caps[0].to_string()
++                    } else {
++                        format!("{}: [REDACTED]", &caps[1])
++                    }
++                })
++                .to_string();
++        }
++    }
++
++
++    redacted
++}
++
+ // ---------------------------------------------------------------------------
+ // Tests
+ // ---------------------------------------------------------------------------
+@@ -139,6 +189,18 @@ pub struct InitializeResult {
+ mod tests {
+     use super::*;
+
++    #[test]
++    fn test_redact_secrets() {
++        let input = r#"Failed with args: {"api_key":"sk-12345","normal_field":"safe","token": "abc-789"}"#;
++        let expected =
++            r#"Failed with args: {"api_key": "[REDACTED]","normal_field":"safe","token": "[REDACTED]"}"#;
++        assert_eq!(redact_secrets(input), expected);
++
++        let input_case = r#"{"APIKEY": "secret", "Auth": "bearer 123"}"#;
++        let expected_case = r#"{"APIKEY": "[REDACTED]", "Auth": "[REDACTED]"}"#;
++        assert_eq!(redact_secrets(input_case), expected_case);
++    }
++
+     #[test]
+     fn json_rpc_request_roundtrip() {
+         let req = JsonRpcRequest::new(1, "tools/list", Some(serde_json::json!({"cursor": null})));

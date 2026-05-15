@@ -1,0 +1,37 @@
+{
+  "checked_count": 5,
+  "valid_count": 5,
+  "invalid_count": 0,
+  "results": [
+    {
+      "path": "/Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/tasks/code-bugfix-mcp-client-error-redaction.json",
+      "task_id": "code-bugfix-mcp-client-error-redaction",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "/Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/tasks/code-feature-workflow-benchmark-human-surfaces.json",
+      "task_id": "code-feature-workflow-benchmark-human-surfaces",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "/Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/tasks/code-stale-trap-prefer-current-task-spec.json",
+      "task_id": "code-stale-trap-prefer-current-task-spec",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "/Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/tasks/negative-control-count-letters.json",
+      "task_id": "negative-control-count-letters",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "/Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/tasks/negative-control-simple-json-validity.json",
+      "task_id": "negative-control-simple-json-validity",
+      "valid": true,
+      "errors": []
+    }
+  ]
+}

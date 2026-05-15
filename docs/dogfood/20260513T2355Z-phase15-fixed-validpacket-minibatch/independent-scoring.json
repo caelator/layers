@@ -1,0 +1,242 @@
+{
+  "artifact_root": "/Users/xxx/layers/docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch",
+  "records": 10,
+  "runner_completed_runs": 10,
+  "runner_failed_runs": 0,
+  "paired_task_count": 5,
+  "baseline_success_rate": 1.0,
+  "layers_success_rate": 1.0,
+  "speedup": 1.1608471069577144,
+  "net_time_saved_ms": 34595.8,
+  "token_reduction_ratio": -0.3,
+  "context_quality_delta": 0.5142857142857142,
+  "claim_status": "not_supported",
+  "claim_blocking_metrics": [
+    "token_reduction_ratio",
+    "paired_task_count",
+    "code_heavy_paired_task_count",
+    "negative_control_paired_task_count"
+  ],
+  "negative_control_abstention_rate": 1.0,
+  "unnecessary_context_injection_rate": 0.0,
+  "packets": [
+    "code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.json",
+    "code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.json",
+    "code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.json"
+  ],
+  "packet_validation_exit_codes": {
+    "code-bugfix-mcp-client-error-redaction--layers_targeted_preflight": "0",
+    "code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight": "0",
+    "code-stale-trap-prefer-current-task-spec--layers_targeted_preflight": "0"
+  },
+  "diff_missing": [],
+  "validation_missing": [],
+  "secret_scan_findings": 0,
+  "negative_controls": [
+    {
+      "task_id": "negative-control-count-letters",
+      "variant": "baseline",
+      "negative_control_abstained": false,
+      "unnecessary_context_injections": 0,
+      "success_score": 1.0
+    },
+    {
+      "task_id": "negative-control-count-letters",
+      "variant": "layers_targeted_preflight",
+      "negative_control_abstained": true,
+      "unnecessary_context_injections": 0,
+      "success_score": 1.0
+    },
+    {
+      "task_id": "negative-control-simple-json-validity",
+      "variant": "baseline",
+      "negative_control_abstained": false,
+      "unnecessary_context_injections": 0,
+      "success_score": 1.0
+    },
+    {
+      "task_id": "negative-control-simple-json-validity",
+      "variant": "layers_targeted_preflight",
+      "negative_control_abstained": true,
+      "unnecessary_context_injections": 0,
+      "success_score": 1.0
+    }
+  ],
+  "per_task": [
+    {
+      "task_id": "code-bugfix-mcp-client-error-redaction",
+      "baseline": {
+        "success_score": 1.0,
+        "wall_time_ms": 502170,
+        "retrieval_quality": {
+          "relevance": 0,
+          "completeness": 0,
+          "specificity": 0,
+          "freshness": 0,
+          "grounding": 0,
+          "concision": 0,
+          "noise_absence": 5
+        },
+        "tool_calls": 3,
+        "negative_control_abstained": false,
+        "unnecessary_context_injections": 0
+      },
+      "layers_targeted_preflight": {
+        "success_score": 1.0,
+        "wall_time_ms": 343305,
+        "retrieval_quality": {
+          "relevance": 1,
+          "completeness": 1,
+          "specificity": 1,
+          "freshness": 1,
+          "grounding": 1,
+          "concision": 1,
+          "noise_absence": 5
+        },
+        "tool_calls": 3,
+        "negative_control_abstained": false,
+        "unnecessary_context_injections": 0
+      }
+    },
+    {
+      "task_id": "code-feature-workflow-benchmark-human-surfaces",
+      "baseline": {
+        "success_score": 1.0,
+        "wall_time_ms": 334894,
+        "retrieval_quality": {
+          "relevance": 0,
+          "completeness": 0,
+          "specificity": 0,
+          "freshness": 0,
+          "grounding": 0,
+          "concision": 0,
+          "noise_absence": 5
+        },
+        "tool_calls": 3,
+        "negative_control_abstained": false,
+        "unnecessary_context_injections": 0
+      },
+      "layers_targeted_preflight": {
+        "success_score": 1.0,
+        "wall_time_ms": 309925,
+        "retrieval_quality": {
+          "relevance": 1,
+          "completeness": 1,
+          "specificity": 1,
+          "freshness": 1,
+          "grounding": 1,
+          "concision": 1,
+          "noise_absence": 5
+        },
+        "tool_calls": 3,
+        "negative_control_abstained": false,
+        "unnecessary_context_injections": 0
+      }
+    },
+    {
+      "task_id": "code-stale-trap-prefer-current-task-spec",
+      "baseline": {
+        "success_score": 1.0,
+        "wall_time_ms": 386110,
+        "retrieval_quality": {
+          "relevance": 0,
+          "completeness": 0,
+          "specificity": 0,
+          "freshness": 0,
+          "grounding": 0,
+          "concision": 0,
+          "noise_absence": 5
+        },
+        "tool_calls": 3,
+        "negative_control_abstained": false,
+        "unnecessary_context_injections": 0
+      },
+      "layers_targeted_preflight": {
+        "success_score": 1.0,
+        "wall_time_ms": 399592,
+        "retrieval_quality": {
+          "relevance": 1,
+          "completeness": 1,
+          "specificity": 1,
+          "freshness": 1,
+          "grounding": 1,
+          "concision": 1,
+          "noise_absence": 5
+        },
+        "tool_calls": 3,
+        "negative_control_abstained": false,
+        "unnecessary_context_injections": 0
+      }
+    },
+    {
+      "task_id": "negative-control-count-letters",
+      "baseline": {
+        "success_score": 1.0,
+        "wall_time_ms": 12259,
+        "retrieval_quality": {
+          "relevance": 0,
+          "completeness": 0,
+          "specificity": 0,
+          "freshness": 0,
+          "grounding": 0,
+          "concision": 0,
+          "noise_absence": 5
+        },
+        "tool_calls": 2,
+        "negative_control_abstained": false,
+        "unnecessary_context_injections": 0
+      },
+      "layers_targeted_preflight": {
+        "success_score": 1.0,
+        "wall_time_ms": 10699,
+        "retrieval_quality": {
+          "relevance": 0,
+          "completeness": 0,
+          "specificity": 0,
+          "freshness": 0,
+          "grounding": 0,
+          "concision": 0,
+          "noise_absence": 5
+        },
+        "tool_calls": 2,
+        "negative_control_abstained": true,
+        "unnecessary_context_injections": 0
+      }
+    },
+    {
+      "task_id": "negative-control-simple-json-validity",
+      "baseline": {
+        "success_score": 1.0,
+        "wall_time_ms": 12971,
+        "retrieval_quality": {
+          "relevance": 0,
+          "completeness": 0,
+          "specificity": 0,
+          "freshness": 0,
+          "grounding": 0,
+          "concision": 0,
+          "noise_absence": 5
+        },
+        "tool_calls": 2,
+        "negative_control_abstained": false,
+        "unnecessary_context_injections": 0
+      },
+      "layers_targeted_preflight": {
+        "success_score": 1.0,
+        "wall_time_ms": 11904,
+        "retrieval_quality": {
+          "relevance": 0,
+          "completeness": 0,
+          "specificity": 0,
+          "freshness": 0,
+          "grounding": 0,
+          "concision": 0,
+          "noise_absence": 5
+        },
+        "tool_calls": 2,
+        "negative_control_abstained": true,
+        "unnecessary_context_injections": 0
+      }
+    }
+  ]
+}

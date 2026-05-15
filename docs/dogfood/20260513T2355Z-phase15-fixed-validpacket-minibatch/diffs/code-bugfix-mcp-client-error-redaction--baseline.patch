@@ -1,0 +1,389 @@
+diff --git a/crates/layers-mcp/src/client.rs b/crates/layers-mcp/src/client.rs
+index 693d6fb..16ab90a 100644
+--- a/crates/layers-mcp/src/client.rs
++++ b/crates/layers-mcp/src/client.rs
+@@ -255,12 +255,12 @@ impl McpClient {
+         }
+
+         let response: JsonRpcResponse = serde_json::from_str(&response_line)
+-            .map_err(|e| LayersError::Tool(format!("invalid JSON-RPC response: {e}")))?;
++            .map_err(|e| LayersError::Tool(crate::redact::redact_message(&format!("invalid JSON-RPC response: {e}"))))?;
+
+         if let Some(err) = response.error {
+             return Err(LayersError::Tool(format!(
+                 "MCP server error: {}",
+-                err.message
++                crate::redact::redact_message(&err.message)
+             )));
+         }
+
+diff --git a/crates/layers-mcp/src/lib.rs b/crates/layers-mcp/src/lib.rs
+index f1eb322..97fcd66 100644
+--- a/crates/layers-mcp/src/lib.rs
++++ b/crates/layers-mcp/src/lib.rs
+@@ -3,6 +3,7 @@
+
+ pub mod bridge;
+ pub mod client;
++pub mod redact;
+ pub mod server;
+ pub mod stable;
+ pub mod types;
+diff --git a/crates/layers-mcp/src/redact.rs b/crates/layers-mcp/src/redact.rs
+new file mode 100644
+index 0000000..b00b9c1
+--- /dev/null
++++ b/crates/layers-mcp/src/redact.rs
+@@ -0,0 +1,156 @@
++//! Redaction utilities for sensitive fields.
++
++use serde_json::Value;
++
++/// Redact sensitive fields from a JSON value.
++pub fn redact_value(value: &mut Value) {
++    match value {
++        Value::Object(obj) => {
++            for (key, val) in obj.iter_mut() {
++                if is_sensitive_key(key) {
++                    *val = Value::String("[REDACTED]".to_string());
++                } else {
++                    redact_value(val);
++                }
++            }
++        }
++        Value::Array(arr) => {
++            for val in arr.iter_mut() {
++                redact_value(val);
++            }
++        }
++        _ => {}
++    }
++}
++
++/// Redact sensitive values from a string message.
++///
++/// This is a best-effort redaction that looks for patterns like
++/// `invalid type: string "secret", expected integer` and replaces the secret.
++pub fn redact_message(message: &str) -> String {
++    let mut redacted = message.to_string();
++
++    // Redact patterns if they seem to follow "invalid type" or similar serde patterns
++    if redacted.contains("invalid type") || redacted.contains("expected") || is_sensitive_message(&redacted) {
++        redacted = redact_quoted_values(&redacted);
++    }
++
++    redacted
++}
++
++fn is_sensitive_key(key: &str) -> bool {
++    let k = key.to_lowercase();
++    k.contains("key")
++        || k.contains("token")
++        || k.contains("secret")
++        || k.contains("password")
++        || k.contains("auth")
++        || k.contains("authorization")
++}
++
++fn is_sensitive_message(msg: &str) -> bool {
++    let m = msg.to_lowercase();
++    m.contains("key")
++        || m.contains("token")
++        || m.contains("secret")
++        || m.contains("password")
++        || m.contains("auth")
++}
++
++fn redact_quoted_values(msg: &str) -> String {
++    // Heuristic: replace values in quotes or backticks if the message looks like a type error
++    // e.g. 'invalid type: string "secret-value", expected i64'
++    // -> 'invalid type: string "[REDACTED]", expected i64'
++
++    let mut result = String::new();
++    let mut in_quotes = false;
++    let mut in_backticks = false;
++    let mut last_pos = 0;
++
++    let chars: Vec<char> = msg.chars().collect();
++    let mut i = 0;
++    while i < chars.len() {
++        if chars[i] == '"' && !in_backticks {
++            if in_quotes {
++                result.push_str("[REDACTED]\"");
++                in_quotes = false;
++            } else {
++                result.push_str(&msg[last_pos..i + 1]);
++                in_quotes = true;
++            }
++            last_pos = i + 1;
++        } else if chars[i] == '`' && !in_quotes {
++            if in_backticks {
++                result.push_str("[REDACTED]`");
++                in_backticks = false;
++            } else {
++                result.push_str(&msg[last_pos..i + 1]);
++                in_backticks = true;
++            }
++            last_pos = i + 1;
++        }
++        if !in_quotes && !in_backticks {
++            // we will catch up in the next push_str
++        }
++        i += 1;
++    }
++    result.push_str(&msg[last_pos..]);
++    result
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use serde_json::json;
++
++    #[test]
++    fn test_redact_value() {
++        let mut v = json!({
++            "api_key": "secret",
++            "nested": {
++                "token": "more-secret",
++                "safe": "data"
++            },
++            "array": [
++                {"password": "pw"},
++                "safe"
++            ]
++        });
++        redact_value(&mut v);
++        assert_eq!(v["api_key"], "[REDACTED]");
++        assert_eq!(v["nested"]["token"], "[REDACTED]");
++        assert_eq!(v["nested"]["safe"], "data");
++        assert_eq!(v["array"][0]["password"], "[REDACTED]");
++        assert_eq!(v["array"][1], "safe");
++    }
++
++    #[test]
++    fn test_serde_from_value_error() {
++        let v = json!({"api_key": 123});
++        #[derive(serde::Deserialize)]
++        struct Req {
++            #[allow(dead_code)]
++            api_key: String,
++        }
++        let res: Result<Req, _> = serde_json::from_value(v);
++        if let Err(e) = res {
++            let msg = e.to_string();
++            println!("from_value error: {}", msg);
++            // It might be "invalid type: integer `123`, expected a string"
++            // If it doesn't mention "api_key", my current redact_message won't catch it!
++        }
++    }
++
++    #[test]
++    fn test_redact_message() {
++        let msg2 = "invalid type: string \"secret-value\", expected i64 for key api_key";
++        let redacted = redact_message(msg2);
++        assert!(redacted.contains("[REDACTED]"));
++        assert!(!redacted.contains("secret-value"));
++
++        let msg3 = "invalid type: integer `123`, expected a string for token";
++        let redacted3 = redact_message(msg3);
++        assert!(redacted3.contains("[REDACTED]"));
++        assert!(!redacted3.contains("123"));
++    }
++}
+diff --git a/crates/layers-mcp/src/server.rs b/crates/layers-mcp/src/server.rs
+index 44b8a67..cdd5c54 100644
+--- a/crates/layers-mcp/src/server.rs
++++ b/crates/layers-mcp/src/server.rs
+@@ -142,6 +142,12 @@ struct JsonRpcError {
+     message: String,
+ }
+
++impl JsonRpcError {
++    fn redact(&mut self) {
++        self.message = crate::redact::redact_message(&self.message);
++    }
++}
++
+ // ---------------------------------------------------------------------------
+ // MCP server
+ // ---------------------------------------------------------------------------
+@@ -248,7 +254,7 @@ impl McpServer {
+                         result: None,
+                         error: Some(JsonRpcError {
+                             code: -32700,
+-                            message: format!("Parse error: {e}"),
++                            message: crate::redact::redact_message(&format!("Parse error: {e}")),
+                         }),
+                     };
+                     let mut resp_line = serde_json::to_string(&response).unwrap_or_default();
+@@ -305,12 +311,16 @@ impl McpServer {
+                 result: Some(value),
+                 error: None,
+             },
+-            Err(err) => JsonRpcResponse {
+-                jsonrpc: "2.0".to_string(),
+-                id: request.id.clone(),
+-                result: None,
+-                error: Some(err),
+-            },
++            Err(err) => {
++                let mut err = err;
++                err.redact();
++                JsonRpcResponse {
++                    jsonrpc: "2.0".to_string(),
++                    id: request.id.clone(),
++                    result: None,
++                    error: Some(err),
++                }
++            }
+         }
+     }
+
+@@ -400,7 +410,7 @@ impl McpServer {
+             Err(e) => {
+                 let content = vec![serde_json::json!({
+                     "type": "text",
+-                    "text": e.to_string()
++                    "text": crate::redact::redact_message(&e.to_string())
+                 })];
+                 Ok(serde_json::json!({
+                     "content": content,
+@@ -810,4 +820,47 @@ mod tests {
+         assert_eq!(decoded.allowlisted_tools.len(), 2);
+         assert!(decoded.expose_dangerous);
+     }
++
++    #[tokio::test]
++    async fn test_error_redaction_on_invalid_params() {
++        let registry = make_registry();
++        let config = McpServerConfig::default();
++        let server = McpServer::new(registry, config);
++
++        // This will fail because 'name' is expected to be a string, but we give it a number.
++        let params = serde_json::json!({
++            "name": 123,
++            "api_key": "secret-value"
++        });
++
++        let result = server.handle_tools_call(Some(&params)).await;
++        assert!(result.is_err());
++    }
++
++    #[tokio::test]
++    async fn test_stable_tool_redaction() {
++        let registry = crate::stable::stable_context_registry();
++        let tool = registry.get("context_compile").unwrap();
++
++        // Provide invalid type for a field
++        let args = serde_json::json!({
++            "task": "test",
++            "max_units": "not-an-integer"
++        });
++
++        let context = ToolContext {
++            session_id: "test".to_string(),
++            agent_id: "test".to_string(),
++            channel: None,
++            metadata: std::collections::HashMap::new(),
++        };
++
++        let result = tool.execute(args, context).await;
++        assert!(result.is_err());
++        let err_msg = result.unwrap_err().to_string();
++
++        // The error message from context_compile tool should be redacted
++        assert!(err_msg.contains("[REDACTED]"));
++        assert!(!err_msg.contains("not-an-integer"));
++    }
+ }
+diff --git a/crates/layers-mcp/src/stable.rs b/crates/layers-mcp/src/stable.rs
+index c672631..fe3cf38 100644
+--- a/crates/layers-mcp/src/stable.rs
++++ b/crates/layers-mcp/src/stable.rs
+@@ -214,7 +214,7 @@ impl Tool for ContextCompileTool {
+
+     async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
+         let params: ContextCompileParams = serde_json::from_value(args)
+-            .map_err(|e| LayersError::Tool(format!("invalid context_compile params: {e}")))?;
++            .map_err(|e| LayersError::Tool(crate::redact::redact_message(&format!("invalid context_compile params: {e}"))))?;
+         let task = params
+             .task
+             .or(params.query)
+@@ -291,7 +291,7 @@ impl Tool for PreflightContextTool {
+
+     async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
+         let params: PreflightContextParams = serde_json::from_value(args)
+-            .map_err(|e| LayersError::Tool(format!("invalid preflight_context params: {e}")))?;
++            .map_err(|e| LayersError::Tool(crate::redact::redact_message(&format!("invalid preflight_context params: {e}"))))?;
+         let task = params
+             .task
+             .or(params.query)
+@@ -378,7 +378,7 @@ impl Tool for ImpactAnalyzeTool {
+
+     async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
+         let params: ImpactAnalyzeParams = serde_json::from_value(args)
+-            .map_err(|e| LayersError::Tool(format!("invalid impact_analyze params: {e}")))?;
++            .map_err(|e| LayersError::Tool(crate::redact::redact_message(&format!("invalid impact_analyze params: {e}"))))?;
+         let summary = if params.targets.is_empty() {
+             "No explicit impact targets were supplied; run local preflight for workspace-derived impact."
+         } else {
+@@ -424,7 +424,7 @@ impl Tool for ValidateContextTool {
+
+     async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
+         let params: ValidateContextParams = serde_json::from_value(args)
+-            .map_err(|e| LayersError::Tool(format!("invalid validate_context params: {e}")))?;
++            .map_err(|e| LayersError::Tool(crate::redact::redact_message(&format!("invalid validate_context params: {e}"))))?;
+         let mut issues = Vec::new();
+         match serde_json::from_value::<ContextPacket>(params.packet) {
+             Ok(packet) => {
+@@ -443,9 +443,9 @@ impl Tool for ValidateContextTool {
+                     }
+                 }
+             }
+-            Err(error) => issues.push(format!(
++            Err(error) => issues.push(crate::redact::redact_message(&format!(
+                 "packet does not match ContextPacket schema: {error}"
+-            )),
++            ))),
+         }
+         json_tool_output(&serde_json::json!({
+             "valid": issues.is_empty(),
+diff --git a/crates/layers-mcp/src/types.rs b/crates/layers-mcp/src/types.rs
+index 30d583b..625f905 100644
+--- a/crates/layers-mcp/src/types.rs
++++ b/crates/layers-mcp/src/types.rs
+@@ -49,6 +49,16 @@ pub struct JsonRpcError {
+     pub data: Option<serde_json::Value>,
+ }
+
++impl JsonRpcError {
++    /// Redact sensitive information from the error.
++    pub fn redact(&mut self) {
++        self.message = crate::redact::redact_message(&self.message);
++        if let Some(data) = self.data.as_mut() {
++            crate::redact::redact_value(data);
++        }
++    }
++}
++
+ // ---------------------------------------------------------------------------
+ // MCP protocol types
+ // ---------------------------------------------------------------------------
+diff --git a/experiment.rs b/experiment.rs
+new file mode 100644
+index 0000000..414c2c6
+--- /dev/null
++++ b/experiment.rs
+@@ -0,0 +1,11 @@
++fn main() {
++    let json = r#"{"api_key": 123}"#;
++    #[derive(serde::Deserialize)]
++    struct Req {
++        api_key: String,
++    }
++    let res: Result<Req, _> = serde_json::from_str(json);
++    if let Err(e) = res {
++        println!("Error: {}", e);
++    }
++}

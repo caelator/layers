@@ -1,0 +1,6 @@
+ Cargo.lock                      |  1 +
+ crates/layers-mcp/Cargo.toml    |  1 +
+ crates/layers-mcp/src/client.rs |  6 ++--
+ crates/layers-mcp/src/server.rs | 58 ++++++++++++++++++++++++++++++++++++--
+ crates/layers-mcp/src/types.rs  | 62 +++++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 124 insertions(+), 4 deletions(-)
