@@ -123,6 +123,16 @@ pub(crate) enum WorkflowBenchmarkCommands {
         #[arg(long)]
         json: bool,
     },
+    /// Recompute estimated token accounting for existing runner records from plan artifacts.
+    RefreshTokenAccounting {
+        /// Path to runner-plan.json produced by `workflow-benchmark plan-run`.
+        plan: PathBuf,
+        /// Path to workflow-runs.jsonl to rewrite with estimated token-accounting provenance.
+        run_records: PathBuf,
+        /// Output a structured refresh summary JSON to stdout.
+        #[arg(long)]
+        json: bool,
+    },
     /// Finalize a runner output directory into reproducible reports and audits.
     FinalizeRun {
         /// Runner output directory containing compare/workflow-runs.jsonl.
@@ -319,6 +329,26 @@ pub(crate) fn handle_workflow_benchmark(command: &WorkflowBenchmarkCommands) -> 
                     "execution_report: {}",
                     report.execution_report_path.display()
                 );
+            }
+            Ok(())
+        }
+        WorkflowBenchmarkCommands::RefreshTokenAccounting {
+            plan,
+            run_records,
+            json,
+        } => {
+            let summary = refresh_token_accounting_records(plan, run_records)?;
+            if *json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&summary)
+                        .context("failed to serialize token accounting refresh summary")?
+                );
+            } else {
+                println!("Workflow benchmark token accounting refreshed");
+                println!("records: {}", summary.records);
+                println!("refreshed_records: {}", summary.refreshed_records);
+                println!("run_records: {}", summary.run_records_path.display());
             }
             Ok(())
         }
@@ -942,6 +972,14 @@ struct FinalizeRunSummary {
     missing_required_artifacts: Vec<String>,
     secret_scan_findings: usize,
     claim_status: Option<ClaimStatus>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct TokenAccountingRefreshSummary {
+    plan_path: PathBuf,
+    run_records_path: PathBuf,
+    records: usize,
+    refreshed_records: usize,
 }
 
 impl FinalizeRunSummary {
@@ -1950,15 +1988,7 @@ fn execute_runner_plan(config: &RunnerExecutionConfig) -> Result<RunnerExecution
         executions.push(execution);
     }
 
-    let run_records = records
-        .iter()
-        .map(|record| {
-            serde_json::to_string(record).context("failed to serialize workflow run record")
-        })
-        .collect::<Result<Vec<_>>>()?
-        .join("\n");
-    fs::write(&run_records_path, format!("{run_records}\n"))
-        .with_context(|| format!("failed to write {}", run_records_path.display()))?;
+    write_run_records(&run_records_path, &records)?;
 
     let completed_runs = executions
         .iter()
@@ -1979,6 +2009,128 @@ fn execute_runner_plan(config: &RunnerExecutionConfig) -> Result<RunnerExecution
         .with_context(|| format!("failed to write {}", execution_report_path.display()))?;
 
     Ok(summary)
+}
+
+fn refresh_token_accounting_records(
+    plan_path: &Path,
+    run_records_path: &Path,
+) -> Result<TokenAccountingRefreshSummary> {
+    let plan_text = fs::read_to_string(plan_path)
+        .with_context(|| format!("failed to read runner plan: {}", plan_path.display()))?;
+    let mut plan: RunnerPlan = serde_json::from_str(&plan_text)
+        .with_context(|| format!("runner plan is not valid JSON: {}", plan_path.display()))?;
+    normalize_runner_plan_paths(&mut plan)?;
+
+    let plan_runs = plan
+        .runs
+        .iter()
+        .map(|run| ((run.task_id.clone(), run.variant.clone()), run))
+        .collect::<BTreeMap<_, _>>();
+    let mut records = load_runs(run_records_path)?;
+    let mut refreshed_records = 0;
+
+    for record in &mut records {
+        let key = (
+            record.task_id.clone(),
+            workflow_variant_name(record.variant).to_owned(),
+        );
+        let run = plan_runs.get(&key).with_context(|| {
+            format!(
+                "run record has no matching runner plan entry: task_id={} variant={}",
+                key.0, key.1
+            )
+        })?;
+        if run_has_measured_token_accounting(record) {
+            bail!(
+                "refusing to overwrite measured token accounting for task_id={} variant={}",
+                key.0,
+                key.1
+            );
+        }
+
+        let token_accounting = estimate_runner_token_accounting(run)?;
+        let was_placeholder = run_has_placeholder_token_accounting(record);
+        let changed = record.input_tokens != token_accounting.input
+            || record.output_tokens != token_accounting.output
+            || record.peak_context_tokens != token_accounting.peak_context
+            || record.context_relevant_tokens != token_accounting.context_relevant
+            || record.context_duplicate_tokens != 0
+            || record.context_irrelevant_tokens != 0
+            || record.layers_overhead_tokens != token_accounting.layers_overhead;
+
+        record.input_tokens = token_accounting.input;
+        record.input_tokens_provenance = TokenAccountingProvenance::Estimated;
+        record.output_tokens = token_accounting.output;
+        record.output_tokens_provenance = TokenAccountingProvenance::Estimated;
+        record.peak_context_tokens = token_accounting.peak_context;
+        record.peak_context_tokens_provenance = TokenAccountingProvenance::Estimated;
+        record.context_relevant_tokens = token_accounting.context_relevant;
+        record.context_relevant_tokens_provenance = TokenAccountingProvenance::Estimated;
+        record.context_duplicate_tokens = 0;
+        record.context_duplicate_tokens_provenance = TokenAccountingProvenance::Estimated;
+        record.context_irrelevant_tokens = 0;
+        record.context_irrelevant_tokens_provenance = TokenAccountingProvenance::Estimated;
+        record.layers_overhead_tokens = token_accounting.layers_overhead;
+        record.layers_overhead_tokens_provenance = TokenAccountingProvenance::Estimated;
+
+        if was_placeholder || changed {
+            refreshed_records += 1;
+        }
+    }
+
+    write_run_records(run_records_path, &records)?;
+
+    Ok(TokenAccountingRefreshSummary {
+        plan_path: absolutize_path(plan_path)?,
+        run_records_path: absolutize_path(run_records_path)?,
+        records: records.len(),
+        refreshed_records,
+    })
+}
+
+fn write_run_records(path: &Path, records: &[WorkflowRun]) -> Result<()> {
+    let run_records = records
+        .iter()
+        .map(|record| {
+            serde_json::to_string(record).context("failed to serialize workflow run record")
+        })
+        .collect::<Result<Vec<_>>>()?
+        .join("\n");
+    fs::write(path, format!("{run_records}\n"))
+        .with_context(|| format!("failed to write {}", path.display()))
+}
+
+fn workflow_variant_name(variant: WorkflowVariant) -> &'static str {
+    match variant {
+        WorkflowVariant::Baseline => "baseline",
+        WorkflowVariant::LayersTargetedPreflight => "layers_targeted_preflight",
+        WorkflowVariant::LayersBroadQuery => "layers_broad_query",
+        WorkflowVariant::LayersMcpPreflight => "layers_mcp_preflight",
+    }
+}
+
+fn run_has_placeholder_token_accounting(run: &WorkflowRun) -> bool {
+    token_accounting_provenances(run)
+        .into_iter()
+        .any(TokenAccountingProvenance::blocks_effectiveness_claims)
+}
+
+fn run_has_measured_token_accounting(run: &WorkflowRun) -> bool {
+    token_accounting_provenances(run)
+        .into_iter()
+        .any(|provenance| provenance == TokenAccountingProvenance::Measured)
+}
+
+fn token_accounting_provenances(run: &WorkflowRun) -> [TokenAccountingProvenance; 7] {
+    [
+        run.input_tokens_provenance,
+        run.output_tokens_provenance,
+        run.peak_context_tokens_provenance,
+        run.context_relevant_tokens_provenance,
+        run.context_duplicate_tokens_provenance,
+        run.context_irrelevant_tokens_provenance,
+        run.layers_overhead_tokens_provenance,
+    ]
 }
 
 fn execute_runner_run(
@@ -5220,6 +5372,100 @@ mod tests {
                 .as_ref()
                 .expect("packet path")
                 .exists()
+        );
+    }
+
+    #[test]
+    fn refreshes_placeholder_token_accounting_records_from_runner_plan() {
+        let output = tempfile::tempdir().expect("temp output dir");
+        let repo = tempfile::tempdir().expect("temp repo dir");
+        let task_path = output.path().join("phase15-refresh-task.json");
+        fs::write(
+            &task_path,
+            r#"{
+  "task_id": "phase15-refresh-token-accounting-test",
+  "title": "Phase 15 refresh token accounting test",
+  "prompt": "Write agent-output.txt in the working directory.",
+  "category": "bugfix",
+  "difficulty": "small",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": false,
+  "stale_context_trap": false,
+  "repo_commit": "HEAD",
+  "time_budget_minutes": 1,
+  "target_files": ["agent-output.txt"],
+  "target_symbols": ["agent-output"],
+  "expected_relevant_files": ["agent-output.txt"],
+  "expected_validation_commands": ["test -f agent-output.txt"],
+  "success_rubric": {
+    "full_success": "agent-output.txt exists.",
+    "partial_success": "The agent ran but did not write the expected file.",
+    "failure": "The agent did not run or validation failed.",
+    "min_verification_quality": 4,
+    "primary_endpoint": "verified_success"
+  }
+}
+"#,
+        )
+        .expect("task written");
+        let config = RunnerPlanConfig {
+            task_path,
+            output_dir: output.path().join("phase15-refresh-run"),
+            repo_root: repo.path().to_path_buf(),
+            agent_command: "python3 -c \"from pathlib import Path; Path('agent-output.txt').write_text('done')\"".to_owned(),
+            model: Some("refresh-model".to_owned()),
+            seed: 15,
+        };
+        let plan = plan_runner_artifacts(&config).expect("runner plan artifacts");
+        let execution = execute_runner_plan(&RunnerExecutionConfig {
+            plan_path: plan.plan_path.clone(),
+            preflight_command: "python3 -c \"import json; print(json.dumps({'packet':'ok'}))\""
+                .to_owned(),
+            keep_worktrees: true,
+        })
+        .expect("runner execution");
+        let placeholder_records = fs::read_to_string(&execution.run_records_path)
+            .expect("run records written")
+            .replace(",\"input_tokens_provenance\":\"estimated\"", "")
+            .replace(",\"output_tokens_provenance\":\"estimated\"", "")
+            .replace(",\"peak_context_tokens_provenance\":\"estimated\"", "")
+            .replace(",\"context_relevant_tokens_provenance\":\"estimated\"", "")
+            .replace(",\"context_duplicate_tokens_provenance\":\"estimated\"", "")
+            .replace(
+                ",\"context_irrelevant_tokens_provenance\":\"estimated\"",
+                "",
+            )
+            .replace(",\"layers_overhead_tokens_provenance\":\"estimated\"", "");
+        fs::write(&execution.run_records_path, placeholder_records)
+            .expect("placeholder records rewritten");
+
+        let summary =
+            refresh_token_accounting_records(&plan.plan_path, &execution.run_records_path)
+                .expect("token accounting refreshed");
+
+        assert_eq!(summary.records, 2);
+        assert_eq!(summary.refreshed_records, 2);
+        let refreshed_runs =
+            load_runs(&execution.run_records_path).expect("refreshed records parse");
+        assert!(refreshed_runs.iter().all(|run| {
+            run.input_tokens_provenance == TokenAccountingProvenance::Estimated
+                && run.output_tokens_provenance == TokenAccountingProvenance::Estimated
+                && run.peak_context_tokens_provenance == TokenAccountingProvenance::Estimated
+                && run.context_relevant_tokens_provenance == TokenAccountingProvenance::Estimated
+                && run.layers_overhead_tokens_provenance == TokenAccountingProvenance::Estimated
+        }));
+
+        let mut measured_runs = refreshed_runs;
+        measured_runs[0].input_tokens_provenance = TokenAccountingProvenance::Measured;
+        write_run_records(&execution.run_records_path, &measured_runs)
+            .expect("measured record written");
+        let error = refresh_token_accounting_records(&plan.plan_path, &execution.run_records_path)
+            .expect_err("measured token accounting must not be overwritten");
+        assert!(
+            error
+                .to_string()
+                .contains("refusing to overwrite measured token accounting"),
+            "unexpected error: {error:#}"
         );
     }
 

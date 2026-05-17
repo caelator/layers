@@ -11,9 +11,9 @@
       "average_orientation_ms": 0.0,
       "average_debugging_ms": 0.0,
       "average_verification_ms": 0.0,
-      "average_input_tokens": 1.0,
-      "average_output_tokens": 1.0,
-      "average_total_tokens": 2.0,
+      "average_input_tokens": 235.0,
+      "average_output_tokens": 1335.4,
+      "average_total_tokens": 1570.4,
       "average_tool_calls": 2.6,
       "average_human_interventions": 0.0,
       "average_failed_attempts": 0.0,
@@ -39,9 +39,9 @@
       "average_orientation_ms": 0.6,
       "average_debugging_ms": 0.0,
       "average_verification_ms": 0.0,
-      "average_input_tokens": 1.0,
-      "average_output_tokens": 1.0,
-      "average_total_tokens": 2.6,
+      "average_input_tokens": 5061.8,
+      "average_output_tokens": 1078.0,
+      "average_total_tokens": 10905.8,
       "average_tool_calls": 2.6,
       "average_human_interventions": 0.0,
       "average_failed_attempts": 0.0,
@@ -50,13 +50,13 @@
       "average_planning_quality": 1.0,
       "average_user_usefulness": 1.0,
       "retrieval_quality_average": 1.2285714285714286,
-      "relevant_context_ratio": 0.6,
+      "relevant_context_ratio": 1.0,
       "context_waste_ratio": 0.0,
       "missed_critical_context_rate": 0.0,
       "hallucinated_or_stale_context_rate": 0.0,
       "regression_rate": 0.0,
       "average_layers_overhead_ms": 0.6,
-      "average_layers_overhead_tokens": 0.6
+      "average_layers_overhead_tokens": 4766.0
     }
   ],
   "baseline": {
@@ -68,9 +68,9 @@
     "average_orientation_ms": 0.0,
     "average_debugging_ms": 0.0,
     "average_verification_ms": 0.0,
-    "average_input_tokens": 1.0,
-    "average_output_tokens": 1.0,
-    "average_total_tokens": 2.0,
+    "average_input_tokens": 235.0,
+    "average_output_tokens": 1335.4,
+    "average_total_tokens": 1570.4,
     "average_tool_calls": 2.6,
     "average_human_interventions": 0.0,
     "average_failed_attempts": 0.0,
@@ -96,9 +96,9 @@
     "average_orientation_ms": 0.6,
     "average_debugging_ms": 0.0,
     "average_verification_ms": 0.0,
-    "average_input_tokens": 1.0,
-    "average_output_tokens": 1.0,
-    "average_total_tokens": 2.6,
+    "average_input_tokens": 5061.8,
+    "average_output_tokens": 1078.0,
+    "average_total_tokens": 10905.8,
     "average_tool_calls": 2.6,
     "average_human_interventions": 0.0,
     "average_failed_attempts": 0.0,
@@ -107,28 +107,28 @@
     "average_planning_quality": 1.0,
     "average_user_usefulness": 1.0,
     "retrieval_quality_average": 1.2285714285714286,
-    "relevant_context_ratio": 0.6,
+    "relevant_context_ratio": 1.0,
     "context_waste_ratio": 0.0,
     "missed_critical_context_rate": 0.0,
     "hallucinated_or_stale_context_rate": 0.0,
     "regression_rate": 0.0,
     "average_layers_overhead_ms": 0.6,
-    "average_layers_overhead_tokens": 0.6
+    "average_layers_overhead_tokens": 4766.0
   },
   "token_accounting": {
     "measured_runs": 0,
-    "estimated_runs": 0,
-    "placeholder_runs": 10,
-    "blocks_effectiveness_claims": true
+    "estimated_runs": 10,
+    "placeholder_runs": 0,
+    "blocks_effectiveness_claims": false
   },
   "comparisons": [
     {
       "variant": "layers_targeted_preflight",
       "paired_task_count": 5,
       "net_time_saved_ms": 34595.8,
-      "net_tokens_saved": -0.6,
+      "net_tokens_saved": -9335.4,
       "speedup": 1.1608471069577144,
-      "token_reduction_ratio": -0.3,
+      "token_reduction_ratio": -5.94460010188487,
       "success_delta": 0.0,
       "success_delta_confidence_interval": {
         "estimate": 0.0,
@@ -142,7 +142,7 @@
       "verification_quality_delta": 0.0,
       "context_quality_delta": 0.5142857142857142,
       "layers_overhead_ms": 0.6,
-      "layers_overhead_tokens": 0.6,
+      "layers_overhead_tokens": 4766.0,
       "missed_critical_context_rate": 0.0,
       "hallucinated_or_stale_context_rate": 0.0
     }
@@ -151,9 +151,9 @@
     "variant": "layers_targeted_preflight",
     "paired_task_count": 5,
     "net_time_saved_ms": 34595.8,
-    "net_tokens_saved": -0.6,
+    "net_tokens_saved": -9335.4,
     "speedup": 1.1608471069577144,
-    "token_reduction_ratio": -0.3,
+    "token_reduction_ratio": -5.94460010188487,
     "success_delta": 0.0,
     "success_delta_confidence_interval": {
       "estimate": 0.0,
@@ -167,7 +167,7 @@
     "verification_quality_delta": 0.0,
     "context_quality_delta": 0.5142857142857142,
     "layers_overhead_ms": 0.6,
-    "layers_overhead_tokens": 0.6,
+    "layers_overhead_tokens": 4766.0,
     "missed_critical_context_rate": 0.0,
     "hallucinated_or_stale_context_rate": 0.0
   },
@@ -189,7 +189,6 @@
     },
     "blocking_metrics": [
       "token_reduction_ratio",
-      "token_accounting_provenance",
       "paired_task_count",
       "code_heavy_paired_task_count",
       "negative_control_paired_task_count"

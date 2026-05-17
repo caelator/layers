@@ -1082,6 +1082,37 @@ mod tests {
     }
 
     #[test]
+    fn parses_workflow_benchmark_refresh_token_accounting_command() {
+        let cli = Cli::try_parse_from([
+            "layers",
+            "workflow-benchmark",
+            "refresh-token-accounting",
+            "docs/dogfood/run/runner-plan.json",
+            "docs/dogfood/run/compare/workflow-runs.jsonl",
+            "--json",
+        ])
+        .expect("workflow benchmark refresh-token-accounting should parse");
+
+        let Commands::WorkflowBenchmark { command } = cli.command else {
+            panic!("expected workflow benchmark command");
+        };
+        let WorkflowBenchmarkCommands::RefreshTokenAccounting {
+            plan,
+            run_records,
+            json,
+        } = command
+        else {
+            panic!("expected workflow benchmark refresh-token-accounting command");
+        };
+        assert_eq!(plan, PathBuf::from("docs/dogfood/run/runner-plan.json"));
+        assert_eq!(
+            run_records,
+            PathBuf::from("docs/dogfood/run/compare/workflow-runs.jsonl")
+        );
+        assert!(json);
+    }
+
+    #[test]
     fn parses_workflow_benchmark_retrieval_eval_corpus_command() {
         let cli = Cli::try_parse_from([
             "layers",
