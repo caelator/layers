@@ -401,11 +401,23 @@ struct WorkflowRun {
     debugging_ms: u64,
     verification_ms: u64,
     input_tokens: u64,
+    #[serde(default)]
+    input_tokens_provenance: TokenAccountingProvenance,
     output_tokens: u64,
+    #[serde(default)]
+    output_tokens_provenance: TokenAccountingProvenance,
     peak_context_tokens: u64,
+    #[serde(default)]
+    peak_context_tokens_provenance: TokenAccountingProvenance,
     context_relevant_tokens: u64,
+    #[serde(default)]
+    context_relevant_tokens_provenance: TokenAccountingProvenance,
     context_duplicate_tokens: u64,
+    #[serde(default)]
+    context_duplicate_tokens_provenance: TokenAccountingProvenance,
     context_irrelevant_tokens: u64,
+    #[serde(default)]
+    context_irrelevant_tokens_provenance: TokenAccountingProvenance,
     assistant_turns: u64,
     tool_calls: u64,
     failed_commands: u64,
@@ -422,6 +434,8 @@ struct WorkflowRun {
     user_usefulness: u8,
     layers_overhead_ms: u64,
     layers_overhead_tokens: u64,
+    #[serde(default)]
+    layers_overhead_tokens_provenance: TokenAccountingProvenance,
     missed_critical_context: u64,
     hallucinated_or_stale_context: u64,
     regressions: u64,
@@ -431,6 +445,21 @@ struct WorkflowRun {
     unnecessary_context_injections: u64,
     #[serde(default)]
     context_caused_regressions: u64,
+}
+
+#[derive(Debug, Clone, Copy, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+enum TokenAccountingProvenance {
+    Measured,
+    Estimated,
+    #[default]
+    Placeholder,
+}
+
+impl TokenAccountingProvenance {
+    fn blocks_effectiveness_claims(self) -> bool {
+        matches!(self, Self::Placeholder)
+    }
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -930,10 +959,28 @@ struct BenchmarkReport {
     variants: Vec<VariantAggregate>,
     baseline: Option<VariantAggregate>,
     layers: Option<VariantAggregate>,
+    token_accounting: TokenAccountingSummary,
     comparisons: Vec<PairedComparison>,
     comparison: Option<PairedComparison>,
     #[serde(skip_serializing_if = "Option::is_none")]
     claim: Option<ClaimReport>,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+struct TokenAccountingSummary {
+    measured_runs: usize,
+    estimated_runs: usize,
+    placeholder_runs: usize,
+    blocks_effectiveness_claims: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct RunnerTokenAccounting {
+    input: u64,
+    output: u64,
+    peak_context: u64,
+    context_relevant: u64,
+    layers_overhead: u64,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
@@ -2353,6 +2400,62 @@ fn run_shell_command(
     }
 }
 
+fn estimate_runner_token_accounting(run: &RunnerRunPlan) -> Result<RunnerTokenAccounting> {
+    let prompt_tokens = estimate_file_tokens(&run.prompt_path)?;
+    let packet_tokens = run
+        .packet_artifact_path
+        .as_ref()
+        .map(|path| estimate_file_tokens(path))
+        .transpose()?
+        .unwrap_or(0);
+    let validation_tokens = estimate_text_tokens(&run.expected_validation_commands.join("\n"));
+    let preflight_query_tokens = estimate_text_tokens(&run.preflight_query);
+    let preflight_target_tokens = estimate_text_tokens(&run.preflight_targets.join("\n"));
+    let layers_overhead_tokens = if run.requires_layers_preflight {
+        packet_tokens
+            .saturating_add(preflight_query_tokens)
+            .saturating_add(preflight_target_tokens)
+    } else {
+        0
+    };
+    let input_tokens = prompt_tokens
+        .saturating_add(validation_tokens)
+        .saturating_add(layers_overhead_tokens)
+        .max(1);
+    let output_tokens = estimate_file_tokens(&run.transcript_path)
+        .unwrap_or(1)
+        .max(1);
+    let peak_context_tokens = if run.requires_layers_preflight {
+        packet_tokens.max(layers_overhead_tokens)
+    } else {
+        0
+    };
+    let context_relevant_tokens = if run.requires_layers_preflight {
+        packet_tokens.min(peak_context_tokens)
+    } else {
+        0
+    };
+
+    Ok(RunnerTokenAccounting {
+        input: input_tokens,
+        output: output_tokens,
+        peak_context: peak_context_tokens,
+        context_relevant: context_relevant_tokens,
+        layers_overhead: layers_overhead_tokens,
+    })
+}
+
+fn estimate_file_tokens(path: &Path) -> Result<u64> {
+    let text = fs::read_to_string(path)
+        .with_context(|| format!("failed to read token accounting source {}", path.display()))?;
+    Ok(estimate_text_tokens(&text))
+}
+
+fn estimate_text_tokens(text: &str) -> u64 {
+    let non_whitespace_chars = text.chars().filter(|ch| !ch.is_whitespace()).count() as u64;
+    non_whitespace_chars.div_ceil(4)
+}
+
 fn build_execution_run_record(
     run: &RunnerRunPlan,
     execution: &RunnerRunExecution,
@@ -2366,7 +2469,7 @@ fn build_execution_run_record(
     };
     let success_score = if execution.completed { 1.0 } else { 0.0 };
     let overhead_ms = u64::from(run.requires_layers_preflight);
-    let overhead_tokens = u64::from(run.requires_layers_preflight);
+    let token_accounting = estimate_runner_token_accounting(run)?;
     let failed_validation_commands = execution
         .validation_exit_codes
         .iter()
@@ -2383,12 +2486,18 @@ fn build_execution_run_record(
         implementation_ms: execution.wall_time_ms.saturating_sub(overhead_ms),
         debugging_ms: 0,
         verification_ms: 0,
-        input_tokens: 1,
-        output_tokens: 1,
-        peak_context_tokens: 1,
-        context_relevant_tokens: u64::from(run.requires_layers_preflight),
+        input_tokens: token_accounting.input,
+        input_tokens_provenance: TokenAccountingProvenance::Estimated,
+        output_tokens: token_accounting.output,
+        output_tokens_provenance: TokenAccountingProvenance::Estimated,
+        peak_context_tokens: token_accounting.peak_context,
+        peak_context_tokens_provenance: TokenAccountingProvenance::Estimated,
+        context_relevant_tokens: token_accounting.context_relevant,
+        context_relevant_tokens_provenance: TokenAccountingProvenance::Estimated,
         context_duplicate_tokens: 0,
+        context_duplicate_tokens_provenance: TokenAccountingProvenance::Estimated,
         context_irrelevant_tokens: 0,
+        context_irrelevant_tokens_provenance: TokenAccountingProvenance::Estimated,
         assistant_turns: 1,
         tool_calls: 1 + run.expected_validation_commands.len() as u64,
         failed_commands,
@@ -2412,7 +2521,8 @@ fn build_execution_run_record(
         confidence_calibration: 1,
         user_usefulness: 1,
         layers_overhead_ms: overhead_ms,
-        layers_overhead_tokens: overhead_tokens,
+        layers_overhead_tokens: token_accounting.layers_overhead,
+        layers_overhead_tokens_provenance: TokenAccountingProvenance::Estimated,
         missed_critical_context: 0,
         hallucinated_or_stale_context: 0,
         regressions: 0,
@@ -3166,10 +3276,38 @@ fn analyze_runs(runs: &[WorkflowRun]) -> Result<BenchmarkReport> {
             WorkflowVariant::LayersTargetedPreflight,
             &targeted_layers_runs,
         ),
+        token_accounting: summarize_token_accounting(runs),
         comparisons,
         comparison: Some(comparison),
         claim: None,
     })
+}
+
+fn summarize_token_accounting(runs: &[WorkflowRun]) -> TokenAccountingSummary {
+    let mut summary = TokenAccountingSummary::default();
+    for run in runs {
+        let provenances = [
+            run.input_tokens_provenance,
+            run.output_tokens_provenance,
+            run.peak_context_tokens_provenance,
+            run.context_relevant_tokens_provenance,
+            run.context_duplicate_tokens_provenance,
+            run.context_irrelevant_tokens_provenance,
+            run.layers_overhead_tokens_provenance,
+        ];
+        if provenances
+            .iter()
+            .any(|provenance| provenance.blocks_effectiveness_claims())
+        {
+            summary.placeholder_runs += 1;
+        } else if provenances.contains(&TokenAccountingProvenance::Estimated) {
+            summary.estimated_runs += 1;
+        } else {
+            summary.measured_runs += 1;
+        }
+    }
+    summary.blocks_effectiveness_claims = summary.placeholder_runs > 0;
+    summary
 }
 
 fn analyze_runs_with_thresholds(
@@ -3255,6 +3393,9 @@ fn analyze_runs_with_thresholds(
     }
     if context_caused_regression_rate > thresholds.max_context_caused_regression_rate {
         blocking_metrics.push("context_caused_regression_rate".to_string());
+    }
+    if report.token_accounting.blocks_effectiveness_claims {
+        blocking_metrics.push("token_accounting_provenance".to_string());
     }
 
     let mut uncertainty_notes = Vec::new();
@@ -4237,7 +4378,7 @@ mod tests {
 
     fn valid_run(task_id: &str, variant: &str, wall_time_ms: u64, input_tokens: u64) -> String {
         format!(
-            r#"{{"task_id":"{task_id}","variant":"{variant}","task_category":"small_bugfix","success_score":1.0,"wall_time_ms":{wall_time_ms},"orientation_ms":10,"implementation_ms":20,"debugging_ms":5,"verification_ms":5,"input_tokens":{input_tokens},"output_tokens":100,"peak_context_tokens":900,"context_relevant_tokens":600,"context_duplicate_tokens":100,"context_irrelevant_tokens":200,"assistant_turns":4,"tool_calls":10,"failed_commands":1,"patch_attempts":1,"test_runs":2,"human_interventions":0,"failed_attempts":1,"retrieval_quality":{{"relevance":5,"completeness":4,"specificity":5,"freshness":5,"grounding":4,"concision":4,"noise_absence":4}},"verification_quality":5,"change_quality":4,"planning_quality":5,"reproducibility":5,"confidence_calibration":4,"user_usefulness":5,"layers_overhead_ms":0,"layers_overhead_tokens":0,"missed_critical_context":0,"hallucinated_or_stale_context":0,"regressions":0}}"#
+            r#"{{"task_id":"{task_id}","variant":"{variant}","task_category":"small_bugfix","success_score":1.0,"wall_time_ms":{wall_time_ms},"orientation_ms":10,"implementation_ms":20,"debugging_ms":5,"verification_ms":5,"input_tokens":{input_tokens},"input_tokens_provenance":"estimated","output_tokens":100,"output_tokens_provenance":"estimated","peak_context_tokens":900,"peak_context_tokens_provenance":"estimated","context_relevant_tokens":600,"context_relevant_tokens_provenance":"estimated","context_duplicate_tokens":100,"context_duplicate_tokens_provenance":"estimated","context_irrelevant_tokens":200,"context_irrelevant_tokens_provenance":"estimated","assistant_turns":4,"tool_calls":10,"failed_commands":1,"patch_attempts":1,"test_runs":2,"human_interventions":0,"failed_attempts":1,"retrieval_quality":{{"relevance":5,"completeness":4,"specificity":5,"freshness":5,"grounding":4,"concision":4,"noise_absence":4}},"verification_quality":5,"change_quality":4,"planning_quality":5,"reproducibility":5,"confidence_calibration":4,"user_usefulness":5,"layers_overhead_ms":0,"layers_overhead_tokens":0,"layers_overhead_tokens_provenance":"estimated","missed_critical_context":0,"hallucinated_or_stale_context":0,"regressions":0}}"#
         )
     }
 
@@ -4814,6 +4955,33 @@ mod tests {
             analyze_runs_with_thresholds(&runs, permissive_claim_thresholds()).expect("analysis");
         let claim = report.claim.expect("claim report");
         assert_eq!(claim.status, ClaimStatus::Supported);
+    }
+
+    #[test]
+    fn placeholder_token_accounting_blocks_effectiveness_claim() {
+        let placeholder_run = valid_run("task-1", "baseline", 1_000, 2_000).replace(
+            "\"input_tokens_provenance\":\"estimated\"",
+            "\"input_tokens_provenance\":\"placeholder\"",
+        );
+        let runs = vec![
+            parse_run(&placeholder_run).expect("baseline"),
+            parse_run(&valid_run("task-1", "layers", 700, 1_500)).expect("layers"),
+            parse_run(&negative_control_run("neg-1", "baseline", false)).expect("baseline neg"),
+            parse_run(&negative_control_run("neg-1", "layers", true)).expect("layers neg"),
+        ];
+
+        let report =
+            analyze_runs_with_thresholds(&runs, permissive_claim_thresholds()).expect("analysis");
+        let claim = report.claim.expect("claim report");
+        assert_eq!(claim.status, ClaimStatus::NotSupported);
+        assert!(
+            claim
+                .blocking_metrics
+                .iter()
+                .any(|metric| metric == "token_accounting_provenance")
+        );
+        assert!(report.token_accounting.blocks_effectiveness_claims);
+        assert_eq!(report.token_accounting.placeholder_runs, 1);
     }
 
     #[test]

@@ -115,6 +115,12 @@
     "average_layers_overhead_ms": 0.6,
     "average_layers_overhead_tokens": 0.6
   },
+  "token_accounting": {
+    "measured_runs": 0,
+    "estimated_runs": 0,
+    "placeholder_runs": 10,
+    "blocks_effectiveness_claims": true
+  },
   "comparisons": [
     {
       "variant": "layers_targeted_preflight",
@@ -183,6 +189,7 @@
     },
     "blocking_metrics": [
       "token_reduction_ratio",
+      "token_accounting_provenance",
       "paired_task_count",
       "code_heavy_paired_task_count",
       "negative_control_paired_task_count"
