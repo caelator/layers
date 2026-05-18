@@ -7,6 +7,7 @@ use layers_core::{
     PacketQualityReport, RetrievalReport, SuccessRubric, TaskCategory, TaskSpec,
 };
 use serde_json::json;
+use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
 use crate::cmd::autoresearch::{AutoresearchPacketBridgeOptions, add_autoresearch_to_packet};
@@ -16,9 +17,12 @@ use crate::context_packet_compiler::{
     context_section, git_output, repo_source, workspace_id,
 };
 
-const DEFAULT_BUDGET_WORDS: usize = 1_800;
-const MAX_MEMORY_ITEMS: usize = 5;
-const MAX_CODE_ITEMS: usize = 8;
+const DEFAULT_BUDGET_WORDS: usize = 700;
+const MAX_MEMORY_ITEMS: usize = 2;
+const MAX_CODE_ITEMS: usize = 4;
+const COMPACT_MEMORY_ITEM_CHARS: usize = 140;
+const COMPACT_CODE_EXCERPT_LINES: usize = 12;
+const COMPACT_CODE_EXCERPT_CHARS: usize = 500;
 
 /// Arguments for the `layers preflight` command.
 #[derive(Debug, Clone)]
@@ -129,7 +133,8 @@ fn build_preflight_packet(args: &PreflightArgs) -> Result<ContextPacket> {
         )
         .with_git_ref(workspace_state.head.clone())
         .with_sections(packet.sections)
-        .with_warnings(packet.warnings),
+        .with_warnings(packet.warnings)
+        .derive_evidence(false),
     );
     packet.task.clone_from(&args.task);
     packet.scores = draft_scores;
@@ -345,10 +350,11 @@ fn add_memory_section(packet: &mut ContextPacket, task: &str) {
         .take(MAX_MEMORY_ITEMS)
         .enumerate()
         .map(|(idx, line)| {
+            let compact_line = compact_preflight_body(line, PreflightBodyKind::Memory);
             context_item(
                 &format!("memory-{}", idx + 1),
                 "Curated memory match",
-                line,
+                &compact_line,
                 "memory",
                 &memory_path.display().to_string(),
                 None,
@@ -404,7 +410,7 @@ fn add_code_section(
     for target in targets.iter().take(MAX_CODE_ITEMS) {
         let path = workspace.join(target);
         if path.is_file() {
-            if let Ok(body) = read_file_excerpt(&path) {
+            if let Ok(body) = read_file_excerpt_with_kind(&path, PreflightBodyKind::Code) {
                 items.push(context_item(
                     &format!("code-{}", items.len() + 1),
                     target,
@@ -657,7 +663,7 @@ fn fallback_code_search(workspace: &Path, keywords: &[String]) -> Vec<ContextIte
             let path = workspace.join(file);
             let content = std::fs::read_to_string(&path).ok()?;
             (keyword_score(&content, keywords) > 0).then(|| {
-                let excerpt = content.lines().take(40).collect::<Vec<_>>().join("\n");
+                let excerpt = compact_preflight_body(&content, PreflightBodyKind::Code);
                 context_item(
                     file,
                     file,
@@ -674,10 +680,79 @@ fn fallback_code_search(workspace: &Path, keywords: &[String]) -> Vec<ContextIte
         .collect()
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PreflightBodyKind {
+    Code,
+    Memory,
+    Policy,
+}
+
+fn compact_preflight_body(body: &str, kind: PreflightBodyKind) -> String {
+    let (max_lines, max_chars) = match kind {
+        PreflightBodyKind::Code => (COMPACT_CODE_EXCERPT_LINES, COMPACT_CODE_EXCERPT_CHARS),
+        PreflightBodyKind::Memory => (usize::MAX, COMPACT_MEMORY_ITEM_CHARS),
+        PreflightBodyKind::Policy => (24, 1_200),
+    };
+    let mut out = String::new();
+    let mut truncated_lines = 0usize;
+    let mut truncated_chars = 0usize;
+    for (idx, line) in body.lines().enumerate() {
+        if idx >= max_lines {
+            truncated_lines += 1;
+            truncated_chars += line.len();
+            continue;
+        }
+        let separator_len = usize::from(!out.is_empty());
+        let available = max_chars.saturating_sub(out.len().saturating_add(separator_len));
+        if line.len() > available {
+            let prefix = utf8_prefix_at_most(line, available);
+            if !prefix.is_empty() {
+                if !out.is_empty() {
+                    out.push('\n');
+                }
+                out.push_str(prefix);
+            }
+            truncated_lines += 1;
+            truncated_chars += line.len().saturating_sub(prefix.len());
+            continue;
+        }
+        if !out.is_empty() {
+            out.push('\n');
+        }
+        out.push_str(line);
+    }
+    if truncated_lines > 0 || truncated_chars > 0 {
+        if !out.is_empty() {
+            out.push('\n');
+        }
+        write!(
+            out,
+            "[truncated: omitted {truncated_lines} lines and at least {truncated_chars} chars to fit preflight budget]"
+        )
+        .expect("writing to a String cannot fail");
+    }
+    out
+}
+
+fn utf8_prefix_at_most(value: &str, max_bytes: usize) -> &str {
+    if value.len() <= max_bytes {
+        return value;
+    }
+    let mut end = max_bytes;
+    while end > 0 && !value.is_char_boundary(end) {
+        end -= 1;
+    }
+    &value[..end]
+}
+
 fn read_file_excerpt(path: &Path) -> Result<String> {
+    read_file_excerpt_with_kind(path, PreflightBodyKind::Policy)
+}
+
+fn read_file_excerpt_with_kind(path: &Path, kind: PreflightBodyKind) -> Result<String> {
     let content = std::fs::read_to_string(path)
         .with_context(|| format!("failed to read target {}", path.display()))?;
-    Ok(content.lines().take(80).collect::<Vec<_>>().join("\n"))
+    Ok(compact_preflight_body(&content, kind))
 }
 
 fn summarize_directory(path: &Path) -> String {
@@ -882,8 +957,12 @@ mod tests {
         assert!(packet.scores.get("packet_quality").is_some());
         assert!(packet.scores.get("injection_recommendation").is_some());
         assert!(
-            packet
-                .evidence
+            packet.evidence.is_empty(),
+            "preflight JSON should not duplicate section bodies in the legacy evidence field"
+        );
+        assert!(
+            section.items[0]
+                .body
                 .contains("Context compiler autoresearch gap")
         );
         assert!(section.items[0].body.contains("Provenance:"));
@@ -921,6 +1000,56 @@ mod tests {
             json: true,
         })
         .unwrap();
+    }
+
+    #[test]
+    fn preflight_compacts_long_memory_and_code_excerpts() {
+        let long_text = (0..80)
+            .map(|idx| {
+                format!(
+                    "line {idx}: this is detailed implementation context that should be trimmed"
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        let compact_code = compact_preflight_body(&long_text, PreflightBodyKind::Code);
+        let compact_memory = compact_preflight_body(&long_text, PreflightBodyKind::Memory);
+
+        assert!(compact_code.lines().count() <= COMPACT_CODE_EXCERPT_LINES + 1);
+        assert!(compact_code.len() <= COMPACT_CODE_EXCERPT_CHARS + 80);
+        assert!(compact_code.contains("[truncated:"));
+        assert!(compact_memory.len() <= COMPACT_MEMORY_ITEM_CHARS + 80);
+        assert!(compact_memory.contains("[truncated:"));
+    }
+
+    #[test]
+    fn preflight_compaction_preserves_prefix_for_single_long_lines() {
+        let long_memory = format!(
+            "critical decision: {}",
+            "retain this exact evidence phrase ".repeat(20)
+        );
+        let compact_memory = compact_preflight_body(&long_memory, PreflightBodyKind::Memory);
+
+        assert!(compact_memory.starts_with("critical decision: retain this exact evidence"));
+        assert!(compact_memory.contains("[truncated:"));
+        assert!(compact_memory.len() <= COMPACT_MEMORY_ITEM_CHARS + 80);
+
+        let long_code = format!("fn important_symbol() {{ {} }}", "do_work(); ".repeat(120));
+        let compact_code = compact_preflight_body(&long_code, PreflightBodyKind::Code);
+
+        assert!(compact_code.starts_with("fn important_symbol()"));
+        assert!(compact_code.contains("[truncated:"));
+        assert!(compact_code.len() <= COMPACT_CODE_EXCERPT_CHARS + 80);
+    }
+
+    #[test]
+    fn preflight_compaction_keeps_utf8_boundaries() {
+        let long_text = format!("重要な判断: {}", "境界".repeat(200));
+        let compact = compact_preflight_body(&long_text, PreflightBodyKind::Memory);
+
+        assert!(compact.starts_with("重要な判断:"));
+        assert!(compact.contains("[truncated:"));
     }
 
     #[test]
