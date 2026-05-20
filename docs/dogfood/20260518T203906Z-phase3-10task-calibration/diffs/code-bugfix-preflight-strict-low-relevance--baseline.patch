@@ -1,0 +1,75 @@
+diff --git a/src/cmd/preflight.rs b/src/cmd/preflight.rs
+index fa215ca..ef13b58 100644
+--- a/src/cmd/preflight.rs
++++ b/src/cmd/preflight.rs
+@@ -189,10 +189,15 @@ fn has_warning(packet: &ContextPacket, code: &str) -> bool {
+ }
+ 
+ fn minimum_bar_passes(packet: &ContextPacket) -> bool {
++    let code_heavy = is_packet_code_heavy(packet);
++    let low_relevance = has_warning(packet, "low_memory_relevance");
++    
+     has_section(packet, "workspace")
+         && has_section(packet, "memory")
+         && has_section(packet, "validation")
+-        && (!is_packet_code_heavy(packet) || has_section(packet, "code"))
++        && (!code_heavy || has_section(packet, "code"))
++        && !low_relevance
++        && packet.confidence != "low"
+ }
+ 
+ fn injection_policy_passes(packet: &ContextPacket) -> bool {
+@@ -1077,4 +1082,53 @@ mod tests {
+ 
+         assert!(!minimum_bar_passes(&packet));
+     }
++
++    #[test]
++    fn strict_preflight_fails_on_low_relevance_memory() {
++        let mut packet = ContextPacket::new(
++            "test".to_string(),
++            "layers".to_string(),
++            "some random task".to_string(),
++            chrono::Utc::now(),
++        );
++        packet.scores = json!({ "code_heavy": false });
++        packet.sections.push(context_section("workspace", "WS", "...", Vec::new()));
++        packet.sections.push(context_section("memory", "Memory", "...", Vec::new()));
++        packet.sections.push(context_section("validation", "Val", "...", Vec::new()));
++        
++        packet.warnings.push(ContextWarning {
++            severity: "warning".to_string(),
++            code: "low_memory_relevance".to_string(),
++            message: "low relevance".to_string(),
++        });
++        
++        assert!(!minimum_bar_passes(&packet));
++    }
++
++    #[test]
++    fn high_confidence_code_heavy_requires_both_code_and_memory() {
++        // memory-only context for code-heavy task should NOT be high confidence
++        let quality = ResearchQuality::new(true, true, false, false);
++        assert_ne!(quality.confidence, "high");
++        
++        // low-relevance memory + code context for code-heavy task should NOT be high confidence
++        let quality = ResearchQuality::new(true, true, true, true);
++        assert_ne!(quality.confidence, "high");
++    }
++
++    #[test]
++    fn strict_preflight_fails_on_memory_only_for_code_heavy_task() {
++        let mut packet = ContextPacket::new(
++            "test".to_string(),
++            "layers".to_string(),
++            "fix some code".to_string(),
++            chrono::Utc::now(),
++        );
++        packet.scores = json!({ "preflight": { "code_heavy": true } });
++        packet.sections.push(context_section("workspace", "WS", "...", Vec::new()));
++        packet.sections.push(context_section("memory", "Memory", "...", Vec::new()));
++        packet.sections.push(context_section("validation", "Val", "...", Vec::new()));
++        
++        assert!(!minimum_bar_passes(&packet));
++    }
+ }

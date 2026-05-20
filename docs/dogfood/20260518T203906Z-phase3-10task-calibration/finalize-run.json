@@ -1,0 +1,18 @@
+{
+  "artifact_root": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration",
+  "run_records_path": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/compare/workflow-runs.jsonl",
+  "report_json_path": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/compare/workflow-benchmark-report.json",
+  "report_markdown_path": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/compare/workflow-benchmark-report.md",
+  "final_report_path": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/PHASE15_FIXED_REPORT.md",
+  "workflow_records": 20,
+  "expected_runs": 20,
+  "completed_runs": 20,
+  "failed_runs": 0,
+  "packet_artifacts": 8,
+  "packet_validation_failures": 0,
+  "missing_required_artifacts": [
+    "benchmark claim not supported: net_time_saved_ms, token_reduction_ratio, paired_task_count, code_heavy_paired_task_count, negative_control_paired_task_count"
+  ],
+  "secret_scan_findings": 0,
+  "claim_status": "not_supported"
+}

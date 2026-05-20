@@ -1,0 +1,292 @@
+diff --git a/crates/layers-mcp/src/server.rs b/crates/layers-mcp/src/server.rs
+index 44b8a67..0a410ce 100644
+--- a/crates/layers-mcp/src/server.rs
++++ b/crates/layers-mcp/src/server.rs
+@@ -553,19 +553,19 @@ mod tests {
+ 
+     fn make_registry() -> Arc<ToolRegistry> {
+         let mut reg = ToolRegistry::new();
+-        reg.register(Arc::new(SafeTool));
+-        reg.register(Arc::new(DangerousTool));
+-        reg.register(Arc::new(AnotherSafeTool));
++        reg.register(Arc::new(SafeTool)).unwrap();
++        reg.register(Arc::new(DangerousTool)).unwrap();
++        reg.register(Arc::new(AnotherSafeTool)).unwrap();
+         Arc::new(reg)
+     }
+ 
+     fn make_stable_registry() -> Arc<ToolRegistry> {
+         let mut reg = ToolRegistry::new();
+         for name in STABLE_CONTEXT_SURFACE_TOOLS {
+-            reg.register(Arc::new(StableTool { name }));
++            reg.register(Arc::new(StableTool { name })).unwrap();
+         }
+-        reg.register(Arc::new(SafeTool));
+-        reg.register(Arc::new(DangerousTool));
++        reg.register(Arc::new(SafeTool)).unwrap();
++        reg.register(Arc::new(DangerousTool)).unwrap();
+         Arc::new(reg)
+     }
+ 
+diff --git a/crates/layers-mcp/src/stable.rs b/crates/layers-mcp/src/stable.rs
+index c672631..3e0b06c 100644
+--- a/crates/layers-mcp/src/stable.rs
++++ b/crates/layers-mcp/src/stable.rs
+@@ -26,12 +26,12 @@ use crate::server::STABLE_CONTEXT_SURFACE_TOOLS;
+ #[must_use]
+ pub fn stable_context_registry() -> ToolRegistry {
+     let mut registry = ToolRegistry::new();
+-    registry.register(std::sync::Arc::new(ContextCompileTool));
+-    registry.register(std::sync::Arc::new(PreflightContextTool));
+-    registry.register(std::sync::Arc::new(ImpactAnalyzeTool));
+-    registry.register(std::sync::Arc::new(MemoryGetTool::new()));
+-    registry.register(std::sync::Arc::new(MemorySearchTool::new()));
+-    registry.register(std::sync::Arc::new(ValidateContextTool));
++    registry.register(std::sync::Arc::new(ContextCompileTool)).unwrap();
++    registry.register(std::sync::Arc::new(PreflightContextTool)).unwrap();
++    registry.register(std::sync::Arc::new(ImpactAnalyzeTool)).unwrap();
++    registry.register(std::sync::Arc::new(MemoryGetTool::new())).unwrap();
++    registry.register(std::sync::Arc::new(MemorySearchTool::new())).unwrap();
++    registry.register(std::sync::Arc::new(ValidateContextTool)).unwrap();
+     registry
+ }
+ 
+diff --git a/crates/layers-runtime/src/tool_dispatch.rs b/crates/layers-runtime/src/tool_dispatch.rs
+index c58a43d..d37da47 100644
+--- a/crates/layers-runtime/src/tool_dispatch.rs
++++ b/crates/layers-runtime/src/tool_dispatch.rs
+@@ -66,11 +66,17 @@ impl ToolRegistry {
+         self
+     }
+ 
+-    /// Register a tool. Replaces any existing tool with the same name.
+-    pub fn register(&mut self, tool: Arc<dyn Tool>) {
++    /// Register a tool. Returns an error if a tool with the same name is already registered.
++    pub fn register(&mut self, tool: Arc<dyn Tool>) -> Result<()> {
+         let name = tool.name().to_string();
++        if self.tools.contains_key(&name) {
++            return Err(LayersError::Tool(format!(
++                "duplicate tool registration: {name}"
++            )));
++        }
+         debug!(tool = %name, "registered tool");
+         self.tools.insert(name, tool);
++        Ok(())
+     }
+ 
+     /// Check if a tool name is permitted by allow/deny filters.
+@@ -148,3 +154,49 @@ impl Default for ToolRegistry {
+         Self::new()
+     }
+ }
++
++// ---------------------------------------------------------------------------
++// Tests
++// ---------------------------------------------------------------------------
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use layers_core::{Tool, ToolContext, ToolOutput};
++    use std::sync::Arc;
++
++    struct MockTool(&'static str);
++
++    #[async_trait::async_trait]
++    impl Tool for MockTool {
++        fn name(&self) -> &str {
++            self.0
++        }
++        fn description(&self) -> &str {
++            "mock"
++        }
++        fn schema(&self) -> serde_json::Value {
++            serde_json::json!({})
++        }
++        async fn execute(&self, _args: serde_json::Value, _ctx: ToolContext) -> Result<ToolOutput> {
++            Ok(ToolOutput::text("ok"))
++        }
++    }
++
++    #[test]
++    fn register_unique() {
++        let mut reg = ToolRegistry::new();
++        reg.register(Arc::new(MockTool("t1"))).unwrap();
++        reg.register(Arc::new(MockTool("t2"))).unwrap();
++        assert_eq!(reg.total_count(), 2);
++    }
++
++    #[test]
++    fn register_duplicate_fails() {
++        let mut reg = ToolRegistry::new();
++        reg.register(Arc::new(MockTool("t1"))).unwrap();
++        let result = reg.register(Arc::new(MockTool("t1")));
++        assert!(result.is_err());
++        assert!(result.unwrap_err().to_string().contains("duplicate"));
++    }
++}
+diff --git a/crates/layers-tools/src/registry.rs b/crates/layers-tools/src/registry.rs
+index 4f90bd5..64e5577 100644
+--- a/crates/layers-tools/src/registry.rs
++++ b/crates/layers-tools/src/registry.rs
+@@ -104,11 +104,17 @@ impl ToolRegistry {
+         self
+     }
+ 
+-    /// Register a tool. Replaces any existing tool with the same name.
+-    pub fn register(&mut self, tool: Arc<dyn Tool>) {
++    /// Register a tool. Returns an error if a tool with the same name is already registered.
++    pub fn register(&mut self, tool: Arc<dyn Tool>) -> Result<()> {
+         let name = tool.name().to_string();
++        if self.tools.contains_key(&name) {
++            return Err(LayersError::Tool(format!(
++                "duplicate tool registration: {name}"
++            )));
++        }
+         debug!(tool = %name, "registered tool");
+         self.tools.insert(name, tool);
++        Ok(())
+     }
+ 
+     /// Check if a tool name is permitted by profile, allow, and deny filters.
+@@ -258,8 +264,8 @@ mod tests {
+     #[tokio::test]
+     async fn register_and_lookup() {
+         let mut reg = ToolRegistry::new();
+-        reg.register(Arc::new(MockTool::new("read")));
+-        reg.register(Arc::new(MockTool::new("write")));
++        reg.register(Arc::new(MockTool::new("read"))).unwrap();
++        reg.register(Arc::new(MockTool::new("write"))).unwrap();
+ 
+         assert!(reg.get("read").is_some());
+         assert!(reg.get("write").is_some());
+@@ -270,7 +276,7 @@ mod tests {
+     #[tokio::test]
+     async fn dispatch_executes_tool() {
+         let mut reg = ToolRegistry::new();
+-        reg.register(Arc::new(MockTool::new("echo")));
++        reg.register(Arc::new(MockTool::new("echo"))).unwrap();
+ 
+         let result = reg
+             .dispatch("echo", serde_json::json!({ "input": "hello" }), test_ctx())
+@@ -291,8 +297,8 @@ mod tests {
+     #[test]
+     fn deny_list_filters_tools() {
+         let mut reg = ToolRegistry::new().with_deny(vec!["exec".into()]);
+-        reg.register(Arc::new(MockTool::new("read")));
+-        reg.register(Arc::new(MockTool::new("exec")));
++        reg.register(Arc::new(MockTool::new("read"))).unwrap();
++        reg.register(Arc::new(MockTool::new("exec"))).unwrap();
+ 
+         assert!(reg.get("read").is_some());
+         assert!(reg.get("exec").is_none());
+@@ -302,8 +308,8 @@ mod tests {
+     #[test]
+     fn allow_list_filters_tools() {
+         let mut reg = ToolRegistry::new().with_allow(vec!["read".into()]);
+-        reg.register(Arc::new(MockTool::new("read")));
+-        reg.register(Arc::new(MockTool::new("write")));
++        reg.register(Arc::new(MockTool::new("read"))).unwrap();
++        reg.register(Arc::new(MockTool::new("write"))).unwrap();
+ 
+         assert!(reg.get("read").is_some());
+         assert!(reg.get("write").is_none());
+@@ -312,11 +318,11 @@ mod tests {
+     #[test]
+     fn profile_minimal_filters() {
+         let mut reg = ToolRegistry::new().with_profile(ToolProfile::Minimal);
+-        reg.register(Arc::new(MockTool::new("read")));
+-        reg.register(Arc::new(MockTool::new("session_status")));
+-        reg.register(Arc::new(MockTool::new("memory_get")));
+-        reg.register(Arc::new(MockTool::new("exec")));
+-        reg.register(Arc::new(MockTool::new("write")));
++        reg.register(Arc::new(MockTool::new("read"))).unwrap();
++        reg.register(Arc::new(MockTool::new("session_status"))).unwrap();
++        reg.register(Arc::new(MockTool::new("memory_get"))).unwrap();
++        reg.register(Arc::new(MockTool::new("exec"))).unwrap();
++        reg.register(Arc::new(MockTool::new("write"))).unwrap();
+ 
+         assert!(reg.get("read").is_some());
+         assert!(reg.get("session_status").is_some());
+@@ -329,12 +335,12 @@ mod tests {
+     #[test]
+     fn profile_coding_includes_exec_fs() {
+         let mut reg = ToolRegistry::new().with_profile(ToolProfile::Coding);
+-        reg.register(Arc::new(MockTool::new("read")));
+-        reg.register(Arc::new(MockTool::new("exec")));
+-        reg.register(Arc::new(MockTool::new("process")));
+-        reg.register(Arc::new(MockTool::new("write")));
+-        reg.register(Arc::new(MockTool::new("edit")));
+-        reg.register(Arc::new(MockTool::new("sessions_send")));
++        reg.register(Arc::new(MockTool::new("read"))).unwrap();
++        reg.register(Arc::new(MockTool::new("exec"))).unwrap();
++        reg.register(Arc::new(MockTool::new("process"))).unwrap();
++        reg.register(Arc::new(MockTool::new("write"))).unwrap();
++        reg.register(Arc::new(MockTool::new("edit"))).unwrap();
++        reg.register(Arc::new(MockTool::new("sessions_send"))).unwrap();
+ 
+         assert!(reg.get("read").is_some());
+         assert!(reg.get("exec").is_some());
+@@ -347,15 +353,15 @@ mod tests {
+     #[test]
+     fn profile_full_allows_all() {
+         let mut reg = ToolRegistry::new().with_profile(ToolProfile::Full);
+-        reg.register(Arc::new(MockTool::new("anything")));
++        reg.register(Arc::new(MockTool::new("anything"))).unwrap();
+         assert!(reg.get("anything").is_some());
+     }
+ 
+     #[test]
+     fn generate_schemas_returns_permitted_only() {
+         let mut reg = ToolRegistry::new().with_deny(vec!["secret".into()]);
+-        reg.register(Arc::new(MockTool::new("read")));
+-        reg.register(Arc::new(MockTool::new("secret")));
++        reg.register(Arc::new(MockTool::new("read"))).unwrap();
++        reg.register(Arc::new(MockTool::new("secret"))).unwrap();
+ 
+         let schemas = reg.generate_schemas();
+         assert_eq!(schemas.len(), 1);
+@@ -365,8 +371,8 @@ mod tests {
+     #[test]
+     fn names_returns_permitted_sorted() {
+         let mut reg = ToolRegistry::new();
+-        reg.register(Arc::new(MockTool::new("write")));
+-        reg.register(Arc::new(MockTool::new("read")));
++        reg.register(Arc::new(MockTool::new("write"))).unwrap();
++        reg.register(Arc::new(MockTool::new("read"))).unwrap();
+ 
+         let names = reg.names();
+         assert!(names.contains(&"read"));
+@@ -374,13 +380,16 @@ mod tests {
+     }
+ 
+     #[test]
+-    fn register_replaces_existing() {
++    fn register_fails_on_duplicate() {
+         let mut reg = ToolRegistry::new();
+-        reg.register(Arc::new(MockTool::new("tool")));
+-        assert_eq!(reg.total_count(), 1);
++        reg.register(Arc::new(MockTool::new("tool"))).unwrap();
+ 
+-        // Re-register should replace, not duplicate.
+-        reg.register(Arc::new(MockTool::new("tool")));
+-        assert_eq!(reg.total_count(), 1);
++        // Re-register should fail, not replace.
++        let result = reg.register(Arc::new(MockTool::new("tool")));
++        assert!(result.is_err());
++        assert!(result
++            .unwrap_err()
++            .to_string()
++            .contains("duplicate tool registration"));
+     }
+ }
+diff --git a/memoryport/telemetry/events.jsonl b/memoryport/telemetry/events.jsonl
+index b9b1feb..e26e7b1 100644
+--- a/memoryport/telemetry/events.jsonl
++++ b/memoryport/telemetry/events.jsonl
+@@ -1042,3 +1042,5 @@
+ {"schema_version":"1.0","timestamp":"2026-04-14T01:45:31.272899+00:00","event_type":"routing_decision","query_fingerprint":"40099e94ce85a57c17a7cb606605e7ce40099e94ce85a57c17a7cb606605e7ce","chosen_route":"neither","route_confidence":0.5,"plugin_calls":[],"end_to_end_latency_ms":261,"outcome":"failure"}
+ {"schema_version":"1.0","timestamp":"2026-04-15T09:10:26.828491+00:00","event_type":"routing_decision","query_fingerprint":"40099e94ce85a57c17a7cb606605e7ce40099e94ce85a57c17a7cb606605e7ce","chosen_route":"neither","route_confidence":0.5,"plugin_calls":[],"end_to_end_latency_ms":16,"outcome":"failure"}
+ {"schema_version":"1.0","timestamp":"2026-04-15T09:10:27.066881+00:00","event_type":"routing_decision","query_fingerprint":"40099e94ce85a57c17a7cb606605e7ce40099e94ce85a57c17a7cb606605e7ce","chosen_route":"neither","route_confidence":0.5,"plugin_calls":[],"end_to_end_latency_ms":257,"outcome":"failure"}
++{"schema_version":"1.0","timestamp":"2026-05-18T22:53:31.459652+00:00","event_type":"routing_decision","query_fingerprint":"40099e94ce85a57c17a7cb606605e7ce40099e94ce85a57c17a7cb606605e7ce","chosen_route":"neither","route_confidence":0.5,"plugin_calls":[],"end_to_end_latency_ms":70,"outcome":"failure"}
++{"schema_version":"1.0","timestamp":"2026-05-18T22:53:31.595914+00:00","event_type":"routing_decision","query_fingerprint":"40099e94ce85a57c17a7cb606605e7ce40099e94ce85a57c17a7cb606605e7ce","chosen_route":"neither","route_confidence":0.5,"plugin_calls":[],"end_to_end_latency_ms":206,"outcome":"failure"}

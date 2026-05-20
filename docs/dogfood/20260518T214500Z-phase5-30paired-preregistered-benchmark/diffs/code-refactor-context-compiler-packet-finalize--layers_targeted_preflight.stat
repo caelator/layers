@@ -1,0 +1,7 @@
+ Cargo.lock                        |   2 +
+ crates/layers-compiler/Cargo.toml |   2 +
+ crates/layers-compiler/src/lib.rs | 139 +++++++++++++++++++++++++++++++++-----
+ crates/layers-mcp/src/stable.rs   |  29 +++-----
+ src/cmd/preflight.rs              |  57 +++++++---------
+ src/cmd/query.rs                  |  47 ++++++-------
+ 6 files changed, 183 insertions(+), 93 deletions(-)

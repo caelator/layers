@@ -1,0 +1,68 @@
+{
+  "agent_nonzero_exits": 0,
+  "artifacts": {
+    "diff_patches": 20,
+    "diff_stats": 20,
+    "empty_diff_patches": 4,
+    "nonempty_diff_patches": 16,
+    "packet_json": 8,
+    "packet_validation_exits": 8,
+    "packet_validation_failures": 0,
+    "transcripts": 20,
+    "validation_logs": 20
+  },
+  "categories_records": {
+    "bugfix": 10,
+    "feature": 6,
+    "negative_control": 4
+  },
+  "claim_blocking_metrics": [
+    "net_time_saved_ms",
+    "token_reduction_ratio",
+    "paired_task_count",
+    "code_heavy_paired_task_count",
+    "negative_control_paired_task_count"
+  ],
+  "claim_status": "not_supported",
+  "code_heavy_paired_task_count": 8,
+  "finalize": {
+    "artifact_root": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration",
+    "claim_status": "not_supported",
+    "completed_runs": 20,
+    "expected_runs": 20,
+    "failed_runs": 0,
+    "final_report_path": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/PHASE15_FIXED_REPORT.md",
+    "missing_required_artifacts": [
+      "benchmark claim not supported: net_time_saved_ms, token_reduction_ratio, paired_task_count, code_heavy_paired_task_count, negative_control_paired_task_count"
+    ],
+    "packet_artifacts": 8,
+    "packet_validation_failures": 0,
+    "report_json_path": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/compare/workflow-benchmark-report.json",
+    "report_markdown_path": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/compare/workflow-benchmark-report.md",
+    "run_records_path": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/compare/workflow-runs.jsonl",
+    "secret_scan_findings": 0,
+    "workflow_records": 20
+  },
+  "negative_control_abstained_targeted": 2,
+  "negative_control_paired_task_count": 2,
+  "paired_task_count": 10,
+  "paired_tasks": 10,
+  "run_dir": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration",
+  "runner": {
+    "completed_runs": 20,
+    "failed_runs": 0,
+    "total_runs": 20
+  },
+  "secret_findings": 0,
+  "synthetic_secret_fixture_matches": 2,
+  "token_provenance_counts": {
+    "estimated": 20
+  },
+  "unnecessary_context_injections": 0,
+  "validation_nonzero_exits": 0,
+  "variants": {
+    "baseline": 10,
+    "layers_targeted_preflight": 10
+  },
+  "workflow_records": 20
+}

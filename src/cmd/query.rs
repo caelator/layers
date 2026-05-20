@@ -84,6 +84,14 @@ pub fn handle_query(
     let effective_route = apply_weight_override(route_result.route, &route_weights);
     let query_plan = BroadQueryPlan::new(task, &route_result.scores, &workspace_root());
 
+    // ── Code-heavy route upgrade ──────────────────────────────────────────────
+    // When the query plan detects CodeHeavy intent with grounded code targets,
+    // upgrade the effective route to include graph retrieval. Without this,
+    // code-heavy queries with explicit Rust targets that the router classified
+    // as MemoryOnly or Neither would skip graph/code context entirely, falling
+    // back to memory-only context.
+    let effective_route = apply_code_heavy_route_upgrade(effective_route, &query_plan);
+
     let mut memory_items: Vec<RetrievalItem> = Vec::new();
     let mut graph_items: Vec<RetrievalItem> = Vec::new();
     let mut open_uncertainty: Vec<String> = Vec::new();
@@ -543,6 +551,29 @@ fn apply_weight_override(route: Route, weights: &std::collections::HashMap<Route
         .map(|(r, _)| r);
 
     fallback.unwrap_or(Route::Neither)
+}
+
+/// Upgrade the effective route when the query plan detects [`QueryIntent::CodeHeavy`]
+/// intent with grounded code targets. Without this, code-heavy queries with explicit
+/// Rust file targets that the router classified as [`Route::MemoryOnly`] or
+/// [`Route::Neither`] would skip graph/code retrieval entirely, falling back to
+/// memory-only context.
+///
+/// Rules:
+/// - [`QueryIntent::CodeHeavy`] + [`UseGroundedTargets`] + [`Route::Neither`] → [`Route::GraphOnly`]
+/// - [`QueryIntent::CodeHeavy`] + [`UseGroundedTargets`] + [`Route::MemoryOnly`] → [`Route::Both`]
+/// - [`QueryIntent::CodeHeavy`] + [`UseGroundedTargets`] + [`Route::GraphOnly`] → [`Route::GraphOnly`] (unchanged)
+/// - [`QueryIntent::CodeHeavy`] + [`UseGroundedTargets`] + [`Route::Both`] → [`Route::Both`] (unchanged)
+/// - Other intents/policies → no change
+fn apply_code_heavy_route_upgrade(route: Route, query_plan: &BroadQueryPlan) -> Route {
+    if query_plan.injection_policy != QueryInjectionPolicy::UseGroundedTargets {
+        return route;
+    }
+    match route {
+        Route::Neither => Route::GraphOnly,
+        Route::MemoryOnly => Route::Both,
+        other => other,
+    }
 }
 
 /// Route-weighted interleave:
@@ -1437,6 +1468,170 @@ mod tests {
             overridden,
             Route::Neither,
             "when all routes are bad, should pick least-bad (Neither at -0.5)"
+        );
+    }
+
+    // ── Code-heavy route upgrade tests ────────────────────────────────────────
+
+    /// When [`BroadQueryPlan`] detects [`QueryIntent::CodeHeavy`] with grounded
+    /// targets and the router classified as [`Route::Neither`], the route should
+    /// be upgraded to [`Route::GraphOnly`].
+    #[test]
+    fn code_heavy_with_targets_upgrades_neither_to_graph_only() {
+        let ws = TestWorkspace::new("query-code-heavy-upgrade-neither");
+        let root = ws.root();
+
+        // Create a real Rust file so extract_path_like_targets can ground it
+        std::fs::create_dir_all(root.join("src")).unwrap();
+        std::fs::write(root.join("src/router.rs"), "pub fn classify() {}").unwrap();
+
+        let scores = router::Scores {
+            historical: 0,
+            structural: 0,
+            local: 0,
+            action: 1, // "fix" is an action signal
+        };
+
+        // "fix src/router.rs" is code-heavy with an explicit grounded target
+        let query_plan = BroadQueryPlan::new("fix src/router.rs", &scores, root);
+
+        assert_eq!(
+            query_plan.injection_policy,
+            QueryInjectionPolicy::UseGroundedTargets
+        );
+
+        let upgraded = apply_code_heavy_route_upgrade(Route::Neither, &query_plan);
+        assert_eq!(
+            upgraded,
+            Route::GraphOnly,
+            "Neither should be upgraded to GraphOnly for code-heavy queries with grounded targets"
+        );
+    }
+
+    /// When [`BroadQueryPlan`] detects [`QueryIntent::CodeHeavy`] with grounded
+    /// targets and the router classified as [`Route::MemoryOnly`], the route
+    /// should be upgraded to [`Route::Both`].
+    #[test]
+    fn code_heavy_with_targets_upgrades_memory_only_to_both() {
+        let ws = TestWorkspace::new("query-code-heavy-upgrade-memory");
+        let root = ws.root();
+
+        std::fs::create_dir_all(root.join("src/cmd")).unwrap();
+        std::fs::write(root.join("src/cmd/query.rs"), "pub fn handle_query() {}").unwrap();
+
+        let scores = router::Scores {
+            historical: 2, // "recover" or similar historical signals
+            structural: 0,
+            local: 0,
+            action: 1, // "fix"
+        };
+
+        let query_plan =
+            BroadQueryPlan::new("fix the regression in src/cmd/query.rs", &scores, root);
+
+        assert_eq!(
+            query_plan.injection_policy,
+            QueryInjectionPolicy::UseGroundedTargets
+        );
+
+        let upgraded = apply_code_heavy_route_upgrade(Route::MemoryOnly, &query_plan);
+        assert_eq!(
+            upgraded,
+            Route::Both,
+            "MemoryOnly should be upgraded to Both for code-heavy queries with grounded targets"
+        );
+    }
+
+    /// When the query plan has [`AllowMemoryOnly`] policy (historical intent),
+    /// the route should NOT be upgraded.
+    #[test]
+    fn historical_query_plan_does_not_upgrade_route() {
+        let ws = TestWorkspace::new("query-historical-no-upgrade");
+        let scores = router::Scores {
+            historical: 2,
+            structural: 0,
+            local: 0,
+            action: 0,
+        };
+
+        let query_plan = BroadQueryPlan::new(
+            "recall the prior decided rationale from memory",
+            &scores,
+            ws.root(),
+        );
+
+        assert_eq!(
+            query_plan.injection_policy,
+            QueryInjectionPolicy::AllowMemoryOnly
+        );
+
+        let upgraded = apply_code_heavy_route_upgrade(Route::MemoryOnly, &query_plan);
+        assert_eq!(
+            upgraded,
+            Route::MemoryOnly,
+            "MemoryOnly should NOT be upgraded for historical queries"
+        );
+    }
+
+    /// When the query plan has [`NeedsTarget`] policy (code-heavy but no targets),
+    /// the route should NOT be upgraded.
+    #[test]
+    fn needs_target_query_plan_does_not_upgrade_route() {
+        let ws = TestWorkspace::new("query-needs-target-no-upgrade");
+        let scores = router::Scores {
+            historical: 0,
+            structural: 1,
+            local: 1,
+            action: 1,
+        };
+
+        let query_plan = BroadQueryPlan::new("fix the CLI parser regression", &scores, ws.root());
+
+        assert_eq!(
+            query_plan.injection_policy,
+            QueryInjectionPolicy::NeedsTarget
+        );
+
+        let upgraded = apply_code_heavy_route_upgrade(Route::Neither, &query_plan);
+        assert_eq!(
+            upgraded,
+            Route::Neither,
+            "Neither should NOT be upgraded when no grounded targets exist"
+        );
+    }
+
+    /// [`Route::GraphOnly`] and [`Route::Both`] routes should be unchanged by the upgrade.
+    #[test]
+    fn code_heavy_upgrade_preserves_graph_routes() {
+        let ws = TestWorkspace::new("query-code-heavy-preserve-graph");
+        let root = ws.root();
+
+        std::fs::create_dir_all(root.join("src")).unwrap();
+        std::fs::write(root.join("src/main.rs"), "fn main() {}").unwrap();
+
+        let scores = router::Scores {
+            historical: 0,
+            structural: 2,
+            local: 0,
+            action: 1,
+        };
+
+        let query_plan = BroadQueryPlan::new("fix src/main.rs", &scores, root);
+
+        assert_eq!(
+            query_plan.injection_policy,
+            QueryInjectionPolicy::UseGroundedTargets
+        );
+
+        assert_eq!(
+            apply_code_heavy_route_upgrade(Route::GraphOnly, &query_plan),
+            Route::GraphOnly,
+            "GraphOnly should remain unchanged"
+        );
+        assert_eq!(
+            apply_code_heavy_route_upgrade(Route::Both, &query_plan),
+            Route::Both,
+            "Both should remain unchanged"
         );
     }
 }

@@ -1,0 +1,489 @@
+diff --git a/crates/layers-core/src/packet_quality.rs b/crates/layers-core/src/packet_quality.rs
+index 10a8e83..87a550e 100644
+--- a/crates/layers-core/src/packet_quality.rs
++++ b/crates/layers-core/src/packet_quality.rs
+@@ -457,13 +457,19 @@ mod tests {
+             title: "Negative".to_string(),
+             prompt: "What is 2+2?".to_string(),
+             category: TaskCategory::NegativeControl,
++            difficulty: None,
++            surface_claim: crate::SurfaceClaim::default(),
++            negative_control: true,
++            stale_context_trap: false,
+             repo_root: None,
++            repo_commit: None,
++            time_budget_minutes: None,
+             target_files: Vec::new(),
+             target_symbols: Vec::new(),
+             expected_relevant_files: Vec::new(),
+-            expected_validation_commands: Vec::new(),
+-            negative_control: true,
++            expected_validation_commands: vec!["test".to_string()],
+             success_rubric: crate::SuccessRubric::default(),
++            abstention_rubric: None,
+         };
+ 
+         let report = PacketQualityReport::grade(&packet, &task);
+@@ -477,13 +483,20 @@ mod tests {
+             title: "Code".to_string(),
+             prompt: "Fix src/main.rs and run cargo test".to_string(),
+             category: TaskCategory::Bugfix,
++            difficulty: None,
++            surface_claim: crate::SurfaceClaim::default(),
++            negative_control: false,
++            stale_context_trap: false,
+             repo_root: None,
++            repo_commit: None,
++            time_budget_minutes: None,
+             target_files: vec![PathBuf::from("src/main.rs")],
+             target_symbols: Vec::new(),
+             expected_relevant_files: vec![PathBuf::from("src/main.rs")],
+             expected_validation_commands: vec!["cargo test".to_string()],
+             negative_control: false,
+             success_rubric: crate::SuccessRubric::default(),
++            abstention_rubric: None,
+         }
+     }
+ 
+diff --git a/crates/layers-core/src/task_spec.rs b/crates/layers-core/src/task_spec.rs
+index 3618005..54052d7 100644
+--- a/crates/layers-core/src/task_spec.rs
++++ b/crates/layers-core/src/task_spec.rs
+@@ -10,20 +10,41 @@ pub struct TaskSpec {
+     pub title: String,
+     pub prompt: String,
+     pub category: TaskCategory,
++    #[serde(default)]
++    pub difficulty: Option<String>,
++    #[serde(default)]
++    pub surface_claim: SurfaceClaim,
++    #[serde(default)]
++    pub negative_control: bool,
++    #[serde(default)]
++    pub stale_context_trap: bool,
+     #[serde(default, skip_serializing_if = "Option::is_none")]
+     pub repo_root: Option<PathBuf>,
+     #[serde(default)]
++    pub repo_commit: Option<String>,
++    #[serde(default)]
++    pub time_budget_minutes: Option<u64>,
++    #[serde(default)]
+     pub target_files: Vec<PathBuf>,
+     #[serde(default)]
+     pub target_symbols: Vec<String>,
+     #[serde(default)]
+     pub expected_relevant_files: Vec<PathBuf>,
+-    #[serde(default)]
+     pub expected_validation_commands: Vec<String>,
+-    #[serde(default)]
+-    pub negative_control: bool,
+-    #[serde(default)]
+     pub success_rubric: SuccessRubric,
++    #[serde(default)]
++    pub abstention_rubric: Option<String>,
++}
++
++/// Evaluation surface claim for grouping benchmark results.
++#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
++#[serde(rename_all = "snake_case")]
++pub enum SurfaceClaim {
++    #[default]
++    LayersTargetedPreflight,
++    LayersBroadQuery,
++    LayersMcpPreflight,
++    Baseline,
+ }
+ 
+ /// Coarse task class for routing, grading, and benchmark grouping.
+@@ -57,12 +78,11 @@ impl TaskCategory {
+ #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+ pub struct SuccessRubric {
+     pub full_success: String,
+-    #[serde(default)]
+     pub partial_success: String,
+-    #[serde(default)]
+     pub failure: String,
+-    #[serde(default = "default_min_verification_quality")]
+     pub min_verification_quality: u8,
++    #[serde(default = "default_primary_endpoint")]
++    pub primary_endpoint: String,
+ }
+ 
+ impl Default for SuccessRubric {
+@@ -72,10 +92,15 @@ impl Default for SuccessRubric {
+             partial_success: "Task is partially complete or needs minor intervention.".to_string(),
+             failure: "Task is wrong, incomplete, or unusable.".to_string(),
+             min_verification_quality: default_min_verification_quality(),
++            primary_endpoint: default_primary_endpoint(),
+         }
+     }
+ }
+ 
++fn default_primary_endpoint() -> String {
++    "verified_success".to_owned()
++}
++
+ const fn default_min_verification_quality() -> u8 {
+     3
+ }
+@@ -89,30 +114,56 @@ impl TaskSpec {
+     pub fn validate(&self) -> Result<(), Vec<String>> {
+         let mut errors = Vec::new();
+         require_non_empty(&mut errors, "task_id", &self.task_id);
++        if !validate_task_id_format(&self.task_id) {
++            errors.push("task_id must start with a lowercase letter or digit and contain only lowercase alphanumeric, '-', or '_'".to_string());
++        }
+         require_non_empty(&mut errors, "title", &self.title);
++        require_non_empty(&mut errors, "prompt", &self.prompt);
++
++        if let Some(difficulty) = &self.difficulty {
++            if !["trivial", "small", "medium", "large"].contains(&difficulty.as_str()) {
++                errors.push("difficulty must be trivial, small, medium, or large".to_string());
++            }
++        }
++
++        if let Some(repo_commit) = &self.repo_commit {
++            require_non_empty(&mut errors, "repo_commit", repo_commit);
++        }
++
++        if matches!(self.time_budget_minutes, Some(0)) {
++            errors.push("time_budget_minutes must be at least 1".to_string());
++        }
+ 
+-        if !self.negative_control {
+-            require_non_empty(&mut errors, "prompt", &self.prompt);
++        if self.expected_validation_commands.is_empty() {
++            errors.push("expected_validation_commands must not be empty".to_string());
+         }
+ 
+-        if self.success_rubric.min_verification_quality > 5 {
+-            errors.push(
+-                "success_rubric.min_verification_quality must be between 0 and 5".to_string(),
+-            );
++        validate_success_rubric(&mut errors, &self.success_rubric);
++
++        if self.negative_control {
++            // Negative control tasks allow empty target_files/expected_relevant_files
++        } else {
++            if self.target_files.is_empty() {
++                errors.push("target_files must not be empty".to_string());
++            }
++            if self.expected_relevant_files.is_empty() {
++                errors.push("expected_relevant_files must not be empty".to_string());
++            }
+         }
+-        if self.success_rubric.full_success.trim().is_empty() {
+-            errors.push("success_rubric.full_success must not be empty".to_string());
++
++        if let Some(abstention_rubric) = &self.abstention_rubric {
++            require_non_empty(&mut errors, "abstention_rubric", abstention_rubric);
+         }
+ 
+-        if self.category.is_code_heavy()
+-            && !self.negative_control
+-            && self.target_files.is_empty()
+-            && self.expected_relevant_files.is_empty()
+-            && self.target_symbols.is_empty()
++        if self.negative_control
++            && (!self.target_files.is_empty() || !self.expected_relevant_files.is_empty())
++            && self.abstention_rubric.is_none()
+         {
+-            errors.push(
+-                "code-heavy task should include target_files, target_symbols, or expected_relevant_files".to_string(),
+-            );
++            errors.push("negative_control tasks with context expectations must define abstention_rubric".to_string());
++        }
++
++        if self.stale_context_trap && self.expected_relevant_files.is_empty() {
++            errors.push("stale_context_trap tasks must declare expected_relevant_files".to_string());
+         }
+ 
+         if self.negative_control && self.category != TaskCategory::NegativeControl {
+@@ -133,6 +184,40 @@ fn require_non_empty(errors: &mut Vec<String>, field: &str, value: &str) {
+     }
+ }
+ 
++fn validate_task_id_format(id: &str) -> bool {
++    if id.is_empty() {
++        return false;
++    }
++    let first = id.chars().next().unwrap();
++    if !first.is_ascii_lowercase() && !first.is_ascii_digit() {
++        return false;
++    }
++    id.chars()
++        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_')
++}
++
++fn validate_success_rubric(errors: &mut Vec<String>, rubric: &SuccessRubric) {
++    require_non_empty(errors, "success_rubric.full_success", &rubric.full_success);
++    require_non_empty(
++        errors,
++        "success_rubric.partial_success",
++        &rubric.partial_success,
++    );
++    require_non_empty(errors, "success_rubric.failure", &rubric.failure);
++    require_non_empty(
++        errors,
++        "success_rubric.primary_endpoint",
++        &rubric.primary_endpoint,
++    );
++
++    if !(1..=5).contains(&rubric.min_verification_quality) {
++        errors.push("success_rubric.min_verification_quality must be between 1 and 5".to_string());
++    }
++    if rubric.primary_endpoint != "verified_success" {
++        errors.push("success_rubric.primary_endpoint must be verified_success".to_string());
++    }
++}
++
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+@@ -146,7 +231,15 @@ mod tests {
+               "prompt":"Inspect the workflow-benchmark command wiring.",
+               "category":"orientation",
+               "expected_relevant_files":["src/main.rs"],
+-              "expected_validation_commands":["cargo test -q workflow_benchmark"]
++              "target_files":["src/main.rs"],
++              "expected_validation_commands":["cargo test -q workflow_benchmark"],
++              "success_rubric": {
++                "full_success": "ok",
++                "partial_success": "part",
++                "failure": "fail",
++                "min_verification_quality": 3,
++                "primary_endpoint": "verified_success"
++              }
+             }"#,
+         )
+         .expect("task should deserialize");
+@@ -162,24 +255,28 @@ mod tests {
+             title: "Bad".to_string(),
+             prompt: "Do work".to_string(),
+             category: TaskCategory::Planning,
++            difficulty: None,
++            surface_claim: SurfaceClaim::default(),
++            negative_control: false,
++            stale_context_trap: false,
+             repo_root: None,
+-            target_files: Vec::new(),
++            repo_commit: None,
++            time_budget_minutes: None,
++            target_files: vec![PathBuf::from("src/main.rs")],
+             target_symbols: Vec::new(),
+-            expected_relevant_files: Vec::new(),
+-            expected_validation_commands: Vec::new(),
+-            negative_control: false,
++            expected_relevant_files: vec![PathBuf::from("src/main.rs")],
++            expected_validation_commands: vec!["test".to_string()],
+             success_rubric: SuccessRubric {
+                 min_verification_quality: 6,
+                 ..SuccessRubric::default()
+             },
++            abstention_rubric: None,
+         };
+ 
+         let errors = task.validate().expect_err("rubric should be invalid");
+-        assert!(
+-            errors
+-                .iter()
+-                .any(|error| error.contains("min_verification_quality"))
+-        );
++        assert!(errors
++            .iter()
++            .any(|error| error.contains("min_verification_quality")));
+     }
+ 
+     #[test]
+@@ -187,15 +284,21 @@ mod tests {
+         let task = TaskSpec {
+             task_id: "negative-1".to_string(),
+             title: "No repo context needed".to_string(),
+-            prompt: String::new(),
++            prompt: "Refuse this task".to_string(),
+             category: TaskCategory::NegativeControl,
++            difficulty: None,
++            surface_claim: SurfaceClaim::default(),
++            negative_control: true,
++            stale_context_trap: false,
+             repo_root: None,
++            repo_commit: None,
++            time_budget_minutes: None,
+             target_files: Vec::new(),
+             target_symbols: Vec::new(),
+             expected_relevant_files: Vec::new(),
+-            expected_validation_commands: Vec::new(),
+-            negative_control: true,
++            expected_validation_commands: vec!["test".to_string()],
+             success_rubric: SuccessRubric::default(),
++            abstention_rubric: None,
+         };
+ 
+         task.validate().expect("negative control should validate");
+@@ -208,19 +311,54 @@ mod tests {
+             title: "Feature".to_string(),
+             prompt: " ".to_string(),
+             category: TaskCategory::Feature,
++            difficulty: None,
++            surface_claim: SurfaceClaim::default(),
++            negative_control: false,
++            stale_context_trap: false,
+             repo_root: None,
++            repo_commit: None,
++            time_budget_minutes: None,
+             target_files: vec![PathBuf::from("src/main.rs")],
+             target_symbols: Vec::new(),
+-            expected_relevant_files: Vec::new(),
+-            expected_validation_commands: Vec::new(),
+-            negative_control: false,
++            expected_relevant_files: vec![PathBuf::from("src/main.rs")],
++            expected_validation_commands: vec!["test".to_string()],
+             success_rubric: SuccessRubric::default(),
++            abstention_rubric: None,
+         };
+ 
+         let errors = task.validate().expect_err("empty prompt should fail");
+         assert!(errors.iter().any(|error| error.contains("prompt")));
+     }
+ 
++    #[test]
++    fn non_negative_control_missing_files_fails() {
++        let task = TaskSpec {
++            task_id: "feature-1".to_string(),
++            title: "Feature".to_string(),
++            prompt: "Do work".to_string(),
++            category: TaskCategory::Feature,
++            difficulty: None,
++            surface_claim: SurfaceClaim::default(),
++            negative_control: false,
++            stale_context_trap: false,
++            repo_root: None,
++            repo_commit: None,
++            time_budget_minutes: None,
++            target_files: Vec::new(),
++            target_symbols: Vec::new(),
++            expected_relevant_files: Vec::new(),
++            expected_validation_commands: vec!["test".to_string()],
++            success_rubric: SuccessRubric::default(),
++            abstention_rubric: None,
++        };
++
++        let errors = task.validate().expect_err("missing files should fail");
++        assert!(errors.iter().any(|error| error.contains("target_files")));
++        assert!(errors
++            .iter()
++            .any(|error| error.contains("expected_relevant_files")));
++    }
++
+     #[test]
+     fn benchmark_task_examples_validate() {
+         let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+diff --git a/memoryport/telemetry/events.jsonl b/memoryport/telemetry/events.jsonl
+index b9b1feb..fb49445 100644
+--- a/memoryport/telemetry/events.jsonl
++++ b/memoryport/telemetry/events.jsonl
+@@ -1042,3 +1042,5 @@
+ {"schema_version":"1.0","timestamp":"2026-04-14T01:45:31.272899+00:00","event_type":"routing_decision","query_fingerprint":"40099e94ce85a57c17a7cb606605e7ce40099e94ce85a57c17a7cb606605e7ce","chosen_route":"neither","route_confidence":0.5,"plugin_calls":[],"end_to_end_latency_ms":261,"outcome":"failure"}
+ {"schema_version":"1.0","timestamp":"2026-04-15T09:10:26.828491+00:00","event_type":"routing_decision","query_fingerprint":"40099e94ce85a57c17a7cb606605e7ce40099e94ce85a57c17a7cb606605e7ce","chosen_route":"neither","route_confidence":0.5,"plugin_calls":[],"end_to_end_latency_ms":16,"outcome":"failure"}
+ {"schema_version":"1.0","timestamp":"2026-04-15T09:10:27.066881+00:00","event_type":"routing_decision","query_fingerprint":"40099e94ce85a57c17a7cb606605e7ce40099e94ce85a57c17a7cb606605e7ce","chosen_route":"neither","route_confidence":0.5,"plugin_calls":[],"end_to_end_latency_ms":257,"outcome":"failure"}
++{"schema_version":"1.0","timestamp":"2026-05-18T20:57:35.327563+00:00","event_type":"routing_decision","query_fingerprint":"40099e94ce85a57c17a7cb606605e7ce40099e94ce85a57c17a7cb606605e7ce","chosen_route":"neither","route_confidence":0.5,"plugin_calls":[],"end_to_end_latency_ms":37,"outcome":"failure"}
++{"schema_version":"1.0","timestamp":"2026-05-18T20:57:35.573938+00:00","event_type":"routing_decision","query_fingerprint":"40099e94ce85a57c17a7cb606605e7ce40099e94ce85a57c17a7cb606605e7ce","chosen_route":"neither","route_confidence":0.5,"plugin_calls":[],"end_to_end_latency_ms":283,"outcome":"failure"}
+diff --git a/src/cmd/packet.rs b/src/cmd/packet.rs
+index e53b321..9e43d28 100644
+--- a/src/cmd/packet.rs
++++ b/src/cmd/packet.rs
+@@ -1441,13 +1441,22 @@ mod tests {
+           "task_id":"bad",
+           "title":"Missing targets",
+           "prompt":"Fix the bug",
+-          "category":"bugfix"
++          "category":"bugfix",
++          "expected_validation_commands":["test"],
++          "success_rubric": {
++            "full_success": "ok",
++            "partial_success": "part",
++            "failure": "fail",
++            "min_verification_quality": 3,
++            "primary_endpoint": "verified_success"
++          }
+         }"#;
+ 
+         let error = super::grade_packet_text(MINIMAL_PACKET, invalid_task, false)
+             .expect_err("code-heavy task without targets should fail");
+ 
+         assert!(error.to_string().contains("task spec validation failed"));
++        assert!(error.to_string().contains("target_files must not be empty"));
+     }
+ 
+     #[test]
+@@ -1476,7 +1485,16 @@ mod tests {
+           "title":"Inspect README context",
+           "prompt":"What should I know before editing README?",
+           "category":"orientation",
+-          "expected_validation_commands":["git status --porcelain=v1"]
++          "target_files": ["README"],
++          "expected_relevant_files": ["README"],
++          "expected_validation_commands":["git status --porcelain=v1"],
++          "success_rubric": {
++            "full_success": "ok",
++            "partial_success": "part",
++            "failure": "fail",
++            "min_verification_quality": 3,
++            "primary_endpoint": "verified_success"
++          }
+         }"#
+     }
+ 
+diff --git a/src/cmd/preflight.rs b/src/cmd/preflight.rs
+index fa215ca..c6a3357 100644
+--- a/src/cmd/preflight.rs
++++ b/src/cmd/preflight.rs
+@@ -215,7 +215,13 @@ fn task_spec_for_preflight(args: &PreflightArgs, code_heavy: bool, targets: &[St
+         title: "Preflight task".to_string(),
+         prompt: args.task.clone(),
+         category,
++        difficulty: None,
++        surface_claim: layers_core::SurfaceClaim::LayersTargetedPreflight,
++        negative_control: false,
++        stale_context_trap: false,
+         repo_root: Some(workspace_root()),
++        repo_commit: None,
++        time_budget_minutes: None,
+         target_files: target_paths.clone(),
+         target_symbols: Vec::new(),
+         expected_relevant_files: target_paths,
+@@ -223,8 +229,8 @@ fn task_spec_for_preflight(args: &PreflightArgs, code_heavy: bool, targets: &[St
+             .into_iter()
+             .map(|command| command.command)
+             .collect(),
+-        negative_control: false,
+         success_rubric: SuccessRubric::default(),
++        abstention_rubric: None,
+     }
+ }
+ 
+diff --git a/src/cmd/query.rs b/src/cmd/query.rs
+index ec5d8ad..e82cc62 100644
+--- a/src/cmd/query.rs
++++ b/src/cmd/query.rs
+@@ -872,13 +872,19 @@ fn task_spec_for_query(
+         title: "Query task".to_string(),
+         prompt: task.to_string(),
+         category,
++        difficulty: None,
++        surface_claim: layers_core::SurfaceClaim::LayersBroadQuery,
++        negative_control: false,
++        stale_context_trap: false,
+         repo_root: Some(workspace_root()),
++        repo_commit: None,
++        time_budget_minutes: None,
+         target_files: targets.clone(),
+         target_symbols: Vec::new(),
+         expected_relevant_files: targets,
+         expected_validation_commands: Vec::new(),
+-        negative_control: false,
+         success_rubric: SuccessRubric::default(),
++        abstention_rubric: None,
+     }
+ }
+ 

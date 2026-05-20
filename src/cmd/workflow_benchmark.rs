@@ -406,6 +406,16 @@ impl WorkflowVariant {
             Self::LayersMcpPreflight => "layers_mcp_preflight",
         }
     }
+
+    /// Human-friendly label for terminal reports.
+    fn display_name(self) -> &'static str {
+        match self {
+            Self::Baseline => "Baseline (no Layers)",
+            Self::LayersTargetedPreflight => "Layers targeted-preflight",
+            Self::LayersBroadQuery => "Layers broad-query",
+            Self::LayersMcpPreflight => "Layers MCP-preflight",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -4368,14 +4378,20 @@ fn format_report(report: &BenchmarkReport, json: bool) -> Result<String> {
     writeln!(output, "=========================")?;
     writeln!(output, "Runs: {}", report.run_count)?;
     writeln!(output, "Paired tasks: {}", report.paired_task_count)?;
-    if let Some(baseline) = &report.baseline {
-        write_variant_summary(&mut output, "Baseline", baseline)?;
+
+    // Emit a per-surface summary for every variant present in the data.
+    for aggregate in &report.variants {
+        write_variant_summary(&mut output, aggregate.variant.display_name(), aggregate)?;
     }
-    if let Some(layers) = &report.layers {
-        write_variant_summary(&mut output, "Layers", layers)?;
-    }
-    if let Some(comparison) = &report.comparison {
-        writeln!(output, "\nPaired net benefit")?;
+
+    // Emit a per-variant paired comparison when multiple Layers surfaces exist.
+    for comparison in &report.comparisons {
+        writeln!(
+            output,
+            "\nPaired net benefit vs. baseline: {}",
+            comparison.variant.display_name()
+        )?;
+        writeln!(output, "- Paired tasks: {}", comparison.paired_task_count)?;
         writeln!(
             output,
             "- Net time saved per task: {:.1} ms",
@@ -4404,6 +4420,24 @@ fn format_report(report: &BenchmarkReport, json: bool) -> Result<String> {
             comparison.layers_overhead_ms, comparison.layers_overhead_tokens
         )?;
     }
+
+    if let Some(claim) = &report.claim {
+        writeln!(output, "\nClaim status: {:?}", claim.status)?;
+        if !claim.blocking_metrics.is_empty() {
+            writeln!(
+                output,
+                "Blocking metrics: {}",
+                claim.blocking_metrics.join(", ")
+            )?;
+        }
+        if !claim.uncertainty_notes.is_empty() {
+            writeln!(output, "Uncertainty notes:")?;
+            for note in &claim.uncertainty_notes {
+                writeln!(output, "  - {note}")?;
+            }
+        }
+    }
+
     Ok(output)
 }
 
@@ -5203,6 +5237,134 @@ mod tests {
         assert!(output.contains("Workflow benchmark report"));
         assert!(output.contains("Paired net benefit"));
         assert!(output.contains("Context relevant/waste ratios"));
+    }
+
+    #[test]
+    fn human_report_names_each_surface_explicitly() {
+        let runs = vec![
+            parse_run(&valid_run("task-1", "baseline", 1_000, 2_000)).expect("baseline"),
+            parse_run(&valid_run("task-1", "layers", 700, 1_500)).expect("layers"),
+        ];
+        let report = analyze_runs(&runs).expect("analysis");
+        let output = format_report(&report, false).expect("human");
+
+        // Every variant aggregate must appear under its human-friendly display name.
+        for aggregate in &report.variants {
+            let display = aggregate.variant.display_name();
+            assert!(
+                output.contains(display),
+                "human report missing explicit surface name: {display}"
+            );
+        }
+
+        // The generic legacy labels "Baseline" / "Layers" must not appear
+        // as bare section headers without qualification.
+        assert!(
+            output.contains("Baseline (no Layers)"),
+            "human report should use qualified surface name for baseline"
+        );
+        assert!(
+            output.contains("Layers targeted-preflight"),
+            "human report should use qualified surface name for targeted-preflight"
+        );
+    }
+
+    #[test]
+    fn human_report_names_comparison_variant_not_just_layers() {
+        let runs = vec![
+            parse_run(&valid_run("task-1", "baseline", 1_000, 2_000)).expect("baseline"),
+            parse_run(&valid_run("task-1", "layers", 700, 1_500)).expect("layers"),
+        ];
+        let output = format_report(&analyze_runs(&runs).expect("analysis"), false).expect("human");
+
+        // The paired comparison heading should identify the specific Layers surface,
+        // not just say "Paired net benefit" without qualification.
+        assert!(
+            output.contains("Paired net benefit vs. baseline: Layers targeted-preflight"),
+            "human report comparison heading should name the Layers surface explicitly"
+        );
+    }
+
+    #[test]
+    fn human_report_lists_all_surfaces_with_multiple_variants() {
+        let runs = vec![
+            parse_run(&valid_run("task-1", "baseline", 1_000, 2_000)).expect("baseline"),
+            parse_run(&valid_run(
+                "task-1",
+                "layers_targeted_preflight",
+                700,
+                1_500,
+            ))
+            .expect("targeted"),
+            parse_run(&valid_run("task-1", "layers_broad_query", 800, 1_600)).expect("broad"),
+            parse_run(&valid_run("task-1", "layers_mcp_preflight", 750, 1_550)).expect("mcp"),
+        ];
+        let report = analyze_runs(&runs).expect("analysis");
+        let output = format_report(&report, false).expect("human");
+
+        // All four variant surfaces must be named.
+        assert!(
+            output.contains("Baseline (no Layers)"),
+            "missing baseline surface name"
+        );
+        assert!(
+            output.contains("Layers targeted-preflight"),
+            "missing targeted-preflight surface name"
+        );
+        assert!(
+            output.contains("Layers broad-query"),
+            "missing broad-query surface name"
+        );
+        assert!(
+            output.contains("Layers MCP-preflight"),
+            "missing MCP-preflight surface name"
+        );
+
+        // Each Layers surface should have its own paired comparison heading.
+        assert!(
+            output.contains("Paired net benefit vs. baseline: Layers targeted-preflight"),
+            "missing targeted-preflight comparison heading"
+        );
+        assert!(
+            output.contains("Paired net benefit vs. baseline: Layers broad-query"),
+            "missing broad-query comparison heading"
+        );
+        assert!(
+            output.contains("Paired net benefit vs. baseline: Layers MCP-preflight"),
+            "missing MCP-preflight comparison heading"
+        );
+    }
+
+    #[test]
+    fn human_report_json_preserves_legacy_baseline_and_layers_fields() {
+        let runs = vec![
+            parse_run(&valid_run("task-1", "baseline", 1_000, 2_000)).expect("baseline"),
+            parse_run(&valid_run("task-1", "layers", 700, 1_500)).expect("layers"),
+        ];
+        let report = analyze_runs(&runs).expect("analysis");
+        let json_output = format_report(&report, true).expect("json");
+
+        // Backward-compatible legacy fields must still be present.
+        assert!(
+            json_output.contains("\"baseline\":"),
+            "JSON backward compat: missing 'baseline' field"
+        );
+        assert!(
+            json_output.contains("\"layers\":"),
+            "JSON backward compat: missing 'layers' field"
+        );
+
+        // The new 'variants' array must also be present.
+        assert!(
+            json_output.contains("\"variants\":"),
+            "JSON must include 'variants' array"
+        );
+
+        // The 'comparisons' array must also be present.
+        assert!(
+            json_output.contains("\"comparisons\":"),
+            "JSON must include 'comparisons' array"
+        );
     }
 
     #[test]

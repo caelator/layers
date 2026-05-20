@@ -1,0 +1,36 @@
+{
+  "task_id": "code-bugfix-mcp-client-error-redaction",
+  "title": "Redact MCP client error payload secrets",
+  "prompt": "Ensure MCP client/server error formatting never echoes secret-like request payload fields. Add tests that secret-like values are redacted in errors.",
+  "category": "bugfix",
+  "difficulty": "medium",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": false,
+  "stale_context_trap": false,
+  "time_budget_minutes": 45,
+  "target_files": [
+    "crates/layers-mcp/src/client.rs",
+    "crates/layers-mcp/src/server.rs",
+    "crates/layers-mcp/src/types.rs"
+  ],
+  "target_symbols": [
+    "McpClient",
+    "ServerError"
+  ],
+  "expected_relevant_files": [
+    "crates/layers-mcp/src/client.rs",
+    "crates/layers-mcp/src/server.rs",
+    "crates/layers-mcp/src/types.rs"
+  ],
+  "expected_validation_commands": [
+    "cargo test -q -p layers-mcp -- --nocapture",
+    "cargo check --workspace --all-targets"
+  ],
+  "success_rubric": {
+    "full_success": "The requested repository change is implemented with focused regression coverage and all listed validation commands pass.",
+    "partial_success": "The main behavior is implemented but validation is incomplete, coverage is weak, or minor follow-up is required.",
+    "failure": "The requested behavior remains missing, untested, or introduces regressions.",
+    "min_verification_quality": 4,
+    "primary_endpoint": "verified_success"
+  }
+}

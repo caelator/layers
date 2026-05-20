@@ -1,0 +1,196 @@
+diff --git a/src/critical_path.rs b/src/critical_path.rs
+index f7d3116..bed2044 100644
+--- a/src/critical_path.rs
++++ b/src/critical_path.rs
+@@ -221,20 +221,43 @@ impl WeightedFairQueue {
+         Self::new(DEFAULT_CRITICAL_QUEUE_CAPACITY)
+     }
+ 
+-    /// Attempt to enqueue a task.  Returns [`EnqueueResult::BackpressureCritical`]
+-    /// when the critical queue has reached capacity.
++    /// Attempt to enqueue a task.  Returns [`EnqueueResult::Accepted`]
++    /// when the task is added to the back of the corresponding lane.
+     pub fn enqueue(&self, item: TaskItem) -> EnqueueResult {
+         let mut state = self.state.lock().expect("queue lock poisoned");
++        self.enqueue_locked(&mut state, item, false)
++    }
++
++    /// Re-enqueue a task at the front of its lane (e.g. after a failed acquire).
++    pub fn re_enqueue(&self, item: TaskItem) {
++        let mut state = self.state.lock().expect("queue lock poisoned");
++        let _ = self.enqueue_locked(&mut state, item, true);
++    }
++
++    fn enqueue_locked(
++        &self,
++        state: &mut QueueState,
++        item: TaskItem,
++        at_front: bool,
++    ) -> EnqueueResult {
+         if item.critical_path {
+-            if state.critical.len() >= self.critical_capacity {
++            if !at_front && state.critical.len() >= self.critical_capacity {
+                 state.total_critical_rejected += 1;
+                 return EnqueueResult::BackpressureCritical;
+             }
+             state.total_critical_enqueued += 1;
+-            state.critical.push_back(item);
++            if at_front {
++                state.critical.push_front(item);
++            } else {
++                state.critical.push_back(item);
++            }
+         } else {
+             state.total_standard_enqueued += 1;
+-            state.standard.push_back(item);
++            if at_front {
++                state.standard.push_front(item);
++            } else {
++                state.standard.push_back(item);
++            }
+         }
+         self.not_empty.notify_one();
+         EnqueueResult::Accepted
+@@ -297,29 +320,42 @@ impl WeightedFairQueue {
+         // Round layout (total = CRITICAL_WEIGHT + STANDARD_WEIGHT = 9):
+         //   positions 0..7 → critical
+         //   position  8    → standard
+-        //
+-        // When the selected lane is empty, fall through to the other.
+         let round_total = CRITICAL_WEIGHT + STANDARD_WEIGHT;
+         let prefer_critical = state.round_position < CRITICAL_WEIGHT;
+ 
++        // 1. Try to pull from the preferred lane.
+         let item = if prefer_critical {
+-            state
+-                .critical
+-                .pop_front()
+-                .or_else(|| state.standard.pop_front())
++            state.critical.pop_front()
++        } else {
++            state.standard.pop_front()
++        };
++
++        if let Some(item) = item {
++            // Success in preferred lane: advance round position.
++            state.round_position = (state.round_position + 1) % round_total;
++            return Some(Self::make_dequeue_event(state, item));
++        }
++
++        // 2. Preferred lane is empty — try to steal from the other lane.
++        let stolen_item = if prefer_critical {
++            state.standard.pop_front()
+         } else {
+-            state
+-                .standard
+-                .pop_front()
+-                .or_else(|| state.critical.pop_front())
++            state.critical.pop_front()
+         };
+ 
+-        let item = item?;
++        if let Some(item) = stolen_item {
++            // FALLBACK: We took an item from the non-preferred lane.
++            // DO NOT advance round_position here. This preserves the "turn"
++            // for the preferred priority as soon as an item arrives, ensuring
++            // the 8:1 ratio is strictly enforced during contention.
++            return Some(Self::make_dequeue_event(state, item));
++        }
+ 
+-        // Advance round position.
+-        state.round_position = (state.round_position + 1) % round_total;
++        None
++    }
+ 
+-        // Record wait time.
++    /// Helper to construct a dequeue event and update counters.
++    fn make_dequeue_event(state: &mut QueueState, item: TaskItem) -> (TaskItem, DequeueEvent) {
+         let wait_ms = u64::try_from(item.enqueued_at.elapsed().as_millis()).unwrap_or(u64::MAX);
+         if item.critical_path {
+             state.total_critical_dequeued += 1;
+@@ -341,7 +377,7 @@ impl WeightedFairQueue {
+             standard_depth_after: state.standard.len(),
+         };
+ 
+-        Some((item, event))
++        (item, event)
+     }
+ }
+ 
+@@ -428,8 +464,8 @@ impl Dispatcher {
+         if item.critical_path {
+             // Critical work can always claim a slot (up to total_workers).
+             if total_active >= self.config.total_workers {
+-                // All slots full — re-enqueue.
+-                let _ = self.queue.enqueue(item);
++                // All slots full — re-enqueue at front.
++                self.queue.re_enqueue(item);
+                 return None;
+             }
+             acct.active_critical += 1;
+@@ -441,11 +477,11 @@ impl Dispatcher {
+                 .saturating_sub(self.config.reserved_critical_slots);
+             if acct.active_standard >= available_for_standard {
+                 // Re-enqueue: the only free slots are reserved.
+-                let _ = self.queue.enqueue(item);
++                self.queue.re_enqueue(item);
+                 return None;
+             }
+             if total_active >= self.config.total_workers {
+-                let _ = self.queue.enqueue(item);
++                self.queue.re_enqueue(item);
+                 return None;
+             }
+             acct.active_standard += 1;
+@@ -960,4 +996,51 @@ mod tests {
+         let m = q.metrics();
+         assert!(m.critical_wait_ms_p50 >= 1, "wait time should be recorded");
+     }
++
++    #[test]
++    fn no_starvation_beyond_ratio_when_stealing() {
++        let q = WeightedFairQueue::new(100);
++
++        // 1. Move round_position to 8 (standard turn)
++        for _ in 0..8 {
++            q.enqueue(TaskItem::new("c", true));
++            q.try_dequeue().unwrap();
++        }
++
++        // 2. Standard is empty, so critical steals the turn.
++        q.enqueue(TaskItem::new("c_stolen", true));
++        let (item, _) = q.try_dequeue().unwrap();
++        assert_eq!(item.id, "c_stolen");
++        // With fix: round_position stays 8!
++
++        // 3. A standard item arrives.
++        q.enqueue(TaskItem::new("s_victim", false));
++
++        // 4. Critical items keep arriving.
++        for i in 0..100 {
++            q.enqueue(TaskItem::new(format!("c_heavy_{}", i), true));
++        }
++
++        // 5. Dequeue. Standard should be served IMMEDIATELY because it's still
++        // turn 8.  In the buggy version, it had to wait for 8 more criticals.
++        let (item, _) = q.try_dequeue().unwrap();
++        assert!(!item.critical_path);
++        assert_eq!(item.id, "s_victim");
++    }
++
++    #[test]
++    fn re_enqueue_at_front_preserves_order() {
++        let q = WeightedFairQueue::new(64);
++        q.enqueue(TaskItem::new("s1", false));
++        q.enqueue(TaskItem::new("s2", false));
++
++        let (item, _) = q.try_dequeue().unwrap();
++        assert_eq!(item.id, "s1");
++
++        // Re-enqueue s1 at front.
++        q.re_enqueue(item);
++
++        let (item, _) = q.try_dequeue().unwrap();
++        assert_eq!(item.id, "s1", "s1 should still be at the front");
++    }
+ }

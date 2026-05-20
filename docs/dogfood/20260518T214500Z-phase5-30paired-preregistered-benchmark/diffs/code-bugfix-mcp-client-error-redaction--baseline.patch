@@ -1,0 +1,331 @@
+diff --git a/crates/layers-mcp/src/client.rs b/crates/layers-mcp/src/client.rs
+index 693d6fb..dd4330f 100644
+--- a/crates/layers-mcp/src/client.rs
++++ b/crates/layers-mcp/src/client.rs
+@@ -255,13 +255,13 @@ impl McpClient {
+         }
+ 
+         let response: JsonRpcResponse = serde_json::from_str(&response_line)
+-            .map_err(|e| LayersError::Tool(format!("invalid JSON-RPC response: {e}")))?;
++            .map_err(|e| LayersError::Tool(crate::redact::redact_message(&format!("invalid JSON-RPC response: {e}"))))?;
+ 
+         if let Some(err) = response.error {
+-            return Err(LayersError::Tool(format!(
++            return Err(LayersError::Tool(crate::redact::redact_message(&format!(
+                 "MCP server error: {}",
+                 err.message
+-            )));
++            ))));
+         }
+ 
+         Ok(response.result)
+diff --git a/crates/layers-mcp/src/lib.rs b/crates/layers-mcp/src/lib.rs
+index f1eb322..97fcd66 100644
+--- a/crates/layers-mcp/src/lib.rs
++++ b/crates/layers-mcp/src/lib.rs
+@@ -3,6 +3,7 @@
+ 
+ pub mod bridge;
+ pub mod client;
++pub mod redact;
+ pub mod server;
+ pub mod stable;
+ pub mod types;
+diff --git a/crates/layers-mcp/src/redact.rs b/crates/layers-mcp/src/redact.rs
+new file mode 100644
+index 0000000..99df017
+--- /dev/null
++++ b/crates/layers-mcp/src/redact.rs
+@@ -0,0 +1,176 @@
++use serde_json::Value;
++
++/// Redact secret-like fields in a JSON value.
++pub fn redact_value(value: &mut Value) {
++    match value {
++        Value::Object(map) => {
++            for (key, val) in map.iter_mut() {
++                if is_secret_key(key) {
++                    *val = Value::String("[REDACTED]".to_string());
++                } else {
++                    redact_value(val);
++                }
++            }
++        }
++        Value::Array(arr) => {
++            for val in arr.iter_mut() {
++                redact_value(val);
++            }
++        }
++        _ => {}
++    }
++}
++
++/// Redact secret-like fields in a string (e.g., error messages).
++pub fn redact_message(message: &str) -> String {
++    // Best-effort redaction for common secret-like patterns in JSON-like strings.
++    // We look for patterns like "key": "value" or "key": value
++    // and replace the value with [REDACTED].
++    
++    let mut redacted = message.to_string();
++    
++    // We'll do a simple scan for keys. 
++    // This is not perfect but covers common cases in error messages.
++    let secret_keys = [
++        "key", "secret", "token", "password", "auth", "credential", "apikey",
++    ];
++
++    for key in &secret_keys {
++        redact_key_in_string(&mut redacted, key);
++    }
++
++    redacted
++}
++
++fn redact_key_in_string(s: &mut String, key: &str) {
++    // We look for "key": and then the value.
++    // This handles both "key":"value" and "key": "value" and "key":value
++    
++    let mut start = 0;
++    while let Some(key_idx) = s[start..].to_lowercase().find(key) {
++        let absolute_key_idx = start + key_idx;
++        
++        // Check if it's likely a JSON key (surrounded by quotes or followed by colon)
++        // For simplicity, we just look for the next colon.
++        if let Some(colon_idx) = s[absolute_key_idx..].find(':') {
++            let absolute_colon_idx = absolute_key_idx + colon_idx;
++            
++            // Now find where the value starts and ends.
++            // Values can be:
++            // 1. "..."
++            // 2. number
++            // 3. true/false/null
++            // 4. [REDACTED] (already redacted)
++            
++            let value_start_part = &s[absolute_colon_idx + 1..];
++            let first_non_ws = value_start_part.find(|c: char| !c.is_whitespace());
++            
++            if let Some(val_start_idx) = first_non_ws {
++                let absolute_val_start_idx = absolute_colon_idx + 1 + val_start_idx;
++                let val_first_char = s.as_bytes()[absolute_val_start_idx] as char;
++                
++                let (val_end_idx, is_quoted) = if val_first_char == '"' {
++                    // Quoted string. Find next unescaped quote.
++                    let mut end = absolute_val_start_idx + 1;
++                    let mut escaped = false;
++                    while end < s.len() {
++                        let c = s.as_bytes()[end] as char;
++                        if escaped {
++                            escaped = false;
++                        } else if c == '\\' {
++                            escaped = true;
++                        } else if c == '"' {
++                            break;
++                        }
++                        end += 1;
++                    }
++                    (end + 1, true)
++                } else {
++                    // Non-quoted value. Find next comma, brace, or end of string.
++                    let mut end = absolute_val_start_idx;
++                    while end < s.len() {
++                        let c = s.as_bytes()[end] as char;
++                        if c == ',' || c == '}' || c == ']' || c.is_whitespace() {
++                            break;
++                        }
++                        end += 1;
++                    }
++                    (end, false)
++                };
++
++                // Redact it if it's not already redacted.
++                let val_to_redact = &s[absolute_val_start_idx..val_end_idx];
++                if val_to_redact != "[REDACTED]" && val_to_redact != "\"[REDACTED]\"" {
++                    let replacement = if is_quoted { "\"[REDACTED]\"" } else { "[REDACTED]" };
++                    s.replace_range(absolute_val_start_idx..val_end_idx, replacement);
++                    start = absolute_val_start_idx + replacement.len();
++                } else {
++                    start = val_end_idx;
++                }
++            } else {
++                start = absolute_colon_idx + 1;
++            }
++        } else {
++            start = absolute_key_idx + key.len();
++        }
++        
++        if start >= s.len() {
++            break;
++        }
++    }
++}
++
++fn is_secret_key(key: &str) -> bool {
++    let k = key.to_lowercase();
++    k.contains("key") || k.contains("secret") || k.contains("token") || k.contains("password") || k.contains("auth") || k.contains("credential") || k.contains("apikey")
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use serde_json::json;
++
++    #[test]
++    fn test_redact_value() {
++        let mut v = json!({
++            "api_key": "sk-12345",
++            "normal": "value",
++            "nested": {
++                "secret_token": "abc",
++                "safe": 123
++            },
++            "array": [
++                {"password": "pw1"},
++                "safe"
++            ]
++        });
++        
++        redact_value(&mut v);
++        
++        assert_eq!(v["api_key"], "[REDACTED]");
++        assert_eq!(v["normal"], "value");
++        assert_eq!(v["nested"]["secret_token"], "[REDACTED]");
++        assert_eq!(v["nested"]["safe"], 123);
++        assert_eq!(v["array"][0]["password"], "[REDACTED]");
++        assert_eq!(v["array"][1], "safe");
++    }
++
++    #[test]
++    fn test_redact_message() {
++        let msg = "Error: invalid key 'secret_val' in {\"api_key\": \"sk-123\", \"other\": 123}";
++        let redacted = redact_message(msg);
++        assert!(redacted.contains("\"api_key\": \"[REDACTED]\""));
++        assert!(redacted.contains("\"other\": 123"));
++        
++        let msg2 = "failed with token:my-token and auth=true";
++        let redacted2 = redact_message(msg2);
++        assert!(redacted2.contains("token:[REDACTED]"));
++    }
++    
++    #[test]
++    fn test_redact_message_unquoted() {
++        let msg = "error at {\"key\": 12345}";
++        let redacted = redact_message(msg);
++        assert!(redacted.contains("\"key\": [REDACTED]"));
++    }
++}
+diff --git a/crates/layers-mcp/src/server.rs b/crates/layers-mcp/src/server.rs
+index 44b8a67..b225e39 100644
+--- a/crates/layers-mcp/src/server.rs
++++ b/crates/layers-mcp/src/server.rs
+@@ -241,14 +241,15 @@ impl McpServer {
+             let request: JsonRpcRequest = match serde_json::from_str(line) {
+                 Ok(r) => r,
+                 Err(e) => {
+-                    error!(error = %e, "invalid JSON-RPC request");
++                    let err_msg = crate::redact::redact_message(&format!("Parse error: {e}"));
++                    error!(error = %err_msg, "invalid JSON-RPC request");
+                     let response = JsonRpcResponse {
+                         jsonrpc: "2.0".to_string(),
+                         id: None,
+                         result: None,
+                         error: Some(JsonRpcError {
+                             code: -32700,
+-                            message: format!("Parse error: {e}"),
++                            message: err_msg,
+                         }),
+                     };
+                     let mut resp_line = serde_json::to_string(&response).unwrap_or_default();
+@@ -400,7 +401,7 @@ impl McpServer {
+             Err(e) => {
+                 let content = vec![serde_json::json!({
+                     "type": "text",
+-                    "text": e.to_string()
++                    "text": crate::redact::redact_message(&e.to_string())
+                 })];
+                 Ok(serde_json::json!({
+                     "content": content,
+@@ -796,18 +797,48 @@ mod tests {
+         assert!(!config.expose_dangerous);
+     }
+ 
+-    #[test]
+-    fn config_roundtrip() {
++    #[tokio::test]
++    async fn server_redacts_parse_error_secrets() {
++        // Simulated error message that contains a snippet
++        let err_msg = "Parse error: expected value at line 1 column 101 in {\"api_key\": \"secret-123\"}";
++        let redacted = crate::redact::redact_message(&err_msg);
++        
++        assert!(redacted.contains("\"api_key\": \"[REDACTED]\"") || redacted.contains("\"api_key\":\"[REDACTED]\""));
++        assert!(!redacted.contains("secret-123"));
++    }
++
++    #[tokio::test]
++    async fn server_redacts_dispatch_error_secrets() {
++        let mut registry = ToolRegistry::new();
++        registry.register(Arc::new(ErroringTool));
+         let config = McpServerConfig {
+-            server_name: "custom".to_string(),
+-            server_version: "2.0".to_string(),
+-            allowlisted_tools: vec!["tool_a".to_string(), "tool_b".to_string()],
+-            expose_dangerous: true,
++            allowlisted_tools: vec!["error_tool".to_string()],
++            ..Default::default()
+         };
+-        let json = serde_json::to_string(&config).unwrap();
+-        let decoded: McpServerConfig = serde_json::from_str(&json).unwrap();
+-        assert_eq!(decoded.server_name, "custom");
+-        assert_eq!(decoded.allowlisted_tools.len(), 2);
+-        assert!(decoded.expose_dangerous);
++        let server = McpServer::new(Arc::new(registry), config);
++        
++        let params = serde_json::json!({
++            "name": "error_tool",
++            "arguments": {
++                "api_key": "secret-456"
++            }
++        });
++        
++        let result = server.handle_tools_call(Some(&params)).await.unwrap();
++        assert_eq!(result["isError"], true);
++        let text = result["content"][0]["text"].as_str().unwrap();
++        assert!(text.contains("\"api_key\": \"[REDACTED]\"") || text.contains("\"api_key\":\"[REDACTED]\""));
++        assert!(!text.contains("secret-456"));
++    }
++
++    struct ErroringTool;
++    #[async_trait::async_trait]
++    impl layers_core::Tool for ErroringTool {
++        fn name(&self) -> &str { "error_tool" }
++        fn description(&self) -> &str { "always errors" }
++        fn schema(&self) -> serde_json::Value { serde_json::json!({}) }
++        async fn execute(&self, args: serde_json::Value, _context: layers_core::ToolContext) -> layers_core::Result<layers_core::ToolOutput> {
++            Err(layers_core::LayersError::Tool(format!("Failed with args: {args}")))
++        }
+     }
+ }
+diff --git a/crates/layers-mcp/src/stable.rs b/crates/layers-mcp/src/stable.rs
+index c672631..f1f5839 100644
+--- a/crates/layers-mcp/src/stable.rs
++++ b/crates/layers-mcp/src/stable.rs
+@@ -443,9 +443,9 @@ impl Tool for ValidateContextTool {
+                     }
+                 }
+             }
+-            Err(error) => issues.push(format!(
++            Err(error) => issues.push(crate::redact::redact_message(&format!(
+                 "packet does not match ContextPacket schema: {error}"
+-            )),
++            ))),
+         }
+         json_tool_output(&serde_json::json!({
+             "valid": issues.is_empty(),
+@@ -456,7 +456,7 @@ impl Tool for ValidateContextTool {
+ 
+ fn json_tool_output(value: &impl serde::Serialize) -> Result<ToolOutput> {
+     let content = serde_json::to_string(value)
+-        .map_err(|e| LayersError::Tool(format!("failed to serialize MCP tool output: {e}")))?;
++        .map_err(|e| LayersError::Tool(crate::redact::redact_message(&format!("failed to serialize MCP tool output: {e}"))))?;
+     Ok(ToolOutput {
+         content,
+         structured_content: None,

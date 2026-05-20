@@ -1,0 +1,7 @@
+ crates/layers-core/src/packet_quality.rs |  17 ++-
+ crates/layers-core/src/task_spec.rs      | 216 +++++++++++++++++++++++++------
+ memoryport/telemetry/events.jsonl        |   2 +
+ src/cmd/packet.rs                        |  22 +++-
+ src/cmd/preflight.rs                     |   8 +-
+ src/cmd/query.rs                         |   8 +-
+ 6 files changed, 228 insertions(+), 45 deletions(-)

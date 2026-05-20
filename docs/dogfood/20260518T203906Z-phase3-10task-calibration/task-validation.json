@@ -1,0 +1,67 @@
+{
+  "checked_count": 10,
+  "valid_count": 10,
+  "invalid_count": 0,
+  "results": [
+    {
+      "path": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/tasks/code-bugfix-mcp-client-error-redaction.json",
+      "task_id": "code-bugfix-mcp-client-error-redaction",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/tasks/code-bugfix-preflight-strict-low-relevance.json",
+      "task_id": "code-bugfix-preflight-strict-low-relevance",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/tasks/code-bugfix-provider-budget-overflow.json",
+      "task_id": "code-bugfix-provider-budget-overflow",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/tasks/code-bugfix-runtime-queue-starvation.json",
+      "task_id": "code-bugfix-runtime-queue-starvation",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/tasks/code-feature-config-secret-redaction-nested.json",
+      "task_id": "code-feature-config-secret-redaction-nested",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/tasks/code-feature-tools-registry-duplicate-names.json",
+      "task_id": "code-feature-tools-registry-duplicate-names",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/tasks/code-feature-workflow-benchmark-human-surfaces.json",
+      "task_id": "code-feature-workflow-benchmark-human-surfaces",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/tasks/code-stale-trap-prefer-current-task-spec.json",
+      "task_id": "code-stale-trap-prefer-current-task-spec",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/tasks/negative-control-count-letters.json",
+      "task_id": "negative-control-count-letters",
+      "valid": true,
+      "errors": []
+    },
+    {
+      "path": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/tasks/negative-control-simple-json-validity.json",
+      "task_id": "negative-control-simple-json-validity",
+      "valid": true,
+      "errors": []
+    }
+  ]
+}

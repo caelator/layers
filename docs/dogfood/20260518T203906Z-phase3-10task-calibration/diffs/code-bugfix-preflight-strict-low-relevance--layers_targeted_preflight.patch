@@ -1,0 +1,62 @@
+diff --git a/src/cmd/preflight.rs b/src/cmd/preflight.rs
+index fa215ca..6c89686 100644
+--- a/src/cmd/preflight.rs
++++ b/src/cmd/preflight.rs
+@@ -191,6 +191,7 @@ fn has_warning(packet: &ContextPacket, code: &str) -> bool {
+ fn minimum_bar_passes(packet: &ContextPacket) -> bool {
+     has_section(packet, "workspace")
+         && has_section(packet, "memory")
++        && !has_warning(packet, "low_memory_relevance")
+         && has_section(packet, "validation")
+         && (!is_packet_code_heavy(packet) || has_section(packet, "code"))
+ }
+@@ -561,7 +562,7 @@ struct ResearchQuality {
+ impl ResearchQuality {
+     #[allow(clippy::fn_params_excessive_bools)]
+     fn new(code_heavy: bool, has_memory: bool, has_code: bool, low_memory_relevance: bool) -> Self {
+-        let passes_minimum_bar = !code_heavy || has_code;
++        let passes_minimum_bar = !low_memory_relevance && (!code_heavy || has_code);
+         let confidence = if (code_heavy || low_memory_relevance) && !has_code {
+             "low"
+         } else if low_memory_relevance {
+@@ -808,7 +809,7 @@ mod tests {
+     fn low_relevance_memory_with_code_is_not_high_confidence() {
+         let quality = ResearchQuality::new(true, true, true, true);
+         assert_eq!(quality.confidence, "medium");
+-        assert!(quality.passes_minimum_bar);
++        assert!(!quality.passes_minimum_bar);
+     }
+ 
+     #[test]
+@@ -1077,4 +1078,31 @@ mod tests {
+ 
+         assert!(!minimum_bar_passes(&packet));
+     }
++
++    #[test]
++    fn strict_validation_fails_on_low_memory_relevance() {
++        let mut packet = ContextPacket::new(
++            "test".to_string(),
++            "layers".to_string(),
++            "fix src/main.rs".to_string(),
++            chrono::Utc::now(),
++        );
++        packet.scores = json!({ "code_heavy": true });
++        packet.sections.push(context_section("workspace", "W", "D", Vec::new()));
++        packet.sections.push(context_section("memory", "M", "D", Vec::new()));
++        packet.sections.push(context_section("validation", "V", "D", Vec::new()));
++        packet.sections.push(context_section("code", "C", "D", Vec::new()));
++        
++        // Initially passes
++        assert!(minimum_bar_passes(&packet));
++        
++        // Should fail if low_memory_relevance warning is present
++        packet.warnings.push(ContextWarning {
++            severity: "warning".to_string(),
++            code: "low_memory_relevance".to_string(),
++            message: "low relevance".to_string(),
++        });
++        
++        assert!(!minimum_bar_passes(&packet));
++    }
+ }

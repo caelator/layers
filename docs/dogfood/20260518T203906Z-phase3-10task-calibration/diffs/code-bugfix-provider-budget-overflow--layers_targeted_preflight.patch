@@ -1,0 +1,297 @@
+diff --git a/crates/layers-providers/src/token_accounting.rs b/crates/layers-providers/src/token_accounting.rs
+index 2558465..7160224 100644
+--- a/crates/layers-providers/src/token_accounting.rs
++++ b/crates/layers-providers/src/token_accounting.rs
+@@ -37,16 +37,24 @@ pub struct UsageSnapshot {
+ impl UsageSnapshot {
+     /// Merge a single-request `Usage` into this snapshot.
+     pub fn record(&mut self, usage: &Usage) {
+-        self.prompt_tokens += usage.prompt_tokens;
+-        self.completion_tokens += usage.completion_tokens;
+-        self.reasoning_tokens += usage.reasoning_tokens.unwrap_or(0);
+-        self.cache_read_tokens += usage.cache_read_tokens.unwrap_or(0);
+-        self.request_count += 1;
++        self.prompt_tokens = self.prompt_tokens.saturating_add(usage.prompt_tokens);
++        self.completion_tokens = self
++            .completion_tokens
++            .saturating_add(usage.completion_tokens);
++        self.reasoning_tokens = self
++            .reasoning_tokens
++            .saturating_add(usage.reasoning_tokens.unwrap_or(0));
++        self.cache_read_tokens = self
++            .cache_read_tokens
++            .saturating_add(usage.cache_read_tokens.unwrap_or(0));
++        self.request_count = self.request_count.saturating_add(1);
+     }
+ 
+     /// Total tokens (prompt + completion + reasoning).
+     pub fn total(&self) -> usize {
+-        self.prompt_tokens + self.completion_tokens + self.reasoning_tokens
++        self.prompt_tokens
++            .saturating_add(self.completion_tokens)
++            .saturating_add(self.reasoning_tokens)
+     }
+ }
+ 
+@@ -153,7 +161,9 @@ impl TokenAccountant {
+                 .as_ref()
+                 .map(|s| tokenizer.count_text_tokens(s))
+                 .unwrap_or(0);
+-            msg_tokens + tool_tokens + system_tokens
++            msg_tokens
++                .saturating_add(tool_tokens)
++                .saturating_add(system_tokens)
+         } else {
+             // Fallback: rough character-based estimate (~4 chars/token)
+             let msg_chars: usize = request
+@@ -163,9 +173,9 @@ impl TokenAccountant {
+                     MessageContent::Text(t) => t.len(),
+                     MessageContent::Parts(_) => 100,
+                 })
+-                .sum();
++                .fold(0, |acc, x| acc.saturating_add(x));
+             let sys_chars = request.system.as_ref().map(|s| s.len()).unwrap_or(0);
+-            (msg_chars + sys_chars) / 4
++            msg_chars.saturating_add(sys_chars).saturating_div(4)
+         }
+     }
+ 
+@@ -557,4 +567,54 @@ mod tests {
+             other => panic!("expected ContextOverflow, got {other}"),
+         }
+     }
++
++    #[test]
++    fn budget_accounting_saturating_arithmetic() {
++        let mut snap = UsageSnapshot::default();
++        // Record nearly usize::MAX tokens
++        snap.record(&make_usage(usize::MAX - 100, usize::MAX - 100));
++        assert_eq!(snap.prompt_tokens, usize::MAX - 100);
++
++        // Record more, should saturate
++        snap.record(&make_usage(200, 200));
++        assert_eq!(snap.prompt_tokens, usize::MAX);
++        assert_eq!(snap.completion_tokens, usize::MAX);
++        assert_eq!(snap.total(), usize::MAX);
++        assert_eq!(snap.request_count, 2);
++    }
++
++    #[test]
++    fn estimate_input_saturating_arithmetic() {
++        let provider = crate::openai::OpenAiProvider::new("test", "http://localhost", "key");
++        
++        // Create a request with moderate content but multiple parts
++        let text = "a".repeat(10_000);
++        let messages = vec![Message {
++            role: MessageRole::User,
++            content: MessageContent::Text(text.clone()),
++            name: None,
++            tool_calls: None,
++            tool_call_id: None,
++            reasoning: None,
++            timestamp: None,
++        }; 10]; 
++
++        let request = ModelRequest {
++            model: ModelRef {
++                provider: "test".into(),
++                model: "test".into(),
++            },
++            messages,
++            system: Some(text),
++            tools: None,
++            temperature: None,
++            max_tokens: None,
++            token_budget: None,
++            thinking: None,
++        };
++
++        // Should not panic
++        let estimated = TokenAccountant::estimate_input(&provider, &request);
++        assert!(estimated > 0);
++    }
+ }
+diff --git a/crates/layers-providers/src/tokenizer_impl.rs b/crates/layers-providers/src/tokenizer_impl.rs
+index 819b27c..45a9d80 100644
+--- a/crates/layers-providers/src/tokenizer_impl.rs
++++ b/crates/layers-providers/src/tokenizer_impl.rs
+@@ -64,23 +64,23 @@ impl TiktokenTokenizer {
+ 
+ impl Tokenizer for TiktokenTokenizer {
+     fn count_message_tokens(&self, messages: &[Message]) -> usize {
+-        let mut total = 0;
++        let mut total = 0usize;
+         for msg in messages {
+             // Per-message overhead: ~4 tokens (role, separators, etc.)
+-            total += 4;
+-            total += self.count_text_tokens(&message_text(msg));
++            total = total.saturating_add(4);
++            total = total.saturating_add(self.count_text_tokens(&message_text(msg)));
+             if let Some(name) = &msg.name {
+-                total += self.count_text_tokens(name);
++                total = total.saturating_add(self.count_text_tokens(name));
+             }
+             if let Some(tcs) = &msg.tool_calls {
+                 for tc in tcs {
+-                    total += self.count_text_tokens(&tc.function.name);
+-                    total += self.count_text_tokens(&tc.function.arguments);
+-                    total += 3; // overhead per tool call
++                    total = total.saturating_add(self.count_text_tokens(&tc.function.name));
++                    total = total.saturating_add(self.count_text_tokens(&tc.function.arguments));
++                    total = total.saturating_add(3); // overhead per tool call
+                 }
+             }
+         }
+-        total += 2; // priming tokens for assistant reply
++        total = total.saturating_add(2); // priming tokens for assistant reply
+         total
+     }
+ 
+@@ -106,25 +106,25 @@ pub struct AnthropicTokenizer;
+ 
+ impl Tokenizer for AnthropicTokenizer {
+     fn count_message_tokens(&self, messages: &[Message]) -> usize {
+-        let mut total = 0;
++        let mut total = 0usize;
+         for msg in messages {
+-            total += 5; // per-message overhead
+-            total += self.count_text_tokens(&message_text(msg));
++            total = total.saturating_add(5); // per-message overhead
++            total = total.saturating_add(self.count_text_tokens(&message_text(msg)));
+             if let Some(tcs) = &msg.tool_calls {
+                 for tc in tcs {
+-                    total += self.count_text_tokens(&tc.function.name);
+-                    total += self.count_text_tokens(&tc.function.arguments);
+-                    total += 5;
++                    total = total.saturating_add(self.count_text_tokens(&tc.function.name));
++                    total = total.saturating_add(self.count_text_tokens(&tc.function.arguments));
++                    total = total.saturating_add(5);
+                 }
+             }
+         }
+-        total += 2;
++        total = total.saturating_add(2);
+         total
+     }
+ 
+     fn count_tool_schema_tokens(&self, tools: &[ToolDefinition]) -> usize {
+         let json = serde_json::to_string(tools).unwrap_or_default();
+-        json.len() / 3
++        json.len().saturating_div(3)
+     }
+ 
+     fn count_text_tokens(&self, text: &str) -> usize {
+@@ -144,29 +144,29 @@ pub struct GoogleTokenizer;
+ 
+ impl Tokenizer for GoogleTokenizer {
+     fn count_message_tokens(&self, messages: &[Message]) -> usize {
+-        let mut total = 0;
++        let mut total = 0usize;
+         for msg in messages {
+-            total += 4;
+-            total += self.count_text_tokens(&message_text(msg));
++            total = total.saturating_add(4);
++            total = total.saturating_add(self.count_text_tokens(&message_text(msg)));
+             if let Some(tcs) = &msg.tool_calls {
+                 for tc in tcs {
+-                    total += self.count_text_tokens(&tc.function.name);
+-                    total += self.count_text_tokens(&tc.function.arguments);
+-                    total += 3;
++                    total = total.saturating_add(self.count_text_tokens(&tc.function.name));
++                    total = total.saturating_add(self.count_text_tokens(&tc.function.arguments));
++                    total = total.saturating_add(3);
+                 }
+             }
+         }
+-        total += 2;
++        total = total.saturating_add(2);
+         total
+     }
+ 
+     fn count_tool_schema_tokens(&self, tools: &[ToolDefinition]) -> usize {
+         let json = serde_json::to_string(tools).unwrap_or_default();
+-        json.len() / 4
++        json.len().saturating_div(4)
+     }
+ 
+     fn count_text_tokens(&self, text: &str) -> usize {
+-        text.len() / 4
++        text.len().saturating_div(4)
+     }
+ }
+ 
+@@ -179,21 +179,21 @@ pub struct FallbackTokenizer;
+ 
+ impl Tokenizer for FallbackTokenizer {
+     fn count_message_tokens(&self, messages: &[Message]) -> usize {
+-        let mut total = 0;
++        let mut total = 0usize;
+         for msg in messages {
+-            total += 4;
+-            total += self.count_text_tokens(&message_text(msg));
++            total = total.saturating_add(4);
++            total = total.saturating_add(self.count_text_tokens(&message_text(msg)));
+         }
+         total
+     }
+ 
+     fn count_tool_schema_tokens(&self, tools: &[ToolDefinition]) -> usize {
+         let json = serde_json::to_string(tools).unwrap_or_default();
+-        json.len() / 4
++        json.len().saturating_div(4)
+     }
+ 
+     fn count_text_tokens(&self, text: &str) -> usize {
+-        text.len() / 4
++        text.len().saturating_div(4)
+     }
+ }
+ 
+@@ -266,6 +266,21 @@ mod tests {
+         let _fallback = tokenizer_for_family(TokenizerFamily::Fallback);
+     }
+ 
++    #[test]
++    fn heuristic_tokenizer_saturating_conversions() {
++        let tok = AnthropicTokenizer;
++        // Mock a very large string length by using a string that is as large as possible
++        // but we can't actually allocate usize::MAX bytes.
++        // We can test the logic directly if we had access to private methods, 
++        // but since count_text_tokens is public we'll just check it doesn't panic on large-ish input.
++        let large_text = "a".repeat(1_000_000);
++        let count = tok.count_text_tokens(&large_text);
++        assert_eq!(count, (1_000_000.0 / 3.5f64).ceil() as usize);
++        
++        // We can't easily test usize::MAX length without allocating it, 
++        // but we've reviewed the logic and it's safe due to Rust's saturating float-to-int casts.
++    }
++
+     #[test]
+     fn tiktoken_tool_schema_counts() {
+         let tok = TiktokenTokenizer::o200k_base();
+diff --git a/src/provider/accounting.rs b/src/provider/accounting.rs
+index d3f0c9e..14666fb 100644
+--- a/src/provider/accounting.rs
++++ b/src/provider/accounting.rs
+@@ -453,4 +453,21 @@ mod tests {
+         assert_eq!(events[1].stage, "claude");
+         assert_eq!(events[2].stage, "codex");
+     }
++
++    #[test]
++    fn ledger_saturating_arithmetic() {
++        let mut ledger = TokenLedger::new();
++        
++        // Record nearly u64::MAX tokens
++        ledger.record(&make_event("claude", "claude", u64::MAX - 100, 50)).unwrap();
++        assert_eq!(ledger.total_input_tokens(), u64::MAX - 100);
++        assert_eq!(ledger.total_output_tokens(), 50);
++        assert_eq!(ledger.total_consumed(), u64::MAX - 50);
++
++        // Record more, should saturate
++        ledger.record(&make_event("gemini", "gemini", 200, 200)).unwrap();
++        assert_eq!(ledger.total_input_tokens(), u64::MAX);
++        assert_eq!(ledger.total_output_tokens(), 250);
++        assert_eq!(ledger.total_consumed(), u64::MAX);
++    }
+ }

@@ -81,17 +81,47 @@ pub struct Thresholds {
 
 impl Thresholds {
     /// Construct from environment variables or fall back to defaults.
+    ///
+    /// Each variable is independently validated: the value must parse as a
+    /// non-zero `u64`. If the variable is unset, empty, non-numeric, or zero,
+    /// the corresponding default is used instead.
+    ///
+    /// After individual parsing, an invariant check ensures `quiet_secs <
+    /// stalled_secs`. When this is violated (e.g. because only one env var was
+    /// overridden), **both** values revert to their defaults so classification
+    /// remains predictable and no live session changes state unexpectedly.
     fn from_env() -> Self {
-        Self {
-            quiet_secs: std::env::var("QUIET_THRESHOLD_SECS")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(DEFAULT_QUIET_THRESHOLD_SECS),
-            stalled_secs: std::env::var("STALLED_THRESHOLD_SECS")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(DEFAULT_STALLED_THRESHOLD_SECS),
+        let quiet_secs = parse_env_threshold("QUIET_THRESHOLD_SECS", DEFAULT_QUIET_THRESHOLD_SECS);
+        let stalled_secs =
+            parse_env_threshold("STALLED_THRESHOLD_SECS", DEFAULT_STALLED_THRESHOLD_SECS);
+
+        // Invariant: quiet must be strictly less than stalled.
+        if quiet_secs >= stalled_secs {
+            return Self {
+                quiet_secs: DEFAULT_QUIET_THRESHOLD_SECS,
+                stalled_secs: DEFAULT_STALLED_THRESHOLD_SECS,
+            };
         }
+
+        Self {
+            quiet_secs,
+            stalled_secs,
+        }
+    }
+}
+
+/// Parse a `u64` threshold from the named environment variable.
+///
+/// Returns `default` when the variable is absent, empty, non-numeric, or zero.
+fn parse_env_threshold(name: &str, default: u64) -> u64 {
+    let val = match std::env::var(name) {
+        Ok(v) if !v.is_empty() => v,
+        _ => return default,
+    };
+
+    match val.parse::<u64>() {
+        Ok(n) if n > 0 => n,
+        _ => default,
     }
 }
 
@@ -576,6 +606,225 @@ mod tests {
         unsafe {
             std::env::remove_var("QUIET_THRESHOLD_SECS");
             std::env::remove_var("STALLED_THRESHOLD_SECS");
+        }
+    }
+
+    // ── Invalid env values fall back to defaults ──────────────────────────
+
+    #[allow(unsafe_code)]
+    #[test]
+    fn thresholds_fallback_on_non_numeric_quiet() {
+        let _env_guard = env_guard();
+
+        unsafe {
+            std::env::set_var("QUIET_THRESHOLD_SECS", "not-a-number");
+            std::env::remove_var("STALLED_THRESHOLD_SECS");
+        }
+        let t = Thresholds::from_env();
+        assert_eq!(
+            t.quiet_secs, 180,
+            "non-numeric QUIET_THRESHOLD_SECS should fall back to default"
+        );
+        assert_eq!(t.stalled_secs, 420);
+        unsafe {
+            std::env::remove_var("QUIET_THRESHOLD_SECS");
+        }
+    }
+
+    #[allow(unsafe_code)]
+    #[test]
+    fn thresholds_fallback_on_non_numeric_stalled() {
+        let _env_guard = env_guard();
+
+        unsafe {
+            std::env::remove_var("QUIET_THRESHOLD_SECS");
+            std::env::set_var("STALLED_THRESHOLD_SECS", "abc");
+        }
+        let t = Thresholds::from_env();
+        assert_eq!(t.quiet_secs, 180);
+        assert_eq!(
+            t.stalled_secs, 420,
+            "non-numeric STALLED_THRESHOLD_SECS should fall back to default"
+        );
+        unsafe {
+            std::env::remove_var("STALLED_THRESHOLD_SECS");
+        }
+    }
+
+    #[allow(unsafe_code)]
+    #[test]
+    fn thresholds_fallback_on_empty_string() {
+        let _env_guard = env_guard();
+
+        unsafe {
+            std::env::set_var("QUIET_THRESHOLD_SECS", "");
+            std::env::set_var("STALLED_THRESHOLD_SECS", "");
+        }
+        let t = Thresholds::from_env();
+        assert_eq!(
+            t.quiet_secs, 180,
+            "empty QUIET_THRESHOLD_SECS should fall back to default"
+        );
+        assert_eq!(
+            t.stalled_secs, 420,
+            "empty STALLED_THRESHOLD_SECS should fall back to default"
+        );
+        unsafe {
+            std::env::remove_var("QUIET_THRESHOLD_SECS");
+            std::env::remove_var("STALLED_THRESHOLD_SECS");
+        }
+    }
+
+    #[allow(unsafe_code)]
+    #[test]
+    fn thresholds_fallback_on_zero() {
+        let _env_guard = env_guard();
+
+        unsafe {
+            std::env::set_var("QUIET_THRESHOLD_SECS", "0");
+            std::env::set_var("STALLED_THRESHOLD_SECS", "0");
+        }
+        let t = Thresholds::from_env();
+        assert_eq!(
+            t.quiet_secs, 180,
+            "zero QUIET_THRESHOLD_SECS should fall back to default"
+        );
+        assert_eq!(
+            t.stalled_secs, 420,
+            "zero STALLED_THRESHOLD_SECS should fall back to default"
+        );
+        unsafe {
+            std::env::remove_var("QUIET_THRESHOLD_SECS");
+            std::env::remove_var("STALLED_THRESHOLD_SECS");
+        }
+    }
+
+    #[allow(unsafe_code)]
+    #[test]
+    fn thresholds_fallback_on_negative_string() {
+        let _env_guard = env_guard();
+
+        // "-5" does not parse as u64, so both should fall back.
+        unsafe {
+            std::env::set_var("QUIET_THRESHOLD_SECS", "-5");
+            std::env::set_var("STALLED_THRESHOLD_SECS", "-10");
+        }
+        let t = Thresholds::from_env();
+        assert_eq!(t.quiet_secs, 180);
+        assert_eq!(t.stalled_secs, 420);
+        unsafe {
+            std::env::remove_var("QUIET_THRESHOLD_SECS");
+            std::env::remove_var("STALLED_THRESHOLD_SECS");
+        }
+    }
+
+    #[allow(unsafe_code)]
+    #[test]
+    fn thresholds_revert_both_when_quiet_ge_stalled() {
+        let _env_guard = env_guard();
+
+        // quiet == stalled: invariant violated → both revert to defaults.
+        unsafe {
+            std::env::set_var("QUIET_THRESHOLD_SECS", "300");
+            std::env::set_var("STALLED_THRESHOLD_SECS", "300");
+        }
+        let t = Thresholds::from_env();
+        assert_eq!(
+            t.quiet_secs, 180,
+            "invariant violation should revert quiet to default"
+        );
+        assert_eq!(
+            t.stalled_secs, 420,
+            "invariant violation should revert stalled to default"
+        );
+
+        // quiet > stalled: invariant also violated.
+        unsafe {
+            std::env::set_var("QUIET_THRESHOLD_SECS", "500");
+            std::env::set_var("STALLED_THRESHOLD_SECS", "100");
+        }
+        let t = Thresholds::from_env();
+        assert_eq!(t.quiet_secs, 180);
+        assert_eq!(t.stalled_secs, 420);
+        unsafe {
+            std::env::remove_var("QUIET_THRESHOLD_SECS");
+            std::env::remove_var("STALLED_THRESHOLD_SECS");
+        }
+    }
+
+    // ── parse_env_threshold unit tests ────────────────────────────────────
+
+    #[allow(unsafe_code)]
+    #[test]
+    fn parse_env_threshold_returns_default_when_unset() {
+        let _env_guard = env_guard();
+        unsafe {
+            std::env::remove_var("_TEST_PARSE_UNSET");
+        }
+        assert_eq!(parse_env_threshold("_TEST_PARSE_UNSET", 99), 99);
+    }
+
+    #[allow(unsafe_code)]
+    #[test]
+    fn parse_env_threshold_parses_valid_u64() {
+        let _env_guard = env_guard();
+        unsafe {
+            std::env::set_var("_TEST_PARSE_VALID", "42");
+        }
+        assert_eq!(parse_env_threshold("_TEST_PARSE_VALID", 99), 42);
+        unsafe {
+            std::env::remove_var("_TEST_PARSE_VALID");
+        }
+    }
+
+    #[allow(unsafe_code)]
+    #[test]
+    fn parse_env_threshold_rejects_zero() {
+        let _env_guard = env_guard();
+        unsafe {
+            std::env::set_var("_TEST_PARSE_ZERO", "0");
+        }
+        assert_eq!(
+            parse_env_threshold("_TEST_PARSE_ZERO", 99),
+            99,
+            "zero should fall back to default"
+        );
+        unsafe {
+            std::env::remove_var("_TEST_PARSE_ZERO");
+        }
+    }
+
+    #[allow(unsafe_code)]
+    #[test]
+    fn parse_env_threshold_rejects_non_numeric() {
+        let _env_guard = env_guard();
+        unsafe {
+            std::env::set_var("_TEST_PARSE_GARBAGE", "hello");
+        }
+        assert_eq!(
+            parse_env_threshold("_TEST_PARSE_GARBAGE", 99),
+            99,
+            "non-numeric should fall back to default"
+        );
+        unsafe {
+            std::env::remove_var("_TEST_PARSE_GARBAGE");
+        }
+    }
+
+    #[allow(unsafe_code)]
+    #[test]
+    fn parse_env_threshold_rejects_empty() {
+        let _env_guard = env_guard();
+        unsafe {
+            std::env::set_var("_TEST_PARSE_EMPTY", "");
+        }
+        assert_eq!(
+            parse_env_threshold("_TEST_PARSE_EMPTY", 99),
+            99,
+            "empty string should fall back to default"
+        );
+        unsafe {
+            std::env::remove_var("_TEST_PARSE_EMPTY");
         }
     }
 

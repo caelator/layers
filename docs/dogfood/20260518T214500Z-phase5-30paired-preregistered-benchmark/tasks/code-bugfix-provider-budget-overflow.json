@@ -1,0 +1,36 @@
+{
+  "task_id": "code-bugfix-provider-budget-overflow",
+  "title": "Prevent provider token budget overflow",
+  "prompt": "Audit provider budget accounting for saturating arithmetic and f64/u64 conversions. Add a regression test for very large token counters without panics or wraparound.",
+  "category": "bugfix",
+  "difficulty": "medium",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": false,
+  "stale_context_trap": false,
+  "time_budget_minutes": 45,
+  "target_files": [
+    "src/provider/accounting.rs",
+    "src/provider/tokenizer.rs",
+    "crates/layers-providers/src/token_accounting.rs"
+  ],
+  "target_symbols": [
+    "TokenLedger",
+    "budget_remaining"
+  ],
+  "expected_relevant_files": [
+    "src/provider/accounting.rs",
+    "src/provider/tokenizer.rs",
+    "crates/layers-providers/src/token_accounting.rs"
+  ],
+  "expected_validation_commands": [
+    "cargo test -q provider::accounting -- --nocapture",
+    "cargo test -q -p layers-providers -- --nocapture"
+  ],
+  "success_rubric": {
+    "full_success": "The requested repository change is implemented with focused regression coverage and all listed validation commands pass.",
+    "partial_success": "The main behavior is implemented but validation is incomplete, coverage is weak, or minor follow-up is required.",
+    "failure": "The requested behavior remains missing, untested, or introduces regressions.",
+    "min_verification_quality": 4,
+    "primary_endpoint": "verified_success"
+  }
+}

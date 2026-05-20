@@ -1,0 +1,93 @@
+diff --git a/src/cmd/workflow_benchmark.rs b/src/cmd/workflow_benchmark.rs
+index d3ca7b0..c145109 100644
+--- a/src/cmd/workflow_benchmark.rs
++++ b/src/cmd/workflow_benchmark.rs
+@@ -406,6 +406,15 @@ impl WorkflowVariant {
+             Self::LayersMcpPreflight => "layers_mcp_preflight",
+         }
+     }
++
++    fn human_name(self) -> &'static str {
++        match self {
++            Self::Baseline => "Baseline",
++            Self::LayersTargetedPreflight => "Layers (Targeted Preflight)",
++            Self::LayersBroadQuery => "Layers (Broad Query)",
++            Self::LayersMcpPreflight => "Layers (MCP Preflight)",
++        }
++    }
+ }
+ 
+ #[derive(Debug, Clone, Deserialize, Serialize)]
+@@ -4324,9 +4333,13 @@ fn write_final_run_report(summary: &FinalizeRunSummary, report: &BenchmarkReport
+             )?;
+         }
+     }
+-    if let Some(comparison) = &report.comparison {
++    for comparison in &report.comparisons {
+         writeln!(output)?;
+-        writeln!(output, "## Paired comparison")?;
++        writeln!(
++            output,
++            "## Paired comparison ({})",
++            comparison.variant.human_name()
++        )?;
+         writeln!(output, "- Paired tasks: {}", report.paired_task_count)?;
+         writeln!(output, "- Speedup: {:.3}x", comparison.speedup)?;
+         writeln!(
+@@ -4368,14 +4381,15 @@ fn format_report(report: &BenchmarkReport, json: bool) -> Result<String> {
+     writeln!(output, "=========================")?;
+     writeln!(output, "Runs: {}", report.run_count)?;
+     writeln!(output, "Paired tasks: {}", report.paired_task_count)?;
+-    if let Some(baseline) = &report.baseline {
+-        write_variant_summary(&mut output, "Baseline", baseline)?;
+-    }
+-    if let Some(layers) = &report.layers {
+-        write_variant_summary(&mut output, "Layers", layers)?;
++    for variant in &report.variants {
++        write_variant_summary(&mut output, variant.variant.human_name(), variant)?;
+     }
+-    if let Some(comparison) = &report.comparison {
+-        writeln!(output, "\nPaired net benefit")?;
++    for comparison in &report.comparisons {
++        writeln!(
++            output,
++            "\nPaired net benefit ({})",
++            comparison.variant.human_name()
++        )?;
+         writeln!(
+             output,
+             "- Net time saved per task: {:.1} ms",
+@@ -5205,6 +5219,33 @@ mod tests {
+         assert!(output.contains("Context relevant/waste ratios"));
+     }
+ 
++    #[test]
++    fn reports_all_layers_surfaces_in_human_output() {
++        let runs = vec![
++            parse_run(&valid_run("task-1", "baseline", 1_000, 2_000)).expect("baseline"),
++            parse_run(&valid_run(
++                "task-1",
++                "layers_targeted_preflight",
++                700,
++                1_500,
++            ))
++            .expect("targeted"),
++            parse_run(&valid_run("task-1", "layers_broad_query", 1_200, 2_400)).expect("broad"),
++            parse_run(&valid_run("task-1", "layers_mcp_preflight", 800, 1_700)).expect("mcp"),
++        ];
++
++        let output = format_report(&analyze_runs(&runs).expect("analysis"), false).expect("human");
++
++        assert!(output.contains("Baseline"));
++        assert!(output.contains("Layers (Targeted Preflight)"));
++        assert!(output.contains("Layers (Broad Query)"));
++        assert!(output.contains("Layers (MCP Preflight)"));
++
++        assert!(output.contains("Paired net benefit (Layers (Targeted Preflight))"));
++        assert!(output.contains("Paired net benefit (Layers (Broad Query))"));
++        assert!(output.contains("Paired net benefit (Layers (MCP Preflight))"));
++    }
++
+     #[test]
+     fn parses_and_validates_task_spec_fixture() {
+         let spec = load_task_spec(Path::new(

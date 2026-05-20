@@ -1,0 +1,16 @@
+{
+  "task_id": "negative-control-trivial-arithmetic",
+  "title": "Answer a context-free arithmetic check",
+  "prompt": "Answer the arithmetic question 17 + 25 without consulting repository context or injecting Layers context.",
+  "category": "negative_control",
+  "negative_control": true,
+  "expected_validation_commands": [
+    "python3 - <<'PY'\nprint(17 + 25)\nPY"
+  ],
+  "success_rubric": {
+    "full_success": "The answer is correct and no repository, memory, or generated context packet is needed.",
+    "partial_success": "The answer is correct but the workflow unnecessarily inspects or injects unrelated context.",
+    "failure": "The answer is incorrect or relies on irrelevant context that could mislead the task.",
+    "min_verification_quality": 2
+  }
+}

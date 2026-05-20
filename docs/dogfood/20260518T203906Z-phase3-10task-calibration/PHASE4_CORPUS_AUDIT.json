@@ -1,0 +1,342 @@
+{
+  "category_counts": {
+    "bugfix": 13,
+    "feature": 9,
+    "negative_control": 6,
+    "other": 1,
+    "refactor": 2
+  },
+  "code_heavy_non_negative": 25,
+  "gate_requirements": {
+    "code_heavy_paired_tasks": 20,
+    "negative_control_paired_tasks": 5,
+    "paired_tasks": 30
+  },
+  "negative_controls": 6,
+  "rows": [
+    {
+      "category": "bugfix",
+      "code_heavy": true,
+      "file": "code-bugfix-context-routing.json",
+      "id": "code-bugfix-context-routing",
+      "negative_control": false,
+      "stale_context_trap": false,
+      "targets": 3
+    },
+    {
+      "category": "bugfix",
+      "code_heavy": true,
+      "file": "code-bugfix-council-circuit-exit-gate.json",
+      "id": "code-bugfix-council-circuit-exit-gate",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 2
+    },
+    {
+      "category": "bugfix",
+      "code_heavy": true,
+      "file": "code-bugfix-mcp-client-error-redaction.json",
+      "id": "code-bugfix-mcp-client-error-redaction",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 3
+    },
+    {
+      "category": "bugfix",
+      "code_heavy": true,
+      "file": "code-bugfix-preflight-strict-low-relevance.json",
+      "id": "code-bugfix-preflight-strict-low-relevance",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 3
+    },
+    {
+      "category": "bugfix",
+      "code_heavy": true,
+      "file": "code-bugfix-proveit-artifact-paths.json",
+      "id": "code-bugfix-proveit-artifact-paths",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 3
+    },
+    {
+      "category": "bugfix",
+      "code_heavy": true,
+      "file": "code-bugfix-provider-budget-overflow.json",
+      "id": "code-bugfix-provider-budget-overflow",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 3
+    },
+    {
+      "category": "bugfix",
+      "code_heavy": true,
+      "file": "code-bugfix-query-target-traversal.json",
+      "id": "code-bugfix-query-target-traversal",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 2
+    },
+    {
+      "category": "bugfix",
+      "code_heavy": true,
+      "file": "code-bugfix-router-historical-code-intent.json",
+      "id": "code-bugfix-router-historical-code-intent",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 2
+    },
+    {
+      "category": "bugfix",
+      "code_heavy": true,
+      "file": "code-bugfix-runtime-queue-starvation.json",
+      "id": "code-bugfix-runtime-queue-starvation",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 3
+    },
+    {
+      "category": "bugfix",
+      "code_heavy": true,
+      "file": "code-bugfix-telemetry-malformed-jsonl-skip.json",
+      "id": "code-bugfix-telemetry-malformed-jsonl-skip",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 2
+    },
+    {
+      "category": "bugfix",
+      "code_heavy": true,
+      "file": "code-bugfix-workflow-benchmark-duplicate-pairing.json",
+      "id": "code-bugfix-workflow-benchmark-duplicate-pairing",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 1
+    },
+    {
+      "category": "other",
+      "code_heavy": true,
+      "file": "code-docs-architecture-context-spine.json",
+      "id": "code-docs-architecture-context-spine",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 3
+    },
+    {
+      "category": "feature",
+      "code_heavy": true,
+      "file": "code-feature-config-secret-redaction-nested.json",
+      "id": "code-feature-config-secret-redaction-nested",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 2
+    },
+    {
+      "category": "feature",
+      "code_heavy": true,
+      "file": "code-feature-daemon-heartbeat-stale-detection.json",
+      "id": "code-feature-daemon-heartbeat-stale-detection",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 2
+    },
+    {
+      "category": "feature",
+      "code_heavy": true,
+      "file": "code-feature-mcp-preflight-stable-registry.json",
+      "id": "code-feature-mcp-preflight-stable-registry",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 3
+    },
+    {
+      "category": "feature",
+      "code_heavy": true,
+      "file": "code-feature-packet-validate-warnings-json.json",
+      "id": "code-feature-packet-validate-warnings-json",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 2
+    },
+    {
+      "category": "feature",
+      "code_heavy": true,
+      "file": "code-feature-quality-abstain-low-specificity.json",
+      "id": "code-feature-quality-abstain-low-specificity",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 3
+    },
+    {
+      "category": "feature",
+      "code_heavy": true,
+      "file": "code-feature-remember-reject-empty-records.json",
+      "id": "code-feature-remember-reject-empty-records",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 2
+    },
+    {
+      "category": "feature",
+      "code_heavy": true,
+      "file": "code-feature-session-monitor-threshold-env.json",
+      "id": "code-feature-session-monitor-threshold-env",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 1
+    },
+    {
+      "category": "feature",
+      "code_heavy": true,
+      "file": "code-feature-tools-registry-duplicate-names.json",
+      "id": "code-feature-tools-registry-duplicate-names",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 2
+    },
+    {
+      "category": "feature",
+      "code_heavy": true,
+      "file": "code-feature-workflow-benchmark-human-surfaces.json",
+      "id": "code-feature-workflow-benchmark-human-surfaces",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 1
+    },
+    {
+      "category": "refactor",
+      "code_heavy": true,
+      "file": "code-refactor-context-compiler-packet-finalize.json",
+      "id": "code-refactor-context-compiler-packet-finalize",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 3
+    },
+    {
+      "category": "refactor",
+      "code_heavy": true,
+      "file": "code-refactor-memory-index-fallback-tags.json",
+      "id": "code-refactor-memory-index-fallback-tags",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 3
+    },
+    {
+      "category": "bugfix",
+      "code_heavy": true,
+      "file": "code-stale-trap-prefer-current-task-spec.json",
+      "id": "code-stale-trap-prefer-current-task-spec",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 2
+    },
+    {
+      "category": "bugfix",
+      "code_heavy": true,
+      "file": "code-stale-trap-query-surface-not-general-proof.json",
+      "id": "code-stale-trap-query-surface-not-general-proof",
+      "negative_control": false,
+      "stale_context_trap": true,
+      "targets": 3
+    },
+    {
+      "category": "negative_control",
+      "code_heavy": false,
+      "file": "negative-control-basic-unit-conversion.json",
+      "id": "negative-control-basic-unit-conversion",
+      "negative_control": true,
+      "stale_context_trap": true,
+      "targets": 0
+    },
+    {
+      "category": "negative_control",
+      "code_heavy": false,
+      "file": "negative-control-count-letters.json",
+      "id": "negative-control-count-letters",
+      "negative_control": true,
+      "stale_context_trap": true,
+      "targets": 0
+    },
+    {
+      "category": "negative_control",
+      "code_heavy": false,
+      "file": "negative-control-iso-date-format.json",
+      "id": "negative-control-iso-date-format",
+      "negative_control": true,
+      "stale_context_trap": true,
+      "targets": 0
+    },
+    {
+      "category": "negative_control",
+      "code_heavy": false,
+      "file": "negative-control-simple-json-validity.json",
+      "id": "negative-control-simple-json-validity",
+      "negative_control": true,
+      "stale_context_trap": true,
+      "targets": 0
+    },
+    {
+      "category": "negative_control",
+      "code_heavy": false,
+      "file": "negative-control-sort-three-words.json",
+      "id": "negative-control-sort-three-words",
+      "negative_control": true,
+      "stale_context_trap": true,
+      "targets": 0
+    },
+    {
+      "category": "negative_control",
+      "code_heavy": false,
+      "file": "negative-control-trivial-arithmetic.json",
+      "id": "negative-control-trivial-arithmetic",
+      "negative_control": true,
+      "stale_context_trap": false,
+      "targets": 0
+    }
+  ],
+  "selection_category_counts": {
+    "bugfix": 12,
+    "feature": 9,
+    "negative_control": 6,
+    "other": 1,
+    "refactor": 2
+  },
+  "selection_code_heavy_non_negative": 24,
+  "selection_count": 30,
+  "selection_negative_controls": 6,
+  "selection_stale_context_traps": 28,
+  "selection_task_ids": [
+    "code-bugfix-context-routing",
+    "code-bugfix-council-circuit-exit-gate",
+    "code-bugfix-mcp-client-error-redaction",
+    "code-bugfix-preflight-strict-low-relevance",
+    "code-bugfix-proveit-artifact-paths",
+    "code-bugfix-provider-budget-overflow",
+    "code-bugfix-query-target-traversal",
+    "code-bugfix-router-historical-code-intent",
+    "code-bugfix-runtime-queue-starvation",
+    "code-bugfix-telemetry-malformed-jsonl-skip",
+    "code-bugfix-workflow-benchmark-duplicate-pairing",
+    "code-docs-architecture-context-spine",
+    "code-feature-config-secret-redaction-nested",
+    "code-feature-daemon-heartbeat-stale-detection",
+    "code-feature-mcp-preflight-stable-registry",
+    "code-feature-packet-validate-warnings-json",
+    "code-feature-quality-abstain-low-specificity",
+    "code-feature-remember-reject-empty-records",
+    "code-feature-session-monitor-threshold-env",
+    "code-feature-tools-registry-duplicate-names",
+    "code-feature-workflow-benchmark-human-surfaces",
+    "code-refactor-context-compiler-packet-finalize",
+    "code-refactor-memory-index-fallback-tags",
+    "code-stale-trap-prefer-current-task-spec",
+    "negative-control-basic-unit-conversion",
+    "negative-control-count-letters",
+    "negative-control-iso-date-format",
+    "negative-control-simple-json-validity",
+    "negative-control-sort-three-words",
+    "negative-control-trivial-arithmetic"
+  ],
+  "stale_context_traps": 29,
+  "task_count": 31
+}

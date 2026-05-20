@@ -1,0 +1,6 @@
+ crates/layers-mcp/src/client.rs |   6 +-
+ crates/layers-mcp/src/lib.rs    |   1 +
+ crates/layers-mcp/src/redact.rs | 176 ++++++++++++++++++++++++++++++++++++++++
+ crates/layers-mcp/src/server.rs |  59 ++++++++++----
+ crates/layers-mcp/src/stable.rs |   6 +-
+ 5 files changed, 228 insertions(+), 20 deletions(-)

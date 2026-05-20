@@ -1,0 +1,5 @@
+ crates/layers-mcp/src/server.rs            | 12 ++---
+ crates/layers-mcp/src/stable.rs            | 24 +++++++---
+ crates/layers-runtime/src/tool_dispatch.rs |  8 +++-
+ crates/layers-tools/src/registry.rs        | 72 ++++++++++++++++++------------
+ 4 files changed, 73 insertions(+), 43 deletions(-)

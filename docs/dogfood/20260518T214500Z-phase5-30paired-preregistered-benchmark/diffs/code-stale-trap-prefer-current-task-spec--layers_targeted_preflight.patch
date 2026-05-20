@@ -1,0 +1,347 @@
+diff --git a/crates/layers-core/src/packet_quality.rs b/crates/layers-core/src/packet_quality.rs
+index 10a8e83..68e14e9 100644
+--- a/crates/layers-core/src/packet_quality.rs
++++ b/crates/layers-core/src/packet_quality.rs
+@@ -458,12 +458,15 @@ mod tests {
+             prompt: "What is 2+2?".to_string(),
+             category: TaskCategory::NegativeControl,
+             repo_root: None,
++            difficulty: None,
+             target_files: Vec::new(),
+             target_symbols: Vec::new(),
+             expected_relevant_files: Vec::new(),
+             expected_validation_commands: Vec::new(),
+             negative_control: true,
++            stale_context_trap: false,
+             success_rubric: crate::SuccessRubric::default(),
++            abstention_rubric: None,
+         };
+ 
+         let report = PacketQualityReport::grade(&packet, &task);
+@@ -478,12 +481,15 @@ mod tests {
+             prompt: "Fix src/main.rs and run cargo test".to_string(),
+             category: TaskCategory::Bugfix,
+             repo_root: None,
++            difficulty: None,
+             target_files: vec![PathBuf::from("src/main.rs")],
+             target_symbols: Vec::new(),
+             expected_relevant_files: vec![PathBuf::from("src/main.rs")],
+             expected_validation_commands: vec!["cargo test".to_string()],
+             negative_control: false,
++            stale_context_trap: false,
+             success_rubric: crate::SuccessRubric::default(),
++            abstention_rubric: None,
+         }
+     }
+ 
+diff --git a/crates/layers-core/src/task_spec.rs b/crates/layers-core/src/task_spec.rs
+index 3618005..c08b409 100644
+--- a/crates/layers-core/src/task_spec.rs
++++ b/crates/layers-core/src/task_spec.rs
+@@ -13,6 +13,12 @@ pub struct TaskSpec {
+     #[serde(default, skip_serializing_if = "Option::is_none")]
+     pub repo_root: Option<PathBuf>,
+     #[serde(default)]
++    pub difficulty: Option<String>,
++    #[serde(default)]
++    pub negative_control: bool,
++    #[serde(default)]
++    pub stale_context_trap: bool,
++    #[serde(default)]
+     pub target_files: Vec<PathBuf>,
+     #[serde(default)]
+     pub target_symbols: Vec<String>,
+@@ -20,10 +26,9 @@ pub struct TaskSpec {
+     pub expected_relevant_files: Vec<PathBuf>,
+     #[serde(default)]
+     pub expected_validation_commands: Vec<String>,
+-    #[serde(default)]
+-    pub negative_control: bool,
+-    #[serde(default)]
+     pub success_rubric: SuccessRubric,
++    #[serde(default)]
++    pub abstention_rubric: Option<String>,
+ }
+ 
+ /// Coarse task class for routing, grading, and benchmark grouping.
+@@ -63,6 +68,12 @@ pub struct SuccessRubric {
+     pub failure: String,
+     #[serde(default = "default_min_verification_quality")]
+     pub min_verification_quality: u8,
++    #[serde(default = "default_primary_endpoint")]
++    pub primary_endpoint: String,
++}
++
++fn default_primary_endpoint() -> String {
++    "verified_success".to_string()
+ }
+ 
+ impl Default for SuccessRubric {
+@@ -72,6 +83,7 @@ impl Default for SuccessRubric {
+             partial_success: "Task is partially complete or needs minor intervention.".to_string(),
+             failure: "Task is wrong, incomplete, or unusable.".to_string(),
+             min_verification_quality: default_min_verification_quality(),
++            primary_endpoint: default_primary_endpoint(),
+         }
+     }
+ }
+@@ -90,28 +102,33 @@ impl TaskSpec {
+         let mut errors = Vec::new();
+         require_non_empty(&mut errors, "task_id", &self.task_id);
+         require_non_empty(&mut errors, "title", &self.title);
++        require_non_empty(&mut errors, "prompt", &self.prompt);
+ 
+-        if !self.negative_control {
+-            require_non_empty(&mut errors, "prompt", &self.prompt);
+-        }
+-
+-        if self.success_rubric.min_verification_quality > 5 {
++        if self.success_rubric.min_verification_quality == 0
++            || self.success_rubric.min_verification_quality > 5
++        {
+             errors.push(
+-                "success_rubric.min_verification_quality must be between 0 and 5".to_string(),
++                "success_rubric.min_verification_quality must be between 1 and 5".to_string(),
+             );
+         }
+         if self.success_rubric.full_success.trim().is_empty() {
+             errors.push("success_rubric.full_success must not be empty".to_string());
+         }
+ 
+-        if self.category.is_code_heavy()
+-            && !self.negative_control
+-            && self.target_files.is_empty()
+-            && self.expected_relevant_files.is_empty()
+-            && self.target_symbols.is_empty()
+-        {
++        if !self.negative_control {
++            if self.target_files.is_empty() {
++                errors.push("non-negative_control tasks must declare target_files".to_string());
++            }
++            if self.expected_relevant_files.is_empty() {
++                errors.push(
++                    "non-negative_control tasks must declare expected_relevant_files".to_string(),
++                );
++            }
++        }
++
++        if self.stale_context_trap && self.expected_relevant_files.is_empty() {
+             errors.push(
+-                "code-heavy task should include target_files, target_symbols, or expected_relevant_files".to_string(),
++                "stale_context_trap tasks must declare expected_relevant_files".to_string(),
+             );
+         }
+ 
+@@ -119,6 +136,16 @@ impl TaskSpec {
+             errors.push("negative_control tasks must use category negative_control".to_string());
+         }
+ 
++        if self.negative_control
++            && (!self.target_files.is_empty() || !self.expected_relevant_files.is_empty())
++            && self.abstention_rubric.is_none()
++        {
++            errors.push(
++                "negative_control tasks with context expectations must define abstention_rubric"
++                    .to_string(),
++            );
++        }
++
+         if errors.is_empty() {
+             Ok(())
+         } else {
+@@ -145,8 +172,15 @@ mod tests {
+               "title":"Inspect benchmark CLI wiring",
+               "prompt":"Inspect the workflow-benchmark command wiring.",
+               "category":"orientation",
++              "target_files":["src/main.rs"],
+               "expected_relevant_files":["src/main.rs"],
+-              "expected_validation_commands":["cargo test -q workflow_benchmark"]
++              "expected_validation_commands":["cargo test -q workflow_benchmark"],
++              "success_rubric": {
++                "full_success": "Done",
++                "partial_success": "Almost",
++                "failure": "Failed",
++                "min_verification_quality": 3
++              }
+             }"#,
+         )
+         .expect("task should deserialize");
+@@ -163,23 +197,24 @@ mod tests {
+             prompt: "Do work".to_string(),
+             category: TaskCategory::Planning,
+             repo_root: None,
+-            target_files: Vec::new(),
++            difficulty: None,
++            stale_context_trap: false,
++            target_files: vec![PathBuf::from("src/main.rs")],
+             target_symbols: Vec::new(),
+-            expected_relevant_files: Vec::new(),
++            expected_relevant_files: vec![PathBuf::from("src/main.rs")],
+             expected_validation_commands: Vec::new(),
+             negative_control: false,
+             success_rubric: SuccessRubric {
+                 min_verification_quality: 6,
+                 ..SuccessRubric::default()
+             },
++            abstention_rubric: None,
+         };
+ 
+         let errors = task.validate().expect_err("rubric should be invalid");
+-        assert!(
+-            errors
+-                .iter()
+-                .any(|error| error.contains("min_verification_quality"))
+-        );
++        assert!(errors
++            .iter()
++            .any(|error| error.contains("min_verification_quality")));
+     }
+ 
+     #[test]
+@@ -187,15 +222,18 @@ mod tests {
+         let task = TaskSpec {
+             task_id: "negative-1".to_string(),
+             title: "No repo context needed".to_string(),
+-            prompt: String::new(),
++            prompt: "Do not use repo context".to_string(),
+             category: TaskCategory::NegativeControl,
+             repo_root: None,
++            difficulty: None,
++            stale_context_trap: false,
+             target_files: Vec::new(),
+             target_symbols: Vec::new(),
+             expected_relevant_files: Vec::new(),
+             expected_validation_commands: Vec::new(),
+             negative_control: true,
+             success_rubric: SuccessRubric::default(),
++            abstention_rubric: None,
+         };
+ 
+         task.validate().expect("negative control should validate");
+@@ -209,12 +247,15 @@ mod tests {
+             prompt: " ".to_string(),
+             category: TaskCategory::Feature,
+             repo_root: None,
++            difficulty: None,
++            stale_context_trap: false,
+             target_files: vec![PathBuf::from("src/main.rs")],
+             target_symbols: Vec::new(),
+-            expected_relevant_files: Vec::new(),
++            expected_relevant_files: vec![PathBuf::from("src/main.rs")],
+             expected_validation_commands: Vec::new(),
+             negative_control: false,
+             success_rubric: SuccessRubric::default(),
++            abstention_rubric: None,
+         };
+ 
+         let errors = task.validate().expect_err("empty prompt should fail");
+diff --git a/src/cmd/packet.rs b/src/cmd/packet.rs
+index e53b321..0aefe48 100644
+--- a/src/cmd/packet.rs
++++ b/src/cmd/packet.rs
+@@ -1414,7 +1414,8 @@ mod tests {
+ 
+     #[test]
+     fn grades_documented_minimal_v2_packet_as_json() {
+-        let output = super::grade_packet_text(MINIMAL_PACKET, orientation_task_json(), true)
++        let packet_json = serde_json::to_string(&minimal_packet_value()).unwrap();
++        let output = super::grade_packet_text(&packet_json, orientation_task_json(), true)
+             .expect("minimal packet should grade successfully");
+         let value: Value = serde_json::from_str(&output).expect("grade output should be JSON");
+ 
+@@ -1426,7 +1427,8 @@ mod tests {
+ 
+     #[test]
+     fn grades_documented_minimal_v2_packet_as_text() {
+-        let output = super::grade_packet_text(MINIMAL_PACKET, orientation_task_json(), false)
++        let packet_json = serde_json::to_string(&minimal_packet_value()).unwrap();
++        let output = super::grade_packet_text(&packet_json, orientation_task_json(), false)
+             .expect("minimal packet should grade successfully");
+ 
+         assert!(output.contains("ContextPacket quality"));
+@@ -1441,7 +1443,13 @@ mod tests {
+           "task_id":"bad",
+           "title":"Missing targets",
+           "prompt":"Fix the bug",
+-          "category":"bugfix"
++          "category":"bugfix",
++          "success_rubric": {
++            "full_success": "Done",
++            "partial_success": "Almost",
++            "failure": "Failed",
++            "min_verification_quality": 3
++          }
+         }"#;
+ 
+         let error = super::grade_packet_text(MINIMAL_PACKET, invalid_task, false)
+@@ -1467,7 +1475,10 @@ mod tests {
+     }
+ 
+     fn minimal_packet_value() -> Value {
+-        serde_json::from_str(MINIMAL_PACKET).expect("minimal packet fixture must be valid JSON")
++        let mut value: Value =
++            serde_json::from_str(MINIMAL_PACKET).expect("minimal packet fixture must be valid JSON");
++        value["sections"][0]["items"][0]["source"]["repo_path"] = Value::from("README.md");
++        value
+     }
+ 
+     fn orientation_task_json() -> &'static str {
+@@ -1476,7 +1487,15 @@ mod tests {
+           "title":"Inspect README context",
+           "prompt":"What should I know before editing README?",
+           "category":"orientation",
+-          "expected_validation_commands":["git status --porcelain=v1"]
++          "target_files":["README.md"],
++          "expected_relevant_files":["README.md"],
++          "expected_validation_commands":["git status --porcelain=v1"],
++          "success_rubric": {
++            "full_success": "Done",
++            "partial_success": "Almost",
++            "failure": "Failed",
++            "min_verification_quality": 3
++          }
+         }"#
+     }
+ 
+diff --git a/src/cmd/preflight.rs b/src/cmd/preflight.rs
+index fa215ca..49df3f7 100644
+--- a/src/cmd/preflight.rs
++++ b/src/cmd/preflight.rs
+@@ -216,6 +216,7 @@ fn task_spec_for_preflight(args: &PreflightArgs, code_heavy: bool, targets: &[St
+         prompt: args.task.clone(),
+         category,
+         repo_root: Some(workspace_root()),
++        difficulty: None,
+         target_files: target_paths.clone(),
+         target_symbols: Vec::new(),
+         expected_relevant_files: target_paths,
+@@ -224,7 +225,9 @@ fn task_spec_for_preflight(args: &PreflightArgs, code_heavy: bool, targets: &[St
+             .map(|command| command.command)
+             .collect(),
+         negative_control: false,
++        stale_context_trap: false,
+         success_rubric: SuccessRubric::default(),
++        abstention_rubric: None,
+     }
+ }
+ 
+diff --git a/src/cmd/query.rs b/src/cmd/query.rs
+index ec5d8ad..c02b350 100644
+--- a/src/cmd/query.rs
++++ b/src/cmd/query.rs
+@@ -873,12 +873,15 @@ fn task_spec_for_query(
+         prompt: task.to_string(),
+         category,
+         repo_root: Some(workspace_root()),
++        difficulty: None,
+         target_files: targets.clone(),
+         target_symbols: Vec::new(),
+         expected_relevant_files: targets,
+         expected_validation_commands: Vec::new(),
+         negative_control: false,
++        stale_context_trap: false,
+         success_rubric: SuccessRubric::default(),
++        abstention_rubric: None,
+     }
+ }
+ 

@@ -1,0 +1,156 @@
+diff --git a/src/cmd/workflow_benchmark.rs b/src/cmd/workflow_benchmark.rs
+index d3ca7b0..1f0a0a7 100644
+--- a/src/cmd/workflow_benchmark.rs
++++ b/src/cmd/workflow_benchmark.rs
+@@ -406,6 +406,15 @@ impl WorkflowVariant {
+             Self::LayersMcpPreflight => "layers_mcp_preflight",
+         }
+     }
++
++    fn display_name(self) -> &'static str {
++        match self {
++            Self::Baseline => "Baseline",
++            Self::LayersTargetedPreflight => "Layers (Targeted Preflight)",
++            Self::LayersBroadQuery => "Layers (Broad Query)",
++            Self::LayersMcpPreflight => "Layers (MCP Preflight)",
++        }
++    }
+ }
+ 
+ #[derive(Debug, Clone, Deserialize, Serialize)]
+@@ -1080,6 +1089,7 @@ struct ClaimReport {
+ #[derive(Debug, Clone, Serialize)]
+ struct VariantAggregate {
+     variant: WorkflowVariant,
++    variant_name: String,
+     run_count: usize,
+     success_rate: f64,
+     median_wall_time_ms: f64,
+@@ -1110,6 +1120,7 @@ struct VariantAggregate {
+ #[derive(Debug, Clone, Serialize)]
+ struct PairedComparison {
+     variant: WorkflowVariant,
++    variant_name: String,
+     paired_task_count: usize,
+     net_time_saved_ms: f64,
+     net_tokens_saved: f64,
+@@ -3648,6 +3659,7 @@ fn aggregate_variant(variant: WorkflowVariant, runs: &[&WorkflowRun]) -> Option<
+ 
+     Some(VariantAggregate {
+         variant,
++        variant_name: variant.display_name().to_string(),
+         run_count: runs.len(),
+         success_rate: average_by(runs, |run| run.success_score),
+         median_wall_time_ms: median(runs.iter().map(|run| run.wall_time_ms as f64).collect()),
+@@ -3750,6 +3762,7 @@ fn paired_comparison(runs: &[WorkflowRun], variant: WorkflowVariant) -> Option<P
+ 
+     Some(PairedComparison {
+         variant,
++        variant_name: variant.display_name().to_string(),
+         paired_task_count: pairs.len(),
+         net_time_saved_ms,
+         net_tokens_saved,
+@@ -4368,41 +4381,46 @@ fn format_report(report: &BenchmarkReport, json: bool) -> Result<String> {
+     writeln!(output, "=========================")?;
+     writeln!(output, "Runs: {}", report.run_count)?;
+     writeln!(output, "Paired tasks: {}", report.paired_task_count)?;
+-    if let Some(baseline) = &report.baseline {
+-        write_variant_summary(&mut output, "Baseline", baseline)?;
+-    }
+-    if let Some(layers) = &report.layers {
+-        write_variant_summary(&mut output, "Layers", layers)?;
++
++    for aggregate in &report.variants {
++        write_variant_summary(&mut output, &aggregate.variant_name, aggregate)?;
+     }
+-    if let Some(comparison) = &report.comparison {
++
++    if !report.comparisons.is_empty() {
+         writeln!(output, "\nPaired net benefit")?;
+-        writeln!(
+-            output,
+-            "- Net time saved per task: {:.1} ms",
+-            comparison.net_time_saved_ms
+-        )?;
+-        writeln!(
+-            output,
+-            "- Net tokens saved per task: {:.1}",
+-            comparison.net_tokens_saved
+-        )?;
+-        writeln!(output, "- Speedup: {:.3}x", comparison.speedup)?;
+-        writeln!(
+-            output,
+-            "- Token reduction ratio: {:.3}",
+-            comparison.token_reduction_ratio
+-        )?;
+-        writeln!(output, "- Success delta: {:.3}", comparison.success_delta)?;
+-        writeln!(
+-            output,
+-            "- Human intervention delta: {:.3}",
+-            comparison.human_intervention_delta
+-        )?;
+-        writeln!(
+-            output,
+-            "- Layers overhead: {:.1} ms / {:.1} tokens",
+-            comparison.layers_overhead_ms, comparison.layers_overhead_tokens
+-        )?;
++        for comparison in &report.comparisons {
++            if !comparison.variant.is_layers() {
++                continue;
++            }
++            writeln!(output, "\n{}", comparison.variant_name)?;
++            writeln!(
++                output,
++                "- Net time saved per task: {:.1} ms",
++                comparison.net_time_saved_ms
++            )?;
++            writeln!(
++                output,
++                "- Net tokens saved per task: {:.1}",
++                comparison.net_tokens_saved
++            )?;
++            writeln!(output, "- Speedup: {:.3}x", comparison.speedup)?;
++            writeln!(
++                output,
++                "- Token reduction ratio: {:.3}",
++                comparison.token_reduction_ratio
++            )?;
++            writeln!(output, "- Success delta: {:.3}", comparison.success_delta)?;
++            writeln!(
++                output,
++                "- Human intervention delta: {:.3}",
++                comparison.human_intervention_delta
++            )?;
++            writeln!(
++                output,
++                "- Layers overhead: {:.1} ms / {:.1} tokens",
++                comparison.layers_overhead_ms, comparison.layers_overhead_tokens
++            )?;
++        }
+     }
+     Ok(output)
+ }
+@@ -5093,8 +5111,9 @@ mod tests {
+         let output = format_report(&analyze_runs(&runs).expect("analysis"), true).expect("json");
+         let value: serde_json::Value = serde_json::from_str(&output).expect("valid json");
+         assert_eq!(value["comparison"]["paired_task_count"], 1);
++        assert_eq!(value["variants"][0]["variant_name"], "Baseline");
++        assert_eq!(value["variants"][1]["variant_name"], "Layers (Targeted Preflight)");
+     }
+-
+     #[test]
+     fn claim_supported_when_thresholds_are_met() {
+         let runs = vec![
+@@ -5201,10 +5220,11 @@ mod tests {
+         ];
+         let output = format_report(&analyze_runs(&runs).expect("analysis"), false).expect("human");
+         assert!(output.contains("Workflow benchmark report"));
++        assert!(output.contains("Baseline"));
++        assert!(output.contains("Layers (Targeted Preflight)"));
+         assert!(output.contains("Paired net benefit"));
+         assert!(output.contains("Context relevant/waste ratios"));
+     }
+-
+     #[test]
+     fn parses_and_validates_task_spec_fixture() {
+         let spec = load_task_spec(Path::new(

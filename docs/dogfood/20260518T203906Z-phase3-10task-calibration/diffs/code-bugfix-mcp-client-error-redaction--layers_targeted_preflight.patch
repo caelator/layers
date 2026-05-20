@@ -1,0 +1,370 @@
+diff --git a/crates/layers-mcp/src/client.rs b/crates/layers-mcp/src/client.rs
+index 693d6fb..bb8aff3 100644
+--- a/crates/layers-mcp/src/client.rs
++++ b/crates/layers-mcp/src/client.rs
+@@ -11,6 +11,8 @@ use tracing::{debug, error, warn};
+ 
+ use layers_core::{LayersError, McpServerConfig, Result, Tool, ToolContext, ToolOutput};
+ 
++use crate::types::JsonRpcError;
++
+ // ---------------------------------------------------------------------------
+ // JSON-RPC types
+ // ---------------------------------------------------------------------------
+@@ -34,13 +36,6 @@ struct JsonRpcResponse {
+     error: Option<JsonRpcError>,
+ }
+ 
+-#[derive(Debug, Deserialize)]
+-struct JsonRpcError {
+-    #[allow(dead_code)]
+-    code: i64,
+-    message: String,
+-}
+-
+ // ---------------------------------------------------------------------------
+ // MCP tool definition from server
+ // ---------------------------------------------------------------------------
+@@ -257,7 +252,8 @@ impl McpClient {
+         let response: JsonRpcResponse = serde_json::from_str(&response_line)
+             .map_err(|e| LayersError::Tool(format!("invalid JSON-RPC response: {e}")))?;
+ 
+-        if let Some(err) = response.error {
++        if let Some(mut err) = response.error {
++            err.redact();
+             return Err(LayersError::Tool(format!(
+                 "MCP server error: {}",
+                 err.message
+diff --git a/crates/layers-mcp/src/lib.rs b/crates/layers-mcp/src/lib.rs
+index f1eb322..0b0afd9 100644
+--- a/crates/layers-mcp/src/lib.rs
++++ b/crates/layers-mcp/src/lib.rs
+@@ -6,3 +6,4 @@ pub mod client;
+ pub mod server;
+ pub mod stable;
+ pub mod types;
++pub mod util;
+diff --git a/crates/layers-mcp/src/server.rs b/crates/layers-mcp/src/server.rs
+index 44b8a67..56e0c5b 100644
+--- a/crates/layers-mcp/src/server.rs
++++ b/crates/layers-mcp/src/server.rs
+@@ -14,6 +14,9 @@ use tracing::{debug, error, warn};
+ use layers_core::{Result, ToolContext};
+ use layers_tools::registry::ToolRegistry;
+ 
++use crate::types::JsonRpcError;
++use crate::util;
++
+ // ---------------------------------------------------------------------------
+ // Dangerous-tool patterns
+ // ---------------------------------------------------------------------------
+@@ -136,12 +139,6 @@ struct JsonRpcResponse {
+     error: Option<JsonRpcError>,
+ }
+ 
+-#[derive(Debug, Serialize)]
+-struct JsonRpcError {
+-    code: i64,
+-    message: String,
+-}
+-
+ // ---------------------------------------------------------------------------
+ // MCP server
+ // ---------------------------------------------------------------------------
+@@ -242,14 +239,17 @@ impl McpServer {
+                 Ok(r) => r,
+                 Err(e) => {
+                     error!(error = %e, "invalid JSON-RPC request");
++                    let mut err = JsonRpcError {
++                        code: -32700,
++                        message: format!("Parse error: {e}"),
++                        data: None,
++                    };
++                    err.redact();
+                     let response = JsonRpcResponse {
+                         jsonrpc: "2.0".to_string(),
+                         id: None,
+                         result: None,
+-                        error: Some(JsonRpcError {
+-                            code: -32700,
+-                            message: format!("Parse error: {e}"),
+-                        }),
++                        error: Some(err),
+                     };
+                     let mut resp_line = serde_json::to_string(&response).unwrap_or_default();
+                     resp_line.push('\n');
+@@ -295,6 +295,7 @@ impl McpServer {
+             _ => Err(JsonRpcError {
+                 code: -32601,
+                 message: format!("Method not found: {}", request.method),
++                data: None,
+             }),
+         };
+ 
+@@ -305,12 +306,15 @@ impl McpServer {
+                 result: Some(value),
+                 error: None,
+             },
+-            Err(err) => JsonRpcResponse {
+-                jsonrpc: "2.0".to_string(),
+-                id: request.id.clone(),
+-                result: None,
+-                error: Some(err),
+-            },
++            Err(mut err) => {
++                err.redact();
++                JsonRpcResponse {
++                    jsonrpc: "2.0".to_string(),
++                    id: request.id.clone(),
++                    result: None,
++                    error: Some(err),
++                }
++            }
+         }
+     }
+ 
+@@ -355,6 +359,7 @@ impl McpServer {
+         let params = params.ok_or_else(|| JsonRpcError {
+             code: -32602,
+             message: "Missing params".to_string(),
++            data: None,
+         })?;
+ 
+         let tool_name =
+@@ -364,6 +369,7 @@ impl McpServer {
+                 .ok_or_else(|| JsonRpcError {
+                     code: -32602,
+                     message: "Missing 'name' in params".to_string(),
++                    data: None,
+                 })?;
+ 
+         // Reject tools not in the exposed set.
+@@ -371,6 +377,7 @@ impl McpServer {
+             return Err(JsonRpcError {
+                 code: -32602,
+                 message: format!("Tool not exposed: {tool_name}"),
++                data: None,
+             });
+         }
+ 
+@@ -390,7 +397,7 @@ impl McpServer {
+             Ok(output) => {
+                 let content = vec![serde_json::json!({
+                     "type": "text",
+-                    "text": output.content
++                    "text": util::redact_error_message(&output.content)
+                 })];
+                 Ok(serde_json::json!({
+                     "content": content,
+@@ -400,7 +407,7 @@ impl McpServer {
+             Err(e) => {
+                 let content = vec![serde_json::json!({
+                     "type": "text",
+-                    "text": e.to_string()
++                    "text": util::redact_error_message(&e.to_string())
+                 })];
+                 Ok(serde_json::json!({
+                     "content": content,
+@@ -810,4 +817,47 @@ mod tests {
+         assert_eq!(decoded.allowlisted_tools.len(), 2);
+         assert!(decoded.expose_dangerous);
+     }
++
++    #[tokio::test]
++    async fn error_redaction_end_to_end() {
++        let registry = make_registry();
++        let config = McpServerConfig {
++            allowlisted_tools: vec!["read_config".to_string()],
++            ..Default::default()
++        };
++        let server = McpServer::new(registry, config);
++
++        // 1. Parse error with sensitive info
++        let request = r#"{"jsonrpc": "2.0", "method": "tools/call", "params": {"api_key": "secret123"}, "invalid"}"#;
++        // In the real run loop, this would be caught. We'll simulate handle_request if it was valid JSON but failed elsewhere,
++        // but for parse error we test the logic in run() loop (simulated here).
++        let e = serde_json::from_str::<serde_json::Value>(request).unwrap_err();
++        let mut err = JsonRpcError {
++            code: -32700,
++            message: format!("Parse error: {e}"),
++            data: None,
++        };
++        err.redact();
++        // serde_json errors don't usually leak values, but if they did, redact() would catch it.
++        // Let's test a more direct leak in message.
++        err.message = "Invalid token: 'my-secret-token'".to_string();
++        err.redact();
++        assert!(err.message.contains("[REDACTED]"));
++        assert!(!err.message.contains("my-secret-token"));
++
++        // 2. Tool call with secret-like arguments that fails
++        let params = serde_json::json!({
++            "name": "non_existent_tool",
++            "arguments": { "password": "password123" }
++        });
++        let req = JsonRpcRequest {
++            jsonrpc: "2.0".to_string(),
++            id: Some(serde_json::json!(1)),
++            method: "tools/call".to_string(),
++            params: Some(params),
++        };
++        let resp = server.handle_request(&req).await;
++        let err = resp.error.unwrap();
++        assert!(err.message.contains("[REDACTED]") || !err.message.contains("password123"));
++    }
+ }
+diff --git a/crates/layers-mcp/src/types.rs b/crates/layers-mcp/src/types.rs
+index 30d583b..611b074 100644
+--- a/crates/layers-mcp/src/types.rs
++++ b/crates/layers-mcp/src/types.rs
+@@ -49,6 +49,16 @@ pub struct JsonRpcError {
+     pub data: Option<serde_json::Value>,
+ }
+ 
++impl JsonRpcError {
++    /// Redact sensitive information from the error message and data.
++    pub fn redact(&mut self) {
++        self.message = crate::util::redact_error_message(&self.message);
++        if let Some(ref mut data) = self.data {
++            crate::util::redact_value(data);
++        }
++    }
++}
++
+ // ---------------------------------------------------------------------------
+ // MCP protocol types
+ // ---------------------------------------------------------------------------
+diff --git a/crates/layers-mcp/src/util.rs b/crates/layers-mcp/src/util.rs
+new file mode 100644
+index 0000000..06de53e
+--- /dev/null
++++ b/crates/layers-mcp/src/util.rs
+@@ -0,0 +1,128 @@
++use serde_json::Value;
++
++/// Redact secret-like fields from a JSON value recursively.
++pub fn redact_value(value: &mut Value) {
++    match value {
++        Value::Object(map) => {
++            for (key, val) in map.iter_mut() {
++                if is_secret_field(key) {
++                    *val = Value::String("[REDACTED]".to_string());
++                } else {
++                    redact_value(val);
++                }
++            }
++        }
++        Value::Array(arr) => {
++            for val in arr.iter_mut() {
++                redact_value(val);
++            }
++        }
++        _ => {}
++    }
++}
++
++/// Returns true if the field name suggests it contains sensitive information.
++pub fn is_secret_field(name: &str) -> bool {
++    let lower = name.to_lowercase();
++    lower.contains("key")
++        || lower.contains("token")
++        || lower.contains("password")
++        || lower.contains("secret")
++        || lower.contains("auth")
++        || lower.contains("credential")
++}
++
++/// Redact secret-like values from an error message string.
++pub fn redact_error_message(message: &str) -> String {
++    let mut result = message.to_string();
++    let secret_keywords = ["key", "token", "password", "secret", "auth", "credential"];
++    
++    for kw in secret_keywords {
++        let mut start_search = 0;
++        while let Some(pos) = result[start_search..].to_lowercase().find(kw) {
++            let kw_pos = start_search + pos;
++            let after_kw = &result[kw_pos + kw.len()..];
++            
++            // Look for a separator (: or =) within a few characters
++            if let Some(sep_pos) = after_kw.find(|c: char| c == ':' || c == '=') {
++                if sep_pos < 10 { // Heuristic: separator should be close to the keyword
++                    let sep_idx = kw_pos + kw.len() + sep_pos;
++                    let val_start_idx = sep_idx + 1;
++                    let val_part = &result[val_start_idx..];
++                    let trimmed_val = val_part.trim_start();
++                    let val_offset = val_part.len() - trimmed_val.len();
++                    let actual_val_start = val_start_idx + val_offset;
++                    
++                    if trimmed_val.starts_with('"') {
++                        // Quoted value
++                        if let Some(end_quote) = trimmed_val[1..].find('"') {
++                            let replacement = "\"[REDACTED]\"";
++                            result.replace_range(actual_val_start..actual_val_start + end_quote + 2, replacement);
++                            start_search = actual_val_start + replacement.len();
++                            continue;
++                        }
++                    } else {
++                        // Unquoted value - find end (space, comma, brace, etc.)
++                        let end_val = trimmed_val.find(|c: char| c == ',' || c == '}' || c == ' ' || c == '\n' || c == ']' || c == ')')
++                            .unwrap_or(trimmed_val.len());
++                        
++                        if end_val > 0 {
++                            let replacement = "[REDACTED]";
++                            result.replace_range(actual_val_start..actual_val_start + end_val, replacement);
++                            start_search = actual_val_start + replacement.len();
++                            continue;
++                        }
++                    }
++                }
++            }
++            start_search = kw_pos + kw.len();
++        }
++    }
++    result
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use serde_json::json;
++
++    #[test]
++    fn test_redact_value() {
++        let mut v = json!({
++            "api_key": "secret123",
++            "user": "bob",
++            "nested": {
++                "token": "abc",
++                "safe": 123
++            },
++            "array": [{"password": "pwd"}, "safe"]
++        });
++        redact_value(&mut v);
++        assert_eq!(v["api_key"], "[REDACTED]");
++        assert_eq!(v["user"], "bob");
++        assert_eq!(v["nested"]["token"], "[REDACTED]");
++        assert_eq!(v["nested"]["safe"], 123);
++        assert_eq!(v["array"][0]["password"], "[REDACTED]");
++        assert_eq!(v["array"][1], "safe");
++    }
++
++    #[test]
++    fn test_redact_error_message() {
++        assert_eq!(
++            redact_error_message("invalid api_key: \"secret123\" for user"),
++            "invalid api_key: \"[REDACTED]\" for user"
++        );
++        assert_eq!(
++            redact_error_message("error: password=mypassword, please retry"),
++            "error: password=[REDACTED], please retry"
++        );
++        assert_eq!(
++            redact_error_message("failed with token: abc-123"),
++            "failed with token: [REDACTED]"
++        );
++        assert_eq!(
++            redact_error_message("nested: {\"secret\":\"val\"}"),
++            "nested: {\"secret\":\"[REDACTED]\"}"
++        );
++    }
++}

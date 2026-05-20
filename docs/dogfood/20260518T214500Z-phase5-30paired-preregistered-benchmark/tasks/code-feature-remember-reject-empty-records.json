@@ -1,0 +1,34 @@
+{
+  "task_id": "code-feature-remember-reject-empty-records",
+  "title": "Reject empty remember records",
+  "prompt": "Ensure remember commands reject empty task, trace, plan, or learning records with actionable errors and no partial writes. Add tests for each affected record kind.",
+  "category": "feature",
+  "difficulty": "small",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": false,
+  "stale_context_trap": false,
+  "time_budget_minutes": 25,
+  "target_files": [
+    "src/cmd/remember.rs",
+    "src/council/artifacts.rs"
+  ],
+  "target_symbols": [
+    "remember_plan",
+    "remember_learning"
+  ],
+  "expected_relevant_files": [
+    "src/cmd/remember.rs",
+    "src/council/artifacts.rs"
+  ],
+  "expected_validation_commands": [
+    "cargo test -q cmd::remember -- --nocapture",
+    "cargo check --workspace --all-targets"
+  ],
+  "success_rubric": {
+    "full_success": "The requested repository change is implemented with focused regression coverage and all listed validation commands pass.",
+    "partial_success": "The main behavior is implemented but validation is incomplete, coverage is weak, or minor follow-up is required.",
+    "failure": "The requested behavior remains missing, untested, or introduces regressions.",
+    "min_verification_quality": 4,
+    "primary_endpoint": "verified_success"
+  }
+}

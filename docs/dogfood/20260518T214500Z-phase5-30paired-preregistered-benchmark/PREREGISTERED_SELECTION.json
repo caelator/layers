@@ -1,0 +1,42 @@
+{
+  "source_audit": "/Users/xxx/layers/docs/dogfood/20260518T203906Z-phase3-10task-calibration/PHASE4_CORPUS_AUDIT.json",
+  "task_ids": [
+    "code-bugfix-context-routing",
+    "code-bugfix-council-circuit-exit-gate",
+    "code-bugfix-mcp-client-error-redaction",
+    "code-bugfix-preflight-strict-low-relevance",
+    "code-bugfix-proveit-artifact-paths",
+    "code-bugfix-provider-budget-overflow",
+    "code-bugfix-query-target-traversal",
+    "code-bugfix-router-historical-code-intent",
+    "code-bugfix-runtime-queue-starvation",
+    "code-bugfix-telemetry-malformed-jsonl-skip",
+    "code-bugfix-workflow-benchmark-duplicate-pairing",
+    "code-docs-architecture-context-spine",
+    "code-feature-config-secret-redaction-nested",
+    "code-feature-daemon-heartbeat-stale-detection",
+    "code-feature-mcp-preflight-stable-registry",
+    "code-feature-packet-validate-warnings-json",
+    "code-feature-quality-abstain-low-specificity",
+    "code-feature-remember-reject-empty-records",
+    "code-feature-session-monitor-threshold-env",
+    "code-feature-tools-registry-duplicate-names",
+    "code-feature-workflow-benchmark-human-surfaces",
+    "code-refactor-context-compiler-packet-finalize",
+    "code-refactor-memory-index-fallback-tags",
+    "code-stale-trap-prefer-current-task-spec",
+    "negative-control-basic-unit-conversion",
+    "negative-control-count-letters",
+    "negative-control-iso-date-format",
+    "negative-control-simple-json-validity",
+    "negative-control-sort-three-words",
+    "negative-control-trivial-arithmetic"
+  ],
+  "gates": {
+    "code_heavy_paired_tasks": 20,
+    "negative_control_paired_tasks": 5,
+    "paired_tasks": 30
+  },
+  "selection_code_heavy_non_negative": 24,
+  "selection_negative_controls": 6
+}

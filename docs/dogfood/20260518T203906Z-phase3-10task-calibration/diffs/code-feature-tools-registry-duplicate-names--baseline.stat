@@ -1,0 +1,6 @@
+ crates/layers-mcp/src/server.rs            | 12 ++---
+ crates/layers-mcp/src/stable.rs            | 12 ++---
+ crates/layers-runtime/src/tool_dispatch.rs | 56 ++++++++++++++++++++++-
+ crates/layers-tools/src/registry.rs        | 71 +++++++++++++++++-------------
+ memoryport/telemetry/events.jsonl          |  2 +
+ 5 files changed, 108 insertions(+), 45 deletions(-)

@@ -23,7 +23,11 @@
     clippy::result_large_err
 )]
 
-//! Layers — local-first `ContextPacket` compiler for coding agents.
+//! Layers — local-first context spine and `ContextPacket` compiler for coding agents.
+//!
+//! Layers compiles project memory, Git/code-graph intelligence, and prior sessions
+//! into bounded, cited, auditable context packets that any agent can consume
+//! before it edits. It is a context compiler, not a competing agent runtime.
 
 #[cfg(feature = "deprecated-runtime")]
 use std::path::PathBuf;
@@ -87,12 +91,12 @@ use cmd::telemetry::{TelemetryCommands, handle_telemetry};
 use cmd::validate::handle_validate;
 use cmd::workflow_benchmark::{WorkflowBenchmarkCommands, handle_workflow_benchmark};
 
-/// Local-first `ContextPacket` compiler for coding agents.
+/// Local-first context spine and `ContextPacket` compiler for coding agents (not a runtime).
 #[derive(Parser)]
 #[command(
     name = "layers",
     version,
-    about = "Layers — local-first ContextPacket compiler for coding agents."
+    about = "Layers — local-first context spine and ContextPacket compiler for coding agents."
 )]
 struct Cli {
     /// Enable verbose tracing output (sets `RUST_LOG=layers=debug`).
@@ -823,9 +827,37 @@ mod tests {
             .expect("CLI should expose concise product positioning")
             .to_string();
 
-        assert!(about.contains("local-first ContextPacket compiler"));
-        assert!(!about.contains("council orchestrator"));
-        assert!(!about.contains("memory spine"));
+        // Positive: context spine + ContextPacket compiler language
+        assert!(
+            about.contains("context spine"),
+            "about should mention 'context spine': {about}"
+        );
+        assert!(
+            about.contains("ContextPacket compiler"),
+            "about should mention 'ContextPacket compiler': {about}"
+        );
+        assert!(
+            about.contains("coding agents"),
+            "about should mention 'coding agents': {about}"
+        );
+        assert!(
+            about.contains("local-first"),
+            "about should mention 'local-first': {about}"
+        );
+
+        // Negative: no runtime overclaim
+        assert!(
+            !about.contains("agent runtime"),
+            "about should not claim to be an agent runtime: {about}"
+        );
+        assert!(
+            !about.contains("council orchestrator"),
+            "about should not claim to be a council orchestrator: {about}"
+        );
+        assert!(
+            !about.contains("memory spine"),
+            "about should say 'context spine', not 'memory spine': {about}"
+        );
     }
 
     #[test]
@@ -849,6 +881,16 @@ mod tests {
         assert!(docs.contains("`layers packet render`"));
         assert!(docs.contains("`layers packet diff`"));
         assert!(!docs.contains("context/memory spine"));
+
+        // NORTH_STAR must explicitly define what Layers is NOT (evidence-gated boundary).
+        assert!(
+            docs.contains("full agent runtime"),
+            "NORTH_STAR must list 'full agent runtime' under 'What Layers Is Not'"
+        );
+        assert!(
+            docs.contains("context compiler") || docs.contains("context spine"),
+            "NORTH_STAR must describe Layers as context compiler or context spine"
+        );
     }
 
     #[test]

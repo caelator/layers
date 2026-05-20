@@ -1,0 +1,484 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 6fdce7f..686017a 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -3307,6 +3307,8 @@ version = "0.1.0"
+ dependencies = [
+  "chrono",
+  "layers-core",
++ "serde_json",
++ "uuid",
+ ]
+ 
+ [[package]]
+diff --git a/crates/layers-compiler/Cargo.toml b/crates/layers-compiler/Cargo.toml
+index 805e816..4183d93 100644
+--- a/crates/layers-compiler/Cargo.toml
++++ b/crates/layers-compiler/Cargo.toml
+@@ -6,6 +6,8 @@ rust-version = "1.85"
+ 
+ [dependencies]
+ chrono = { version = "0.4", features = ["serde"] }
++uuid = { version = "1", features = ["v4"] }
++serde_json = "1"
+ layers-core = { path = "../layers-core" }
+ 
+ [lints.rust]
+diff --git a/crates/layers-compiler/src/lib.rs b/crates/layers-compiler/src/lib.rs
+index fbf7495..6ffae6d 100644
+--- a/crates/layers-compiler/src/lib.rs
++++ b/crates/layers-compiler/src/lib.rs
+@@ -7,7 +7,11 @@
+ use std::path::Path;
+ 
+ use chrono::{DateTime, Utc};
+-use layers_core::{ContextItem, ContextPacket, ContextSection, ContextSource, ContextWarning};
++use layers_core::{
++    ContextBudget, ContextItem, ContextPacket, ContextSection, ContextSource, ContextWarning,
++    RetrievalReport,
++};
++use serde_json::Value;
+ 
+ /// Compiler mode used to preserve caller intent in generated packet metadata.
+ #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+@@ -34,41 +38,67 @@ impl CompileMode {
+ /// Side-effect-free request for building a `ContextPacket` from caller-supplied context.
+ #[derive(Debug, Clone)]
+ pub struct CompileRequest {
+-    pub packet_id: String,
+     pub workspace_id: String,
+     pub objective: String,
+-    pub generated_at: DateTime<Utc>,
+     pub mode: CompileMode,
++    pub packet_id: Option<String>,
++    pub generated_at: Option<DateTime<Utc>>,
+     pub route_label: Option<String>,
+     pub sections: Vec<ContextSection>,
+     pub warnings: Vec<ContextWarning>,
+     pub git_ref: Option<String>,
+     pub derive_evidence: bool,
++    pub confidence: Option<String>,
++    pub budget: Option<ContextBudget>,
++    pub retrieval: Option<RetrievalReport>,
++    pub scores: Value,
++    pub why_retrieved: Option<String>,
++    pub why_not_retrieved: Option<String>,
++    pub low_confidence_fallback: bool,
++    pub evidence: Option<String>,
+ }
+ 
+ impl CompileRequest {
+     #[must_use]
+     pub fn new(
+-        packet_id: impl Into<String>,
+         workspace_id: impl Into<String>,
+         objective: impl Into<String>,
+-        generated_at: DateTime<Utc>,
+         mode: CompileMode,
+     ) -> Self {
+         Self {
+-            packet_id: packet_id.into(),
+             workspace_id: workspace_id.into(),
+             objective: objective.into(),
+-            generated_at,
+             mode,
++            packet_id: None,
++            generated_at: None,
+             route_label: None,
+             sections: Vec::new(),
+             warnings: Vec::new(),
+             git_ref: None,
+             derive_evidence: true,
++            confidence: None,
++            budget: None,
++            retrieval: None,
++            scores: Value::Null,
++            why_retrieved: None,
++            why_not_retrieved: None,
++            low_confidence_fallback: false,
++            evidence: None,
+         }
+     }
+ 
++    #[must_use]
++    pub fn with_packet_id(mut self, packet_id: impl Into<String>) -> Self {
++        self.packet_id = Some(packet_id.into());
++        self
++    }
++
++    #[must_use]
++    pub fn with_generated_at(mut self, generated_at: DateTime<Utc>) -> Self {
++        self.generated_at = Some(generated_at);
++        self
++    }
++
+     #[must_use]
+     pub fn with_sections(mut self, sections: Vec<ContextSection>) -> Self {
+         self.sections = sections;
+@@ -98,6 +128,54 @@ impl CompileRequest {
+         self.derive_evidence = derive_evidence;
+         self
+     }
++
++    #[must_use]
++    pub fn with_confidence(mut self, confidence: impl Into<String>) -> Self {
++        self.confidence = Some(confidence.into());
++        self
++    }
++
++    #[must_use]
++    pub fn with_budget(mut self, budget: ContextBudget) -> Self {
++        self.budget = Some(budget);
++        self
++    }
++
++    #[must_use]
++    pub fn with_retrieval(mut self, retrieval: RetrievalReport) -> Self {
++        self.retrieval = Some(retrieval);
++        self
++    }
++
++    #[must_use]
++    pub fn with_scores(mut self, scores: Value) -> Self {
++        self.scores = scores;
++        self
++    }
++
++    #[must_use]
++    pub fn with_why_retrieved(mut self, why: impl Into<String>) -> Self {
++        self.why_retrieved = Some(why.into());
++        self
++    }
++
++    #[must_use]
++    pub fn with_why_not_retrieved(mut self, why: impl Into<String>) -> Self {
++        self.why_not_retrieved = Some(why.into());
++        self
++    }
++
++    #[must_use]
++    pub const fn with_low_confidence_fallback(mut self, fallback: bool) -> Self {
++        self.low_confidence_fallback = fallback;
++        self
++    }
++
++    #[must_use]
++    pub fn with_evidence(mut self, evidence: impl Into<String>) -> Self {
++        self.evidence = Some(evidence.into());
++        self
++    }
+ }
+ 
+ /// Pure compiler for caller-supplied context into a normalized `ContextPacket`.
+@@ -112,12 +190,19 @@ impl ContextCompiler {
+ 
+     #[must_use]
+     pub fn compile(self, request: CompileRequest) -> ContextPacket {
++        let packet_id = request.packet_id.unwrap_or_else(|| match request.mode {
++            CompileMode::Preflight => format!("preflight-{}", uuid::Uuid::new_v4()),
++            CompileMode::Query | CompileMode::Mcp => format!("ctx-{}", uuid::Uuid::new_v4()),
++        });
++        let generated_at = request.generated_at.unwrap_or_else(Utc::now);
++
+         let mut packet = ContextPacket::new(
+-            request.packet_id,
++            packet_id,
+             request.workspace_id,
+             request.objective,
+-            request.generated_at,
++            generated_at,
+         );
++
+         packet.route = request
+             .route_label
+             .unwrap_or_else(|| request.mode.route().to_string());
+@@ -125,7 +210,32 @@ impl ContextCompiler {
+         packet.git_ref = request.git_ref;
+         packet.sections = request.sections;
+         packet.warnings = request.warnings;
+-        finalize_packet(&mut packet, request.derive_evidence);
++
++        if let Some(confidence) = request.confidence {
++            packet.confidence = confidence;
++        }
++        if let Some(budget) = request.budget {
++            packet.budget = budget;
++        }
++        if let Some(retrieval) = request.retrieval {
++            packet.retrieval = retrieval;
++            packet.retrieval_meta = packet.retrieval.clone();
++        }
++        packet.scores = request.scores;
++        if let Some(why) = request.why_retrieved {
++            packet.why_retrieved = why;
++        }
++        if let Some(why) = request.why_not_retrieved {
++            packet.why_not_retrieved = why;
++        }
++        packet.low_confidence_fallback = request.low_confidence_fallback;
++
++        let derive_evidence = request.derive_evidence && request.evidence.is_none();
++        if let Some(evidence) = request.evidence {
++            packet.evidence = evidence;
++        }
++
++        finalize_packet(&mut packet, derive_evidence);
+         packet
+     }
+ }
+@@ -256,7 +366,6 @@ mod tests {
+ 
+     #[test]
+     fn compiler_request_builds_normalized_packet_for_preflight() {
+-        let generated_at = Utc::now();
+         let section = code_impact_section(vec![cited_item(
+             "code-1",
+             "Compiler API",
+@@ -273,12 +382,11 @@ mod tests {
+ 
+         let packet = ContextCompiler::new().compile(
+             CompileRequest::new(
+-                "ctx-compiler-api",
+                 "layers",
+                 "compile context packet",
+-                generated_at,
+                 CompileMode::Preflight,
+             )
++            .with_packet_id("ctx-compiler-api")
+             .with_git_ref(Some("abc123".to_string()))
+             .with_sections(vec![section])
+             .with_warnings(vec![warning.clone()]),
+@@ -290,7 +398,6 @@ mod tests {
+         assert_eq!(packet.route, "preflight");
+         assert_eq!(packet.provenance.surface, "preflight");
+         assert_eq!(packet.provenance.workspace_id, "layers");
+-        assert_eq!(packet.provenance.generated_at, generated_at);
+         assert_eq!(packet.git_ref.as_deref(), Some("abc123"));
+         assert_eq!(packet.provenance.git_ref.as_deref(), Some("abc123"));
+         assert_eq!(packet.warnings, vec![warning]);
+@@ -319,10 +426,8 @@ mod tests {
+ 
+         let packet = ContextCompiler::new().compile(
+             CompileRequest::new(
+-                "ctx-query",
+                 "layers",
+                 "query",
+-                Utc::now(),
+                 CompileMode::Query,
+             )
+             .with_sections(vec![section])
+@@ -338,10 +443,8 @@ mod tests {
+     fn compiler_request_can_preserve_query_route_label() {
+         let packet = ContextCompiler::new().compile(
+             CompileRequest::new(
+-                "ctx-query",
+                 "layers",
+                 "query",
+-                Utc::now(),
+                 CompileMode::Query,
+             )
+             .with_route_label("memory_only"),
+diff --git a/crates/layers-mcp/src/stable.rs b/crates/layers-mcp/src/stable.rs
+index c672631..efaa1d3 100644
+--- a/crates/layers-mcp/src/stable.rs
++++ b/crates/layers-mcp/src/stable.rs
+@@ -14,7 +14,6 @@ use layers_core::{
+ use layers_tools::memory::{MemoryGetTool, MemorySearchTool};
+ use layers_tools::registry::ToolRegistry;
+ use serde::Deserialize;
+-use uuid::Uuid;
+ 
+ use crate::server::STABLE_CONTEXT_SURFACE_TOOLS;
+ 
+@@ -151,27 +150,21 @@ fn compile_stable_packet(
+         .flat_map(|section| section.items.iter())
+         .map(|item| item.token_estimate)
+         .sum();
+-    let mut packet = ContextCompiler::new().compile(
+-        CompileRequest::new(
+-            format!("ctx-{}", Uuid::new_v4()),
+-            workspace_id,
+-            task,
+-            chrono::Utc::now(),
+-            mode,
+-        )
+-        .with_route_label(route_label)
+-        .with_git_ref(git_ref)
+-        .with_sections(sections),
+-    );
+-    packet.confidence = "explicit".to_string();
+-    packet.budget = ContextBudget {
++    let budget = ContextBudget {
+         max_units: max_units.unwrap_or(0),
+         used_units,
+         unit: "words".to_string(),
+-        truncated: false,
++        truncated: max_units.map_or(false, |m| used_units > m),
+     };
+-    packet
+-}
++    ContextCompiler::new().compile(
++        CompileRequest::new(workspace_id, task, mode)
++            .with_route_label(route_label)
++            .with_git_ref(git_ref)
++            .with_sections(sections)
++            .with_confidence("explicit")
++            .with_budget(budget),
++    )
++    }
+ 
+ #[async_trait::async_trait]
+ impl Tool for ContextCompileTool {
+diff --git a/src/cmd/preflight.rs b/src/cmd/preflight.rs
+index fa215ca..170d04e 100644
+--- a/src/cmd/preflight.rs
++++ b/src/cmd/preflight.rs
+@@ -68,13 +68,11 @@ pub fn handle_preflight(args: &PreflightArgs) -> Result<()> {
+ fn build_preflight_packet(args: &PreflightArgs) -> Result<ContextPacket> {
+     let workspace = workspace_root();
+     let workspace_id = workspace_id(&workspace);
+-    let packet_id = format!("preflight-{}", uuid::Uuid::new_v4());
+-    let generated_at = chrono::Utc::now();
+     let mut packet = ContextPacket::new(
+-        packet_id.clone(),
++        String::new(),
+         workspace_id.clone(),
+         args.task.clone(),
+-        generated_at,
++        chrono::Utc::now(),
+     );
+     packet.task.clone_from(&args.task);
+     packet.budget = ContextBudget {
+@@ -121,33 +119,9 @@ fn build_preflight_packet(args: &PreflightArgs) -> Result<ContextPacket> {
+         });
+     }
+ 
+-    let draft_scores = packet.scores;
++    let draft_scores = packet.scores.clone();
+     let draft_budget_truncated = packet.budget.truncated;
+-    let mut packet = ContextCompiler::new().compile(
+-        CompileRequest::new(
+-            packet_id,
+-            workspace_id,
+-            args.task.clone(),
+-            generated_at,
+-            CompileMode::Preflight,
+-        )
+-        .with_git_ref(workspace_state.head.clone())
+-        .with_sections(packet.sections)
+-        .with_warnings(packet.warnings)
+-        .derive_evidence(false),
+-    );
+-    packet.task.clone_from(&args.task);
+-    packet.scores = draft_scores;
+-    packet.budget = ContextBudget {
+-        max_units: DEFAULT_BUDGET_WORDS,
+-        used_units: estimate_packet_words(&packet),
+-        unit: "words".to_string(),
+-        truncated: draft_budget_truncated,
+-    };
+-    if packet.budget.used_units > packet.budget.max_units {
+-        packet.budget.truncated = true;
+-    }
+-    packet.retrieval = RetrievalReport {
++    let retrieval = RetrievalReport {
+         memory_source: "curated-memory-jsonl".to_string(),
+         memory_latency_ms: 0,
+         graph_latency_ms: 0,
+@@ -156,7 +130,28 @@ fn build_preflight_packet(args: &PreflightArgs) -> Result<ContextPacket> {
+                 .to_string(),
+         ),
+     };
+-    packet.retrieval_meta = packet.retrieval.clone();
++    let budget = ContextBudget {
++        max_units: DEFAULT_BUDGET_WORDS,
++        used_units: estimate_packet_words(&packet),
++        unit: "words".to_string(),
++        truncated: draft_budget_truncated,
++    };
++
++    let mut packet = ContextCompiler::new().compile(
++        CompileRequest::new(workspace_id, args.task.clone(), CompileMode::Preflight)
++            .with_git_ref(workspace_state.head.clone())
++            .with_sections(std::mem::take(&mut packet.sections))
++            .with_warnings(std::mem::take(&mut packet.warnings))
++            .with_scores(draft_scores)
++            .with_retrieval(retrieval)
++            .with_budget(budget)
++            .derive_evidence(false),
++    );
++
++    if packet.budget.used_units > packet.budget.max_units {
++        packet.budget.truncated = true;
++    }
++
+     packet.scores = json!({
+         "code_heavy": code_heavy,
+         "targets": inferred_targets.len(),
+diff --git a/src/cmd/query.rs b/src/cmd/query.rs
+index ec5d8ad..d301ca2 100644
+--- a/src/cmd/query.rs
++++ b/src/cmd/query.rs
+@@ -652,7 +652,7 @@ fn build_context_packet(
+     let workspace = workspace_root();
+     let workspace_id = workspace_id(&workspace);
+     let mut packet = ContextPacket::new(
+-        format!("ctx-{}", uuid::Uuid::new_v4()),
++        String::new(),
+         workspace_id,
+         task.to_string(),
+         chrono::Utc::now(),
+@@ -730,33 +730,28 @@ fn build_context_packet(
+             message: format!("Evidence exceeded {MAX_OUTPUT_WORDS}-word budget and was truncated."),
+         });
+     }
+-    let derive_evidence = evidence.is_none();
+-    let mut compiled = ContextCompiler::new().compile(
+-        CompileRequest::new(
+-            packet.id.clone(),
+-            packet.workspace_id.clone(),
+-            packet.query.clone(),
+-            packet.created_at,
+-            CompileMode::Query,
+-        )
+-        .with_route_label(route.label())
+-        .with_sections(std::mem::take(&mut packet.sections))
+-        .with_warnings(std::mem::take(&mut packet.warnings))
+-        .with_git_ref(packet.git_ref.clone())
+-        .derive_evidence(derive_evidence),
+-    );
++    let mut request = CompileRequest::new(
++        packet.workspace_id.clone(),
++        packet.query.clone(),
++        CompileMode::Query,
++    )
++    .with_route_label(route.label())
++    .with_sections(std::mem::take(&mut packet.sections))
++    .with_warnings(std::mem::take(&mut packet.warnings))
++    .with_git_ref(packet.git_ref.clone())
++    .with_confidence(packet.confidence)
++    .with_budget(packet.budget)
++    .with_retrieval(packet.retrieval)
++    .with_scores(packet.scores)
++    .with_why_retrieved(packet.why_retrieved)
++    .with_why_not_retrieved(packet.why_not_retrieved)
++    .with_low_confidence_fallback(packet.low_confidence_fallback);
++
+     if let Some(evidence_text) = evidence {
+-        compiled.evidence = evidence_text;
++        request = request.with_evidence(evidence_text);
+     }
+-    compiled.confidence = packet.confidence;
+-    compiled.budget = packet.budget;
+-    compiled.retrieval = packet.retrieval;
+-    compiled.retrieval_meta = packet.retrieval_meta;
+-    compiled.scores = packet.scores;
+-    compiled.why_retrieved = packet.why_retrieved;
+-    compiled.why_not_retrieved = packet.why_not_retrieved;
+-    compiled.low_confidence_fallback = packet.low_confidence_fallback;
+-    compiled
++
++    ContextCompiler::new().compile(request)
+ }
+ 
+ fn add_query_plan_to_packet(packet: &mut ContextPacket, query_plan: &BroadQueryPlan) {

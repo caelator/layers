@@ -193,6 +193,7 @@ fn minimum_bar_passes(packet: &ContextPacket) -> bool {
         && has_section(packet, "memory")
         && has_section(packet, "validation")
         && (!is_packet_code_heavy(packet) || has_section(packet, "code"))
+        && packet.confidence != "low"
 }
 
 fn injection_policy_passes(packet: &ContextPacket) -> bool {
@@ -561,16 +562,23 @@ struct ResearchQuality {
 impl ResearchQuality {
     #[allow(clippy::fn_params_excessive_bools)]
     fn new(code_heavy: bool, has_memory: bool, has_code: bool, low_memory_relevance: bool) -> Self {
-        let passes_minimum_bar = !code_heavy || has_code;
-        let confidence = if (code_heavy || low_memory_relevance) && !has_code {
+        // Low-relevance or memory-only context must never be reported as high confidence.
+        let confidence = if !has_memory && !has_code {
+            // No useful context at all.
+            "low"
+        } else if (code_heavy || low_memory_relevance) && !has_code {
+            // Code-heavy task without code, or any task with only low-relevance memory
+            // and no code to compensate, cannot claim medium or high confidence.
             "low"
         } else if low_memory_relevance {
+            // Has code but memory is weak; cap at medium.
             "medium"
         } else if has_memory && has_code {
             "high"
         } else {
             "medium"
         };
+        let passes_minimum_bar = confidence != "low";
         Self {
             confidence: confidence.to_string(),
             passes_minimum_bar,
@@ -1076,5 +1084,78 @@ mod tests {
         ));
 
         assert!(!minimum_bar_passes(&packet));
+    }
+
+    // ── Regression: low-relevance / memory-only cannot be high confidence ─────
+
+    #[test]
+    fn regression_low_relevance_memory_only_is_low_confidence() {
+        // Non-code-heavy task with only low-relevance memory and no code.
+        let quality = ResearchQuality::new(false, true, false, true);
+        assert_eq!(
+            quality.confidence, "low",
+            "low-relevance memory-only context must be low confidence"
+        );
+        assert!(
+            !quality.passes_minimum_bar,
+            "low-relevance memory-only must not pass minimum bar"
+        );
+    }
+
+    #[test]
+    fn regression_no_memory_no_code_is_low_confidence() {
+        // Any task with neither memory nor code context.
+        let quality = ResearchQuality::new(false, false, false, false);
+        assert_eq!(
+            quality.confidence, "low",
+            "no memory and no code must be low confidence"
+        );
+        assert!(
+            !quality.passes_minimum_bar,
+            "empty context must not pass minimum bar"
+        );
+    }
+
+    #[test]
+    fn regression_strict_rejects_low_confidence_packet() {
+        // Build a packet that has all required sections but low confidence.
+        let mut packet = ContextPacket::new(
+            "test".to_string(),
+            "layers".to_string(),
+            "orientation task".to_string(),
+            chrono::Utc::now(),
+        );
+        packet.confidence = "low".to_string();
+        packet.scores = json!({ "code_heavy": false });
+        packet.sections.push(context_section(
+            "workspace",
+            "Workspace State",
+            "Current Git/worktree context.",
+            Vec::new(),
+        ));
+        packet.sections.push(context_section(
+            "memory",
+            "Project Memory",
+            "Relevant explicit project memory.",
+            Vec::new(),
+        ));
+        packet.sections.push(context_section(
+            "validation",
+            "Validation",
+            "Validation commands.",
+            Vec::new(),
+        ));
+
+        assert!(
+            !minimum_bar_passes(&packet),
+            "strict minimum bar must reject low-confidence packets even with all sections present"
+        );
+    }
+
+    #[test]
+    fn regression_high_confidence_still_requires_memory_and_code() {
+        let quality = ResearchQuality::new(true, true, true, false);
+        assert_eq!(quality.confidence, "high");
+        assert!(quality.passes_minimum_bar);
     }
 }

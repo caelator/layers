@@ -1,0 +1,193 @@
+diff --git a/src/critical_path.rs b/src/critical_path.rs
+index f7d3116..5c564d9 100644
+--- a/src/critical_path.rs
++++ b/src/critical_path.rs
+@@ -246,7 +246,7 @@ impl WeightedFairQueue {
+     pub fn dequeue(&self) -> Option<(TaskItem, DequeueEvent)> {
+         let mut state = self.state.lock().expect("queue lock poisoned");
+         loop {
+-            if let Some(result) = Self::try_dequeue_inner(&mut state) {
++            if let Some(result) = Self::try_dequeue_inner(&mut state, true, true) {
+                 return Some(result);
+             }
+             if state.shutdown && state.critical.is_empty() && state.standard.is_empty() {
+@@ -259,7 +259,17 @@ impl WeightedFairQueue {
+     /// Non-blocking dequeue — returns `None` immediately if nothing is ready.
+     pub fn try_dequeue(&self) -> Option<(TaskItem, DequeueEvent)> {
+         let mut state = self.state.lock().expect("queue lock poisoned");
+-        Self::try_dequeue_inner(&mut state)
++        Self::try_dequeue_inner(&mut state, true, true)
++    }
++
++    /// Conditional non-blocking dequeue based on worker-slot availability.
++    pub fn try_dequeue_conditional(
++        &self,
++        can_take_critical: bool,
++        can_take_standard: bool,
++    ) -> Option<(TaskItem, DequeueEvent)> {
++        let mut state = self.state.lock().expect("queue lock poisoned");
++        Self::try_dequeue_inner(&mut state, can_take_critical, can_take_standard)
+     }
+ 
+     /// Signal that no more items will be enqueued.  Workers will drain
+@@ -291,27 +301,50 @@ impl WeightedFairQueue {
+ 
+     // -- internal ------------------------------------------------------------
+ 
+-    fn try_dequeue_inner(state: &mut QueueState) -> Option<(TaskItem, DequeueEvent)> {
++    fn try_dequeue_inner(
++        state: &mut QueueState,
++        can_take_critical: bool,
++        can_take_standard: bool,
++    ) -> Option<(TaskItem, DequeueEvent)> {
++        if !can_take_critical && !can_take_standard {
++            return None;
++        }
++
+         // Determine which lane to pull from based on round position.
+         //
+         // Round layout (total = CRITICAL_WEIGHT + STANDARD_WEIGHT = 9):
+         //   positions 0..7 → critical
+         //   position  8    → standard
+         //
+-        // When the selected lane is empty, fall through to the other.
++        // When the selected lane is empty, or we cannot take from it,
++        // fall through to the other.
+         let round_total = CRITICAL_WEIGHT + STANDARD_WEIGHT;
+         let prefer_critical = state.round_position < CRITICAL_WEIGHT;
+ 
+         let item = if prefer_critical {
+-            state
+-                .critical
+-                .pop_front()
+-                .or_else(|| state.standard.pop_front())
++            // Priority 1: Critical (preferred lane)
++            let mut item = if can_take_critical {
++                state.critical.pop_front()
++            } else {
++                None
++            };
++            // Priority 2: Standard (fallthrough)
++            if item.is_none() && can_take_standard {
++                item = state.standard.pop_front();
++            }
++            item
+         } else {
+-            state
+-                .standard
+-                .pop_front()
+-                .or_else(|| state.critical.pop_front())
++            // Priority 1: Standard (preferred lane)
++            let mut item = if can_take_standard {
++                state.standard.pop_front()
++            } else {
++                None
++            };
++            // Priority 2: Critical (fallthrough)
++            if item.is_none() && can_take_critical {
++                item = state.critical.pop_front();
++            }
++            item
+         };
+ 
+         let item = item?;
+@@ -421,33 +454,26 @@ impl Dispatcher {
+     ///
+     /// On success, the caller **must** call [`release`] when done.
+     pub fn acquire(&self) -> Option<(TaskItem, DequeueEvent)> {
+-        let (item, event) = self.queue.try_dequeue()?;
+         let mut acct = self.accounting.lock().expect("accounting lock poisoned");
+         let total_active = acct.active_critical + acct.active_standard;
+ 
++        if total_active >= self.config.total_workers {
++            return None;
++        }
++
++        let available_for_standard = self
++            .config
++            .total_workers
++            .saturating_sub(self.config.reserved_critical_slots);
++        let can_take_standard = acct.active_standard < available_for_standard;
++
++        // Note: we've already checked total_active < total_workers, so
++        // can_take_critical is always true here.
++        let (item, event) = self.queue.try_dequeue_conditional(true, can_take_standard)?;
++
+         if item.critical_path {
+-            // Critical work can always claim a slot (up to total_workers).
+-            if total_active >= self.config.total_workers {
+-                // All slots full — re-enqueue.
+-                let _ = self.queue.enqueue(item);
+-                return None;
+-            }
+             acct.active_critical += 1;
+         } else {
+-            // Standard work cannot use the reserved critical slot(s).
+-            let available_for_standard = self
+-                .config
+-                .total_workers
+-                .saturating_sub(self.config.reserved_critical_slots);
+-            if acct.active_standard >= available_for_standard {
+-                // Re-enqueue: the only free slots are reserved.
+-                let _ = self.queue.enqueue(item);
+-                return None;
+-            }
+-            if total_active >= self.config.total_workers {
+-                let _ = self.queue.enqueue(item);
+-                return None;
+-            }
+             acct.active_standard += 1;
+         }
+ 
+@@ -692,6 +718,51 @@ mod tests {
+         assert!(standard_seen, "standard item must eventually be dequeued");
+     }
+ 
++    #[test]
++    fn test_no_wasted_turn_when_busy() {
++        // Prove that calling acquire() when all slots are full DOES NOT
++        // advance the round-robin counter, preserving fairness.
++        let d = Dispatcher::new(DispatcherConfig {
++            total_workers: 1,
++            reserved_critical_slots: 0,
++            critical_queue_capacity: 10,
++        });
++
++        // 1. Fill the only slot.
++        d.submit(TaskItem::new("c1", true));
++        d.acquire().expect("should acquire c1");
++
++        // 2. Queue up a standard item. Round position is at 1.
++        // We want to reach position 8 (standard turn).
++        for i in 0..7 {
++            d.submit(TaskItem::new(format!("c_fill_{i}"), true));
++        }
++        d.submit(TaskItem::new("s_victim", false));
++
++        // 3. Call acquire 100 times while busy.
++        // With the bug, this would advance the round many times.
++        // Fixed: round position stays at 1.
++        for _ in 0..100 {
++            assert!(d.acquire().is_none());
++        }
++
++        // 4. Release the slot.
++        d.release(true);
++
++        // 5. Dequeue enough critical items to reach the standard turn.
++        // Since we are at pos 1, we need 7 more critical dequeues to reach pos 8.
++        for _ in 0..7 {
++            let (item, _) = d.acquire().unwrap();
++            assert!(item.critical_path, "should be critical at pos 1..7");
++            d.release(true);
++        }
++
++        // 6. The NEXT dequeue MUST be standard (pos 8).
++        let (item, _) = d.acquire().expect("should acquire s_victim");
++        assert!(!item.critical_path, "should be standard at pos 8");
++        assert_eq!(item.id, "s_victim");
++    }
++
+     // -- Back-pressure tests -------------------------------------------------
+ 
+     #[test]

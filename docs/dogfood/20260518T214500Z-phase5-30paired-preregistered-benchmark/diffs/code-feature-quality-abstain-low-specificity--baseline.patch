@@ -1,0 +1,289 @@
+diff --git a/crates/layers-core/src/packet_quality.rs b/crates/layers-core/src/packet_quality.rs
+index 10a8e83..21f0732 100644
+--- a/crates/layers-core/src/packet_quality.rs
++++ b/crates/layers-core/src/packet_quality.rs
+@@ -143,6 +143,12 @@ impl PacketQualityReport {
+ 
+         let recommendation = if task.negative_control && item_count <= 2 {
+             InjectionRecommendation::Abstain
++        } else if code_heavy && scores.specificity <= 2 {
++            if expected_target_count == 0 {
++                InjectionRecommendation::NeedsTarget
++            } else {
++                InjectionRecommendation::Abstain
++            }
+         } else if code_heavy
+             && expected_target_count == 0
+             && packet.sections.iter().all(|s| s.id != "code")
+@@ -299,10 +305,29 @@ fn score_from_ratio(ratio: f64) -> u8 {
+ }
+ 
+ fn specificity_score(packet: &ContextPacket, code_heavy: bool) -> u8 {
+-    if packet.sections.iter().any(|section| section.id == "code") {
+-        5
++    let has_code = packet
++        .sections
++        .iter()
++        .any(|section| section.id == "code" || section.id == "gitnexus");
++
++    if has_code {
++        let code_words = packet
++            .sections
++            .iter()
++            .filter(|s| s.id == "code" || s.id == "gitnexus")
++            .flat_map(|s| s.items.iter())
++            .map(|i| i.body.split_whitespace().count())
++            .sum::<usize>();
++
++        if code_heavy && code_words < 30 {
++            2
++        } else if code_words < 15 {
++            3
++        } else {
++            5
++        }
+     } else if code_heavy {
+-        2
++        1
+     } else {
+         3
+     }
+@@ -430,6 +455,29 @@ mod tests {
+         assert_eq!(report.recommendation, InjectionRecommendation::Abstain);
+     }
+ 
++    #[test]
++    fn low_specificity_code_heavy_task_abstains() {
++        let mut packet = ContextPacket::new("p".into(), "w".into(), "fix".into(), Utc::now());
++        packet.confidence = "high".to_string();
++        packet.sections.push(ContextSection {
++            id: "code".to_string(),
++            title: "Code".to_string(),
++            summary: None,
++            items: vec![ContextItem::cited(
++                "c1",
++                "src/main.rs",
++                "auth ok", // too short, < 30 words
++                ContextSource::new("file", "src/main.rs").with_repo_path("src/main.rs"),
++                "target file",
++            )],
++        });
++
++        let report = PacketQualityReport::grade(&packet, &code_task());
++
++        assert_eq!(report.scores.specificity, 2);
++        assert_eq!(report.recommendation, InjectionRecommendation::Abstain);
++    }
++
+     #[test]
+     fn warning_heavy_packet_receives_warning_penalty() {
+         let mut packet = packet_with_file("src/main.rs", "cargo test");
+@@ -496,6 +544,12 @@ mod tests {
+             unit: "words".to_string(),
+             truncated: false,
+         };
++        let body = format!(
++            "Relevant code in {path}. This is a more substantial body to pass the specificity check. \
++             It needs to have more than thirty words to avoid being flagged as low specificity for \
++             code-heavy tasks. We are adding enough fluff here to ensure the count is sufficient \
++             for the test case to pass with a high specificity score."
++        );
+         packet.sections.push(ContextSection {
+             id: "code".to_string(),
+             title: "Code".to_string(),
+@@ -503,7 +557,7 @@ mod tests {
+             items: vec![ContextItem::cited(
+                 "c1",
+                 path,
+-                format!("Relevant code in {path}"),
++                body,
+                 ContextSource::new("file", path).with_repo_path(path),
+                 "target file",
+             )],
+diff --git a/src/quality.rs b/src/quality.rs
+index 3b165e5..c4c01e0 100644
+--- a/src/quality.rs
++++ b/src/quality.rs
+@@ -8,6 +8,7 @@
+ use crate::feedback::{
+     FailureKind, RouteFailure, RouteId, RoutingSignals, SoftErrorKind, emit_failure,
+ };
++use layers_core::InjectionRecommendation;
+ 
+ // ─── Thresholds ─────────────────────────────────────────────────────────────
+ 
+@@ -17,6 +18,9 @@ const RELEVANCE_THRESHOLD: f64 = 0.25;
+ /// Minimum average words per result to avoid flagging as too thin.
+ const SPECIFICITY_MIN_WORDS: usize = 8;
+ 
++/// Minimum average words for code-heavy tasks to be considered specific.
++const SPECIFICITY_MIN_WORDS_CODE: usize = 40;
++
+ // ─── Public API ─────────────────────────────────────────────────────────────
+ 
+ /// Quality dimensions for a set of retrieved results.
+@@ -31,6 +35,8 @@ pub struct ResultQuality {
+     pub avg_words: f64,
+     /// Whether quality is acceptable (all dimensions above thresholds).
+     pub acceptable: bool,
++    /// Agent-facing recommendation for this result set.
++    pub recommendation: InjectionRecommendation,
+     /// Human-readable reason if not acceptable.
+     pub reason: Option<String>,
+ }
+@@ -49,6 +55,7 @@ pub fn evaluate(query: &str, results: &[&str], requested: usize) -> ResultQualit
+             coverage: 0.0,
+             avg_words: 0.0,
+             acceptable: false,
++            recommendation: InjectionRecommendation::Abstain,
+             reason: Some("No results returned".into()),
+         };
+     }
+@@ -65,15 +72,31 @@ pub fn evaluate(query: &str, results: &[&str], requested: usize) -> ResultQualit
+         .sum::<usize>() as f64
+         / results.len() as f64;
+ 
++    let code_heavy = looks_code_heavy_simple(query);
+     let mut reasons: Vec<&str> = Vec::new();
+     if relevance < RELEVANCE_THRESHOLD {
+         reasons.push("low relevance — query terms rarely appear in results");
+     }
+-    if avg_words < SPECIFICITY_MIN_WORDS as f64 {
+-        reasons.push("low specificity — results are too short/generic");
++
++    let min_words = if code_heavy {
++        SPECIFICITY_MIN_WORDS_CODE
++    } else {
++        SPECIFICITY_MIN_WORDS
++    };
++
++    if avg_words < min_words as f64 {
++        reasons.push("low specificity — results are too short/generic for the task type");
+     }
+ 
+     let acceptable = reasons.is_empty();
++    let recommendation = if code_heavy && avg_words < (min_words / 2) as f64 {
++        InjectionRecommendation::Abstain
++    } else if !acceptable {
++        InjectionRecommendation::InjectCompact
++    } else {
++        InjectionRecommendation::InjectFull
++    };
++
+     let reason = if reasons.is_empty() {
+         None
+     } else {
+@@ -85,6 +108,7 @@ pub fn evaluate(query: &str, results: &[&str], requested: usize) -> ResultQualit
+         coverage,
+         avg_words,
+         acceptable,
++        recommendation,
+         reason,
+     }
+ }
+@@ -115,7 +139,11 @@ pub fn emit_if_poor(
+         },
+         signals,
+     )
+-    .with_note(quality.reason.clone().unwrap_or_default());
++    .with_note(format!(
++        "[{:?}] {}",
++        quality.recommendation,
++        quality.reason.clone().unwrap_or_default()
++    ));
+ 
+     if let Err(e) = emit_failure(&failure) {
+         eprintln!("[route-feedback] failed to emit quality failure: {e}");
+@@ -171,6 +199,24 @@ fn compute_relevance(query: &str, results: &[&str]) -> f64 {
+     hits as f64 / terms.len() as f64
+ }
+ 
++fn looks_code_heavy_simple(query: &str) -> bool {
++    let query = query.to_ascii_lowercase();
++    [
++        "fix",
++        "bug",
++        "implement",
++        "refactor",
++        "debug",
++        "test",
++        "clippy",
++        "cargo",
++        ".rs",
++        "src/",
++    ]
++    .iter()
++    .any(|needle| query.contains(needle))
++}
++
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+@@ -179,6 +225,7 @@ mod tests {
+     fn empty_results_are_unacceptable() {
+         let q = evaluate("how does auth work", &[], 3);
+         assert!(!q.acceptable);
++        assert_eq!(q.recommendation, InjectionRecommendation::Abstain);
+         assert!((q.relevance - 0.0).abs() < f64::EPSILON);
+         assert!((q.coverage - 0.0).abs() < f64::EPSILON);
+     }
+@@ -192,6 +239,7 @@ mod tests {
+         let q = evaluate("how does auth validation work", results, 3);
+         assert!(q.relevance > RELEVANCE_THRESHOLD);
+         assert!(q.acceptable);
++        assert_eq!(q.recommendation, InjectionRecommendation::InjectFull);
+     }
+ 
+     #[test]
+@@ -203,6 +251,7 @@ mod tests {
+         let q = evaluate("how does auth validation work", results, 3);
+         assert!(q.relevance < RELEVANCE_THRESHOLD);
+         assert!(!q.acceptable);
++        assert_eq!(q.recommendation, InjectionRecommendation::InjectCompact);
+     }
+ 
+     #[test]
+@@ -214,6 +263,15 @@ mod tests {
+         assert!(!q.acceptable);
+     }
+ 
++    #[test]
++    fn code_heavy_short_results_abstain() {
++        let results = &["auth ok", "token valid"];
++        let q = evaluate("fix auth bug in src/auth.rs", results, 3);
++        assert!(q.avg_words < SPECIFICITY_MIN_WORDS_CODE as f64);
++        assert!(!q.acceptable);
++        assert_eq!(q.recommendation, InjectionRecommendation::Abstain);
++    }
++
+     #[test]
+     fn coverage_reflects_fill_ratio() {
+         let results = &["result one with enough words to pass specificity check easily"];
+diff --git a/tests/prove_it_sprint.rs b/tests/prove_it_sprint.rs
+index 739fe00..3cf6558 100644
+--- a/tests/prove_it_sprint.rs
++++ b/tests/prove_it_sprint.rs
+@@ -891,6 +891,7 @@ mod quality_evaluator_proofs {
+             coverage: 0.6,
+             avg_words: 12.5,
+             acceptable: true,
++            recommendation: layers_core::InjectionRecommendation::InjectFull,
+             reason: None,
+         };
+ 
+@@ -910,6 +911,7 @@ mod quality_evaluator_proofs {
+             "avg_words mismatch"
+         );
+         assert_eq!(restored.acceptable, original.acceptable);
++        assert_eq!(restored.recommendation, original.recommendation);
+         assert_eq!(restored.reason, original.reason);
+ 
+         // Also test with a reason present
+@@ -918,6 +920,7 @@ mod quality_evaluator_proofs {
+             coverage: 0.5,
+             avg_words: 3.0,
+             acceptable: false,
++            recommendation: layers_core::InjectionRecommendation::InjectCompact,
+             reason: Some("low relevance — query terms rarely appear in results".into()),
+         };
+         let json2 = serde_json::to_string(&with_reason).expect("serialize with reason");

@@ -1,0 +1,36 @@
+{
+  "task_id": "code-bugfix-preflight-strict-low-relevance",
+  "title": "Reject low-relevance strict preflight packets",
+  "prompt": "Fix strict preflight validation so low-relevance or memory-only context cannot be reported as high-confidence code-heavy context. Add a regression test and run Rust gates.",
+  "category": "bugfix",
+  "difficulty": "medium",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": false,
+  "stale_context_trap": false,
+  "time_budget_minutes": 45,
+  "target_files": [
+    "src/cmd/preflight.rs",
+    "crates/layers-core/src/packet_quality.rs",
+    "crates/layers-core/src/task_spec.rs"
+  ],
+  "target_symbols": [
+    "handle_preflight",
+    "PacketQualityReport"
+  ],
+  "expected_relevant_files": [
+    "src/cmd/preflight.rs",
+    "crates/layers-core/src/packet_quality.rs",
+    "crates/layers-core/src/task_spec.rs"
+  ],
+  "expected_validation_commands": [
+    "cargo test -q cmd::preflight -- --nocapture",
+    "cargo check --workspace --all-targets"
+  ],
+  "success_rubric": {
+    "full_success": "The requested repository change is implemented with focused regression coverage and all listed validation commands pass.",
+    "partial_success": "The main behavior is implemented but validation is incomplete, coverage is weak, or minor follow-up is required.",
+    "failure": "The requested behavior remains missing, untested, or introduces regressions.",
+    "min_verification_quality": 4,
+    "primary_endpoint": "verified_success"
+  }
+}

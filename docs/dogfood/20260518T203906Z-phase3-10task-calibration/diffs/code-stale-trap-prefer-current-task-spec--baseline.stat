@@ -1,0 +1,7 @@
+ crates/layers-core/src/packet_quality.rs     | 14 ++++-
+ crates/layers-core/src/task_spec.rs          | 93 +++++++++++++++++++++++-----
+ docs/examples/context-packet-v2-minimal.json |  2 +-
+ src/cmd/packet.rs                            |  4 +-
+ src/cmd/preflight.rs                         |  8 ++-
+ src/cmd/query.rs                             |  8 ++-
+ 6 files changed, 107 insertions(+), 22 deletions(-)

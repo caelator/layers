@@ -1,0 +1,34 @@
+{
+  "task_id": "code-stale-trap-prefer-current-task-spec",
+  "title": "Prefer current task_spec schema over stale docs",
+  "prompt": "Stale-context trap: update code using the current TaskSpec validation rules, not older docs that allowed missing expected relevant files. The correct solution must inspect current schema and validator before editing.",
+  "category": "bugfix",
+  "difficulty": "medium",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": false,
+  "stale_context_trap": true,
+  "time_budget_minutes": 45,
+  "target_files": [
+    "src/cmd/workflow_benchmark.rs",
+    "benchmarks/workflows/schemas/task-spec.schema.json"
+  ],
+  "target_symbols": [
+    "TaskSpec",
+    "validate_task_spec"
+  ],
+  "expected_relevant_files": [
+    "src/cmd/workflow_benchmark.rs",
+    "benchmarks/workflows/schemas/task-spec.schema.json"
+  ],
+  "expected_validation_commands": [
+    "cargo test -q workflow_benchmark -- --nocapture",
+    "cargo run -q -- workflow-benchmark validate-tasks benchmarks/workflows/tasks --json"
+  ],
+  "success_rubric": {
+    "full_success": "The requested repository change is implemented with focused regression coverage and all listed validation commands pass.",
+    "partial_success": "The main behavior is implemented but validation is incomplete, coverage is weak, or minor follow-up is required.",
+    "failure": "The requested behavior remains missing, untested, or introduces regressions.",
+    "min_verification_quality": 4,
+    "primary_endpoint": "verified_success"
+  }
+}
