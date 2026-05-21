@@ -1,0 +1,27 @@
+{
+  "route": "preflight",
+  "confidence": "high",
+  "warnings": [
+    "dirty_worktree",
+    "autoresearch_uncertainty",
+    "injection_policy"
+  ],
+  "sections": [
+    "preflight_summary",
+    "workspace",
+    "memory",
+    "code",
+    "validation"
+  ],
+  "injection_recommendation": "inject_full",
+  "budget": {
+    "max_units": 700,
+    "used_units": 289,
+    "unit": "words",
+    "truncated": false
+  },
+  "strict_validate_expected_exit": 1,
+  "strict_validate_reason": "strict mode rejects warning-bearing/degraded packets; non-strict validation passes",
+  "contains_dirty_warning": true,
+  "contains_validation": true
+}

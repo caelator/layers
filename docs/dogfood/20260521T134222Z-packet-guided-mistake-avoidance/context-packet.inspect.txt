@@ -1,0 +1,20 @@
+ContextPacket inspection
+schema_version: 2
+id: preflight-e5115a81-8e38-4e11-8552-16ad6e3a815a
+workspace_id: layers
+query: Avoid committing generated telemetry artifacts and avoid expanding deprecated runtime/MCP surfaces while improving Layers release readiness
+created_at: 2026-05-21 13:42:25.851503 UTC
+git_ref: ba3664c
+route: preflight
+confidence: high
+budget: 289/700 words (truncated: false)
+provenance.compiler: layers-context-packet
+provenance.compiler_version: 2
+provenance.surface: preflight
+provenance.generated_at: 2026-05-21 13:42:25.851503 UTC
+provenance.source_adapters: file, memory, preflight, validation, workspace
+sections: 5
+items: 10
+warnings: 3
+degraded: true
+low_confidence_fallback: false

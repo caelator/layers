@@ -1045,6 +1045,7 @@ struct ClaimThresholds {
     max_context_caused_regression_rate: f64,
     min_negative_control_abstention_rate: f64,
     max_unnecessary_context_injection_rate: f64,
+    max_average_layers_overhead_tokens: f64,
 }
 
 impl Default for ClaimThresholds {
@@ -1062,6 +1063,7 @@ impl Default for ClaimThresholds {
             max_context_caused_regression_rate: 0.0,
             min_negative_control_abstention_rate: 0.95,
             max_unnecessary_context_injection_rate: 0.05,
+            max_average_layers_overhead_tokens: 1_200.0,
         }
     }
 }
@@ -1085,6 +1087,7 @@ struct ClaimReport {
     negative_control_abstention_rate: f64,
     unnecessary_context_injection_rate: f64,
     context_caused_regression_rate: f64,
+    average_layers_overhead_tokens: f64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -3553,6 +3556,9 @@ fn analyze_runs_with_thresholds(
     if unnecessary_context_injection_rate > thresholds.max_unnecessary_context_injection_rate {
         blocking_metrics.push("unnecessary_context_injection_rate".to_string());
     }
+    if layers.average_layers_overhead_tokens > thresholds.max_average_layers_overhead_tokens {
+        blocking_metrics.push("average_layers_overhead_tokens".to_string());
+    }
     if context_caused_regression_rate > thresholds.max_context_caused_regression_rate {
         blocking_metrics.push("context_caused_regression_rate".to_string());
     }
@@ -3598,6 +3604,7 @@ fn analyze_runs_with_thresholds(
         negative_control_abstention_rate,
         unnecessary_context_injection_rate,
         context_caused_regression_rate,
+        average_layers_overhead_tokens: layers.average_layers_overhead_tokens,
     });
     Ok(report)
 }
@@ -4598,6 +4605,7 @@ mod tests {
             max_context_caused_regression_rate: 0.0,
             min_negative_control_abstention_rate: 1.0,
             max_unnecessary_context_injection_rate: 0.0,
+            max_average_layers_overhead_tokens: f64::INFINITY,
         }
     }
 
@@ -5207,6 +5215,35 @@ mod tests {
                 .blocking_metrics
                 .iter()
                 .any(|metric| metric == "negative_control_abstention_rate")
+        );
+    }
+
+    #[test]
+    fn targeted_preflight_overhead_blocks_effectiveness_claim() {
+        let high_overhead_layers = valid_run("task-1", "layers", 700, 1_500).replace(
+            "\"layers_overhead_tokens\":0",
+            "\"layers_overhead_tokens\":1500",
+        );
+        let runs = vec![
+            parse_run(&valid_run("task-1", "baseline", 1_000, 2_000)).expect("baseline"),
+            parse_run(&high_overhead_layers).expect("layers"),
+            parse_run(&negative_control_run("neg-1", "baseline", false)).expect("baseline neg"),
+            parse_run(&negative_control_run("neg-1", "layers", true)).expect("layers neg"),
+        ];
+        let thresholds = ClaimThresholds {
+            max_average_layers_overhead_tokens: 700.0,
+            ..permissive_claim_thresholds()
+        };
+
+        let report = analyze_runs_with_thresholds(&runs, thresholds).expect("analysis");
+        let claim = report.claim.expect("claim report");
+        assert_eq!(claim.status, ClaimStatus::NotSupported);
+        assert_approx_eq(claim.average_layers_overhead_tokens, 750.0);
+        assert!(
+            claim
+                .blocking_metrics
+                .iter()
+                .any(|metric| metric == "average_layers_overhead_tokens")
         );
     }
 

@@ -151,10 +151,11 @@ fn build_preflight_packet(args: &PreflightArgs) -> Result<ContextPacket> {
         memory_source: "curated-memory-jsonl".to_string(),
         memory_latency_ms: 0,
         graph_latency_ms: 0,
-        fallback_reason: Some(
-            "preflight v1 uses local workspace, memory, and file/Git fallback collectors"
-                .to_string(),
-        ),
+        // Preflight's local workspace/memory/file collectors are the primary
+        // implementation path, not a degraded fallback. Leaving this unset keeps
+        // confidence and injection-policy reasons aligned for well-grounded
+        // targeted packets.
+        fallback_reason: None,
     };
     packet.retrieval_meta = packet.retrieval.clone();
     packet.scores = json!({
@@ -872,6 +873,41 @@ mod tests {
         assert_eq!(packet.provenance.surface, "preflight");
         assert!(packet.id.starts_with("preflight-"));
         assert_eq!(packet.task, "fix src/main.rs");
+    }
+
+    #[test]
+    fn targeted_preflight_confidence_and_injection_policy_are_consistent() {
+        let ws = TestWorkspace::new("preflight-confidence-policy");
+        std::fs::create_dir_all(ws.root().join("src/cmd")).unwrap();
+        std::fs::write(
+            ws.root().join("src/cmd/preflight.rs"),
+            "fn build_preflight_packet() { /* grounded test target */ }\n",
+        )
+        .unwrap();
+        let args = PreflightArgs {
+            task: "fix preflight packet confidence in src/cmd/preflight.rs".to_string(),
+            targets: vec!["src/cmd/preflight.rs".to_string()],
+            json: true,
+            agent_prompt: false,
+            no_audit: true,
+            strict: false,
+        };
+
+        let packet = build_preflight_packet(&args).unwrap();
+        let policy_warning = packet
+            .warnings
+            .iter()
+            .find(|warning| warning.code == "injection_policy")
+            .expect("preflight should include injection policy warning");
+
+        assert_ne!(packet.confidence, "low");
+        assert!(!packet.low_confidence_fallback);
+        assert!(packet.retrieval.fallback_reason.is_none());
+        assert!(
+            !policy_warning.message.contains("low-confidence or fallback-derived"),
+            "well-grounded targeted preflight must not cite fallback-derived reasons: {}",
+            policy_warning.message
+        );
     }
 
     #[test]

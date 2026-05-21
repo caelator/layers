@@ -1,0 +1,4 @@
+## main...origin/main
+ M src/cmd/preflight.rs
+ M src/cmd/workflow_benchmark.rs
+?? docs/dogfood/20260521T134222Z-packet-guided-mistake-avoidance/

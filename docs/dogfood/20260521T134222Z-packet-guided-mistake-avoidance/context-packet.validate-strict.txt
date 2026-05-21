@@ -1,0 +1,2 @@
+ContextPacket validation failed
+error: strict mode rejects packet warnings or degraded state
