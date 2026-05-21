@@ -315,20 +315,24 @@ Status: **Planned stable**
 
 Draft memory records from a normalized session. Drafts require explicit promotion before they become canonical memory.
 
-## `layers mcp serve`
+## MCP stable context surface
 
-Status: **Planned stable**
+Status: **Library surface available; CLI adapter not yet shipped**
 
-Expose the stable context/memory/impact surface to other agents.
+There is currently no `layers mcp` CLI subcommand. Running `layers mcp serve` is expected to fail until the CLI adapter lands.
 
-Planned MCP tools:
+The implemented stable MCP surface lives in the `layers-mcp` crate as a safe allowlist for context compiler integrations. The default stable surface is intentionally narrow and excludes generic runtime/filesystem/process/subagent tools.
 
-- `layers_context_packet`
-- `layers_remember`
-- `layers_impact`
-- `layers_memory_search`
-- `layers_promote`
-- `layers_doctor`
+Stable MCP tool names:
+
+- `context_compile`
+- `impact_analyze`
+- `memory_get`
+- `memory_search`
+- `preflight_context`
+- `validate_context`
+
+Use the CLI commands above (`layers query`, `layers preflight`, and `layers packet ...`) for end-user workflows until a real `layers mcp` command is added.
 
 ---
 

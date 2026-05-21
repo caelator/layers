@@ -9,6 +9,7 @@ use std::path::Path;
 use std::time::Instant;
 
 use crate::cmd::autoresearch::{AutoresearchPacketBridgeOptions, add_autoresearch_to_packet};
+use crate::cmd::packet::format_objective_brief;
 use crate::cmd::telemetry::PluginResult;
 use crate::config::{CONTEXT_PAYLOAD_SCHEMA_VERSION, memoryport_dir, workspace_root};
 use crate::context_packet_compiler::query_plan::{
@@ -420,7 +421,7 @@ pub fn handle_query(
     let final_evidence = packet.evidence.clone();
 
     if agent_prompt && should_inject {
-        println!("{}", packet.to_agent_prompt());
+        println!("{}", format_objective_brief(&packet));
     } else if agent_prompt {
         print_abstention_context(&packet);
     } else if json_out {

@@ -11,6 +11,7 @@ use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
 use crate::cmd::autoresearch::{AutoresearchPacketBridgeOptions, add_autoresearch_to_packet};
+use crate::cmd::packet::format_objective_brief;
 use crate::config::{canonical_curated_memory_path, workspace_root};
 use crate::context_packet_compiler::{
     add_workspace_section, cited_item, code_impact_section, collect_workspace_state,
@@ -56,13 +57,17 @@ pub fn handle_preflight(args: &PreflightArgs) -> Result<()> {
         ));
     }
     if args.agent_prompt {
-        println!("{}", packet.to_agent_prompt());
+        println!("{}", render_preflight_agent_prompt(&packet));
     } else if args.json {
         println!("{}", serde_json::to_string_pretty(&packet)?);
     } else {
         println!("{}", packet.to_markdown());
     }
     Ok(())
+}
+
+fn render_preflight_agent_prompt(packet: &ContextPacket) -> String {
+    format_objective_brief(packet)
 }
 
 fn build_preflight_packet(args: &PreflightArgs) -> Result<ContextPacket> {
@@ -935,6 +940,33 @@ mod tests {
         );
         assert!(!packet.route.contains("autoresearch"));
         assert!(!packet.why_retrieved.contains("Autoresearch"));
+    }
+
+    #[test]
+    fn preflight_agent_prompt_uses_compact_objective_brief() {
+        let ws = TestWorkspace::new("preflight-agent-prompt-compact");
+        std::fs::create_dir_all(ws.root().join("src/cmd")).unwrap();
+        std::fs::write(
+            ws.root().join("src/cmd/preflight.rs"),
+            "fn build_preflight_packet() { /* grounded test target */ }\n",
+        )
+        .unwrap();
+        let args = PreflightArgs {
+            task: "fix src/cmd/preflight.rs".to_string(),
+            targets: vec!["src/cmd/preflight.rs".to_string()],
+            json: false,
+            agent_prompt: true,
+            no_audit: true,
+            strict: false,
+        };
+
+        let packet = build_preflight_packet(&args).unwrap();
+        let rendered = render_preflight_agent_prompt(&packet);
+
+        assert!(rendered.starts_with("# Objective Brief"));
+        assert!(rendered.contains("## Handoff Expectations"));
+        assert!(!rendered.contains("<layers_context>"));
+        assert!(!rendered.contains("grounded test target"));
     }
 
     #[test]

@@ -13,6 +13,8 @@ use anyhow::{Context as _, Result, bail};
 use clap::Subcommand;
 use serde::{Deserialize, Serialize};
 
+use crate::cmd::packet::parse_valid_packet_text;
+
 /// Workflow benchmark commands.
 #[derive(Debug, Subcommand)]
 pub(crate) enum WorkflowBenchmarkCommands {
@@ -114,7 +116,10 @@ pub(crate) enum WorkflowBenchmarkCommands {
         /// Path to runner-plan.json produced by `workflow-benchmark plan-run`.
         path: PathBuf,
         /// Targeted preflight command to run before targeted-preflight agent runs.
-        #[arg(long, default_value = "layers preflight --no-audit --json --strict")]
+        #[arg(
+            long,
+            default_value = "layers preflight --no-audit --agent-prompt --strict"
+        )]
         preflight_command: String,
         /// Keep worktrees after execution for manual inspection.
         #[arg(long)]
@@ -2951,7 +2956,7 @@ fn build_runner_run_plan(
         diff_stat_path: output_dir.join("diffs").join(format!("{run_id}.stat")),
         diff_patch_path: output_dir.join("diffs").join(format!("{run_id}.patch")),
         packet_artifact_path: requires_layers_preflight
-            .then(|| output_dir.join("packets").join(format!("{run_id}.json"))),
+            .then(|| output_dir.join("packets").join(format!("{run_id}.md"))),
         requires_layers_preflight,
         agent_command: config.agent_command.clone(),
         model: config.model.clone(),
@@ -4097,15 +4102,21 @@ fn finalize_workflow_benchmark_run(run_dir: &Path) -> Result<FinalizeRunSummary>
                                     run.run_id
                                 ));
                             }
-                            let expected_packet_artifact_path = artifact_root
-                                .join("packets")
-                                .join(format!("{}.json", run.run_id));
-                            if expected_packet_artifact_path.exists() {
-                                missing_required_artifacts.push(format!(
-                                    "negative-control targeted-preflight run produced stray packet artifact for {}: {}",
-                                    run.run_id,
-                                    expected_packet_artifact_path.display()
-                                ));
+                            for expected_packet_artifact_path in [
+                                artifact_root
+                                    .join("packets")
+                                    .join(format!("{}.json", run.run_id)),
+                                artifact_root
+                                    .join("packets")
+                                    .join(format!("{}.md", run.run_id)),
+                            ] {
+                                if expected_packet_artifact_path.exists() {
+                                    missing_required_artifacts.push(format!(
+                                        "negative-control targeted-preflight run produced stray packet artifact for {}: {}",
+                                        run.run_id,
+                                        expected_packet_artifact_path.display()
+                                    ));
+                                }
                             }
                         }
                         _ if run.packet_artifact_path.is_none() => {
@@ -4220,18 +4231,38 @@ fn diff_artifact_contains_failure(path: &Path) -> Result<bool> {
 }
 
 fn validate_packet_artifact(path: &Path) -> Result<()> {
-    let current_exe = std::env::current_exe().context("failed to resolve current executable")?;
-    let output = Command::new(current_exe)
-        .args(["packet", "validate"])
-        .arg(path)
-        .output()
-        .with_context(|| format!("failed to run packet validation for {}", path.display()))?;
-    if !output.status.success() {
+    let content =
+        fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
+    if content.trim_start().starts_with('{') {
+        parse_valid_packet_text(&content).with_context(|| {
+            format!(
+                "failed to validate ContextPacket JSON artifact {}",
+                path.display()
+            )
+        })?;
+        return Ok(());
+    }
+    validate_objective_brief_artifact_text(path, &content)
+}
+
+fn validate_objective_brief_artifact_text(path: &Path, content: &str) -> Result<()> {
+    for required in [
+        "# Objective Brief",
+        "## Objective",
+        "## Cited Context",
+        "## Handoff Expectations",
+    ] {
+        if !content.contains(required) {
+            bail!(
+                "objective brief artifact {} is missing required section {required}",
+                path.display()
+            );
+        }
+    }
+    if content.contains("<layers_context>") {
         bail!(
-            "packet validate exited {:?}: {}{}",
-            output.status.code(),
-            output_text(&output.stdout),
-            output_text(&output.stderr)
+            "objective brief artifact {} contains full agent-prompt wrapper",
+            path.display()
         );
     }
     Ok(())
@@ -5248,6 +5279,30 @@ mod tests {
     }
 
     #[test]
+    fn committed_phase5_claim_fixture_blocks_on_success_and_tokens() {
+        let report: serde_json::Value = serde_json::from_str(include_str!(
+            "../../docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/compare/workflow-benchmark-report.json"
+        ))
+        .expect("committed phase5 benchmark report should parse");
+        let claim = &report["claim"];
+
+        assert_eq!(claim["status"], "not_supported");
+        let blocking_metrics = claim["blocking_metrics"]
+            .as_array()
+            .expect("blocking metrics should be an array");
+        assert!(
+            blocking_metrics
+                .iter()
+                .any(|metric| metric.as_str() == Some("success_delta"))
+        );
+        assert!(
+            blocking_metrics
+                .iter()
+                .any(|metric| metric.as_str() == Some("token_reduction_ratio"))
+        );
+    }
+
+    #[test]
     fn claim_rates_are_finite_without_negative_control_runs() {
         let runs = vec![
             parse_run(&valid_run("task-1", "baseline", 1_000, 2_000)).expect("baseline"),
@@ -6214,6 +6269,10 @@ mod tests {
             run.preflight_targets
                 .contains(&"validate_task_spec".to_owned())
         );
+        assert!(run.packet_artifact_path.as_ref().is_some_and(|path| {
+            path.extension()
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("md"))
+        }));
 
         let command = build_layers_preflight_command_with_exe(
             "layers preflight --json --strict",
@@ -6266,7 +6325,7 @@ mod tests {
             fs::write(&diff_stat_path, "stat").expect("stat");
             fs::write(&diff_patch_path, "patch").expect("patch");
             let packet_artifact_path = (variant == "layers_targeted_preflight")
-                .then(|| write_valid_packet_artifact(root, run_id));
+                .then(|| write_valid_objective_brief_artifact(root, run_id));
             executions.push(RunnerRunExecution {
                 run_id: run_id.to_owned(),
                 task_id: task_id.to_owned(),
@@ -6750,7 +6809,7 @@ mod tests {
             ),
         )
         .expect("run records");
-        write_valid_packet_artifact(root, "task-1--layers_targeted_preflight");
+        write_valid_objective_brief_artifact(root, "task-1--layers_targeted_preflight");
 
         let execution_summary = RunnerExecutionSummary {
             total_runs: 2,
@@ -6777,18 +6836,63 @@ mod tests {
             finding
                 .contains("negative-control targeted-preflight run produced stray packet artifact")
                 && finding.contains("task-1--layers_targeted_preflight")
+                && finding.contains(".md")
         }));
     }
 
-    fn write_valid_packet_artifact(root: &Path, run_id: &str) -> PathBuf {
+    #[test]
+    fn packet_artifact_validation_accepts_json_and_objective_brief_markdown() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path();
+        let json = write_valid_packet_artifact_with_extension(root, "json-packet", "md");
+        let md = write_valid_objective_brief_artifact(root, "md-brief");
+
+        validate_packet_artifact(&json).expect("json packet should validate by content");
+        validate_packet_artifact(&md).expect("objective brief markdown should validate");
+    }
+
+    #[test]
+    fn packet_artifact_validation_rejects_secret_like_json_even_with_markdown_extension() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let packet_dir = tmp.path().join("packets");
+        fs::create_dir_all(&packet_dir).expect("packet dir");
+        let packet_path = packet_dir.join("secret-bearing.md");
+        fs::write(
+            &packet_path,
+            r#"{"schema_version":2,"api_key":"secret-value-123456"}"#,
+        )
+        .expect("packet artifact");
+
+        let error =
+            validate_packet_artifact(&packet_path).expect_err("secret-like JSON should fail");
+        assert!(error.to_string().contains("ContextPacket JSON"));
+    }
+
+    fn write_valid_packet_artifact_with_extension(
+        root: &Path,
+        run_id: &str,
+        extension: &str,
+    ) -> PathBuf {
         let packet_dir = root.join("packets");
         fs::create_dir_all(&packet_dir).expect("packet dir");
-        let packet_path = packet_dir.join(format!("{run_id}.json"));
+        let packet_path = packet_dir.join(format!("{run_id}.{extension}"));
         fs::write(
             &packet_path,
             include_str!("../../docs/examples/context-packet-v2-minimal.json"),
         )
         .expect("packet artifact");
+        packet_path
+    }
+
+    fn write_valid_objective_brief_artifact(root: &Path, run_id: &str) -> PathBuf {
+        let packet_dir = root.join("packets");
+        fs::create_dir_all(&packet_dir).expect("packet dir");
+        let packet_path = packet_dir.join(format!("{run_id}.md"));
+        fs::write(
+            &packet_path,
+            "# Objective Brief\n\n## Objective\n\nFix the benchmark task.\n\n## Cited Context\n\n- Workflow / fixture\n  source: test://fixture (test)\n  selected because: validates markdown artifact finalization\n\n## Validation Plan\n\n- `cargo test -p layers workflow_benchmark`\n\n## Handoff Expectations\n\n- Use the cited context above as the task boundary.\n",
+        )
+        .expect("objective brief artifact");
         packet_path
     }
 

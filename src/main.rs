@@ -873,6 +873,36 @@ mod tests {
     }
 
     #[test]
+    fn cli_reference_matches_current_mcp_surface() {
+        let docs = include_str!("../docs/cli.md");
+        let command = Cli::command();
+        assert!(
+            command.find_subcommand("mcp").is_none(),
+            "docs must not advertise a shipped mcp CLI before the command exists"
+        );
+        assert!(docs.contains("no `layers mcp` CLI subcommand"));
+        for tool in [
+            "context_compile",
+            "impact_analyze",
+            "memory_get",
+            "memory_search",
+            "preflight_context",
+            "validate_context",
+        ] {
+            assert!(
+                docs.contains(tool),
+                "docs should name stable MCP tool {tool}"
+            );
+        }
+        for runtime_tool in ["filesystem", "process", "subagent"] {
+            assert!(
+                docs.contains(runtime_tool),
+                "docs should explicitly exclude generic {runtime_tool} tools from the stable surface"
+            );
+        }
+    }
+
+    #[test]
     fn north_star_names_packet_artifacts_as_stable_core() {
         let docs = include_str!("../docs/NORTH_STAR.md");
 

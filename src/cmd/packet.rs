@@ -291,7 +291,7 @@ fn render_packet_text(text: &str, format: PacketRenderFormat) -> Result<String> 
     }
 }
 
-fn format_objective_brief(packet: &ContextPacket) -> String {
+pub(crate) fn format_objective_brief(packet: &ContextPacket) -> String {
     let mut out = String::new();
     out.push_str("# Objective Brief\n\n");
     out.push_str("## Objective\n\n");
@@ -407,7 +407,7 @@ fn diff_packet_text(old_text: &str, new_text: &str, json: bool) -> Result<String
     }
 }
 
-fn parse_valid_packet_text(text: &str) -> Result<ContextPacket> {
+pub(crate) fn parse_valid_packet_text(text: &str) -> Result<ContextPacket> {
     let value: Value = serde_json::from_str(text).context("invalid ContextPacket JSON")?;
     let mut pre_deserialization_errors = Vec::new();
     validate_secret_like_values(&value, &mut pre_deserialization_errors);
