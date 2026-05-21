@@ -42,6 +42,7 @@ tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
 layers-core = { path = "crates/layers-core" }
 layers-compiler = { path = "crates/layers-compiler" }
 layers-store = { path = "crates/layers-store" }
+layers-mcp = { path = "crates/layers-mcp" }
 layers-daemon = { path = "crates/layers-daemon", optional = true }
 arrow-array = "57"
 arrow-schema = "57"

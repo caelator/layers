@@ -3267,6 +3267,7 @@ dependencies = [
  "layers-compiler",
  "layers-core",
  "layers-daemon",
+ "layers-mcp",
  "layers-store",
  "libc",
  "rand 0.8.5",

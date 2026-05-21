@@ -1,0 +1,224 @@
+{
+  "rows": [
+    {
+      "task_id": "code-bugfix-context-routing",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 484,
+      "bytes": 4010,
+      "elapsed_ms": 3353,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-bugfix-context-routing.md"
+    },
+    {
+      "task_id": "code-bugfix-council-circuit-exit-gate",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 406,
+      "bytes": 3371,
+      "elapsed_ms": 3292,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-bugfix-council-circuit-exit-gate.md"
+    },
+    {
+      "task_id": "code-bugfix-mcp-client-error-redaction",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 423,
+      "bytes": 3617,
+      "elapsed_ms": 3308,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-bugfix-mcp-client-error-redaction.md"
+    },
+    {
+      "task_id": "code-bugfix-preflight-strict-low-relevance",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 427,
+      "bytes": 3616,
+      "elapsed_ms": 3152,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-bugfix-preflight-strict-low-relevance.md"
+    },
+    {
+      "task_id": "code-bugfix-proveit-artifact-paths",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 428,
+      "bytes": 3557,
+      "elapsed_ms": 3293,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-bugfix-proveit-artifact-paths.md"
+    },
+    {
+      "task_id": "code-bugfix-provider-budget-overflow",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 426,
+      "bytes": 3637,
+      "elapsed_ms": 3209,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-bugfix-provider-budget-overflow.md"
+    },
+    {
+      "task_id": "code-bugfix-query-target-traversal",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 440,
+      "bytes": 3764,
+      "elapsed_ms": 3265,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-bugfix-query-target-traversal.md"
+    },
+    {
+      "task_id": "code-bugfix-router-historical-code-intent",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 438,
+      "bytes": 3610,
+      "elapsed_ms": 3277,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-bugfix-router-historical-code-intent.md"
+    },
+    {
+      "task_id": "code-bugfix-runtime-queue-starvation",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 427,
+      "bytes": 3644,
+      "elapsed_ms": 3375,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-bugfix-runtime-queue-starvation.md"
+    },
+    {
+      "task_id": "code-bugfix-telemetry-malformed-jsonl-skip",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 405,
+      "bytes": 3412,
+      "elapsed_ms": 3281,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-bugfix-telemetry-malformed-jsonl-skip.md"
+    },
+    {
+      "task_id": "code-bugfix-workflow-benchmark-duplicate-pairing",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 377,
+      "bytes": 3149,
+      "elapsed_ms": 3277,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-bugfix-workflow-benchmark-duplicate-pairing.md"
+    },
+    {
+      "task_id": "code-docs-architecture-context-spine",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 429,
+      "bytes": 3477,
+      "elapsed_ms": 3174,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-docs-architecture-context-spine.md"
+    },
+    {
+      "task_id": "code-feature-config-secret-redaction-nested",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 405,
+      "bytes": 3311,
+      "elapsed_ms": 3291,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-feature-config-secret-redaction-nested.md"
+    },
+    {
+      "task_id": "code-feature-daemon-heartbeat-stale-detection",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 405,
+      "bytes": 3463,
+      "elapsed_ms": 3339,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-feature-daemon-heartbeat-stale-detection.md"
+    },
+    {
+      "task_id": "code-feature-mcp-preflight-stable-registry",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 425,
+      "bytes": 3636,
+      "elapsed_ms": 3187,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-feature-mcp-preflight-stable-registry.md"
+    },
+    {
+      "task_id": "code-feature-packet-validate-warnings-json",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 443,
+      "bytes": 3695,
+      "elapsed_ms": 3278,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-feature-packet-validate-warnings-json.md"
+    },
+    {
+      "task_id": "code-feature-quality-abstain-low-specificity",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 466,
+      "bytes": 3902,
+      "elapsed_ms": 3261,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-feature-quality-abstain-low-specificity.md"
+    },
+    {
+      "task_id": "code-feature-remember-reject-empty-records",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 403,
+      "bytes": 3298,
+      "elapsed_ms": 3352,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-feature-remember-reject-empty-records.md"
+    },
+    {
+      "task_id": "code-feature-session-monitor-threshold-env",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 377,
+      "bytes": 3122,
+      "elapsed_ms": 3312,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-feature-session-monitor-threshold-env.md"
+    },
+    {
+      "task_id": "code-feature-tools-registry-duplicate-names",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 400,
+      "bytes": 3397,
+      "elapsed_ms": 3202,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-feature-tools-registry-duplicate-names.md"
+    },
+    {
+      "task_id": "code-feature-workflow-benchmark-human-surfaces",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 382,
+      "bytes": 3173,
+      "elapsed_ms": 3264,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-feature-workflow-benchmark-human-surfaces.md"
+    },
+    {
+      "task_id": "code-refactor-context-compiler-packet-finalize",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 469,
+      "bytes": 3974,
+      "elapsed_ms": 3239,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-refactor-context-compiler-packet-finalize.md"
+    },
+    {
+      "task_id": "code-refactor-memory-index-fallback-tags",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 424,
+      "bytes": 3491,
+      "elapsed_ms": 3216,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-refactor-memory-index-fallback-tags.md"
+    },
+    {
+      "task_id": "code-stale-trap-prefer-current-task-spec",
+      "negative_control": false,
+      "exit_code": 0,
+      "words": 408,
+      "bytes": 3489,
+      "elapsed_ms": 3286,
+      "artifact": "docs/dogfood/20260521T225107Z-compact-objective-brief-benchmark/compact-packets/code-stale-trap-prefer-current-task-spec.md"
+    }
+  ],
+  "count": 24,
+  "avg_words": 421.5416666666667,
+  "max_words": 484,
+  "min_words": 377
+}

@@ -260,41 +260,44 @@ Example:
 layers packet diff before.packet.json after.packet.json --json
 ```
 
-## Planned Stable Commands
-
-These are the next commands Layers should add or stabilize for v0.2.
-
 ## `layers memory ...`
 
-Status: **Planned stable**
+Status: **Stable core**
 
-Inspect and maintain explicit project memory.
+Inspect explicit project memory through the existing curated/remembered memory backend. This is a stable UX alias over the current curated-memory records; it does not introduce a separate memory store.
 
-Planned subcommands:
+Subcommands:
 
 ```bash
-layers memory list
-layers memory search <query>
-layers memory show <id>
-layers memory retire <id>
-layers memory audit
+layers memory list [--limit 20] [--include-legacy]
+layers memory search <query> [--limit 10] [--include-legacy]
+layers memory show <id> [--include-legacy]
 ```
 
 ## `layers impact <target>`
 
-Status: **Planned stable**
+Status: **Stable core**
 
-Produce Git-aware blast-radius context for a symbol, file, or task.
+Produce Git-aware blast-radius context for a symbol, file, or task target. When GitNexus is available, Layers calls `gitnexus impact`; otherwise it degrades to a bounded local summary with explicit warnings and validation commands.
+
+Options:
+
+| Flag | Description |
+|------|-------------|
+| `--json` | Emit the impact report as JSON |
+| `--include-tests` | Ask GitNexus to include tests and include test validation guidance |
+| `--depth <n>` | Relationship depth for GitNexus impact, default `2` |
 
 Expected output:
 
-- direct callers/dependents
-- affected execution flows
-- likely tests/commands
-- related files
-- recent commits touching target
-- linked decisions/failures/constraints
-- risk level
+- source/status (`gitnexus`, `local`, or degraded)
+- affected files when known
+- validation commands
+- degradation warnings when structural impact is unavailable
+
+## Planned Stable Commands
+
+These are the next commands Layers should add or stabilize after the current context-compiler slice.
 
 ## `layers import-session ...`
 
@@ -315,13 +318,11 @@ Status: **Planned stable**
 
 Draft memory records from a normalized session. Drafts require explicit promotion before they become canonical memory.
 
-## MCP stable context surface
+## `layers mcp serve`
 
-Status: **Library surface available; CLI adapter not yet shipped**
+Status: **Stable core**
 
-There is currently no `layers mcp` CLI subcommand. Running `layers mcp serve` is expected to fail until the CLI adapter lands.
-
-The implemented stable MCP surface lives in the `layers-mcp` crate as a safe allowlist for context compiler integrations. The default stable surface is intentionally narrow and excludes generic runtime/filesystem/process/subagent tools.
+Serve the stable context compiler MCP surface over stdio. The default surface is intentionally narrow and excludes generic runtime/filesystem/process/subagent tools.
 
 Stable MCP tool names:
 
@@ -332,7 +333,13 @@ Stable MCP tool names:
 - `preflight_context`
 - `validate_context`
 
-Use the CLI commands above (`layers query`, `layers preflight`, and `layers packet ...`) for end-user workflows until a real `layers mcp` command is added.
+Example:
+
+```bash
+layers mcp serve
+```
+
+Use `layers query`, `layers preflight`, and `layers packet ...` for direct CLI workflows; use `layers mcp serve` when another agent/runtime needs the same stable context surface over MCP.
 
 ---
 

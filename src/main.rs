@@ -75,8 +75,10 @@ use cmd::curated::{
 };
 use cmd::feedback::handle_feedback;
 use cmd::gate::handle_gate;
+use cmd::impact::{ImpactArgs, handle_impact};
 use cmd::infrastructure::{InfrastructureArgs, handle_infrastructure};
 use cmd::init::{InitArgs, handle_init};
+use cmd::mcp::{McpCommands, handle_mcp};
 use cmd::migrate::handle_migrate;
 #[cfg(feature = "substrate-storage")]
 use cmd::monitor::handle_monitor;
@@ -161,10 +163,17 @@ enum Commands {
         #[arg(long, default_value = "3")]
         uc_min_results: usize,
     },
+    /// [stable core] Summarize Git-aware impact context for a file or symbol.
+    Impact(ImpactArgs),
     /// [stable core] Validate, inspect, render, and diff `ContextPacket` artifacts.
     Packet {
         #[command(subcommand)]
         command: PacketCommands,
+    },
+    /// [stable core] Serve stable MCP context tools.
+    Mcp {
+        #[command(subcommand)]
+        command: McpCommands,
     },
     /// [beta] Prepare a local pre-edit context packet for a task.
     Preflight {
@@ -214,6 +223,11 @@ enum Commands {
         /// Comma-separated symbol names for graph context.
         #[arg(long)]
         targets: Option<String>,
+    },
+    /// [stable core] Inspect curated/remembered memory records.
+    Memory {
+        #[command(subcommand)]
+        command: MemoryCommands,
     },
     /// [stable core] Verify local readiness and degraded modes.
     Validate {
@@ -295,6 +309,38 @@ enum Commands {
     WorkflowBenchmark {
         #[command(subcommand)]
         command: WorkflowBenchmarkCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum MemoryCommands {
+    /// List curated/remembered memory records.
+    List {
+        /// Maximum number of records to return.
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
+        /// Include legacy council JSONL adapter records.
+        #[arg(long)]
+        include_legacy: bool,
+    },
+    /// Search curated/remembered memory records.
+    Search {
+        /// Search query.
+        query: String,
+        /// Maximum number of records to return.
+        #[arg(long, default_value_t = 10)]
+        limit: usize,
+        /// Include legacy council JSONL adapter records.
+        #[arg(long)]
+        include_legacy: bool,
+    },
+    /// Show one curated/remembered memory record.
+    Show {
+        /// Record id to show.
+        id: String,
+        /// Include legacy council JSONL adapter records.
+        #[arg(long)]
+        include_legacy: bool,
     },
 }
 
@@ -553,7 +599,9 @@ fn main() -> anyhow::Result<()> {
             no_audit,
             uc_min_results,
         } => handle_query(&task, json, agent_prompt, no_audit, uc_min_results),
+        Commands::Impact(args) => handle_impact(&args),
         Commands::Packet { command } => handle_packet(&command),
+        Commands::Mcp { command } => handle_mcp(&command),
         Commands::Preflight {
             task,
             targets,
@@ -587,6 +635,18 @@ fn main() -> anyhow::Result<()> {
             artifacts_dir,
             targets,
         ),
+        Commands::Memory { command } => match command {
+            MemoryCommands::List {
+                limit,
+                include_legacy,
+            } => handle_curated_list(limit, include_legacy),
+            MemoryCommands::Search {
+                query,
+                limit,
+                include_legacy,
+            } => handle_curated_search(&query, limit, include_legacy),
+            MemoryCommands::Show { id, include_legacy } => handle_curated_show(&id, include_legacy),
+        },
         Commands::Validate { routing, ci } => handle_validate(routing, ci),
         Commands::Refresh { embeddings } => handle_refresh(embeddings),
         Commands::Gate {
@@ -813,7 +873,7 @@ fn handle_daemon_run(config: Option<PathBuf>, pid_file: Option<PathBuf>) -> anyh
 
 #[cfg(test)]
 mod tests {
-    use super::{Cli, Commands};
+    use super::{Cli, Commands, MemoryCommands};
     use crate::cmd::packet::{PacketCommands, PacketRenderFormat};
     use crate::cmd::workflow_benchmark::WorkflowBenchmarkCommands;
     use clap::{CommandFactory, Parser};
@@ -877,10 +937,11 @@ mod tests {
         let docs = include_str!("../docs/cli.md");
         let command = Cli::command();
         assert!(
-            command.find_subcommand("mcp").is_none(),
-            "docs must not advertise a shipped mcp CLI before the command exists"
+            command.find_subcommand("mcp").is_some(),
+            "docs must advertise shipped mcp CLI once the command exists"
         );
-        assert!(docs.contains("no `layers mcp` CLI subcommand"));
+        assert!(docs.contains("## `layers mcp serve`"));
+        assert!(docs.contains("Status: **Stable core**"));
         for tool in [
             "context_compile",
             "impact_analyze",
@@ -921,6 +982,43 @@ mod tests {
             docs.contains("context compiler") || docs.contains("context spine"),
             "NORTH_STAR must describe Layers as context compiler or context spine"
         );
+    }
+
+    #[test]
+    fn parses_memory_commands() {
+        let cli = Cli::try_parse_from(["layers", "memory", "search", "packet", "--limit", "3"])
+            .expect("memory search should parse");
+
+        let Commands::Memory { command } = cli.command else {
+            panic!("expected memory command");
+        };
+        let MemoryCommands::Search { query, limit, .. } = command else {
+            panic!("expected memory search");
+        };
+        assert_eq!(query, "packet");
+        assert_eq!(limit, 3);
+    }
+
+    #[test]
+    fn parses_impact_command() {
+        let cli = Cli::try_parse_from(["layers", "impact", "src/cmd/preflight.rs", "--json"])
+            .expect("impact should parse");
+
+        let Commands::Impact(args) = cli.command else {
+            panic!("expected impact command");
+        };
+        assert_eq!(args.target, "src/cmd/preflight.rs");
+        assert!(args.json);
+    }
+
+    #[test]
+    fn parses_mcp_serve_command() {
+        let cli = Cli::try_parse_from(["layers", "mcp", "serve"]).expect("mcp serve should parse");
+
+        let Commands::Mcp { command } = cli.command else {
+            panic!("expected mcp command");
+        };
+        assert!(matches!(command, crate::cmd::mcp::McpCommands::Serve));
     }
 
     #[test]

@@ -77,6 +77,8 @@ The v2.0 stable core converges on:
 | `layers validate` / `layers doctor` | Stable core | Explain readiness and degraded modes |
 | `layers refresh` | Support | Refresh optional derived context such as GitNexus data |
 | `layers mcp serve` stable tools | Stable core | Expose context compilation and packet validation to agents |
+| `layers memory list/search/show` | Stable core | Inspect existing curated/remembered memory without a new backend |
+| `layers impact <target>` | Stable core | Summarize GitNexus-backed or degraded blast-radius context |
 
 ## Beta / v2.x Expansion Surface
 
@@ -84,8 +86,6 @@ These are strategically aligned, but not required to ship the minimal v2.0 relea
 
 | Surface | Target | Reason |
 |---------|--------|--------|
-| `layers memory ...` | v2.1 | Explicit memory inspection and hygiene |
-| `layers impact ...` | v2.1 | First-class blast-radius context |
 | session import/distillation | v2.2 | Cross-agent continuity from transcripts |
 | packet quality scoring | v2.2 | Measurable packet usefulness after dogfood evidence |
 | autoresearch freshness/network fetchers | v2.3 | External context intake once compiler core is stable |

@@ -1,0 +1,10 @@
+ContextPacket validation passed
+warning: packet includes warnings or degraded state
+{
+  "valid": true,
+  "strict": false,
+  "errors": [],
+  "warnings": [
+    "packet includes warnings or degraded state"
+  ]
+}

@@ -11,6 +11,7 @@ use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
 use crate::cmd::autoresearch::{AutoresearchPacketBridgeOptions, add_autoresearch_to_packet};
+use crate::cmd::impact::{ImpactSource, ImpactStatus, build_impact_report};
 use crate::cmd::packet::format_objective_brief;
 use crate::config::{canonical_curated_memory_path, workspace_root};
 use crate::context_packet_compiler::{
@@ -101,6 +102,7 @@ fn build_preflight_packet(args: &PreflightArgs) -> Result<ContextPacket> {
     let autoresearch_findings =
         add_autoresearch_section(&mut packet, &args.task, &inferred_targets);
     add_code_section(&mut packet, &workspace, &inferred_targets, code_heavy);
+    add_impact_section(&mut packet, &workspace, &inferred_targets);
     add_validation_section(&mut packet, code_heavy, &inferred_targets);
     add_preflight_summary_section(&mut packet, args, code_heavy, &inferred_targets);
 
@@ -464,6 +466,69 @@ fn add_code_section(
         return;
     }
     packet.sections.push(code_impact_section(items));
+}
+
+fn add_impact_section(packet: &mut ContextPacket, workspace: &Path, targets: &[String]) {
+    let Some(primary_target) = targets.first() else {
+        return;
+    };
+    let report = build_impact_report(workspace, primary_target, true, 2);
+    let status = match report.status {
+        ImpactStatus::Ok => "ok",
+        ImpactStatus::Degraded => "degraded",
+    };
+    let source = match report.source {
+        ImpactSource::GitNexus => "gitnexus",
+        ImpactSource::Local => "local",
+        ImpactSource::Degraded => "degraded",
+    };
+    let mut body = format!(
+        "Target: {}\nStatus: {status}\nSource: {source}\nSummary: {}",
+        report.target, report.summary
+    );
+    if !report.affected_files.is_empty() {
+        body.push_str("\nAffected files:");
+        for file in report.affected_files.iter().take(8) {
+            let _ = write!(body, "\n- {file}");
+        }
+    }
+    if !report.validation_commands.is_empty() {
+        body.push_str("\nValidation commands:");
+        for command in report.validation_commands.iter().take(5) {
+            let _ = write!(body, "\n- {command}");
+        }
+    }
+    if !report.warnings.is_empty() {
+        body.push_str("\nWarnings:");
+        for warning in report.warnings.iter().take(3) {
+            let _ = write!(body, "\n- {warning}");
+        }
+    }
+
+    packet.sections.push(context_section(
+        "impact",
+        "Impact Context",
+        "GitNexus-backed or degraded local blast-radius context for preflight targets.",
+        vec![context_item(
+            "impact-1",
+            primary_target,
+            &body,
+            source,
+            &format!("impact:{primary_target}"),
+            Some(primary_target.clone()),
+            "impact context identifies likely blast radius and validation before editing",
+            vec!["impact".to_string()],
+        )],
+    ));
+    if report.status == ImpactStatus::Degraded {
+        packet.warnings.push(ContextWarning {
+            severity: "warning".to_string(),
+            code: "impact_degraded".to_string(),
+            message: format!(
+                "Impact analysis for {primary_target} degraded; GitNexus context was unavailable or incomplete."
+            ),
+        });
+    }
 }
 
 fn add_validation_section(packet: &mut ContextPacket, code_heavy: bool, targets: &[String]) {
@@ -967,6 +1032,35 @@ mod tests {
         assert!(rendered.contains("## Handoff Expectations"));
         assert!(!rendered.contains("<layers_context>"));
         assert!(!rendered.contains("grounded test target"));
+    }
+
+    #[test]
+    fn targeted_preflight_includes_impact_section() {
+        let ws = TestWorkspace::new("preflight-impact-section");
+        std::fs::create_dir_all(ws.root().join("src/cmd")).unwrap();
+        std::fs::write(ws.root().join("src/cmd/preflight.rs"), "pub fn demo() {}\n").unwrap();
+        let args = PreflightArgs {
+            task: "fix src/cmd/preflight.rs".to_string(),
+            targets: vec!["src/cmd/preflight.rs".to_string()],
+            json: true,
+            agent_prompt: false,
+            no_audit: true,
+            strict: false,
+        };
+
+        let packet = build_preflight_packet(&args).unwrap();
+        let section = packet
+            .sections
+            .iter()
+            .find(|section| section.id == "impact")
+            .expect("targeted preflight should include impact context");
+
+        assert!(
+            section.items[0]
+                .body
+                .contains("Target: src/cmd/preflight.rs")
+        );
+        assert!(section.items[0].body.contains("Validation commands:"));
     }
 
     #[test]

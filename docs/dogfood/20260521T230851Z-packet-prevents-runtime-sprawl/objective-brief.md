@@ -1,0 +1,78 @@
+# Objective Brief
+
+## Objective
+
+Prevent runtime sprawl while adding stable MCP, impact, and memory UX; avoid committing telemetry artifacts and run the correct Rust verification gates
+
+## Context Constraints
+
+- packet: preflight-a405c6f4-9a42-41b9-a1a1-8707b37e4234
+- workspace: layers
+- route: preflight
+- confidence: high
+- budget: 363/700 words
+- git ref: ca45a9b
+
+## Warnings
+
+- [warning] dirty_worktree: Workspace has 6 changed and 4 untracked files; inspect before editing.
+- [info] autoresearch_uncertainty: No persisted autoresearch finding matched this task.
+- [info] injection_policy: Packet quality gate recommends InjectFull: packet has strong target coverage and low warning burden
+
+## Cited Context
+
+- Preflight Summary / Preflight classification
+  source: local-planner (preflight)
+  selected because: summarizes the local preflight plan before source collection
+  tags: planning
+- Workspace State / Git worktree state
+  source: git status --porcelain=v1 (workspace)
+  selected because: dirty or divergent workspace state changes how agents should interpret context
+  tags: workspace, git
+- Project Memory / Curated memory match
+  source: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)
+  selected because: curated memory shares terms with the preflight task
+  tags: memory
+- Project Memory / Curated memory match
+  source: /Users/xxx/layers/memoryport/curated-memory.jsonl (memory)
+  selected because: curated memory shares terms with the preflight task
+  tags: memory
+- Code and Impact Context / src/main.rs
+  source: src/main.rs (file) [src/main.rs]
+  selected because: explicit or inferred target file should be inspected before editing
+  tags: code
+- Code and Impact Context / docs/NORTH_STAR.md
+  source: docs/NORTH_STAR.md (file) [docs/NORTH_STAR.md]
+  selected because: explicit or inferred target file should be inspected before editing
+  tags: code
+- Code and Impact Context / docs/V2_PRODUCT_CONTRACT.md
+  source: docs/V2_PRODUCT_CONTRACT.md (file) [docs/V2_PRODUCT_CONTRACT.md]
+  selected because: explicit or inferred target file should be inspected before editing
+  tags: code
+- Impact Context / src/main.rs
+  source: impact:src/main.rs (gitnexus) [src/main.rs]
+  selected because: impact context identifies likely blast radius and validation before editing
+  tags: impact
+- Suggested Validation Commands / git diff --check
+  source: preflight-validation-policy (validation)
+  selected because: validation commands prevent context-only research from becoming unverified implementation
+  tags: validation
+- Suggested Validation Commands / cargo test --workspace --all-targets
+  source: preflight-validation-policy (validation)
+  selected because: validation commands prevent context-only research from becoming unverified implementation
+  tags: validation
+- Suggested Validation Commands / cargo clippy --workspace --all-targets -- -D warnings
+  source: preflight-validation-policy (validation)
+  selected because: validation commands prevent context-only research from becoming unverified implementation
+  tags: validation
+
+## Validation Plan
+
+No explicit validation commands were captured in this packet.
+
+## Handoff Expectations
+
+- Use the cited context above as the task boundary.
+- Do not assume uncited repository facts are current.
+- Preserve packet citations in review notes when they justify edits.
+- If the cited context is insufficient, stop and request an updated ContextPacket or explicit targets.

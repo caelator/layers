@@ -5,8 +5,10 @@ pub mod council;
 pub mod curated;
 pub mod feedback;
 pub mod gate;
+pub mod impact;
 pub mod infrastructure;
 pub mod init;
+pub mod mcp;
 pub mod migrate;
 #[cfg(feature = "substrate-storage")]
 pub mod monitor;
