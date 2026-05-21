@@ -904,7 +904,9 @@ mod tests {
         assert!(!packet.low_confidence_fallback);
         assert!(packet.retrieval.fallback_reason.is_none());
         assert!(
-            !policy_warning.message.contains("low-confidence or fallback-derived"),
+            !policy_warning
+                .message
+                .contains("low-confidence or fallback-derived"),
             "well-grounded targeted preflight must not cite fallback-derived reasons: {}",
             policy_warning.message
         );
