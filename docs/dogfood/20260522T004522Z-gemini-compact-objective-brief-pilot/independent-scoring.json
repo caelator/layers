@@ -1,0 +1,32 @@
+{
+  "actionable_secret_findings": 0,
+  "baseline_success_rate": 1.0,
+  "blocking_metrics": [
+    "token_reduction_ratio",
+    "paired_task_count",
+    "code_heavy_paired_task_count",
+    "negative_control_paired_task_count"
+  ],
+  "claim_status": "not_supported",
+  "context_quality_delta": 0.5142857142857142,
+  "effectiveness_verdict": "pilot_supported_noninferior_success_and_faster_context_quality",
+  "hallucinated_or_stale_context_rate": 0.0,
+  "layers_overhead_tokens": 551.2,
+  "layers_success_rate": 1.0,
+  "limitation": "5-pair pilot proves non-inferior success/faster execution/context-quality lift for this sample; preregistered full product claim remains blocked by estimated token_reduction_ratio and sample-size gates.",
+  "missed_critical_context_rate": 0.0,
+  "negative_control_abstention_rate": 1.0,
+  "net_time_saved_ms": 13226.6,
+  "objective_brief_artifacts": 3,
+  "packet_json_artifacts": 3,
+  "packet_json_validation_failures": [],
+  "paired_tasks": 5,
+  "product_claim_verdict": "not_supported_until_full_gates_pass",
+  "run": "docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot",
+  "speedup": 1.0519870608165207,
+  "success_delta": 0.0,
+  "token_accounting": "estimated_runs=10; measured_runs=0; placeholder_runs=0",
+  "token_reduction_ratio": -0.4520636984075398,
+  "unnecessary_context_injection_rate": 0.0,
+  "workflow_records": 10
+}

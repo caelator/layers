@@ -1,0 +1,32 @@
+{
+  "task_id": "code-feature-workflow-benchmark-human-surfaces",
+  "title": "List all benchmark surfaces in human reports",
+  "prompt": "Improve human workflow benchmark reports so each Layers surface and comparison variant is named explicitly rather than relying on a legacy singular Layers summary. Keep JSON output backward compatible.",
+  "category": "feature",
+  "difficulty": "small",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": false,
+  "stale_context_trap": false,
+  "time_budget_minutes": 25,
+  "target_files": [
+    "src/cmd/workflow_benchmark.rs"
+  ],
+  "target_symbols": [
+    "render_human_report",
+    "VariantAggregate"
+  ],
+  "expected_relevant_files": [
+    "src/cmd/workflow_benchmark.rs"
+  ],
+  "expected_validation_commands": [
+    "cargo test -q workflow_benchmark -- --nocapture",
+    "cargo check --workspace --all-targets"
+  ],
+  "success_rubric": {
+    "full_success": "The requested repository change is implemented with focused regression coverage and all listed validation commands pass.",
+    "partial_success": "The main behavior is implemented but validation is incomplete, coverage is weak, or minor follow-up is required.",
+    "failure": "The requested behavior remains missing, untested, or introduces regressions.",
+    "min_verification_quality": 4,
+    "primary_endpoint": "verified_success"
+  }
+}

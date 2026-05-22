@@ -1,0 +1,236 @@
+diff --git a/crates/layers-mcp/src/bridge.rs b/crates/layers-mcp/src/bridge.rs
+index 278a94e..d43e7a6 100644
+--- a/crates/layers-mcp/src/bridge.rs
++++ b/crates/layers-mcp/src/bridge.rs
+@@ -101,8 +101,9 @@ impl Tool for McpToolBridge {
+ 
+         let mcp_result: McpToolResult = serde_json::from_value(response).map_err(|e| {
+             LayersError::Tool(format!(
+-                "failed to parse MCP tool result from '{}': {e}",
+-                self.tool_name
++                "failed to parse MCP tool result from '{}': {}",
++                self.tool_name,
++                crate::types::redact_secrets(&e.to_string())
+             ))
+         })?;
+ 
+diff --git a/crates/layers-mcp/src/client.rs b/crates/layers-mcp/src/client.rs
+index 693d6fb..6def6a7 100644
+--- a/crates/layers-mcp/src/client.rs
++++ b/crates/layers-mcp/src/client.rs
+@@ -254,13 +254,17 @@ impl McpClient {
+             return Err(LayersError::Tool("MCP server closed connection".into()));
+         }
+ 
+-        let response: JsonRpcResponse = serde_json::from_str(&response_line)
+-            .map_err(|e| LayersError::Tool(format!("invalid JSON-RPC response: {e}")))?;
++        let response: JsonRpcResponse = serde_json::from_str(&response_line).map_err(|e| {
++            LayersError::Tool(format!(
++                "invalid JSON-RPC response: {}",
++                crate::types::redact_secrets(&e.to_string())
++            ))
++        })?;
+ 
+         if let Some(err) = response.error {
+             return Err(LayersError::Tool(format!(
+                 "MCP server error: {}",
+-                err.message
++                crate::types::redact_secrets(&err.message)
+             )));
+         }
+ 
+diff --git a/crates/layers-mcp/src/server.rs b/crates/layers-mcp/src/server.rs
+index 44b8a67..d0f97e9 100644
+--- a/crates/layers-mcp/src/server.rs
++++ b/crates/layers-mcp/src/server.rs
+@@ -241,14 +241,15 @@ impl McpServer {
+             let request: JsonRpcRequest = match serde_json::from_str(line) {
+                 Ok(r) => r,
+                 Err(e) => {
+-                    error!(error = %e, "invalid JSON-RPC request");
++                    let redacted_msg = crate::types::redact_secrets(&e.to_string());
++                    error!(error = %redacted_msg, "invalid JSON-RPC request");
+                     let response = JsonRpcResponse {
+                         jsonrpc: "2.0".to_string(),
+                         id: None,
+                         result: None,
+                         error: Some(JsonRpcError {
+                             code: -32700,
+-                            message: format!("Parse error: {e}"),
++                            message: format!("Parse error: {redacted_msg}"),
+                         }),
+                     };
+                     let mut resp_line = serde_json::to_string(&response).unwrap_or_default();
+@@ -400,7 +401,7 @@ impl McpServer {
+             Err(e) => {
+                 let content = vec![serde_json::json!({
+                     "type": "text",
+-                    "text": e.to_string()
++                    "text": crate::types::redact_secrets(&e.to_string())
+                 })];
+                 Ok(serde_json::json!({
+                     "content": content,
+diff --git a/crates/layers-mcp/src/types.rs b/crates/layers-mcp/src/types.rs
+index 30d583b..550bd1e 100644
+--- a/crates/layers-mcp/src/types.rs
++++ b/crates/layers-mcp/src/types.rs
+@@ -131,6 +131,113 @@ pub struct InitializeResult {
+     pub server_info: McpServerInfo,
+ }
+ 
++// ---------------------------------------------------------------------------
++// Redaction
++// ---------------------------------------------------------------------------
++
++/// Redact secret-like fields from a JSON value.
++pub fn redact_value(value: &mut serde_json::Value) {
++    match value {
++        serde_json::Value::Object(map) => {
++            for (key, val) in map.iter_mut() {
++                if is_secret_field(key) {
++                    *val = serde_json::Value::String("[REDACTED]".to_string());
++                } else {
++                    redact_value(val);
++                }
++            }
++        }
++        serde_json::Value::Array(arr) => {
++            for val in arr {
++                redact_value(val);
++            }
++        }
++        _ => {}
++    }
++}
++
++/// Redact secret-like patterns from a string.
++pub fn redact_secrets(s: &str) -> String {
++    if s.is_empty() {
++        return s.to_string();
++    }
++
++    // Try parsing as JSON first
++    if let Ok(mut val) = serde_json::from_str::<serde_json::Value>(s) {
++        redact_value(&mut val);
++        if let Ok(redacted) = serde_json::to_string(&val) {
++            return redacted;
++        }
++    }
++
++    // Best-effort for non-JSON strings (like error messages)
++    let keywords = ["key", "token", "password", "secret", "auth"];
++    let mut result = s.to_string();
++
++    for kw in &keywords {
++        let mut start_search = 0;
++        while let Some(kw_pos) = result[start_search..].to_lowercase().find(kw) {
++            let actual_pos = start_search + kw_pos;
++
++            // Find the boundaries of the quoted string containing this keyword
++            let before = &result[..actual_pos];
++            let after = &result[actual_pos..];
++
++            if let (Some(q_start), Some(q_end)) = (before.rfind('"'), after.find('"')) {
++                let actual_q_start = q_start;
++                let actual_q_end = actual_pos + q_end;
++
++                // Check if this quoted string is a key (followed by a colon)
++                let after_quote = &result[actual_q_end + 1..];
++                if let Some(colon_pos) = after_quote.find(':') {
++                    if after_quote[..colon_pos].trim().is_empty() {
++                        // It's a key! Redact the VALUE after the colon.
++                        let after_colon = &after_quote[colon_pos + 1..];
++                        if let Some(v_q_start) = after_colon.find('"') {
++                            let actual_v_q_start = actual_q_end + 1 + colon_pos + 1 + v_q_start;
++                            if let Some(v_q_end) = result[actual_v_q_start + 1..].find('"') {
++                                let actual_v_q_end = actual_v_q_start + 1 + v_q_end;
++                                if &result[actual_v_q_start + 1..actual_v_q_end] == "[REDACTED]" {
++                                    start_search = actual_v_q_end + 1;
++                                    continue;
++                                }
++                                result.replace_range(
++                                    actual_v_q_start + 1..actual_v_q_end,
++                                    "[REDACTED]",
++                                );
++                                start_search = 0;
++                                continue;
++                            }
++                        }
++                    }
++                }
++
++                // If it's NOT a key but contains a keyword, it's likely a sensitive value echoed.
++                if &result[actual_q_start + 1..actual_q_end] == "[REDACTED]" {
++                    start_search = actual_q_end + 1;
++                    continue;
++                }
++                result.replace_range(actual_q_start + 1..actual_q_end, "[REDACTED]");
++                start_search = 0;
++                continue;
++            }
++            start_search = actual_pos + kw.len();
++        }
++    }
++
++    result
++}
++
++/// Returns true if the field name suggests it might contain a secret.
++fn is_secret_field(name: &str) -> bool {
++    let lower = name.to_lowercase();
++    lower.contains("key")
++        || lower.contains("token")
++        || lower.contains("password")
++        || lower.contains("secret")
++        || lower.contains("auth")
++}
++
+ // ---------------------------------------------------------------------------
+ // Tests
+ // ---------------------------------------------------------------------------
+@@ -251,4 +358,45 @@ mod tests {
+         let caps: McpServerCapabilities = serde_json::from_str(json).unwrap();
+         assert!(caps.tools.is_none());
+     }
++
++    #[test]
++    fn test_redact_value() {
++        let mut val = serde_json::json!({
++            "api_key": "secret123",
++            "nested": {
++                "token": "abc-456",
++                "normal": "value"
++            },
++            "array": [
++                {"password": "pass"},
++                {"other": "data"}
++            ]
++        });
++
++        redact_value(&mut val);
++
++        assert_eq!(val["api_key"], "[REDACTED]");
++        assert_eq!(val["nested"]["token"], "[REDACTED]");
++        assert_eq!(val["nested"]["normal"], "value");
++        assert_eq!(val["array"][0]["password"], "[REDACTED]");
++        assert_eq!(val["array"][1]["other"], "data");
++    }
++
++    #[test]
++    fn test_redact_secrets_json() {
++        let input = r#"{"api_key": "secret123", "msg": "hello"}"#;
++        let redacted = redact_secrets(input);
++        // It should be a valid JSON with redacted key
++        let val: serde_json::Value = serde_json::from_str(&redacted).unwrap();
++        assert_eq!(val["api_key"], "[REDACTED]");
++        assert_eq!(val["msg"], "hello");
++    }
++
++    #[test]
++    fn test_redact_secrets_string() {
++        let input = "Parse error: invalid type: string \"secret-token\", expected u32 at line 1 column 40. Context: \"token\": \"secret-token\"";
++        let redacted = redact_secrets(input);
++        assert!(redacted.contains("\"token\": \"[REDACTED]\""));
++        assert!(!redacted.contains("secret-token"));
++    }
+ }

@@ -1,0 +1,5 @@
+ crates/layers-mcp/src/bridge.rs | 30 ++++++++++++++-
+ crates/layers-mcp/src/client.rs |  8 +++-
+ crates/layers-mcp/src/server.rs | 59 +++++++++++++++++++++++++++--
+ crates/layers-mcp/src/types.rs  | 83 +++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 173 insertions(+), 7 deletions(-)

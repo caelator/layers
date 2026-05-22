@@ -1,0 +1,178 @@
+{
+  "total_runs": 10,
+  "completed_runs": 10,
+  "failed_runs": 0,
+  "run_records_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/compare/workflow-runs.jsonl",
+  "execution_report_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/compare/runner-execution-report.json",
+  "runs": [
+    {
+      "run_id": "code-stale-trap-prefer-current-task-spec--layers_targeted_preflight",
+      "task_id": "code-stale-trap-prefer-current-task-spec",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/transcripts/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/validation/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/packets/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.md",
+      "agent_exit_code": 0,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 492991,
+      "completed": true
+    },
+    {
+      "run_id": "code-bugfix-mcp-client-error-redaction--layers_targeted_preflight",
+      "task_id": "code-bugfix-mcp-client-error-redaction",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/worktrees/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/transcripts/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/validation/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/packets/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.md",
+      "agent_exit_code": 0,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 381352,
+      "completed": true
+    },
+    {
+      "run_id": "negative-control-count-letters--baseline",
+      "task_id": "negative-control-count-letters",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/worktrees/negative-control-count-letters--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/transcripts/negative-control-count-letters--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/validation/negative-control-count-letters--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/negative-control-count-letters--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/negative-control-count-letters--baseline.patch",
+      "agent_exit_code": 0,
+      "validation_exit_codes": [
+        0
+      ],
+      "wall_time_ms": 12407,
+      "completed": true
+    },
+    {
+      "run_id": "negative-control-simple-json-validity--baseline",
+      "task_id": "negative-control-simple-json-validity",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/worktrees/negative-control-simple-json-validity--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/transcripts/negative-control-simple-json-validity--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/validation/negative-control-simple-json-validity--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/negative-control-simple-json-validity--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/negative-control-simple-json-validity--baseline.patch",
+      "agent_exit_code": 0,
+      "validation_exit_codes": [
+        0
+      ],
+      "wall_time_ms": 11544,
+      "completed": true
+    },
+    {
+      "run_id": "code-stale-trap-prefer-current-task-spec--baseline",
+      "task_id": "code-stale-trap-prefer-current-task-spec",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/worktrees/code-stale-trap-prefer-current-task-spec--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/transcripts/code-stale-trap-prefer-current-task-spec--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/validation/code-stale-trap-prefer-current-task-spec--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/code-stale-trap-prefer-current-task-spec--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/code-stale-trap-prefer-current-task-spec--baseline.patch",
+      "agent_exit_code": 0,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 380543,
+      "completed": true
+    },
+    {
+      "run_id": "negative-control-simple-json-validity--layers_targeted_preflight",
+      "task_id": "negative-control-simple-json-validity",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/worktrees/negative-control-simple-json-validity--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/transcripts/negative-control-simple-json-validity--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/validation/negative-control-simple-json-validity--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/negative-control-simple-json-validity--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/negative-control-simple-json-validity--layers_targeted_preflight.patch",
+      "agent_exit_code": 0,
+      "validation_exit_codes": [
+        0
+      ],
+      "wall_time_ms": 11040,
+      "completed": true
+    },
+    {
+      "run_id": "negative-control-count-letters--layers_targeted_preflight",
+      "task_id": "negative-control-count-letters",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/worktrees/negative-control-count-letters--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/transcripts/negative-control-count-letters--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/validation/negative-control-count-letters--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/negative-control-count-letters--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/negative-control-count-letters--layers_targeted_preflight.patch",
+      "agent_exit_code": 0,
+      "validation_exit_codes": [
+        0
+      ],
+      "wall_time_ms": 12089,
+      "completed": true
+    },
+    {
+      "run_id": "code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight",
+      "task_id": "code-feature-workflow-benchmark-human-surfaces",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/worktrees/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/transcripts/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/validation/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/packets/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.md",
+      "agent_exit_code": 0,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 374633,
+      "completed": true
+    },
+    {
+      "run_id": "code-bugfix-mcp-client-error-redaction--baseline",
+      "task_id": "code-bugfix-mcp-client-error-redaction",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/worktrees/code-bugfix-mcp-client-error-redaction--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/transcripts/code-bugfix-mcp-client-error-redaction--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/validation/code-bugfix-mcp-client-error-redaction--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/code-bugfix-mcp-client-error-redaction--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/code-bugfix-mcp-client-error-redaction--baseline.patch",
+      "agent_exit_code": 0,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 407015,
+      "completed": true
+    },
+    {
+      "run_id": "code-feature-workflow-benchmark-human-surfaces--baseline",
+      "task_id": "code-feature-workflow-benchmark-human-surfaces",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/worktrees/code-feature-workflow-benchmark-human-surfaces--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/transcripts/code-feature-workflow-benchmark-human-surfaces--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/validation/code-feature-workflow-benchmark-human-surfaces--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/code-feature-workflow-benchmark-human-surfaces--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/diffs/code-feature-workflow-benchmark-human-surfaces--baseline.patch",
+      "agent_exit_code": 0,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 526729,
+      "completed": true
+    }
+  ]
+}

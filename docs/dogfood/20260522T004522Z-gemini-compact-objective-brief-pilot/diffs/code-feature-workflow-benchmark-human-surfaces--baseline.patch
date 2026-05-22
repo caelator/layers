@@ -1,0 +1,352 @@
+diff --git a/src/cmd/workflow_benchmark.rs b/src/cmd/workflow_benchmark.rs
+index c98fb76..b899a5c 100644
+--- a/src/cmd/workflow_benchmark.rs
++++ b/src/cmd/workflow_benchmark.rs
+@@ -415,10 +415,10 @@ impl WorkflowVariant {
+     /// Human-friendly label for terminal reports.
+     fn display_name(self) -> &'static str {
+         match self {
+-            Self::Baseline => "Baseline (no Layers)",
+-            Self::LayersTargetedPreflight => "Layers targeted-preflight",
+-            Self::LayersBroadQuery => "Layers broad-query",
+-            Self::LayersMcpPreflight => "Layers MCP-preflight",
++            Self::Baseline => "Baseline",
++            Self::LayersTargetedPreflight => "Layers (Targeted Preflight)",
++            Self::LayersBroadQuery => "Layers (Broad Query)",
++            Self::LayersMcpPreflight => "Layers (MCP Preflight)",
+         }
+     }
+ }
+@@ -1011,10 +1011,24 @@ struct BenchmarkReport {
+     paired_task_count: usize,
+     variants: Vec<VariantAggregate>,
+     baseline: Option<VariantAggregate>,
++    /// Legacy singular Layers summary (targeted-preflight).
+     layers: Option<VariantAggregate>,
++    /// Explicit Layers (targeted-preflight) surface aggregate.
++    layers_targeted_preflight: Option<VariantAggregate>,
++    /// Explicit Layers (broad-query) surface aggregate.
++    layers_broad_query: Option<VariantAggregate>,
++    /// Explicit Layers (mcp-preflight) surface aggregate.
++    layers_mcp_preflight: Option<VariantAggregate>,
+     token_accounting: TokenAccountingSummary,
+     comparisons: Vec<PairedComparison>,
++    /// Legacy singular comparison (targeted-preflight).
+     comparison: Option<PairedComparison>,
++    /// Explicit Layers (targeted-preflight) vs baseline comparison.
++    comparison_targeted_preflight: Option<PairedComparison>,
++    /// Explicit Layers (broad-query) vs baseline comparison.
++    comparison_broad_query: Option<PairedComparison>,
++    /// Explicit Layers (mcp-preflight) vs baseline comparison.
++    comparison_mcp_preflight: Option<PairedComparison>,
+     #[serde(skip_serializing_if = "Option::is_none")]
+     claim: Option<ClaimReport>,
+ }
+@@ -1083,6 +1097,8 @@ enum ClaimStatus {
+ 
+ #[derive(Debug, Clone, Serialize)]
+ struct ClaimReport {
++    variant: WorkflowVariant,
++    variant_name: String,
+     status: ClaimStatus,
+     thresholds: ClaimThresholds,
+     blocking_metrics: Vec<String>,
+@@ -1098,6 +1114,7 @@ struct ClaimReport {
+ #[derive(Debug, Clone, Serialize)]
+ struct VariantAggregate {
+     variant: WorkflowVariant,
++    variant_name: String,
+     run_count: usize,
+     success_rate: f64,
+     median_wall_time_ms: f64,
+@@ -1128,6 +1145,7 @@ struct VariantAggregate {
+ #[derive(Debug, Clone, Serialize)]
+ struct PairedComparison {
+     variant: WorkflowVariant,
++    variant_name: String,
+     paired_task_count: usize,
+     net_time_saved_ms: f64,
+     net_tokens_saved: f64,
+@@ -3437,18 +3455,51 @@ fn analyze_runs(runs: &[WorkflowRun]) -> Result<BenchmarkReport> {
+         )?;
+     let paired_task_count = comparison.paired_task_count;
+ 
++    let layers_targeted_preflight =
++        aggregate_variant(WorkflowVariant::LayersTargetedPreflight, &targeted_layers_runs);
++    let layers_broad_query = aggregate_variant(
++        WorkflowVariant::LayersBroadQuery,
++        &runs
++            .iter()
++            .filter(|run| run.variant == WorkflowVariant::LayersBroadQuery)
++            .collect::<Vec<_>>(),
++    );
++    let layers_mcp_preflight = aggregate_variant(
++        WorkflowVariant::LayersMcpPreflight,
++        &runs
++            .iter()
++            .filter(|run| run.variant == WorkflowVariant::LayersMcpPreflight)
++            .collect::<Vec<_>>(),
++    );
++
++    let comparison_targeted_preflight = comparisons
++        .iter()
++        .find(|c| c.variant == WorkflowVariant::LayersTargetedPreflight)
++        .cloned();
++    let comparison_broad_query = comparisons
++        .iter()
++        .find(|c| c.variant == WorkflowVariant::LayersBroadQuery)
++        .cloned();
++    let comparison_mcp_preflight = comparisons
++        .iter()
++        .find(|c| c.variant == WorkflowVariant::LayersMcpPreflight)
++        .cloned();
++
+     Ok(BenchmarkReport {
+         run_count: runs.len(),
+         paired_task_count,
+         variants,
+         baseline: aggregate_variant(WorkflowVariant::Baseline, &baseline_runs),
+-        layers: aggregate_variant(
+-            WorkflowVariant::LayersTargetedPreflight,
+-            &targeted_layers_runs,
+-        ),
++        layers: layers_targeted_preflight.clone(),
++        layers_targeted_preflight,
++        layers_broad_query,
++        layers_mcp_preflight,
+         token_accounting: summarize_token_accounting(runs),
+         comparisons,
+-        comparison: Some(comparison),
++        comparison: Some(comparison.clone()),
++        comparison_targeted_preflight,
++        comparison_broad_query,
++        comparison_mcp_preflight,
+         claim: None,
+     })
+ }
+@@ -3594,6 +3645,8 @@ fn analyze_runs_with_thresholds(
+     blocking_metrics.extend(sample_size_metrics);
+ 
+     report.claim = Some(ClaimReport {
++        variant: comparison.variant,
++        variant_name: comparison.variant.display_name().to_string(),
+         status: if has_hard_blockers {
+             ClaimStatus::NotSupported
+         } else if !uncertainty_notes.is_empty() {
+@@ -3670,6 +3723,7 @@ fn aggregate_variant(variant: WorkflowVariant, runs: &[&WorkflowRun]) -> Option<
+ 
+     Some(VariantAggregate {
+         variant,
++        variant_name: variant.display_name().to_string(),
+         run_count: runs.len(),
+         success_rate: average_by(runs, |run| run.success_score),
+         median_wall_time_ms: median(runs.iter().map(|run| run.wall_time_ms as f64).collect()),
+@@ -3772,6 +3826,7 @@ fn paired_comparison(runs: &[WorkflowRun], variant: WorkflowVariant) -> Option<P
+ 
+     Some(PairedComparison {
+         variant,
++        variant_name: variant.display_name().to_string(),
+         paired_task_count: pairs.len(),
+         net_time_saved_ms,
+         net_tokens_saved,
+@@ -4356,7 +4411,7 @@ fn write_final_run_report(summary: &FinalizeRunSummary, report: &BenchmarkReport
+         summary.secret_scan_findings
+     )?;
+     if let Some(claim) = &report.claim {
+-        writeln!(output, "- Claim status: {:?}", claim.status)?;
++        writeln!(output, "- Claim status for {}: {:?}", claim.variant_name, claim.status)?;
+         if !claim.blocking_metrics.is_empty() {
+             writeln!(
+                 output,
+@@ -4372,10 +4427,10 @@ fn write_final_run_report(summary: &FinalizeRunSummary, report: &BenchmarkReport
+             )?;
+         }
+     }
+-    if let Some(comparison) = &report.comparison {
++    for comparison in &report.comparisons {
+         writeln!(output)?;
+-        writeln!(output, "## Paired comparison")?;
+-        writeln!(output, "- Paired tasks: {}", report.paired_task_count)?;
++        writeln!(output, "## Paired comparison: {}", comparison.variant_name)?;
++        writeln!(output, "- Paired tasks: {}", comparison.paired_task_count)?;
+         writeln!(output, "- Speedup: {:.3}x", comparison.speedup)?;
+         writeln!(
+             output,
+@@ -4419,7 +4474,7 @@ fn format_report(report: &BenchmarkReport, json: bool) -> Result<String> {
+ 
+     // Emit a per-surface summary for every variant present in the data.
+     for aggregate in &report.variants {
+-        write_variant_summary(&mut output, aggregate.variant.display_name(), aggregate)?;
++        write_variant_summary(&mut output, &aggregate.variant_name, aggregate)?;
+     }
+ 
+     // Emit a per-variant paired comparison when multiple Layers surfaces exist.
+@@ -4427,7 +4482,7 @@ fn format_report(report: &BenchmarkReport, json: bool) -> Result<String> {
+         writeln!(
+             output,
+             "\nPaired net benefit vs. baseline: {}",
+-            comparison.variant.display_name()
++            comparison.variant_name
+         )?;
+         writeln!(output, "- Paired tasks: {}", comparison.paired_task_count)?;
+         writeln!(
+@@ -4460,7 +4515,7 @@ fn format_report(report: &BenchmarkReport, json: bool) -> Result<String> {
+     }
+ 
+     if let Some(claim) = &report.claim {
+-        writeln!(output, "\nClaim status: {:?}", claim.status)?;
++        writeln!(output, "\nClaim status for {}: {:?}", claim.variant_name, claim.status)?;
+         if !claim.blocking_metrics.is_empty() {
+             writeln!(
+                 output,
+@@ -4976,6 +5031,8 @@ mod tests {
+         let baseline = report.baseline.expect("baseline aggregate");
+         let layers = report.layers.expect("layers aggregate");
+ 
++        assert_eq!(baseline.variant_name, "Baseline");
++        assert_eq!(layers.variant_name, "Layers (Targeted Preflight)");
+         assert_eq!(baseline.run_count, 2);
+         assert_approx_eq(baseline.median_wall_time_ms, 2_000.0);
+         assert_approx_eq(baseline.average_input_tokens, 3_000.0);
+@@ -5002,6 +5059,7 @@ mod tests {
+         let report = analyze_runs(&runs).expect("analysis");
+         let comparison = report.comparison.expect("comparison");
+ 
++        assert_eq!(comparison.variant_name, "Layers (Targeted Preflight)");
+         assert_eq!(comparison.paired_task_count, 1);
+         assert_approx_eq(comparison.net_time_saved_ms, 300.0);
+         assert_approx_eq(comparison.net_tokens_saved, 400.0);
+@@ -5028,23 +5086,30 @@ mod tests {
+         let report = analyze_runs(&runs).expect("analysis");
+ 
+         assert_eq!(report.variants.len(), 4);
+-        assert!(
+-            report
+-                .comparisons
+-                .iter()
+-                .any(|comparison| comparison.variant == WorkflowVariant::LayersTargetedPreflight)
++        assert_eq!(
++            report.layers_targeted_preflight.as_ref().unwrap().variant_name,
++            "Layers (Targeted Preflight)"
+         );
+-        assert!(
+-            report
+-                .comparisons
+-                .iter()
+-                .any(|comparison| comparison.variant == WorkflowVariant::LayersBroadQuery)
++        assert_eq!(
++            report.layers_broad_query.as_ref().unwrap().variant_name,
++            "Layers (Broad Query)"
++        );
++        assert_eq!(
++            report.layers_mcp_preflight.as_ref().unwrap().variant_name,
++            "Layers (MCP Preflight)"
+         );
+         assert!(
+             report
+                 .comparisons
+                 .iter()
+-                .any(|comparison| comparison.variant == WorkflowVariant::LayersMcpPreflight)
++                .any(|comparison| comparison.variant == WorkflowVariant::LayersTargetedPreflight)
++        );
++        assert!(report.comparison_targeted_preflight.is_some());
++        assert!(report.comparison_broad_query.is_some());
++        assert!(report.comparison_mcp_preflight.is_some());
++        assert_eq!(
++            report.comparison_broad_query.as_ref().unwrap().variant_name,
++            "Layers (Broad Query)"
+         );
+         assert_eq!(
+             report.comparison.expect("default comparison").variant,
+@@ -5140,6 +5205,7 @@ mod tests {
+         let report = analyze_runs(&runs).expect("analysis");
+         let comparison = report.comparison.expect("comparison");
+ 
++        assert_eq!(comparison.variant_name, "Layers (Targeted Preflight)");
+         assert_eq!(comparison.paired_task_count, 1);
+         assert_approx_eq(comparison.net_time_saved_ms, 1_400.0);
+         assert_approx_eq(comparison.net_tokens_saved, 1_800.0);
+@@ -5352,12 +5418,12 @@ mod tests {
+         // The generic legacy labels "Baseline" / "Layers" must not appear
+         // as bare section headers without qualification.
+         assert!(
+-            output.contains("Baseline (no Layers)"),
+-            "human report should use qualified surface name for baseline"
++            output.contains("Baseline"),
++            "human report should use explicit name for baseline"
+         );
+         assert!(
+-            output.contains("Layers targeted-preflight"),
+-            "human report should use qualified surface name for targeted-preflight"
++            output.contains("Layers (Targeted Preflight)"),
++            "human report should use explicit name for targeted-preflight"
+         );
+     }
+ 
+@@ -5372,7 +5438,7 @@ mod tests {
+         // The paired comparison heading should identify the specific Layers surface,
+         // not just say "Paired net benefit" without qualification.
+         assert!(
+-            output.contains("Paired net benefit vs. baseline: Layers targeted-preflight"),
++            output.contains("Paired net benefit vs. baseline: Layers (Targeted Preflight)"),
+             "human report comparison heading should name the Layers surface explicitly"
+         );
+     }
+@@ -5396,33 +5462,33 @@ mod tests {
+ 
+         // All four variant surfaces must be named.
+         assert!(
+-            output.contains("Baseline (no Layers)"),
++            output.contains("Baseline"),
+             "missing baseline surface name"
+         );
+         assert!(
+-            output.contains("Layers targeted-preflight"),
++            output.contains("Layers (Targeted Preflight)"),
+             "missing targeted-preflight surface name"
+         );
+         assert!(
+-            output.contains("Layers broad-query"),
++            output.contains("Layers (Broad Query)"),
+             "missing broad-query surface name"
+         );
+         assert!(
+-            output.contains("Layers MCP-preflight"),
++            output.contains("Layers (MCP Preflight)"),
+             "missing MCP-preflight surface name"
+         );
+ 
+         // Each Layers surface should have its own paired comparison heading.
+         assert!(
+-            output.contains("Paired net benefit vs. baseline: Layers targeted-preflight"),
++            output.contains("Paired net benefit vs. baseline: Layers (Targeted Preflight)"),
+             "missing targeted-preflight comparison heading"
+         );
+         assert!(
+-            output.contains("Paired net benefit vs. baseline: Layers broad-query"),
++            output.contains("Paired net benefit vs. baseline: Layers (Broad Query)"),
+             "missing broad-query comparison heading"
+         );
+         assert!(
+-            output.contains("Paired net benefit vs. baseline: Layers MCP-preflight"),
++            output.contains("Paired net benefit vs. baseline: Layers (MCP Preflight)"),
+             "missing MCP-preflight comparison heading"
+         );
+     }
+@@ -5446,6 +5512,16 @@ mod tests {
+             "JSON backward compat: missing 'layers' field"
+         );
+ 
++        // The new explicit fields must also be present.
++        assert!(
++            json_output.contains("\"layers_targeted_preflight\":"),
++            "JSON: missing 'layers_targeted_preflight' field"
++        );
++        assert!(
++            json_output.contains("\"comparison_targeted_preflight\":"),
++            "JSON: missing 'comparison_targeted_preflight' field"
++        );
++
+         // The new 'variants' array must also be present.
+         assert!(
+             json_output.contains("\"variants\":"),

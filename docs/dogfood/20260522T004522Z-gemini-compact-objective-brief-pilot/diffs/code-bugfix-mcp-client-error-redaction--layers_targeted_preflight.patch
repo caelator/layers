@@ -1,0 +1,271 @@
+diff --git a/crates/layers-mcp/src/bridge.rs b/crates/layers-mcp/src/bridge.rs
+index 278a94e..0afbafe 100644
+--- a/crates/layers-mcp/src/bridge.rs
++++ b/crates/layers-mcp/src/bridge.rs
+@@ -97,7 +97,7 @@ impl Tool for McpToolBridge {
+     }
+ 
+     async fn execute(&self, args: serde_json::Value, _context: ToolContext) -> Result<ToolOutput> {
+-        let response = self.client.call_tool(&self.tool_name, args).await?;
++        let response = self.client.call_tool(&self.tool_name, args.clone()).await?;
+ 
+         let mcp_result: McpToolResult = serde_json::from_value(response).map_err(|e| {
+             LayersError::Tool(format!(
+@@ -106,7 +106,11 @@ impl Tool for McpToolBridge {
+             ))
+         })?;
+ 
+-        Ok(Self::convert_result(mcp_result))
++        let mut output = Self::convert_result(mcp_result);
++        if output.is_error.unwrap_or(false) {
++            output.content = crate::types::redact_message_secrets(&output.content, &args);
++        }
++        Ok(output)
+     }
+ }
+ 
+@@ -198,6 +202,28 @@ mod tests {
+         assert!(output.content.contains("[image: image/png"));
+     }
+ 
++    #[test]
++    fn test_redaction_in_bridge() {
++        let args = serde_json::json!({
++            "api_key": "sk-test-secret"
++        });
++        let result = McpToolResult {
++            content: vec![ContentBlock::Text {
++                text: "failed with sk-test-secret".to_string(),
++            }],
++            is_error: true,
++        };
++        
++        // We test the redaction logic as it would be used in execute
++        let mut output = McpToolBridge::convert_result(result);
++        if output.is_error.unwrap_or(false) {
++            output.content = crate::types::redact_message_secrets(&output.content, &args);
++        }
++        
++        assert!(output.content.contains("[REDACTED]"));
++        assert!(!output.content.contains("sk-test-secret"));
++    }
++
+     #[test]
+     fn tool_trait_accessors() {
+         let bridge = McpToolBridge {
+diff --git a/crates/layers-mcp/src/client.rs b/crates/layers-mcp/src/client.rs
+index 693d6fb..7bc75e7 100644
+--- a/crates/layers-mcp/src/client.rs
++++ b/crates/layers-mcp/src/client.rs
+@@ -215,7 +215,7 @@ impl McpClient {
+             jsonrpc: "2.0".to_string(),
+             id,
+             method: method.to_string(),
+-            params,
++            params: params.clone(),
+         };
+ 
+         let mut line = serde_json::to_string(&request).map_err(LayersError::Serialization)?;
+@@ -258,9 +258,13 @@ impl McpClient {
+             .map_err(|e| LayersError::Tool(format!("invalid JSON-RPC response: {e}")))?;
+ 
+         if let Some(err) = response.error {
++            let mut message = err.message;
++            if let Some(ref p) = params {
++                message = crate::types::redact_message_secrets(&message, p);
++            }
+             return Err(LayersError::Tool(format!(
+                 "MCP server error: {}",
+-                err.message
++                message
+             )));
+         }
+ 
+diff --git a/crates/layers-mcp/src/server.rs b/crates/layers-mcp/src/server.rs
+index 44b8a67..850dc27 100644
+--- a/crates/layers-mcp/src/server.rs
++++ b/crates/layers-mcp/src/server.rs
+@@ -386,11 +386,15 @@ impl McpServer {
+             metadata: std::collections::HashMap::new(),
+         };
+ 
+-        match self.registry.dispatch(tool_name, arguments, context).await {
++        match self.registry.dispatch(tool_name, arguments.clone(), context).await {
+             Ok(output) => {
++                let mut text = output.content;
++                if output.is_error.unwrap_or(false) {
++                    text = crate::types::redact_message_secrets(&text, &arguments);
++                }
+                 let content = vec![serde_json::json!({
+                     "type": "text",
+-                    "text": output.content
++                    "text": text
+                 })];
+                 Ok(serde_json::json!({
+                     "content": content,
+@@ -398,9 +402,10 @@ impl McpServer {
+                 }))
+             }
+             Err(e) => {
++                let error_text = crate::types::redact_message_secrets(&e.to_string(), &arguments);
+                 let content = vec![serde_json::json!({
+                     "type": "text",
+-                    "text": e.to_string()
++                    "text": error_text
+                 })];
+                 Ok(serde_json::json!({
+                     "content": content,
+@@ -784,6 +789,54 @@ mod tests {
+         assert!(err.message.contains("not exposed"));
+     }
+ 
++    #[tokio::test]
++    async fn tools_call_redacts_secrets_in_error() {
++        struct ErrorTool;
++        #[async_trait::async_trait]
++        impl layers_core::Tool for ErrorTool {
++            fn name(&self) -> &str {
++                "error_tool"
++            }
++            fn description(&self) -> &str {
++                "returns error"
++            }
++            fn schema(&self) -> serde_json::Value {
++                serde_json::json!({})
++            }
++            async fn execute(
++                &self,
++                args: serde_json::Value,
++                _ctx: ToolContext,
++            ) -> layers_core::Result<layers_core::ToolOutput> {
++                Err(layers_core::LayersError::Tool(format!(
++                    "failed with secret: {}",
++                    args["api_key"].as_str().unwrap_or("none")
++                )))
++            }
++        }
++
++        let mut reg = ToolRegistry::new();
++        reg.register(Arc::new(ErrorTool));
++        let registry = Arc::new(reg);
++
++        let config = McpServerConfig {
++            allowlisted_tools: vec!["error_tool".to_string()],
++            ..Default::default()
++        };
++        let server = McpServer::new(registry, config);
++
++        let params = serde_json::json!({
++            "name": "error_tool",
++            "arguments": { "api_key": "sk-test-12345" }
++        });
++        let result = server.handle_tools_call(Some(&params)).await.unwrap();
++
++        assert_eq!(result["isError"], true);
++        let text = result["content"][0]["text"].as_str().unwrap();
++        assert!(text.contains("[REDACTED]"));
++        assert!(!text.contains("sk-test-12345"));
++    }
++
+     // -- Config serde ----------------------------------------------------------
+ 
+     #[test]
+diff --git a/crates/layers-mcp/src/types.rs b/crates/layers-mcp/src/types.rs
+index 30d583b..0f2dbde 100644
+--- a/crates/layers-mcp/src/types.rs
++++ b/crates/layers-mcp/src/types.rs
+@@ -131,6 +131,60 @@ pub struct InitializeResult {
+     pub server_info: McpServerInfo,
+ }
+ 
++// ---------------------------------------------------------------------------
++// Redaction utilities
++// ---------------------------------------------------------------------------
++
++/// Redacts secret-like values from a message based on a request payload.
++pub fn redact_message_secrets(text: &str, params: &serde_json::Value) -> String {
++    let secrets = collect_secrets(params);
++    let mut redacted = text.to_string();
++    for secret in secrets {
++        if secret.len() >= 4 {
++            redacted = redacted.replace(&secret, "[REDACTED]");
++        }
++    }
++    redacted
++}
++
++fn collect_secrets(value: &serde_json::Value) -> Vec<String> {
++    let mut secrets = Vec::new();
++    match value {
++        serde_json::Value::Object(map) => {
++            for (key, val) in map {
++                if is_secret_key(key) {
++                    if let Some(s) = val.as_str() {
++                        secrets.push(s.to_string());
++                    } else if !val.is_null() {
++                        secrets.push(val.to_string());
++                    }
++                } else {
++                    secrets.extend(collect_secrets(val));
++                }
++            }
++        }
++        serde_json::Value::Array(arr) => {
++            for val in arr {
++                secrets.extend(collect_secrets(val));
++            }
++        }
++        _ => {}
++    }
++    secrets
++}
++
++fn is_secret_key(key: &str) -> bool {
++    let k = key.to_lowercase();
++    k.contains("api_key")
++        || k.contains("apikey")
++        || k.contains("secret")
++        || k.contains("token")
++        || k.contains("password")
++        || k.contains("auth")
++        || k.contains("authorization")
++        || k.contains("credential")
++}
++
+ // ---------------------------------------------------------------------------
+ // Tests
+ // ---------------------------------------------------------------------------
+@@ -251,4 +305,33 @@ mod tests {
+         let caps: McpServerCapabilities = serde_json::from_str(json).unwrap();
+         assert!(caps.tools.is_none());
+     }
++
++    #[test]
++    fn test_redact_message_secrets() {
++        let params = serde_json::json!({
++            "api_key": "sk-12345",
++            "nested": {
++                "token": "secret-token"
++            },
++            "regular": "not a secret"
++        });
++
++        let msg = "Failed to authenticate with sk-12345 using token secret-token. Data: not a secret";
++        let redacted = redact_message_secrets(msg, &params);
++        assert_eq!(
++            redacted,
++            "Failed to authenticate with [REDACTED] using token [REDACTED]. Data: not a secret"
++        );
++    }
++
++    #[test]
++    fn test_redact_short_secrets_skipped() {
++        let params = serde_json::json!({
++            "api_key": "abc"
++        });
++        let msg = "Error with abc";
++        let redacted = redact_message_secrets(msg, &params);
++        // Too short, should not redact to avoid over-redaction
++        assert_eq!(redacted, "Error with abc");
++    }
+ }

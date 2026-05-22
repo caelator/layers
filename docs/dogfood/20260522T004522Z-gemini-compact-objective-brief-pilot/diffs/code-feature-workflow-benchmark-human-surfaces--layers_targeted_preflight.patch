@@ -1,0 +1,52 @@
+diff --git a/src/cmd/workflow_benchmark.rs b/src/cmd/workflow_benchmark.rs
+index c98fb76..aecd4da 100644
+--- a/src/cmd/workflow_benchmark.rs
++++ b/src/cmd/workflow_benchmark.rs
+@@ -1008,12 +1008,16 @@ impl FinalizeRunSummary {
+ #[derive(Debug, Clone, Serialize)]
+ struct BenchmarkReport {
+     run_count: usize,
++    /// Legacy singular summary field. Use `variants` for per-surface data.
+     paired_task_count: usize,
+     variants: Vec<VariantAggregate>,
++    /// Legacy singular summary field. Use `variants` for per-surface data.
+     baseline: Option<VariantAggregate>,
++    /// Legacy singular summary field. Use `variants` for per-surface data.
+     layers: Option<VariantAggregate>,
+     token_accounting: TokenAccountingSummary,
+     comparisons: Vec<PairedComparison>,
++    /// Legacy singular summary field. Use `comparisons` for per-surface data.
+     comparison: Option<PairedComparison>,
+     #[serde(skip_serializing_if = "Option::is_none")]
+     claim: Option<ClaimReport>,
+@@ -4372,10 +4376,19 @@ fn write_final_run_report(summary: &FinalizeRunSummary, report: &BenchmarkReport
+             )?;
+         }
+     }
+-    if let Some(comparison) = &report.comparison {
++
++    for aggregate in &report.variants {
++        write_variant_summary(&mut output, aggregate.variant.display_name(), aggregate)?;
++    }
++
++    for comparison in &report.comparisons {
+         writeln!(output)?;
+-        writeln!(output, "## Paired comparison")?;
+-        writeln!(output, "- Paired tasks: {}", report.paired_task_count)?;
++        writeln!(
++            output,
++            "## Paired net benefit vs. baseline: {}",
++            comparison.variant.display_name()
++        )?;
++        writeln!(output, "- Paired tasks: {}", comparison.paired_task_count)?;
+         writeln!(output, "- Speedup: {:.3}x", comparison.speedup)?;
+         writeln!(
+             output,
+@@ -4415,7 +4428,6 @@ fn format_report(report: &BenchmarkReport, json: bool) -> Result<String> {
+     writeln!(output, "Workflow benchmark report")?;
+     writeln!(output, "=========================")?;
+     writeln!(output, "Runs: {}", report.run_count)?;
+-    writeln!(output, "Paired tasks: {}", report.paired_task_count)?;
+ 
+     // Emit a per-surface summary for every variant present in the data.
+     for aggregate in &report.variants {

@@ -1,0 +1,447 @@
+diff --git a/crates/layers-core/src/packet_quality.rs b/crates/layers-core/src/packet_quality.rs
+index 10a8e83..2c0ee82 100644
+--- a/crates/layers-core/src/packet_quality.rs
++++ b/crates/layers-core/src/packet_quality.rs
+@@ -374,7 +374,7 @@ mod tests {
+     use super::*;
+     use crate::{
+         ContextBudget, ContextItem, ContextPacket, ContextSection, ContextSource, ContextWarning,
+-        TaskCategory,
++        SurfaceClaim, TaskCategory,
+     };
+     use chrono::Utc;
+     use std::path::PathBuf;
+@@ -457,13 +457,19 @@ mod tests {
+             title: "Negative".to_string(),
+             prompt: "What is 2+2?".to_string(),
+             category: TaskCategory::NegativeControl,
++            difficulty: None,
++            surface_claim: SurfaceClaim::Baseline,
++            negative_control: true,
++            stale_context_trap: false,
++            repo_commit: None,
++            time_budget_minutes: None,
+             repo_root: None,
+             target_files: Vec::new(),
+             target_symbols: Vec::new(),
+             expected_relevant_files: Vec::new(),
+-            expected_validation_commands: Vec::new(),
+-            negative_control: true,
++            expected_validation_commands: vec!["cargo test".to_string()],
+             success_rubric: crate::SuccessRubric::default(),
++            abstention_rubric: None,
+         };
+ 
+         let report = PacketQualityReport::grade(&packet, &task);
+@@ -477,13 +483,19 @@ mod tests {
+             title: "Code".to_string(),
+             prompt: "Fix src/main.rs and run cargo test".to_string(),
+             category: TaskCategory::Bugfix,
++            difficulty: None,
++            surface_claim: SurfaceClaim::Baseline,
++            negative_control: false,
++            stale_context_trap: false,
++            repo_commit: None,
++            time_budget_minutes: None,
+             repo_root: None,
+             target_files: vec![PathBuf::from("src/main.rs")],
+             target_symbols: Vec::new(),
+             expected_relevant_files: vec![PathBuf::from("src/main.rs")],
+             expected_validation_commands: vec!["cargo test".to_string()],
+-            negative_control: false,
+             success_rubric: crate::SuccessRubric::default(),
++            abstention_rubric: None,
+         }
+     }
+ 
+diff --git a/crates/layers-core/src/task_spec.rs b/crates/layers-core/src/task_spec.rs
+index 3618005..a4d11ae 100644
+--- a/crates/layers-core/src/task_spec.rs
++++ b/crates/layers-core/src/task_spec.rs
+@@ -5,11 +5,24 @@ use std::path::PathBuf;
+ 
+ /// Durable local description of a workflow task.
+ #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
++#[serde(deny_unknown_fields)]
+ pub struct TaskSpec {
+     pub task_id: String,
+     pub title: String,
+     pub prompt: String,
+     pub category: TaskCategory,
++    #[serde(default)]
++    pub difficulty: Option<String>,
++    #[serde(default)]
++    pub surface_claim: SurfaceClaim,
++    #[serde(default)]
++    pub negative_control: bool,
++    #[serde(default)]
++    pub stale_context_trap: bool,
++    #[serde(default)]
++    pub repo_commit: Option<String>,
++    #[serde(default)]
++    pub time_budget_minutes: Option<u64>,
+     #[serde(default, skip_serializing_if = "Option::is_none")]
+     pub repo_root: Option<PathBuf>,
+     #[serde(default)]
+@@ -20,10 +33,9 @@ pub struct TaskSpec {
+     pub expected_relevant_files: Vec<PathBuf>,
+     #[serde(default)]
+     pub expected_validation_commands: Vec<String>,
+-    #[serde(default)]
+-    pub negative_control: bool,
+-    #[serde(default)]
+     pub success_rubric: SuccessRubric,
++    #[serde(default)]
++    pub abstention_rubric: Option<String>,
+ }
+ 
+ /// Coarse task class for routing, grading, and benchmark grouping.
+@@ -53,16 +65,28 @@ impl TaskCategory {
+     }
+ }
+ 
++/// Surface/interface used for the task run.
++#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
++#[serde(rename_all = "snake_case")]
++pub enum SurfaceClaim {
++    Baseline,
++    LayersBroadQuery,
++    #[default]
++    LayersTargetedPreflight,
++    LayersMcpPreflight,
++}
++
+ /// Human/evaluator rubric for deciding task success.
+ #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
++#[serde(deny_unknown_fields)]
+ pub struct SuccessRubric {
+     pub full_success: String,
+-    #[serde(default)]
+     pub partial_success: String,
+-    #[serde(default)]
+     pub failure: String,
+     #[serde(default = "default_min_verification_quality")]
+     pub min_verification_quality: u8,
++    #[serde(default = "default_primary_endpoint")]
++    pub primary_endpoint: String,
+ }
+ 
+ impl Default for SuccessRubric {
+@@ -72,6 +96,7 @@ impl Default for SuccessRubric {
+             partial_success: "Task is partially complete or needs minor intervention.".to_string(),
+             failure: "Task is wrong, incomplete, or unusable.".to_string(),
+             min_verification_quality: default_min_verification_quality(),
++            primary_endpoint: default_primary_endpoint(),
+         }
+     }
+ }
+@@ -80,6 +105,10 @@ const fn default_min_verification_quality() -> u8 {
+     3
+ }
+ 
++fn default_primary_endpoint() -> String {
++    "verified_success".to_string()
++}
++
+ impl TaskSpec {
+     /// Validate semantic constraints that serde shape alone cannot enforce.
+     ///
+@@ -88,35 +117,62 @@ impl TaskSpec {
+     /// Returns a list of all validation errors when the task spec is unusable.
+     pub fn validate(&self) -> Result<(), Vec<String>> {
+         let mut errors = Vec::new();
+-        require_non_empty(&mut errors, "task_id", &self.task_id);
++        if let Err(err) = validate_task_id(&self.task_id) {
++            errors.push(err);
++        }
+         require_non_empty(&mut errors, "title", &self.title);
++        require_non_empty(&mut errors, "prompt", &self.prompt);
+ 
+-        if !self.negative_control {
+-            require_non_empty(&mut errors, "prompt", &self.prompt);
++        if let Some(difficulty) = &self.difficulty {
++            match difficulty.as_str() {
++                "trivial" | "small" | "medium" | "large" => {}
++                _ => errors.push(format!("invalid difficulty: {difficulty}")),
++            }
+         }
+ 
+-        if self.success_rubric.min_verification_quality > 5 {
+-            errors.push(
+-                "success_rubric.min_verification_quality must be between 0 and 5".to_string(),
+-            );
++        if let Some(repo_commit) = &self.repo_commit {
++            require_non_empty(&mut errors, "repo_commit", repo_commit);
++        }
++
++        if matches!(self.time_budget_minutes, Some(0)) {
++            errors.push("time_budget_minutes must be at least 1".to_string());
++        }
++
++        if self.expected_validation_commands.is_empty() {
++            errors.push("expected_validation_commands must not be empty".to_string());
++        }
++
++        validate_success_rubric(&mut errors, &self.success_rubric);
++
++        if !self.negative_control {
++            if self.target_files.is_empty() {
++                errors.push("non-negative_control tasks must declare target_files".to_string());
++            }
++            if self.expected_relevant_files.is_empty() {
++                errors.push(
++                    "non-negative_control tasks must declare expected_relevant_files".to_string(),
++                );
++            }
+         }
+-        if self.success_rubric.full_success.trim().is_empty() {
+-            errors.push("success_rubric.full_success must not be empty".to_string());
++
++        if let Some(abstention_rubric) = &self.abstention_rubric {
++            if abstention_rubric.trim().is_empty() {
++                errors.push("abstention_rubric must not be empty if present".to_string());
++            }
+         }
+ 
+-        if self.category.is_code_heavy()
+-            && !self.negative_control
+-            && self.target_files.is_empty()
+-            && self.expected_relevant_files.is_empty()
+-            && self.target_symbols.is_empty()
++        if self.negative_control
++            && (!self.target_files.is_empty() || !self.expected_relevant_files.is_empty())
++            && self.abstention_rubric.is_none()
+         {
+             errors.push(
+-                "code-heavy task should include target_files, target_symbols, or expected_relevant_files".to_string(),
++                "negative_control tasks with context expectations must define abstention_rubric"
++                    .to_string(),
+             );
+         }
+ 
+-        if self.negative_control && self.category != TaskCategory::NegativeControl {
+-            errors.push("negative_control tasks must use category negative_control".to_string());
++        if self.stale_context_trap && self.expected_relevant_files.is_empty() {
++            errors.push("stale_context_trap tasks must declare expected_relevant_files".to_string());
+         }
+ 
+         if errors.is_empty() {
+@@ -127,6 +183,44 @@ impl TaskSpec {
+     }
+ }
+ 
++fn validate_task_id(task_id: &str) -> Result<(), String> {
++    let mut chars = task_id.chars();
++    let Some(first) = chars.next() else {
++        return Err("task_id must not be empty".to_string());
++    };
++    if !first.is_ascii_lowercase() && !first.is_ascii_digit() {
++        return Err("task_id must start with a lowercase ASCII letter or digit".to_string());
++    }
++    if !chars.all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '_' || ch == '-') {
++        return Err(
++            "task_id may only contain lowercase ASCII letters, digits, '_' or '-'".to_string(),
++        );
++    }
++    Ok(())
++}
++
++fn validate_success_rubric(errors: &mut Vec<String>, rubric: &SuccessRubric) {
++    require_non_empty(errors, "success_rubric.full_success", &rubric.full_success);
++    require_non_empty(
++        errors,
++        "success_rubric.partial_success",
++        &rubric.partial_success,
++    );
++    require_non_empty(errors, "success_rubric.failure", &rubric.failure);
++    require_non_empty(
++        errors,
++        "success_rubric.primary_endpoint",
++        &rubric.primary_endpoint,
++    );
++
++    if !(1..=5).contains(&rubric.min_verification_quality) {
++        errors.push("success_rubric.min_verification_quality must be between 1 and 5".to_string());
++    }
++    if rubric.primary_endpoint != "verified_success" {
++        errors.push("success_rubric.primary_endpoint must be verified_success".to_string());
++    }
++}
++
+ fn require_non_empty(errors: &mut Vec<String>, field: &str, value: &str) {
+     if value.trim().is_empty() {
+         errors.push(format!("{field} must not be empty"));
+@@ -145,8 +239,15 @@ mod tests {
+               "title":"Inspect benchmark CLI wiring",
+               "prompt":"Inspect the workflow-benchmark command wiring.",
+               "category":"orientation",
++              "target_files":["src/main.rs"],
+               "expected_relevant_files":["src/main.rs"],
+-              "expected_validation_commands":["cargo test -q workflow_benchmark"]
++              "expected_validation_commands":["cargo test -q workflow_benchmark"],
++              "success_rubric": {
++                "full_success": "OK",
++                "partial_success": "Partial",
++                "failure": "Fail",
++                "min_verification_quality": 3
++              }
+             }"#,
+         )
+         .expect("task should deserialize");
+@@ -162,16 +263,22 @@ mod tests {
+             title: "Bad".to_string(),
+             prompt: "Do work".to_string(),
+             category: TaskCategory::Planning,
++            difficulty: None,
++            surface_claim: SurfaceClaim::Baseline,
++            negative_control: false,
++            stale_context_trap: false,
++            repo_commit: None,
++            time_budget_minutes: None,
+             repo_root: None,
+-            target_files: Vec::new(),
++            target_files: vec![PathBuf::from("src/main.rs")],
+             target_symbols: Vec::new(),
+-            expected_relevant_files: Vec::new(),
+-            expected_validation_commands: Vec::new(),
+-            negative_control: false,
++            expected_relevant_files: vec![PathBuf::from("src/main.rs")],
++            expected_validation_commands: vec!["test".to_string()],
+             success_rubric: SuccessRubric {
+                 min_verification_quality: 6,
+                 ..SuccessRubric::default()
+             },
++            abstention_rubric: None,
+         };
+ 
+         let errors = task.validate().expect_err("rubric should be invalid");
+@@ -187,15 +294,21 @@ mod tests {
+         let task = TaskSpec {
+             task_id: "negative-1".to_string(),
+             title: "No repo context needed".to_string(),
+-            prompt: String::new(),
++            prompt: "No prompt needed".to_string(),
+             category: TaskCategory::NegativeControl,
++            difficulty: None,
++            surface_claim: SurfaceClaim::Baseline,
++            negative_control: true,
++            stale_context_trap: false,
++            repo_commit: None,
++            time_budget_minutes: None,
+             repo_root: None,
+             target_files: Vec::new(),
+             target_symbols: Vec::new(),
+             expected_relevant_files: Vec::new(),
+-            expected_validation_commands: Vec::new(),
+-            negative_control: true,
++            expected_validation_commands: vec!["test".to_string()],
+             success_rubric: SuccessRubric::default(),
++            abstention_rubric: None,
+         };
+ 
+         task.validate().expect("negative control should validate");
+@@ -208,13 +321,19 @@ mod tests {
+             title: "Feature".to_string(),
+             prompt: " ".to_string(),
+             category: TaskCategory::Feature,
++            difficulty: None,
++            surface_claim: SurfaceClaim::Baseline,
++            negative_control: false,
++            stale_context_trap: false,
++            repo_commit: None,
++            time_budget_minutes: None,
+             repo_root: None,
+             target_files: vec![PathBuf::from("src/main.rs")],
+             target_symbols: Vec::new(),
+-            expected_relevant_files: Vec::new(),
+-            expected_validation_commands: Vec::new(),
+-            negative_control: false,
++            expected_relevant_files: vec![PathBuf::from("src/main.rs")],
++            expected_validation_commands: vec!["test".to_string()],
+             success_rubric: SuccessRubric::default(),
++            abstention_rubric: None,
+         };
+ 
+         let errors = task.validate().expect_err("empty prompt should fail");
+@@ -235,7 +354,9 @@ mod tests {
+             }
+             let content = std::fs::read_to_string(&path).expect("read task example");
+             let task: TaskSpec = serde_json::from_str(&content).expect("task example deserializes");
+-            task.validate().expect("task example validates");
++            if let Err(errors) = task.validate() {
++                panic!("task example {} failed validation: {:?}", path.display(), errors);
++            }
+             validated += 1;
+         }
+ 
+diff --git a/src/cmd/preflight.rs b/src/cmd/preflight.rs
+index 81eb594..1f2ad62 100644
+--- a/src/cmd/preflight.rs
++++ b/src/cmd/preflight.rs
+@@ -4,7 +4,7 @@ use anyhow::{Context, Result, anyhow};
+ use layers_compiler::{CompileMode, CompileRequest, ContextCompiler};
+ use layers_core::{
+     ContextBudget, ContextItem, ContextPacket, ContextWarning, InjectionRecommendation,
+-    PacketQualityReport, RetrievalReport, SuccessRubric, TaskCategory, TaskSpec,
++    PacketQualityReport, RetrievalReport, SuccessRubric, SurfaceClaim, TaskCategory, TaskSpec,
+ };
+ use serde_json::json;
+ use std::fmt::Write as _;
+@@ -224,6 +224,12 @@ fn task_spec_for_preflight(args: &PreflightArgs, code_heavy: bool, targets: &[St
+         title: "Preflight task".to_string(),
+         prompt: args.task.clone(),
+         category,
++        difficulty: None,
++        surface_claim: SurfaceClaim::LayersTargetedPreflight,
++        negative_control: false,
++        stale_context_trap: false,
++        repo_commit: None,
++        time_budget_minutes: None,
+         repo_root: Some(workspace_root()),
+         target_files: target_paths.clone(),
+         target_symbols: Vec::new(),
+@@ -232,8 +238,8 @@ fn task_spec_for_preflight(args: &PreflightArgs, code_heavy: bool, targets: &[St
+             .into_iter()
+             .map(|command| command.command)
+             .collect(),
+-        negative_control: false,
+         success_rubric: SuccessRubric::default(),
++        abstention_rubric: None,
+     }
+ }
+ 
+diff --git a/src/cmd/query.rs b/src/cmd/query.rs
+index 0e25244..ae7c022 100644
+--- a/src/cmd/query.rs
++++ b/src/cmd/query.rs
+@@ -2,7 +2,7 @@ use anyhow::Result;
+ use layers_compiler::{CompileMode, CompileRequest, ContextCompiler};
+ use layers_core::{
+     ContextBudget, ContextItem, ContextPacket, ContextWarning, InjectionRecommendation,
+-    PacketQualityReport, RetrievalReport, SuccessRubric, TaskCategory, TaskSpec,
++    PacketQualityReport, RetrievalReport, SuccessRubric, SurfaceClaim, TaskCategory, TaskSpec,
+ };
+ use serde_json::json;
+ use std::path::Path;
+@@ -904,13 +904,19 @@ fn task_spec_for_query(
+         title: "Query task".to_string(),
+         prompt: task.to_string(),
+         category,
++        difficulty: None,
++        surface_claim: SurfaceClaim::LayersBroadQuery,
++        negative_control: false,
++        stale_context_trap: false,
++        repo_commit: None,
++        time_budget_minutes: None,
+         repo_root: Some(workspace_root()),
+         target_files: targets.clone(),
+         target_symbols: Vec::new(),
+         expected_relevant_files: targets,
+-        expected_validation_commands: Vec::new(),
+-        negative_control: false,
++        expected_validation_commands: vec!["cargo check".to_string()],
+         success_rubric: SuccessRubric::default(),
++        abstention_rubric: None,
+     }
+ }
+ 

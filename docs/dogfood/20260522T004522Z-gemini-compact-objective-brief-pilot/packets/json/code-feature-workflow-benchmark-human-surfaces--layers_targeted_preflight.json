@@ -1,0 +1,314 @@
+{
+  "schema_version": 2,
+  "id": "preflight-d69f78db-0041-4ac7-a9bc-a0a94a53062a",
+  "workspace_id": "layers",
+  "query": "List all benchmark surfaces in human reports\n\nImprove human workflow benchmark reports so each Layers surface and comparison variant is named explicitly rather than relying on a legacy singular Layers summary. Keep JSON output backward compatible.",
+  "created_at": "2026-05-22T01:30:59.299202Z",
+  "git_ref": "a7217f5",
+  "route": "preflight",
+  "confidence": "high",
+  "budget": {
+    "max_units": 700,
+    "used_units": 222,
+    "unit": "words",
+    "truncated": false
+  },
+  "sections": [
+    {
+      "id": "preflight_summary",
+      "title": "Preflight Summary",
+      "summary": "Preflight planning result.",
+      "items": [
+        {
+          "id": "research-summary-1",
+          "title": "Preflight classification",
+          "body": "Preflight classified this task as code-heavy. Explicit targets: src/cmd/workflow_benchmark.rs. Effective targets: src/cmd/workflow_benchmark.rs.",
+          "source": {
+            "kind": "preflight",
+            "uri": "local-planner"
+          },
+          "token_estimate": 12,
+          "selected_reason": "summarizes the local preflight plan before source collection",
+          "tags": [
+            "planning"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "workspace",
+      "title": "Workspace State",
+      "summary": "Current Git/worktree context that can affect safe edits.",
+      "items": [
+        {
+          "id": "workspace-state-1",
+          "title": "Git worktree state",
+          "body": "Branch: main\nHead: a7217f5\nDirty: true\nChanged files:\n- ocs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/PHASE15_FIXED_REPORT.md\n- docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/compare/workflow-benchmark-report.json\n- docs/dogfood/20260513T2355Z-phase15-fixed-validpacket-minibatch/compare/workflow-benchmark-report.md\nUntracked files:\n- docs/dogfood/20260522T004102Z-codex-compact-objective-brief-pilot/\n- docs/dogfood/20260522T004522Z-gemini-compact-objective-brief-pilot/\n",
+          "source": {
+            "kind": "workspace",
+            "uri": "git status --porcelain=v1"
+          },
+          "token_estimate": 20,
+          "selected_reason": "dirty or divergent workspace state changes how agents should interpret context",
+          "tags": [
+            "workspace",
+            "git"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "title": "Project Memory",
+      "summary": "Relevant explicit project memory or memory-source warning.",
+      "items": [
+        {
+          "id": "memory-1",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_narrow-layers-scope-for-now-to-three-core\n[truncated: omitted 1 lines and at least 853 chars to fit preflight budget]",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 14,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        },
+        {
+          "id": "memory-2",
+          "title": "Curated memory match",
+          "body": "{\"archived\":false,\"created_at\":\"2026-03-31T22:33:00Z\",\"entity\":\"decision\",\"id\":\"cm_decision_layers_treat-layers-as-builder-tooling-proving-g\n[truncated: omitted 1 lines and at least 699 chars to fit preflight budget]",
+          "source": {
+            "kind": "memory",
+            "uri": "/Users/xxx/layers/memoryport/curated-memory.jsonl"
+          },
+          "token_estimate": 14,
+          "selected_reason": "curated memory shares terms with the preflight task",
+          "tags": [
+            "memory"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "title": "Code and Impact Context",
+      "summary": "Local code context gathered without editing files.",
+      "items": [
+        {
+          "id": "code-1",
+          "title": "src/cmd/workflow_benchmark.rs",
+          "body": "//! Workflow benchmark telemetry analysis for comparing Layers vs baseline runs.\nuse std::{\n    collections::{BTreeMap, BTreeSet},\n    fmt::Write as _,\n    fs,\n    path::{Component, Path, PathBuf},\n    process::{Command, Stdio},\n    thread,\n    time::{Duration, Instant},\n};\n\nuse anyhow::{Context as _, Result, bail};\n[truncated: omitted 6946 lines and at least 254210 chars to fit preflight budget]",
+          "source": {
+            "kind": "file",
+            "uri": "src/cmd/workflow_benchmark.rs",
+            "repo_path": "src/cmd/workflow_benchmark.rs"
+          },
+          "token_estimate": 47,
+          "selected_reason": "explicit or inferred target file should be inspected before editing",
+          "tags": [
+            "code"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "impact",
+      "title": "Impact Context",
+      "summary": "GitNexus-backed or degraded local blast-radius context for preflight targets.",
+      "items": [
+        {
+          "id": "impact-1",
+          "title": "src/cmd/workflow_benchmark.rs",
+          "body": "Target: src/cmd/workflow_benchmark.rs\nStatus: degraded\nSource: local\nSummary: Degraded local impact summary for src/cmd/workflow_benchmark.rs\nAffected files:\n- src/cmd/workflow_benchmark.rs\nValidation commands:\n- cargo clippy --workspace --all-targets -- -D warnings\n- cargo test --workspace --all-targets\n- git diff --check\nWarnings:\n- GitNexus impact returned no usable target: {\n  \"error\": \"Target 'src/cmd/workflow_benchmark.rs' not found\",\n  \"target\": {\n    \"name\": \"src/cmd/workflow_benchmark.rs\"\n  },\n  \"direction\": \"upstream\",\n  \"impactedCount\": 0,\n  \"risk\": \"UNKNOWN\"\n}",
+          "source": {
+            "kind": "local",
+            "uri": "impact:src/cmd/workflow_benchmark.rs",
+            "repo_path": "src/cmd/workflow_benchmark.rs"
+          },
+          "token_estimate": 62,
+          "selected_reason": "impact context identifies likely blast radius and validation before editing",
+          "tags": [
+            "impact"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "validation",
+      "title": "Suggested Validation Commands",
+      "summary": "Commands an agent should run after using this research.",
+      "items": [
+        {
+          "id": "validation-1",
+          "title": "git diff --check",
+          "body": "Reason: detect whitespace and patch hygiene issues before handoff\nRequired: true\nExpected signal: no diff formatting errors",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 17,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-2",
+          "title": "cargo test --workspace --all-targets",
+          "body": "Reason: verify all Rust crates and binary targets after code-heavy changes\nRequired: true\nExpected signal: all tests pass",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        },
+        {
+          "id": "validation-3",
+          "title": "cargo clippy --workspace --all-targets -- -D warnings",
+          "body": "Reason: production-readiness gate for Rust lint debt\nRequired: true\nExpected signal: no clippy warnings or documented baseline debt",
+          "source": {
+            "kind": "validation",
+            "uri": "preflight-validation-policy"
+          },
+          "token_estimate": 18,
+          "selected_reason": "validation commands prevent context-only research from becoming unverified implementation",
+          "tags": [
+            "validation"
+          ]
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "dirty_worktree",
+      "message": "Workspace has 3 changed and 2 untracked files; inspect before editing."
+    },
+    {
+      "severity": "info",
+      "code": "autoresearch_uncertainty",
+      "message": "No persisted autoresearch finding matched this task."
+    },
+    {
+      "severity": "warning",
+      "code": "impact_degraded",
+      "message": "Impact analysis for src/cmd/workflow_benchmark.rs degraded; GitNexus context was unavailable or incomplete."
+    },
+    {
+      "severity": "info",
+      "code": "injection_policy",
+      "message": "Packet quality gate recommends InjectCompact: packet has usable context but should be compacted or verified carefully"
+    }
+  ],
+  "selection_trace": [
+    {
+      "item_id": "research-summary-1",
+      "reason": "summarizes the local preflight plan before source collection"
+    },
+    {
+      "item_id": "workspace-state-1",
+      "reason": "dirty or divergent workspace state changes how agents should interpret context"
+    },
+    {
+      "item_id": "memory-1",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "memory-2",
+      "reason": "curated memory shares terms with the preflight task"
+    },
+    {
+      "item_id": "code-1",
+      "reason": "explicit or inferred target file should be inspected before editing"
+    },
+    {
+      "item_id": "impact-1",
+      "reason": "impact context identifies likely blast radius and validation before editing"
+    },
+    {
+      "item_id": "validation-1",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-2",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    },
+    {
+      "item_id": "validation-3",
+      "reason": "validation commands prevent context-only research from becoming unverified implementation"
+    }
+  ],
+  "retrieval": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0
+  },
+  "provenance": {
+    "compiler": "layers-context-packet",
+    "compiler_version": "2",
+    "surface": "preflight",
+    "workspace_id": "layers",
+    "git_ref": "a7217f5",
+    "generated_at": "2026-05-22T01:30:59.299202Z",
+    "source_adapters": [
+      "file",
+      "local",
+      "memory",
+      "preflight",
+      "validation",
+      "workspace"
+    ]
+  },
+  "task": "List all benchmark surfaces in human reports\n\nImprove human workflow benchmark reports so each Layers surface and comparison variant is named explicitly rather than relying on a legacy singular Layers summary. Keep JSON output backward compatible.",
+  "low_confidence_fallback": false,
+  "scores": {
+    "injection_recommendation": "inject_compact",
+    "packet_quality": {
+      "hallucinated_or_stale_context": false,
+      "missed_critical_context": false,
+      "reasons": [
+        "packet has usable context but should be compacted or verified carefully"
+      ],
+      "recommendation": "inject_compact",
+      "scores": {
+        "completeness": 5,
+        "concision": 5,
+        "freshness": 3,
+        "grounding": 5,
+        "noise_absence": 3,
+        "relevance": 5,
+        "specificity": 5
+      },
+      "target_coverage_ratio": 1.0,
+      "validation_coverage_ratio": 1.0,
+      "warning_penalty": 2.25
+    },
+    "preflight": {
+      "autoresearch_findings": 0,
+      "code_heavy": true,
+      "targets": 1,
+      "workspace_dirty": true
+    }
+  },
+  "why_retrieved": "Preflight compiles local pre-edit context from workspace state, persisted autoresearch findings, memory, code targets, and validation policy.",
+  "why_not_retrieved": "",
+  "evidence": "",
+  "open_uncertainty": [
+    "Workspace has 3 changed and 2 untracked files; inspect before editing.",
+    "No persisted autoresearch finding matched this task.",
+    "Impact analysis for src/cmd/workflow_benchmark.rs degraded; GitNexus context was unavailable or incomplete."
+  ],
+  "retrieval_meta": {
+    "memory_source": "curated-memory-jsonl",
+    "memory_latency_ms": 0,
+    "graph_latency_ms": 0
+  }
+}
