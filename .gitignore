@@ -26,3 +26,11 @@ infrastructure/infrastructure.json
 layers_load_test_*
 layers_telemetry_test_*
 layers_new_test_*
+
+# Benchmark generated artifacts (worktrees, diffs, packets, run logs)
+docs/dogfood/*/worktrees/
+docs/dogfood/*/diffs/
+docs/dogfood/*/packets/
+docs/dogfood/*/run-plan.stderr
+docs/dogfood/*/run-plan-report.json
+docs/dogfood/*/plan-run.stderr

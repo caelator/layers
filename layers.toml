@@ -1,34 +1,10 @@
-# Layers Shadow Mode — runs alongside OpenClaw on port 18791
+# Layers — local-first context compiler for coding agents
 
 [daemon]
 bind_address = "127.0.0.1"
 port = 18791
 
 [agent]
-workspace = "/Users/bri/.openclaw/workspace"
-default_model = "opus"
-timezone = "America/Bogota"
-
-[brains.opus]
-cli = "/Users/bri/.local/bin/claude"
-args = ["--permission-mode", "bypassPermissions", "--print", "--model", "opus"]
-output = "stream-json"
-session_arg = "--session-id"
-
-[brains.sonnet]
-cli = "/Users/bri/.local/bin/claude"
-args = ["--permission-mode", "bypassPermissions", "--print", "--model", "sonnet"]
-output = "stream-json"
-session_arg = "--session-id"
-
-[brains.codex]
-cli = "/Users/bri/.local/bin/codex"
-args = ["exec"]
-output = "text"
-read_stderr = true
-pipe_stdin = true
-
-[brains.gemini]
-cli = "/Users/bri/.local/bin/gemini"
-args = ["--prompt"]
-output = "text"
+workspace = "/Users/xxx/layers"
+default_model = "sonnet"
+timezone = "UTC"
