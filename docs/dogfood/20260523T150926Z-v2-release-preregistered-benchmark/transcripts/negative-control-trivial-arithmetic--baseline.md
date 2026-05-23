@@ -1,26 +1,36 @@
 # Workflow Benchmark Transcript
 
-## Setup
 Task ID: negative-control-trivial-arithmetic
 Variant: baseline
-Worktree: docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/negative-control-trivial-arithmetic--baseline
+Run ID: negative-control-trivial-arithmetic--baseline
+Worktree: /Users/xxx/layers/docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/negative-control-trivial-arithmetic--baseline
+Prompt: /Users/xxx/layers/docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/negative-control-trivial-arithmetic--baseline.md
+
+## Baseline Isolation
+No Layers preflight command was executed.
+
+## Agent Execution
 Agent command: docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh
-Model: gemini-cli
+Agent exit status: 0
+Agent stdout:
+I will calculate the sum of 17 and 25 and then validate it using the requested python command.
 
-## Prompt
-See docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/negative-control-trivial-arithmetic--baseline.md
+17 + 25 = 42
 
-## Packet Artifacts
-Baseline run: no Layers packet artifacts allowed.
+Checking with the required validation command:
 
-## Timeline
-TBD by executor
+The sum of 17 + 25 is 42.
+
+Agent stderr:
+YOLO mode is enabled. All tool calls will be automatically approved.
+YOLO mode is enabled. All tool calls will be automatically approved.
+
 
 ## Validation
-Log: docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/negative-control-trivial-arithmetic--baseline.log
+Log: /Users/xxx/layers/docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/negative-control-trivial-arithmetic--baseline.log
 
 ## Scoring Notes
-TBD by scorer
+Smoke execution record generated automatically; not product-effectiveness evidence.
 
 ## Context Quality Classification
-TBD by scorer
+Variant-scoped smoke classification; independent scoring required for claims.

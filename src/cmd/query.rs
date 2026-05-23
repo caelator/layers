@@ -109,140 +109,173 @@ pub fn handle_query(
         Route::Both => RouteId::Both,
     };
 
-    // Always try UC semantic retrieval when routed OR when the classifier
-    // had low confidence (best-effort fallback — low confidence ≠ no retrieval).
     let low_confidence_fallback = route_result.confidence == Confidence::Low;
-    if matches!(effective_route, Route::MemoryOnly | Route::Both) || low_confidence_fallback {
-        let t0 = Instant::now();
-        let uc_retriever = uc::UcRetriever::new(uc::UcOptions::default());
-        let uc_result = uc_retriever.retrieve(task, MAX_MEMORY_RECORDS);
-        let used_uc = uc::meets_threshold_with(&uc_result, uc_retriever.min_results());
+    let needs_memory =
+        matches!(effective_route, Route::MemoryOnly | Route::Both) || low_confidence_fallback;
+    let needs_graph = matches!(effective_route, Route::GraphOnly | Route::Both);
 
-        if used_uc {
-            memory_source = if low_confidence_fallback {
-                "uc-low-confidence-fallback".to_string()
+    // ── Parallel retrieval ───────────────────────────────────────────────────
+    // Run UC retrieval, graph retrieval, and workspace state collection
+    // concurrently since they are independent external process calls.
+    let task_for_uc = task.to_string();
+    let task_for_graph = task.to_string();
+
+    std::thread::scope(|s| {
+        // Thread 1: UC semantic retrieval (with keyword fallback)
+        let uc_handle = needs_memory.then(|| {
+            s.spawn(|| {
+                let t0 = Instant::now();
+                let uc_retriever = uc::UcRetriever::new(uc::UcOptions::default());
+                let uc_result = uc_retriever.retrieve(&task_for_uc, MAX_MEMORY_RECORDS);
+                let used_uc = uc::meets_threshold_with(&uc_result, uc_retriever.min_results());
+
+                let keyword_fallback =
+                    (!used_uc).then(|| memory::retrieve_relevant(&task_for_uc, MAX_MEMORY_RECORDS));
+
+                let latency_ms = u64::try_from(t0.elapsed().as_millis()).unwrap_or(u64::MAX);
+                (uc_result, used_uc, keyword_fallback, latency_ms)
+            })
+        });
+
+        // Thread 2: GitNexus graph retrieval
+        let graph_handle = needs_graph.then(|| {
+            s.spawn(|| {
+                let t0 = Instant::now();
+                let result = graph::query(&task_for_graph, MAX_GITNEXUS_FACTS);
+                let latency_ms = u64::try_from(t0.elapsed().as_millis()).unwrap_or(u64::MAX);
+                (result, latency_ms)
+            })
+        });
+
+        // ── Process UC results ───────────────────────────────────────────────
+        if let Some(handle) = uc_handle {
+            let (uc_result, used_uc, keyword_fallback, latency_ms) = handle.join().unwrap();
+            memory_latency_ms = latency_ms;
+
+            if used_uc {
+                memory_source = if low_confidence_fallback {
+                    "uc-low-confidence-fallback".to_string()
+                } else {
+                    "uc".to_string()
+                };
+                for line in &uc_result.lines {
+                    memory_items.push(RetrievalItem {
+                        source: memory_source.clone(),
+                        text: line.clone(),
+                        timestamp: None,
+                    });
+                }
+            } else if let Some(reason) = &uc_result.fallback_reason {
+                fallback_reason = Some(reason.clone());
             } else {
-                "uc".to_string()
-            };
-            for line in &uc_result.lines {
-                memory_items.push(RetrievalItem {
-                    source: memory_source.clone(),
-                    text: line.clone(),
-                    timestamp: None,
-                });
+                fallback_reason = Some("uc returned too few results".into());
             }
-        } else if let Some(reason) = &uc_result.fallback_reason {
-            fallback_reason = Some(reason.clone());
-        } else {
-            fallback_reason = Some("uc returned too few results".into());
+
+            // Process keyword fallback if UC didn't produce results
+            if !used_uc {
+                if let Some(keyword_result) = keyword_fallback {
+                    match keyword_result {
+                        Ok(records) if !records.is_empty() => {
+                            memory_source = if low_confidence_fallback {
+                                "keyword-low-confidence-fallback".to_string()
+                            } else {
+                                "keyword".to_string()
+                            };
+                            for r in &records {
+                                memory_items.push(RetrievalItem {
+                                    source: r.source.clone(),
+                                    text: r.text.clone(),
+                                    timestamp: if r.timestamp.is_empty() {
+                                        None
+                                    } else {
+                                        Some(r.timestamp.clone())
+                                    },
+                                });
+                            }
+                        }
+                        Ok(_) => {
+                            if !low_confidence_fallback {
+                                open_uncertainty
+                                    .push("Memory retrieval returned no matching records.".into());
+                            }
+                        }
+                        Err(e) => {
+                            if !low_confidence_fallback {
+                                open_uncertainty.push(format!("Memory retrieval failed: {e}"));
+                            }
+                            fallback_reason.get_or_insert_with(|| format!("memory error: {e}"));
+                            let failure = RouteFailure::new(
+                                task.to_string(),
+                                current_fbid,
+                                FailureKind::Hard {
+                                    error_kind: HardErrorKind::NonZeroExit,
+                                    error_code: None,
+                                    tool_name: "memoryport".to_string(),
+                                },
+                                RoutingSignals::default(),
+                            );
+                            if let Err(fe) = emit_failure(&failure) {
+                                eprintln!("[route-feedback] failed to emit hard failure: {fe}");
+                            }
+                        }
+                    }
+                }
+            }
         }
 
-        // Fall back to local keyword retrieval if UC didn't produce results
-        if !used_uc {
-            match memory::retrieve_relevant(task, MAX_MEMORY_RECORDS) {
-                Ok(records) if !records.is_empty() => {
-                    memory_source = if low_confidence_fallback {
-                        "keyword-low-confidence-fallback".to_string()
-                    } else {
-                        "keyword".to_string()
-                    };
-                    for r in &records {
-                        memory_items.push(RetrievalItem {
-                            source: r.source.clone(),
-                            text: r.text.clone(),
-                            timestamp: if r.timestamp.is_empty() {
-                                None
-                            } else {
-                                Some(r.timestamp.clone())
-                            },
+        // ── Process graph results ────────────────────────────────────────────
+        if let Some(handle) = graph_handle {
+            let (graph_result, latency_ms) = handle.join().unwrap();
+            graph_latency_ms = latency_ms;
+
+            match graph_result {
+                Ok(facts) if !facts.is_empty() => {
+                    for f in &facts {
+                        graph_items.push(RetrievalItem {
+                            source: "gitnexus".to_string(),
+                            text: f.clone(),
+                            timestamp: None,
                         });
                     }
                 }
                 Ok(_) => {
-                    if !low_confidence_fallback {
-                        open_uncertainty
-                            .push("Memory retrieval returned no matching records.".into());
+                    open_uncertainty.push(
+                        "GitNexus query returned no results. Run `layers refresh` to update the index."
+                            .into(),
+                    );
+                    let failure = RouteFailure::new(
+                        task.to_string(),
+                        current_fbid,
+                        FailureKind::Soft {
+                            error_kind: SoftErrorKind::InsufficientContext,
+                            flagged_by: "layers-query".to_string(),
+                            affected_stage: "graph-retrieval".to_string(),
+                        },
+                        RoutingSignals::default(),
+                    );
+                    if let Err(e) = emit_failure(&failure) {
+                        eprintln!("[route-feedback] failed to emit soft failure: {e}");
                     }
                 }
                 Err(e) => {
-                    if !low_confidence_fallback {
-                        open_uncertainty.push(format!("Memory retrieval failed: {e}"));
-                    }
-                    fallback_reason.get_or_insert_with(|| format!("memory error: {e}"));
-                    // RFC 006: emit HardError when memory retrieval errors
+                    open_uncertainty.push(format!("GitNexus retrieval failed: {e}"));
                     let failure = RouteFailure::new(
                         task.to_string(),
                         current_fbid,
                         FailureKind::Hard {
                             error_kind: HardErrorKind::NonZeroExit,
                             error_code: None,
-                            tool_name: "memoryport".to_string(),
+                            tool_name: "gitnexus".to_string(),
                         },
                         RoutingSignals::default(),
                     );
-                    if let Err(fe) = emit_failure(&failure) {
-                        eprintln!("[route-feedback] failed to emit hard failure: {fe}");
+                    if let Err(e) = emit_failure(&failure) {
+                        eprintln!("[route-feedback] failed to emit hard failure: {e}");
                     }
                 }
             }
         }
-
-        memory_latency_ms = u64::try_from(t0.elapsed().as_millis()).unwrap_or(u64::MAX);
-    }
-
-    // Retrieve graph context if routed
-    if matches!(effective_route, Route::GraphOnly | Route::Both) {
-        let t0 = Instant::now();
-        match graph::query(task, MAX_GITNEXUS_FACTS) {
-            Ok(facts) if !facts.is_empty() => {
-                for f in &facts {
-                    graph_items.push(RetrievalItem {
-                        source: "gitnexus".to_string(),
-                        text: f.clone(),
-                        timestamp: None,
-                    });
-                }
-            }
-            Ok(_) => {
-                open_uncertainty.push(
-                    "GitNexus query returned no results. Run `layers refresh` to update the index."
-                        .into(),
-                );
-                // RFC 006: emit SoftError when graph returns empty on a graph-routed query
-                let failure = RouteFailure::new(
-                    task.to_string(),
-                    current_fbid,
-                    FailureKind::Soft {
-                        error_kind: SoftErrorKind::InsufficientContext,
-                        flagged_by: "layers-query".to_string(),
-                        affected_stage: "graph-retrieval".to_string(),
-                    },
-                    RoutingSignals::default(),
-                );
-                if let Err(e) = emit_failure(&failure) {
-                    eprintln!("[route-feedback] failed to emit soft failure: {e}");
-                }
-            }
-            Err(e) => {
-                open_uncertainty.push(format!("GitNexus retrieval failed: {e}"));
-                // RFC 006: emit HardError when graph retrieval errors
-                let failure = RouteFailure::new(
-                    task.to_string(),
-                    current_fbid,
-                    FailureKind::Hard {
-                        error_kind: HardErrorKind::NonZeroExit,
-                        error_code: None,
-                        tool_name: "gitnexus".to_string(),
-                    },
-                    RoutingSignals::default(),
-                );
-                if let Err(e) = emit_failure(&failure) {
-                    eprintln!("[route-feedback] failed to emit hard failure: {e}");
-                }
-            }
-        }
-        graph_latency_ms = u64::try_from(t0.elapsed().as_millis()).unwrap_or(u64::MAX);
-    }
+    });
 
     // ── Result quality evaluation ─────────────────────────────────────────────
     // Score returned results for relevance and specificity.
