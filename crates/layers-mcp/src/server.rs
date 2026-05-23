@@ -30,14 +30,30 @@ const DANGEROUS_PATTERNS: &[&str] = &[
 /// memory retrieval, code-impact analysis, and context validation. Generic
 /// runtime tools such as filesystem mutation, process execution, and subagent
 /// control must remain behind explicit allowlists and dangerous-tool opt-in.
-pub const STABLE_CONTEXT_SURFACE_TOOLS: &[&str] = &[
+/// Core stable MCP tools (always available).
+pub const CORE_STABLE_TOOLS: &[&str] = &[
     "context_compile",
     "impact_analyze",
-    "memory_get",
-    "memory_search",
     "preflight_context",
     "validate_context",
 ];
+
+/// Stable context surface tool names, including vector-store tools when enabled.
+#[must_use]
+pub fn stable_surface_tool_names() -> Vec<&'static str> {
+    let mut tools: Vec<&str> = CORE_STABLE_TOOLS.to_vec();
+    #[cfg(feature = "vector-store")]
+    {
+        tools.push("memory_get");
+        tools.push("memory_search");
+    }
+    tools.sort_unstable();
+    tools
+}
+
+/// Stable context surface tools (for backward compatibility).
+pub static STABLE_CONTEXT_SURFACE_TOOLS: std::sync::LazyLock<Vec<&'static str>> =
+    std::sync::LazyLock::new(stable_surface_tool_names);
 
 /// Returns `true` if the tool name matches any dangerous pattern.
 pub fn is_dangerous_tool(name: &str) -> bool {
@@ -561,7 +577,7 @@ mod tests {
 
     fn make_stable_registry() -> Arc<ToolRegistry> {
         let mut reg = ToolRegistry::new();
-        for name in STABLE_CONTEXT_SURFACE_TOOLS {
+        for name in &**STABLE_CONTEXT_SURFACE_TOOLS {
             reg.register(Arc::new(StableTool { name }));
         }
         reg.register(Arc::new(SafeTool));
@@ -648,7 +664,9 @@ mod tests {
 
         assert_eq!(names, stable_context_surface_tools());
         assert!(server.is_tool_exposed("context_compile"));
+        #[cfg(feature = "vector-store")]
         assert!(server.is_tool_exposed("memory_search"));
+        #[cfg(feature = "vector-store")]
         assert!(server.is_tool_exposed("memory_get"));
         assert!(server.is_tool_exposed("impact_analyze"));
         assert!(server.is_tool_exposed("preflight_context"));

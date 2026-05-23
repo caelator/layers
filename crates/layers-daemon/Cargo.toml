@@ -25,6 +25,10 @@ uuid = { version = "1", features = ["v4"] }
 clap = { version = "4", features = ["derive"] }
 tokio-stream = "0.1"
 
+[features]
+default = []
+vector-store = ["layers-tools/vector-store"]
+
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"

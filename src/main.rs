@@ -60,6 +60,7 @@ mod router;
 mod technician;
 mod uc;
 
+#[cfg(feature = "vector-store")]
 pub mod memory_index;
 
 use cmd::autoresearch::{AutoresearchCommands, handle_autoresearch};

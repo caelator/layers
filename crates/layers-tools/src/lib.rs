@@ -6,6 +6,7 @@ pub mod exec;
 pub mod fs;
 pub mod loop_detection;
 pub mod media;
+#[cfg(feature = "vector-store")]
 pub mod memory;
 pub mod process;
 pub mod registry;

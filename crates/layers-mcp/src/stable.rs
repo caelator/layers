@@ -11,6 +11,7 @@ use layers_core::{
     ContextBudget, ContextPacket, ContextSection, LayersError, Result, Tool, ToolContext,
     ToolOutput,
 };
+#[cfg(feature = "vector-store")]
 use layers_tools::memory::{MemoryGetTool, MemorySearchTool};
 use layers_tools::registry::ToolRegistry;
 use serde::Deserialize;
@@ -29,8 +30,11 @@ pub fn stable_context_registry() -> ToolRegistry {
     registry.register(std::sync::Arc::new(ContextCompileTool));
     registry.register(std::sync::Arc::new(PreflightContextTool));
     registry.register(std::sync::Arc::new(ImpactAnalyzeTool));
-    registry.register(std::sync::Arc::new(MemoryGetTool::new()));
-    registry.register(std::sync::Arc::new(MemorySearchTool::new()));
+    #[cfg(feature = "vector-store")]
+    {
+        registry.register(std::sync::Arc::new(MemoryGetTool::new()));
+        registry.register(std::sync::Arc::new(MemorySearchTool::new()));
+    }
     registry.register(std::sync::Arc::new(ValidateContextTool));
     registry
 }
