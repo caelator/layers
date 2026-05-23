@@ -4,7 +4,8 @@ use anyhow::{Context, Result, anyhow};
 use layers_compiler::{CompileMode, CompileRequest, ContextCompiler};
 use layers_core::{
     ContextBudget, ContextItem, ContextPacket, ContextWarning, InjectionRecommendation,
-    PacketQualityReport, RetrievalReport, SuccessRubric, TaskCategory, TaskSpec,
+    PacketQualityReport, RetrievalReport, SpecificInstruction, SuccessRubric, TaskCategory,
+    TaskSpec,
 };
 use serde_json::json;
 use std::fmt::Write as _;
@@ -105,6 +106,7 @@ fn build_preflight_packet(args: &PreflightArgs) -> Result<ContextPacket> {
     add_impact_section(&mut packet, &workspace, &inferred_targets);
     add_validation_section(&mut packet, code_heavy, &inferred_targets);
     add_preflight_summary_section(&mut packet, args, code_heavy, &inferred_targets);
+    add_specific_instructions(&mut packet, &args.task);
 
     packet.budget.used_units = estimate_packet_words(&packet);
     if packet.budget.used_units > packet.budget.max_units {
@@ -130,6 +132,7 @@ fn build_preflight_packet(args: &PreflightArgs) -> Result<ContextPacket> {
 
     let draft_scores = packet.scores;
     let draft_budget_truncated = packet.budget.truncated;
+    let draft_specific_instructions = packet.specific_instructions.clone();
     let mut packet = ContextCompiler::new().compile(
         CompileRequest::new(
             packet_id,
@@ -141,6 +144,7 @@ fn build_preflight_packet(args: &PreflightArgs) -> Result<ContextPacket> {
         .with_git_ref(workspace_state.head.clone())
         .with_sections(packet.sections)
         .with_warnings(packet.warnings)
+        .with_specific_instructions(draft_specific_instructions)
         .derive_evidence(false),
     );
     packet.task.clone_from(&args.task);
@@ -271,6 +275,97 @@ fn is_packet_code_heavy(packet: &ContextPacket) -> bool {
         })
         .and_then(serde_json::Value::as_bool)
         .unwrap_or(false)
+}
+
+/// Extract imperative instructions from curated memory that match the task.
+///
+/// Reads `memoryport/curated-memory.jsonl`, filters for constraint/pitfall/learning
+/// records whose text shares keywords with the task, and whose text uses imperative
+/// language. At most 3 instructions are added to the packet.
+pub fn add_specific_instructions(packet: &mut ContextPacket, task: &str) {
+    let memory_path = canonical_curated_memory_path();
+    let Ok(contents) = std::fs::read_to_string(&memory_path) else {
+        return;
+    };
+
+    let task_keywords = keywords(task);
+    let imperative_prefixes = [
+        "do ", "do not", "don't", "always", "never", "must", "avoid", "ensure", "require",
+    ];
+
+    let instructions: Vec<SpecificInstruction> = contents
+        .lines()
+        .filter_map(|line| {
+            let record: serde_json::Value = serde_json::from_str(line).ok()?;
+
+            // Extract kind from "entity" or "kind" field.
+            let kind = record
+                .get("entity")
+                .or_else(|| record.get("kind"))
+                .and_then(serde_json::Value::as_str)?
+                .to_string();
+
+            // Filter for constraint, pitfall, or learning kinds.
+            if !matches!(kind.as_str(), "constraint" | "pitfall" | "learning") {
+                return None;
+            }
+
+            // Extract text from "text" or "payload.summary".
+            let text = record
+                .get("text")
+                .and_then(serde_json::Value::as_str)
+                .or_else(|| {
+                    record
+                        .get("payload")
+                        .and_then(|p| p.get("summary"))
+                        .and_then(serde_json::Value::as_str)
+                })?
+                .to_string();
+
+            // Check if the text shares keywords with the task.
+            if keyword_score(&text, &task_keywords) == 0 {
+                return None;
+            }
+
+            // Extract confidence, defaulting to "high" for curated records.
+            let confidence = record
+                .get("confidence")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("high")
+                .to_string();
+
+            // Only accept "medium" or "high" confidence.
+            if !matches!(confidence.as_str(), "medium" | "high") {
+                return None;
+            }
+
+            // Check for imperative language (text starts with an imperative prefix).
+            let text_lower = text.to_lowercase();
+            let is_imperative = imperative_prefixes
+                .iter()
+                .any(|prefix| text_lower.starts_with(prefix));
+            if !is_imperative {
+                return None;
+            }
+
+            // Extract record ID.
+            let source_id = record
+                .get("id")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("unknown")
+                .to_string();
+
+            Some(SpecificInstruction {
+                text,
+                source_id,
+                kind,
+                confidence,
+            })
+        })
+        .take(3)
+        .collect();
+
+    packet.specific_instructions = instructions;
 }
 
 fn add_preflight_summary_section(
@@ -1321,5 +1416,97 @@ mod tests {
         let quality = ResearchQuality::new(true, true, true, false);
         assert_eq!(quality.confidence, "high");
         assert!(quality.passes_minimum_bar);
+    }
+
+    #[test]
+    fn add_specific_instructions_extracts_imperative_constraints() {
+        let ws = TestWorkspace::new("specific-instructions-extract");
+        let memory_path = ws.root().join("memoryport").join("curated-memory.jsonl");
+        let lines = [
+            r#"{"entity":"constraint","id":"c1","payload":{"summary":"Do not modify the router without running tests"},"project":"layers","tags":["router"],"confidence":"high"}"#,
+            r#"{"entity":"constraint","id":"c2","payload":{"summary":"Always validate packets before sending"},"project":"layers","tags":["packet"],"confidence":"high"}"#,
+            r#"{"entity":"decision","id":"d1","payload":{"summary":"Do not change this decision"},"project":"layers","tags":["decision"]}"#,
+            r#"{"entity":"constraint","id":"c3","payload":{"summary":"Never skip validation on router input"},"project":"layers","tags":["router","validation"],"confidence":"medium"}"#,
+            r#"{"entity":"pitfall","id":"p1","payload":{"summary":"Avoid using unwrap in router handlers"},"project":"layers","tags":["router"],"confidence":"high"}"#,
+            r#"{"entity":"constraint","id":"c4","payload":{"summary":"Must ensure test coverage for router changes"},"project":"layers","tags":["router"],"confidence":"low"}"#,
+        ];
+        std::fs::write(&memory_path, lines.join("\n")).unwrap();
+
+        let mut packet = ContextPacket::new(
+            "test".to_string(),
+            "layers".to_string(),
+            "fix router tests".to_string(),
+            chrono::Utc::now(),
+        );
+        add_specific_instructions(&mut packet, "fix router tests");
+
+        // Should find constraint c1 (Do not...), constraint c3 (Never...), and pitfall p1 (Avoid...)
+        // c4 has low confidence so excluded. c2 doesn't match "router" keyword. d1 is a decision.
+        assert!(
+            packet.specific_instructions.len() <= 3,
+            "at most 3 instructions"
+        );
+        assert!(
+            !packet.specific_instructions.is_empty(),
+            "should find matching imperative constraints"
+        );
+        for instr in &packet.specific_instructions {
+            assert!(
+                matches!(instr.kind.as_str(), "constraint" | "pitfall" | "learning"),
+                "only constraint/pitfall/learning kinds allowed: {}",
+                instr.kind
+            );
+            assert!(
+                matches!(instr.confidence.as_str(), "medium" | "high"),
+                "only medium/high confidence allowed: {}",
+                instr.confidence
+            );
+        }
+    }
+
+    #[test]
+    fn add_specific_instructions_returns_empty_when_no_matches() {
+        let ws = TestWorkspace::new("specific-instructions-empty");
+        let memory_path = ws.root().join("memoryport").join("curated-memory.jsonl");
+        let lines = [
+            r#"{"entity":"decision","id":"d1","payload":{"summary":"Use Rust for systems"},"project":"layers","tags":["rust"]}"#,
+        ];
+        std::fs::write(&memory_path, lines.join("\n")).unwrap();
+
+        let mut packet = ContextPacket::new(
+            "test".to_string(),
+            "layers".to_string(),
+            "something completely unrelated like quantum computing".to_string(),
+            chrono::Utc::now(),
+        );
+        add_specific_instructions(
+            &mut packet,
+            "something completely unrelated like quantum computing",
+        );
+
+        assert!(
+            packet.specific_instructions.is_empty(),
+            "no matching instructions expected for unrelated task"
+        );
+    }
+
+    #[test]
+    fn add_specific_instructions_handles_missing_file() {
+        let ws = TestWorkspace::new("specific-instructions-missing");
+        // Do not create curated-memory.jsonl
+        let _ = ws;
+
+        let mut packet = ContextPacket::new(
+            "test".to_string(),
+            "layers".to_string(),
+            "fix something".to_string(),
+            chrono::Utc::now(),
+        );
+        add_specific_instructions(&mut packet, "fix something");
+
+        assert!(
+            packet.specific_instructions.is_empty(),
+            "missing file should produce no instructions"
+        );
     }
 }

@@ -3036,6 +3036,37 @@ fn write_runner_prompt(run: &RunnerRunPlan, spec: &TaskSpec) -> Result<()> {
         )?;
     }
     writeln!(&mut prompt)?;
+    writeln!(&mut prompt, "## Implementation guidance")?;
+    writeln!(&mut prompt)?;
+    writeln!(
+        &mut prompt,
+        "You have {} minutes. Use them fully.",
+        run.time_budget_minutes
+    )?;
+    writeln!(&mut prompt)?;
+    writeln!(
+        &mut prompt,
+        "1. Read the relevant source files before editing."
+    )?;
+    writeln!(
+        &mut prompt,
+        "2. Make the requested change and add regression tests."
+    )?;
+    writeln!(&mut prompt, "3. Run ALL validation commands listed above.")?;
+    writeln!(
+        &mut prompt,
+        "4. If validation fails, diagnose the failure and retry. Do NOT stop after one failed command."
+    )?;
+    writeln!(
+        &mut prompt,
+        "5. Only declare success when all validation commands pass."
+    )?;
+    writeln!(&mut prompt)?;
+    writeln!(
+        &mut prompt,
+        "Agents that make only 2-3 tool calls and stop are scored as failures."
+    )?;
+    writeln!(&mut prompt)?;
     writeln!(&mut prompt, "## Scoring reminder")?;
     writeln!(
         &mut prompt,

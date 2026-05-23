@@ -7,7 +7,9 @@
 use std::path::Path;
 
 use chrono::{DateTime, Utc};
-use layers_core::{ContextItem, ContextPacket, ContextSection, ContextSource, ContextWarning};
+use layers_core::{
+    ContextItem, ContextPacket, ContextSection, ContextSource, ContextWarning, SpecificInstruction,
+};
 
 /// Compiler mode used to preserve caller intent in generated packet metadata.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -44,6 +46,7 @@ pub struct CompileRequest {
     pub warnings: Vec<ContextWarning>,
     pub git_ref: Option<String>,
     pub derive_evidence: bool,
+    pub specific_instructions: Vec<SpecificInstruction>,
 }
 
 impl CompileRequest {
@@ -66,6 +69,7 @@ impl CompileRequest {
             warnings: Vec::new(),
             git_ref: None,
             derive_evidence: true,
+            specific_instructions: Vec::new(),
         }
     }
 
@@ -98,6 +102,15 @@ impl CompileRequest {
         self.derive_evidence = derive_evidence;
         self
     }
+
+    #[must_use]
+    pub fn with_specific_instructions(
+        mut self,
+        specific_instructions: Vec<SpecificInstruction>,
+    ) -> Self {
+        self.specific_instructions = specific_instructions;
+        self
+    }
 }
 
 /// Pure compiler for caller-supplied context into a normalized `ContextPacket`.
@@ -125,6 +138,7 @@ impl ContextCompiler {
         packet.git_ref = request.git_ref;
         packet.sections = request.sections;
         packet.warnings = request.warnings;
+        packet.specific_instructions = request.specific_instructions;
         finalize_packet(&mut packet, request.derive_evidence);
         packet
     }

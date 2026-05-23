@@ -11,6 +11,19 @@ use std::collections::BTreeSet;
 /// Current stable ContextPacket schema version.
 pub const CONTEXT_PACKET_SCHEMA_VERSION: u32 = 2;
 
+/// A single imperative instruction for the agent, derived from curated memory.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SpecificInstruction {
+    /// The imperative instruction text (e.g. "DO NOT modify src/router.rs").
+    pub text: String,
+    /// Source memory record ID.
+    pub source_id: String,
+    /// Instruction kind: "constraint", "pitfall", "requirement", "trap".
+    pub kind: String,
+    /// Confidence: "high" or "medium".
+    pub confidence: String,
+}
+
 /// Agent-ready bundle of selected context for one task/query.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ContextPacket {
@@ -69,6 +82,9 @@ pub struct ContextPacket {
     /// Transitional compatibility field for existing query JSON consumers.
     #[serde(default)]
     pub retrieval_meta: RetrievalReport,
+    /// Specific imperative instructions derived from curated memory.
+    #[serde(default)]
+    pub specific_instructions: Vec<SpecificInstruction>,
 }
 
 impl ContextPacket {
@@ -102,6 +118,7 @@ impl ContextPacket {
             evidence: String::new(),
             open_uncertainty: Vec::new(),
             retrieval_meta: RetrievalReport::default(),
+            specific_instructions: Vec::new(),
         }
     }
 
@@ -149,6 +166,15 @@ impl ContextPacket {
             for trace in &self.selection_trace {
                 out.push_str(&format!("- {}: {}\n", trace.item_id, trace.reason));
             }
+            out.push('\n');
+        }
+
+        if !self.specific_instructions.is_empty() {
+            out.push_str("## Specific Instructions\n\n");
+            for instruction in &self.specific_instructions {
+                out.push_str(&format!("- [{}] {}\n", instruction.kind, instruction.text));
+            }
+            out.push('\n');
         }
 
         out
