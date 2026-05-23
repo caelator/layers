@@ -1,0 +1,1669 @@
+{
+  "task_count": 30,
+  "variants": [
+    "baseline",
+    "layers_targeted_preflight"
+  ],
+  "repo_root": ".",
+  "output_dir": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark",
+  "worktree_root": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees",
+  "runner_plan_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/runner-plan.json",
+  "execution_order_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/execution-order.jsonl",
+  "seed": 20260523,
+  "runs": [
+    {
+      "task_id": "code-stale-trap-prefer-current-task-spec",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-stale-trap-prefer-current-task-spec--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q workflow_benchmark -- --nocapture",
+        "cargo run -q -- workflow-benchmark validate-tasks benchmarks/workflows/tasks --json"
+      ],
+      "preflight_query": "Prefer current task_spec schema over stale docs\n\nStale-context trap: update code using the current TaskSpec validation rules, not older docs that allowed missing expected relevant files. The correct solution must inspect current schema and validator before editing.",
+      "preflight_targets": [
+        "src/cmd/workflow_benchmark.rs",
+        "benchmarks/workflows/schemas/task-spec.schema.json",
+        "TaskSpec",
+        "validate_task_spec"
+      ]
+    },
+    {
+      "task_id": "code-feature-config-secret-redaction-nested",
+      "task_category": "feature",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-feature-config-secret-redaction-nested--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-feature-config-secret-redaction-nested--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-feature-config-secret-redaction-nested--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-feature-config-secret-redaction-nested--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-feature-config-secret-redaction-nested--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-config-secret-redaction-nested--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-config-secret-redaction-nested--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-feature-config-secret-redaction-nested--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q config::tests::mask -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Redact nested provider secrets in config output\n\nExtend config masking so nested provider secret-like values are redacted consistently in displayed or serialized diagnostic output. Add tests proving short and long secrets are not echoed.",
+      "preflight_targets": [
+        "src/config.rs",
+        "crates/layers-core/src/config.rs",
+        "mask_secrets",
+        "mask_secret"
+      ]
+    },
+    {
+      "task_id": "code-bugfix-workflow-benchmark-duplicate-pairing",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-bugfix-workflow-benchmark-duplicate-pairing--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-workflow-benchmark-duplicate-pairing--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-workflow-benchmark-duplicate-pairing--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-workflow-benchmark-duplicate-pairing--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-workflow-benchmark-duplicate-pairing--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-workflow-benchmark-duplicate-pairing--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-workflow-benchmark-duplicate-pairing--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q workflow_benchmark -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Avoid duplicate replicate cross-product pairing\n\nFix workflow benchmark paired comparison logic if duplicate task replicates create cross-product bias. Aggregate per task and variant before computing paired deltas, with tests.",
+      "preflight_targets": [
+        "src/cmd/workflow_benchmark.rs",
+        "paired_comparisons",
+        "aggregate_variants"
+      ]
+    },
+    {
+      "task_id": "code-feature-config-secret-redaction-nested",
+      "task_category": "feature",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-feature-config-secret-redaction-nested--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-feature-config-secret-redaction-nested--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-feature-config-secret-redaction-nested--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-feature-config-secret-redaction-nested--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-feature-config-secret-redaction-nested--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-config-secret-redaction-nested--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-config-secret-redaction-nested--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q config::tests::mask -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Redact nested provider secrets in config output\n\nExtend config masking so nested provider secret-like values are redacted consistently in displayed or serialized diagnostic output. Add tests proving short and long secrets are not echoed.",
+      "preflight_targets": [
+        "src/config.rs",
+        "crates/layers-core/src/config.rs",
+        "mask_secrets",
+        "mask_secret"
+      ]
+    },
+    {
+      "task_id": "code-feature-daemon-heartbeat-stale-detection",
+      "task_category": "feature",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-feature-daemon-heartbeat-stale-detection--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-feature-daemon-heartbeat-stale-detection--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-feature-daemon-heartbeat-stale-detection--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-feature-daemon-heartbeat-stale-detection--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-feature-daemon-heartbeat-stale-detection--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-daemon-heartbeat-stale-detection--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-daemon-heartbeat-stale-detection--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q -p layers-daemon -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Add stale daemon heartbeat detection\n\nImplement stale heartbeat detection for the daemon lifecycle so health checks report stale but not dead processes correctly. Add tests for fresh, stale, and missing heartbeat files.",
+      "preflight_targets": [
+        "crates/layers-daemon/src/heartbeat.rs",
+        "crates/layers-daemon/src/lifecycle.rs",
+        "Heartbeat",
+        "Lifecycle"
+      ]
+    },
+    {
+      "task_id": "code-feature-session-monitor-threshold-env",
+      "task_category": "feature",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-feature-session-monitor-threshold-env--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-feature-session-monitor-threshold-env--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-feature-session-monitor-threshold-env--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-feature-session-monitor-threshold-env--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-feature-session-monitor-threshold-env--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-session-monitor-threshold-env--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-session-monitor-threshold-env--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-feature-session-monitor-threshold-env--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 25,
+      "expected_validation_commands": [
+        "cargo test -q --bin session_monitor -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Validate session monitor threshold env vars\n\nImprove session monitor threshold parsing so invalid environment values fall back to defaults and are covered by tests without making live session classification flaky.",
+      "preflight_targets": [
+        "src/bin/session_monitor.rs",
+        "thresholds_from_env_vars",
+        "classify"
+      ]
+    },
+    {
+      "task_id": "code-feature-quality-abstain-low-specificity",
+      "task_category": "feature",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-feature-quality-abstain-low-specificity--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-feature-quality-abstain-low-specificity--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-feature-quality-abstain-low-specificity--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-feature-quality-abstain-low-specificity--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-feature-quality-abstain-low-specificity--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-quality-abstain-low-specificity--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-quality-abstain-low-specificity--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q quality::tests -- --nocapture",
+        "cargo test -q cmd::preflight -- --nocapture"
+      ],
+      "preflight_query": "Surface abstention for low-specificity context\n\nImprove quality evaluation so low-specificity context for code-heavy tasks produces an explicit abstain or needs-target signal instead of being accepted as useful context. Add focused tests.",
+      "preflight_targets": [
+        "src/quality.rs",
+        "crates/layers-core/src/packet_quality.rs",
+        "src/cmd/preflight.rs",
+        "QualityReport",
+        "query_terms"
+      ]
+    },
+    {
+      "task_id": "code-refactor-memory-index-fallback-tags",
+      "task_category": "refactor",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-refactor-memory-index-fallback-tags--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-refactor-memory-index-fallback-tags--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-refactor-memory-index-fallback-tags--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-refactor-memory-index-fallback-tags--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-refactor-memory-index-fallback-tags--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-refactor-memory-index-fallback-tags--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-refactor-memory-index-fallback-tags--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-refactor-memory-index-fallback-tags--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q uc::tests -- --nocapture",
+        "cargo test -q memory_index -- --nocapture"
+      ],
+      "preflight_query": "Standardize memory retrieval fallback tags\n\nRefactor memory index retrieval fallback tags so UC unavailable, timeout, and low-result cases are reported consistently without changing successful retrieval output.",
+      "preflight_targets": [
+        "src/uc.rs",
+        "src/memory_index/retrieval.rs",
+        "src/memory_index/pipeline.rs",
+        "retrieve_with_opts",
+        "Retriever"
+      ]
+    },
+    {
+      "task_id": "code-refactor-memory-index-fallback-tags",
+      "task_category": "refactor",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-refactor-memory-index-fallback-tags--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-refactor-memory-index-fallback-tags--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-refactor-memory-index-fallback-tags--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-refactor-memory-index-fallback-tags--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-refactor-memory-index-fallback-tags--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-refactor-memory-index-fallback-tags--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-refactor-memory-index-fallback-tags--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q uc::tests -- --nocapture",
+        "cargo test -q memory_index -- --nocapture"
+      ],
+      "preflight_query": "Standardize memory retrieval fallback tags\n\nRefactor memory index retrieval fallback tags so UC unavailable, timeout, and low-result cases are reported consistently without changing successful retrieval output.",
+      "preflight_targets": [
+        "src/uc.rs",
+        "src/memory_index/retrieval.rs",
+        "src/memory_index/pipeline.rs",
+        "retrieve_with_opts",
+        "Retriever"
+      ]
+    },
+    {
+      "task_id": "negative-control-trivial-arithmetic",
+      "task_category": "negative_control",
+      "negative_control": true,
+      "variant": "layers_targeted_preflight",
+      "run_id": "negative-control-trivial-arithmetic--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/negative-control-trivial-arithmetic--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/negative-control-trivial-arithmetic--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/negative-control-trivial-arithmetic--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/negative-control-trivial-arithmetic--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-trivial-arithmetic--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-trivial-arithmetic--layers_targeted_preflight.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 30,
+      "expected_validation_commands": [
+        "python3 - <<'PY'\nprint(17 + 25)\nPY"
+      ],
+      "preflight_query": "Answer a context-free arithmetic check\n\nAnswer the arithmetic question 17 + 25 without consulting repository context or injecting Layers context.",
+      "preflight_targets": []
+    },
+    {
+      "task_id": "code-bugfix-context-routing",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-bugfix-context-routing--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-context-routing--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-context-routing--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-context-routing--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-context-routing--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-context-routing--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-context-routing--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-bugfix-context-routing--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 30,
+      "expected_validation_commands": [
+        "cargo test -q cmd::query -- --nocapture",
+        "cargo check --workspace --all-targets",
+        "cargo clippy --workspace --all-targets -- -D warnings"
+      ],
+      "preflight_query": "Fix context routing regression\n\nDiagnose and fix a regression in Layers context routing where code-heavy queries with explicit Rust targets should request or inject targeted code context instead of falling back to memory-only context. Use tests to prove the routing behavior and run the relevant Rust validation gates.",
+      "preflight_targets": [
+        "src/cmd/query.rs",
+        "src/cmd/preflight.rs",
+        "crates/layers-core/src/packet_quality.rs",
+        "task_spec_for_query",
+        "query_looks_code_heavy",
+        "PacketQualityReport"
+      ]
+    },
+    {
+      "task_id": "negative-control-iso-date-format",
+      "task_category": "negative_control",
+      "negative_control": true,
+      "variant": "baseline",
+      "run_id": "negative-control-iso-date-format--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/negative-control-iso-date-format--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/negative-control-iso-date-format--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/negative-control-iso-date-format--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/negative-control-iso-date-format--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-iso-date-format--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-iso-date-format--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 5,
+      "expected_validation_commands": [
+        "python3 - <<'PY'\nprint('2026-03-07')\nPY"
+      ],
+      "preflight_query": "Format a provided date string\n\nRewrite the provided date March 7, 2026 as ISO 8601 date format. No repository context is relevant.",
+      "preflight_targets": []
+    },
+    {
+      "task_id": "negative-control-sort-three-words",
+      "task_category": "negative_control",
+      "negative_control": true,
+      "variant": "baseline",
+      "run_id": "negative-control-sort-three-words--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/negative-control-sort-three-words--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/negative-control-sort-three-words--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/negative-control-sort-three-words--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/negative-control-sort-three-words--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-sort-three-words--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-sort-three-words--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 5,
+      "expected_validation_commands": [
+        "python3 - <<'PY'\nprint(', '.join(sorted(['zebra','amber','cobalt'])))\nPY"
+      ],
+      "preflight_query": "Sort three words alphabetically\n\nSort these words alphabetically: zebra, amber, cobalt. Do not inspect repository files or use context retrieval.",
+      "preflight_targets": []
+    },
+    {
+      "task_id": "negative-control-basic-unit-conversion",
+      "task_category": "negative_control",
+      "negative_control": true,
+      "variant": "layers_targeted_preflight",
+      "run_id": "negative-control-basic-unit-conversion--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/negative-control-basic-unit-conversion--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/negative-control-basic-unit-conversion--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/negative-control-basic-unit-conversion--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/negative-control-basic-unit-conversion--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-basic-unit-conversion--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-basic-unit-conversion--layers_targeted_preflight.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 5,
+      "expected_validation_commands": [
+        "python3 - <<'PY'\nprint(7 * 60)\nPY"
+      ],
+      "preflight_query": "Convert minutes to seconds\n\nConvert 7 minutes to seconds. This is a context-free arithmetic task; abstain from Layers context.",
+      "preflight_targets": []
+    },
+    {
+      "task_id": "code-bugfix-mcp-client-error-redaction",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-bugfix-mcp-client-error-redaction--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q -p layers-mcp -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Redact MCP client error payload secrets\n\nEnsure MCP client/server error formatting never echoes secret-like request payload fields. Add tests that secret-like values are redacted in errors.",
+      "preflight_targets": [
+        "crates/layers-mcp/src/client.rs",
+        "crates/layers-mcp/src/server.rs",
+        "crates/layers-mcp/src/types.rs",
+        "McpClient",
+        "ServerError"
+      ]
+    },
+    {
+      "task_id": "code-feature-workflow-benchmark-human-surfaces",
+      "task_category": "feature",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 25,
+      "expected_validation_commands": [
+        "cargo test -q workflow_benchmark -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "List all benchmark surfaces in human reports\n\nImprove human workflow benchmark reports so each Layers surface and comparison variant is named explicitly rather than relying on a legacy singular Layers summary. Keep JSON output backward compatible.",
+      "preflight_targets": [
+        "src/cmd/workflow_benchmark.rs",
+        "render_human_report",
+        "VariantAggregate"
+      ]
+    },
+    {
+      "task_id": "code-bugfix-preflight-strict-low-relevance",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-bugfix-preflight-strict-low-relevance--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-preflight-strict-low-relevance--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-preflight-strict-low-relevance--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-preflight-strict-low-relevance--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-preflight-strict-low-relevance--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-preflight-strict-low-relevance--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-preflight-strict-low-relevance--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q cmd::preflight -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Reject low-relevance strict preflight packets\n\nFix strict preflight validation so low-relevance or memory-only context cannot be reported as high-confidence code-heavy context. Add a regression test and run Rust gates.",
+      "preflight_targets": [
+        "src/cmd/preflight.rs",
+        "crates/layers-core/src/packet_quality.rs",
+        "crates/layers-core/src/task_spec.rs",
+        "handle_preflight",
+        "PacketQualityReport"
+      ]
+    },
+    {
+      "task_id": "code-feature-mcp-preflight-stable-registry",
+      "task_category": "feature",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-feature-mcp-preflight-stable-registry--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-feature-mcp-preflight-stable-registry--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-feature-mcp-preflight-stable-registry--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-feature-mcp-preflight-stable-registry--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-feature-mcp-preflight-stable-registry--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-mcp-preflight-stable-registry--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-mcp-preflight-stable-registry--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q -p layers-mcp -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Keep MCP preflight in stable registry\n\nAdd a regression guard that stable MCP preflight_context remains exposed in the stable registry and routes packet generation through the compiler-backed path.",
+      "preflight_targets": [
+        "crates/layers-mcp/src/stable.rs",
+        "crates/layers-mcp/src/server.rs",
+        "crates/layers-compiler/src/lib.rs",
+        "preflight_context",
+        "ContextCompiler"
+      ]
+    },
+    {
+      "task_id": "negative-control-count-letters",
+      "task_category": "negative_control",
+      "negative_control": true,
+      "variant": "baseline",
+      "run_id": "negative-control-count-letters--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/negative-control-count-letters--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/negative-control-count-letters--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/negative-control-count-letters--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/negative-control-count-letters--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-count-letters--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-count-letters--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 5,
+      "expected_validation_commands": [
+        "python3 - <<'PY'\nprint(len('deterministic'))\nPY"
+      ],
+      "preflight_query": "Count letters without repo context\n\nHow many letters are in the word deterministic? Answer directly without consulting repository context or generating a Layers packet.",
+      "preflight_targets": []
+    },
+    {
+      "task_id": "code-stale-trap-prefer-current-task-spec",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-stale-trap-prefer-current-task-spec--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-stale-trap-prefer-current-task-spec--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-stale-trap-prefer-current-task-spec--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-stale-trap-prefer-current-task-spec--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-stale-trap-prefer-current-task-spec--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-stale-trap-prefer-current-task-spec--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q workflow_benchmark -- --nocapture",
+        "cargo run -q -- workflow-benchmark validate-tasks benchmarks/workflows/tasks --json"
+      ],
+      "preflight_query": "Prefer current task_spec schema over stale docs\n\nStale-context trap: update code using the current TaskSpec validation rules, not older docs that allowed missing expected relevant files. The correct solution must inspect current schema and validator before editing.",
+      "preflight_targets": [
+        "src/cmd/workflow_benchmark.rs",
+        "benchmarks/workflows/schemas/task-spec.schema.json",
+        "TaskSpec",
+        "validate_task_spec"
+      ]
+    },
+    {
+      "task_id": "code-bugfix-provider-budget-overflow",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-bugfix-provider-budget-overflow--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-provider-budget-overflow--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-provider-budget-overflow--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-provider-budget-overflow--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-provider-budget-overflow--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-provider-budget-overflow--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-provider-budget-overflow--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-bugfix-provider-budget-overflow--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q provider::accounting -- --nocapture",
+        "cargo test -q -p layers-providers -- --nocapture"
+      ],
+      "preflight_query": "Prevent provider token budget overflow\n\nAudit provider budget accounting for saturating arithmetic and f64/u64 conversions. Add a regression test for very large token counters without panics or wraparound.",
+      "preflight_targets": [
+        "src/provider/accounting.rs",
+        "src/provider/tokenizer.rs",
+        "crates/layers-providers/src/token_accounting.rs",
+        "TokenLedger",
+        "budget_remaining"
+      ]
+    },
+    {
+      "task_id": "code-bugfix-runtime-queue-starvation",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-bugfix-runtime-queue-starvation--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-runtime-queue-starvation--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-runtime-queue-starvation--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-runtime-queue-starvation--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-runtime-queue-starvation--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-runtime-queue-starvation--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-runtime-queue-starvation--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 75,
+      "expected_validation_commands": [
+        "cargo test -q -p layers-runtime -- --nocapture",
+        "cargo test -q critical_path -- --nocapture"
+      ],
+      "preflight_query": "Preserve runtime queue fairness under critical load\n\nDiagnose and fix a runtime queue fairness regression where critical work can starve standard work beyond the configured ratio. Add a deterministic regression test.",
+      "preflight_targets": [
+        "crates/layers-runtime/src/queue.rs",
+        "crates/layers-runtime/src/agent_loop.rs",
+        "src/critical_path.rs",
+        "Queue",
+        "weighted_ratio"
+      ]
+    },
+    {
+      "task_id": "code-feature-tools-registry-duplicate-names",
+      "task_category": "feature",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-feature-tools-registry-duplicate-names--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-feature-tools-registry-duplicate-names--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-feature-tools-registry-duplicate-names--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-feature-tools-registry-duplicate-names--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-feature-tools-registry-duplicate-names--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-tools-registry-duplicate-names--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-tools-registry-duplicate-names--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 25,
+      "expected_validation_commands": [
+        "cargo test -q -p layers-tools -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Reject duplicate tool registry names\n\nMake the tools registry reject duplicate tool names deterministically with a clear error, and add unit tests for duplicate and unique registrations.",
+      "preflight_targets": [
+        "crates/layers-tools/src/registry.rs",
+        "crates/layers-tools/src/lib.rs",
+        "ToolRegistry",
+        "register"
+      ]
+    },
+    {
+      "task_id": "code-bugfix-preflight-strict-low-relevance",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q cmd::preflight -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Reject low-relevance strict preflight packets\n\nFix strict preflight validation so low-relevance or memory-only context cannot be reported as high-confidence code-heavy context. Add a regression test and run Rust gates.",
+      "preflight_targets": [
+        "src/cmd/preflight.rs",
+        "crates/layers-core/src/packet_quality.rs",
+        "crates/layers-core/src/task_spec.rs",
+        "handle_preflight",
+        "PacketQualityReport"
+      ]
+    },
+    {
+      "task_id": "code-docs-architecture-context-spine",
+      "task_category": "other",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-docs-architecture-context-spine--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-docs-architecture-context-spine--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-docs-architecture-context-spine--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-docs-architecture-context-spine--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-docs-architecture-context-spine--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-docs-architecture-context-spine--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-docs-architecture-context-spine--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 25,
+      "expected_validation_commands": [
+        "cargo test -q tests::cli_about_positions_layers_as_context_packet_compiler -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Document context spine architecture without runtime overclaim\n\nImprove architecture documentation or CLI help to describe Layers as a local-first context compiler/context spine for coding agents, not a competing agent runtime. Keep claims evidence-gated.",
+      "preflight_targets": [
+        "src/main.rs",
+        "src/lib.rs",
+        "benchmarks/workflows/README.md",
+        "Cli",
+        "north_star"
+      ]
+    },
+    {
+      "task_id": "code-bugfix-telemetry-malformed-jsonl-skip",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-bugfix-telemetry-malformed-jsonl-skip--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-telemetry-malformed-jsonl-skip--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-telemetry-malformed-jsonl-skip--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-telemetry-malformed-jsonl-skip--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-telemetry-malformed-jsonl-skip--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-telemetry-malformed-jsonl-skip--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-telemetry-malformed-jsonl-skip--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 25,
+      "expected_validation_commands": [
+        "cargo test -q plugins::telemetry -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Skip malformed telemetry JSONL safely\n\nHarden telemetry JSONL loading so malformed lines are skipped or reported without panics and without losing valid events before or after the bad line. Add regression tests.",
+      "preflight_targets": [
+        "src/plugins/telemetry/schema.rs",
+        "src/plugins/telemetry/aggregator.rs",
+        "load_events",
+        "TelemetryEvent"
+      ]
+    },
+    {
+      "task_id": "code-bugfix-provider-budget-overflow",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-bugfix-provider-budget-overflow--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-provider-budget-overflow--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-provider-budget-overflow--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-provider-budget-overflow--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-provider-budget-overflow--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-provider-budget-overflow--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-provider-budget-overflow--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q provider::accounting -- --nocapture",
+        "cargo test -q -p layers-providers -- --nocapture"
+      ],
+      "preflight_query": "Prevent provider token budget overflow\n\nAudit provider budget accounting for saturating arithmetic and f64/u64 conversions. Add a regression test for very large token counters without panics or wraparound.",
+      "preflight_targets": [
+        "src/provider/accounting.rs",
+        "src/provider/tokenizer.rs",
+        "crates/layers-providers/src/token_accounting.rs",
+        "TokenLedger",
+        "budget_remaining"
+      ]
+    },
+    {
+      "task_id": "code-bugfix-query-target-traversal",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-bugfix-query-target-traversal--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-query-target-traversal--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-query-target-traversal--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-query-target-traversal--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-query-target-traversal--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-query-target-traversal--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-query-target-traversal--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-bugfix-query-target-traversal--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 25,
+      "expected_validation_commands": [
+        "cargo test -q context_packet_compiler::query_plan -- --nocapture",
+        "cargo test -q cmd::query -- --nocapture"
+      ],
+      "preflight_query": "Reject unsafe query targets\n\nEnsure explicit query targets containing absolute paths or parent traversal cannot be treated as grounded repository targets. Add regression tests for absolute and .. paths.",
+      "preflight_targets": [
+        "src/context_packet_compiler/query_plan.rs",
+        "src/cmd/query.rs",
+        "QueryPlan",
+        "explicit_parent_traversal_target_is_rejected"
+      ]
+    },
+    {
+      "task_id": "code-bugfix-query-target-traversal",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-bugfix-query-target-traversal--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-query-target-traversal--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-query-target-traversal--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-query-target-traversal--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-query-target-traversal--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-query-target-traversal--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-query-target-traversal--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 25,
+      "expected_validation_commands": [
+        "cargo test -q context_packet_compiler::query_plan -- --nocapture",
+        "cargo test -q cmd::query -- --nocapture"
+      ],
+      "preflight_query": "Reject unsafe query targets\n\nEnsure explicit query targets containing absolute paths or parent traversal cannot be treated as grounded repository targets. Add regression tests for absolute and .. paths.",
+      "preflight_targets": [
+        "src/context_packet_compiler/query_plan.rs",
+        "src/cmd/query.rs",
+        "QueryPlan",
+        "explicit_parent_traversal_target_is_rejected"
+      ]
+    },
+    {
+      "task_id": "code-feature-remember-reject-empty-records",
+      "task_category": "feature",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-feature-remember-reject-empty-records--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-feature-remember-reject-empty-records--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-feature-remember-reject-empty-records--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-feature-remember-reject-empty-records--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-feature-remember-reject-empty-records--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-remember-reject-empty-records--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-remember-reject-empty-records--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 25,
+      "expected_validation_commands": [
+        "cargo test -q cmd::remember -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Reject empty remember records\n\nEnsure remember commands reject empty task, trace, plan, or learning records with actionable errors and no partial writes. Add tests for each affected record kind.",
+      "preflight_targets": [
+        "src/cmd/remember.rs",
+        "src/council/artifacts.rs",
+        "remember_plan",
+        "remember_learning"
+      ]
+    },
+    {
+      "task_id": "code-bugfix-context-routing",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-bugfix-context-routing--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-context-routing--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-context-routing--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-context-routing--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-context-routing--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-context-routing--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-context-routing--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 30,
+      "expected_validation_commands": [
+        "cargo test -q cmd::query -- --nocapture",
+        "cargo check --workspace --all-targets",
+        "cargo clippy --workspace --all-targets -- -D warnings"
+      ],
+      "preflight_query": "Fix context routing regression\n\nDiagnose and fix a regression in Layers context routing where code-heavy queries with explicit Rust targets should request or inject targeted code context instead of falling back to memory-only context. Use tests to prove the routing behavior and run the relevant Rust validation gates.",
+      "preflight_targets": [
+        "src/cmd/query.rs",
+        "src/cmd/preflight.rs",
+        "crates/layers-core/src/packet_quality.rs",
+        "task_spec_for_query",
+        "query_looks_code_heavy",
+        "PacketQualityReport"
+      ]
+    },
+    {
+      "task_id": "negative-control-basic-unit-conversion",
+      "task_category": "negative_control",
+      "negative_control": true,
+      "variant": "baseline",
+      "run_id": "negative-control-basic-unit-conversion--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/negative-control-basic-unit-conversion--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/negative-control-basic-unit-conversion--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/negative-control-basic-unit-conversion--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/negative-control-basic-unit-conversion--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-basic-unit-conversion--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-basic-unit-conversion--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 5,
+      "expected_validation_commands": [
+        "python3 - <<'PY'\nprint(7 * 60)\nPY"
+      ],
+      "preflight_query": "Convert minutes to seconds\n\nConvert 7 minutes to seconds. This is a context-free arithmetic task; abstain from Layers context.",
+      "preflight_targets": []
+    },
+    {
+      "task_id": "code-bugfix-council-circuit-exit-gate",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-bugfix-council-circuit-exit-gate--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-council-circuit-exit-gate--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-council-circuit-exit-gate--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-council-circuit-exit-gate--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-council-circuit-exit-gate--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-council-circuit-exit-gate--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-council-circuit-exit-gate--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q council::circuit_breaker -- --nocapture",
+        "cargo test -q council::topology -- --nocapture"
+      ],
+      "preflight_query": "Fix council circuit breaker exit gate edge case\n\nDiagnose and fix an edge case where the council circuit breaker exit gate could reopen too early or too late around threshold boundaries. Prove behavior with boundary tests.",
+      "preflight_targets": [
+        "src/council/circuit_breaker.rs",
+        "src/council/topology.rs",
+        "CircuitBreaker",
+        "exit_gate"
+      ]
+    },
+    {
+      "task_id": "code-bugfix-telemetry-malformed-jsonl-skip",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 25,
+      "expected_validation_commands": [
+        "cargo test -q plugins::telemetry -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Skip malformed telemetry JSONL safely\n\nHarden telemetry JSONL loading so malformed lines are skipped or reported without panics and without losing valid events before or after the bad line. Add regression tests.",
+      "preflight_targets": [
+        "src/plugins/telemetry/schema.rs",
+        "src/plugins/telemetry/aggregator.rs",
+        "load_events",
+        "TelemetryEvent"
+      ]
+    },
+    {
+      "task_id": "code-bugfix-workflow-benchmark-duplicate-pairing",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q workflow_benchmark -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Avoid duplicate replicate cross-product pairing\n\nFix workflow benchmark paired comparison logic if duplicate task replicates create cross-product bias. Aggregate per task and variant before computing paired deltas, with tests.",
+      "preflight_targets": [
+        "src/cmd/workflow_benchmark.rs",
+        "paired_comparisons",
+        "aggregate_variants"
+      ]
+    },
+    {
+      "task_id": "code-feature-tools-registry-duplicate-names",
+      "task_category": "feature",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-feature-tools-registry-duplicate-names--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-feature-tools-registry-duplicate-names--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-feature-tools-registry-duplicate-names--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-feature-tools-registry-duplicate-names--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-feature-tools-registry-duplicate-names--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-tools-registry-duplicate-names--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-tools-registry-duplicate-names--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-feature-tools-registry-duplicate-names--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 25,
+      "expected_validation_commands": [
+        "cargo test -q -p layers-tools -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Reject duplicate tool registry names\n\nMake the tools registry reject duplicate tool names deterministically with a clear error, and add unit tests for duplicate and unique registrations.",
+      "preflight_targets": [
+        "crates/layers-tools/src/registry.rs",
+        "crates/layers-tools/src/lib.rs",
+        "ToolRegistry",
+        "register"
+      ]
+    },
+    {
+      "task_id": "code-feature-workflow-benchmark-human-surfaces",
+      "task_category": "feature",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-feature-workflow-benchmark-human-surfaces--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-feature-workflow-benchmark-human-surfaces--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-feature-workflow-benchmark-human-surfaces--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-feature-workflow-benchmark-human-surfaces--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-feature-workflow-benchmark-human-surfaces--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-workflow-benchmark-human-surfaces--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-workflow-benchmark-human-surfaces--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 25,
+      "expected_validation_commands": [
+        "cargo test -q workflow_benchmark -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "List all benchmark surfaces in human reports\n\nImprove human workflow benchmark reports so each Layers surface and comparison variant is named explicitly rather than relying on a legacy singular Layers summary. Keep JSON output backward compatible.",
+      "preflight_targets": [
+        "src/cmd/workflow_benchmark.rs",
+        "render_human_report",
+        "VariantAggregate"
+      ]
+    },
+    {
+      "task_id": "code-bugfix-proveit-artifact-paths",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-bugfix-proveit-artifact-paths--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-proveit-artifact-paths--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-proveit-artifact-paths--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-proveit-artifact-paths--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-proveit-artifact-paths--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-proveit-artifact-paths--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-proveit-artifact-paths--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q prove_it_sprint -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Prevent proveit artifact path traversal\n\nAdd path safety checks to proveit artifact storage so artifact names cannot escape the run directory through absolute paths, symlinks, or parent traversal. Add tests.",
+      "preflight_targets": [
+        "src/proveit/artifact_store.rs",
+        "src/proveit/runner.rs",
+        "src/proveit/git.rs",
+        "ArtifactStore",
+        "write_artifact"
+      ]
+    },
+    {
+      "task_id": "code-feature-quality-abstain-low-specificity",
+      "task_category": "feature",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-feature-quality-abstain-low-specificity--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-feature-quality-abstain-low-specificity--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-feature-quality-abstain-low-specificity--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-feature-quality-abstain-low-specificity--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-feature-quality-abstain-low-specificity--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-quality-abstain-low-specificity--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-quality-abstain-low-specificity--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-feature-quality-abstain-low-specificity--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q quality::tests -- --nocapture",
+        "cargo test -q cmd::preflight -- --nocapture"
+      ],
+      "preflight_query": "Surface abstention for low-specificity context\n\nImprove quality evaluation so low-specificity context for code-heavy tasks produces an explicit abstain or needs-target signal instead of being accepted as useful context. Add focused tests.",
+      "preflight_targets": [
+        "src/quality.rs",
+        "crates/layers-core/src/packet_quality.rs",
+        "src/cmd/preflight.rs",
+        "QualityReport",
+        "query_terms"
+      ]
+    },
+    {
+      "task_id": "negative-control-trivial-arithmetic",
+      "task_category": "negative_control",
+      "negative_control": true,
+      "variant": "baseline",
+      "run_id": "negative-control-trivial-arithmetic--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/negative-control-trivial-arithmetic--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/negative-control-trivial-arithmetic--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/negative-control-trivial-arithmetic--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/negative-control-trivial-arithmetic--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-trivial-arithmetic--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-trivial-arithmetic--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 30,
+      "expected_validation_commands": [
+        "python3 - <<'PY'\nprint(17 + 25)\nPY"
+      ],
+      "preflight_query": "Answer a context-free arithmetic check\n\nAnswer the arithmetic question 17 + 25 without consulting repository context or injecting Layers context.",
+      "preflight_targets": []
+    },
+    {
+      "task_id": "negative-control-simple-json-validity",
+      "task_category": "negative_control",
+      "negative_control": true,
+      "variant": "layers_targeted_preflight",
+      "run_id": "negative-control-simple-json-validity--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/negative-control-simple-json-validity--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/negative-control-simple-json-validity--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/negative-control-simple-json-validity--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/negative-control-simple-json-validity--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-simple-json-validity--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-simple-json-validity--layers_targeted_preflight.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 5,
+      "expected_validation_commands": [
+        "python3 - <<'PY'\nimport json; json.loads('{\"ok\": true, \"count\": 3}'); print('yes')\nPY"
+      ],
+      "preflight_query": "Validate a tiny JSON object mentally\n\nIs {\"ok\": true, \"count\": 3} valid JSON? Answer yes or no without consulting repository context.",
+      "preflight_targets": []
+    },
+    {
+      "task_id": "negative-control-iso-date-format",
+      "task_category": "negative_control",
+      "negative_control": true,
+      "variant": "layers_targeted_preflight",
+      "run_id": "negative-control-iso-date-format--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/negative-control-iso-date-format--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/negative-control-iso-date-format--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/negative-control-iso-date-format--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/negative-control-iso-date-format--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-iso-date-format--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-iso-date-format--layers_targeted_preflight.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 5,
+      "expected_validation_commands": [
+        "python3 - <<'PY'\nprint('2026-03-07')\nPY"
+      ],
+      "preflight_query": "Format a provided date string\n\nRewrite the provided date March 7, 2026 as ISO 8601 date format. No repository context is relevant.",
+      "preflight_targets": []
+    },
+    {
+      "task_id": "negative-control-count-letters",
+      "task_category": "negative_control",
+      "negative_control": true,
+      "variant": "layers_targeted_preflight",
+      "run_id": "negative-control-count-letters--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/negative-control-count-letters--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/negative-control-count-letters--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/negative-control-count-letters--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/negative-control-count-letters--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-count-letters--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-count-letters--layers_targeted_preflight.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 5,
+      "expected_validation_commands": [
+        "python3 - <<'PY'\nprint(len('deterministic'))\nPY"
+      ],
+      "preflight_query": "Count letters without repo context\n\nHow many letters are in the word deterministic? Answer directly without consulting repository context or generating a Layers packet.",
+      "preflight_targets": []
+    },
+    {
+      "task_id": "code-bugfix-router-historical-code-intent",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-bugfix-router-historical-code-intent--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-router-historical-code-intent--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-router-historical-code-intent--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-router-historical-code-intent--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-router-historical-code-intent--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-router-historical-code-intent--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-router-historical-code-intent--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-bugfix-router-historical-code-intent--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q router::tests -- --nocapture",
+        "cargo test -q cmd::query -- --nocapture"
+      ],
+      "preflight_query": "Keep historical code mentions memory eligible\n\nFix routing so historical or prior-decision questions that mention code terms remain memory-eligible unless they clearly request edit/debug/action work. Add benchmark-style routing tests.",
+      "preflight_targets": [
+        "src/router.rs",
+        "src/cmd/query.rs",
+        "route_query",
+        "historical_query_routes_memory"
+      ]
+    },
+    {
+      "task_id": "code-feature-remember-reject-empty-records",
+      "task_category": "feature",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-feature-remember-reject-empty-records--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-feature-remember-reject-empty-records--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-feature-remember-reject-empty-records--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-feature-remember-reject-empty-records--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-feature-remember-reject-empty-records--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-remember-reject-empty-records--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-remember-reject-empty-records--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-feature-remember-reject-empty-records--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 25,
+      "expected_validation_commands": [
+        "cargo test -q cmd::remember -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Reject empty remember records\n\nEnsure remember commands reject empty task, trace, plan, or learning records with actionable errors and no partial writes. Add tests for each affected record kind.",
+      "preflight_targets": [
+        "src/cmd/remember.rs",
+        "src/council/artifacts.rs",
+        "remember_plan",
+        "remember_learning"
+      ]
+    },
+    {
+      "task_id": "code-feature-session-monitor-threshold-env",
+      "task_category": "feature",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-feature-session-monitor-threshold-env--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-feature-session-monitor-threshold-env--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-feature-session-monitor-threshold-env--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-feature-session-monitor-threshold-env--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-feature-session-monitor-threshold-env--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-session-monitor-threshold-env--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-session-monitor-threshold-env--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 25,
+      "expected_validation_commands": [
+        "cargo test -q --bin session_monitor -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Validate session monitor threshold env vars\n\nImprove session monitor threshold parsing so invalid environment values fall back to defaults and are covered by tests without making live session classification flaky.",
+      "preflight_targets": [
+        "src/bin/session_monitor.rs",
+        "thresholds_from_env_vars",
+        "classify"
+      ]
+    },
+    {
+      "task_id": "code-bugfix-proveit-artifact-paths",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-bugfix-proveit-artifact-paths--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-proveit-artifact-paths--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-proveit-artifact-paths--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-proveit-artifact-paths--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-proveit-artifact-paths--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-proveit-artifact-paths--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-proveit-artifact-paths--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-bugfix-proveit-artifact-paths--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q prove_it_sprint -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Prevent proveit artifact path traversal\n\nAdd path safety checks to proveit artifact storage so artifact names cannot escape the run directory through absolute paths, symlinks, or parent traversal. Add tests.",
+      "preflight_targets": [
+        "src/proveit/artifact_store.rs",
+        "src/proveit/runner.rs",
+        "src/proveit/git.rs",
+        "ArtifactStore",
+        "write_artifact"
+      ]
+    },
+    {
+      "task_id": "code-feature-packet-validate-warnings-json",
+      "task_category": "feature",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-feature-packet-validate-warnings-json--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-feature-packet-validate-warnings-json--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-feature-packet-validate-warnings-json--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-feature-packet-validate-warnings-json--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-feature-packet-validate-warnings-json--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-packet-validate-warnings-json--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-packet-validate-warnings-json--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-feature-packet-validate-warnings-json--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q cmd::packet -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Emit packet validation warnings in JSON\n\nAdd or fix JSON output for packet validation so warning codes are preserved without echoing packet body text or secret-like content. Prove the JSON contract with focused tests.",
+      "preflight_targets": [
+        "src/cmd/packet.rs",
+        "crates/layers-core/src/context_packet.rs",
+        "validate_packet",
+        "PacketValidationReport"
+      ]
+    },
+    {
+      "task_id": "code-bugfix-mcp-client-error-redaction",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-bugfix-mcp-client-error-redaction--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-mcp-client-error-redaction--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-mcp-client-error-redaction--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-mcp-client-error-redaction--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-mcp-client-error-redaction--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-mcp-client-error-redaction--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-mcp-client-error-redaction--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q -p layers-mcp -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Redact MCP client error payload secrets\n\nEnsure MCP client/server error formatting never echoes secret-like request payload fields. Add tests that secret-like values are redacted in errors.",
+      "preflight_targets": [
+        "crates/layers-mcp/src/client.rs",
+        "crates/layers-mcp/src/server.rs",
+        "crates/layers-mcp/src/types.rs",
+        "McpClient",
+        "ServerError"
+      ]
+    },
+    {
+      "task_id": "negative-control-sort-three-words",
+      "task_category": "negative_control",
+      "negative_control": true,
+      "variant": "layers_targeted_preflight",
+      "run_id": "negative-control-sort-three-words--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/negative-control-sort-three-words--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/negative-control-sort-three-words--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/negative-control-sort-three-words--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/negative-control-sort-three-words--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-sort-three-words--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-sort-three-words--layers_targeted_preflight.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 5,
+      "expected_validation_commands": [
+        "python3 - <<'PY'\nprint(', '.join(sorted(['zebra','amber','cobalt'])))\nPY"
+      ],
+      "preflight_query": "Sort three words alphabetically\n\nSort these words alphabetically: zebra, amber, cobalt. Do not inspect repository files or use context retrieval.",
+      "preflight_targets": []
+    },
+    {
+      "task_id": "code-bugfix-router-historical-code-intent",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-bugfix-router-historical-code-intent--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-router-historical-code-intent--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-router-historical-code-intent--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-router-historical-code-intent--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-router-historical-code-intent--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-router-historical-code-intent--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-router-historical-code-intent--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q router::tests -- --nocapture",
+        "cargo test -q cmd::query -- --nocapture"
+      ],
+      "preflight_query": "Keep historical code mentions memory eligible\n\nFix routing so historical or prior-decision questions that mention code terms remain memory-eligible unless they clearly request edit/debug/action work. Add benchmark-style routing tests.",
+      "preflight_targets": [
+        "src/router.rs",
+        "src/cmd/query.rs",
+        "route_query",
+        "historical_query_routes_memory"
+      ]
+    },
+    {
+      "task_id": "code-docs-architecture-context-spine",
+      "task_category": "other",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-docs-architecture-context-spine--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-docs-architecture-context-spine--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-docs-architecture-context-spine--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-docs-architecture-context-spine--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-docs-architecture-context-spine--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-docs-architecture-context-spine--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-docs-architecture-context-spine--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-docs-architecture-context-spine--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 25,
+      "expected_validation_commands": [
+        "cargo test -q tests::cli_about_positions_layers_as_context_packet_compiler -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Document context spine architecture without runtime overclaim\n\nImprove architecture documentation or CLI help to describe Layers as a local-first context compiler/context spine for coding agents, not a competing agent runtime. Keep claims evidence-gated.",
+      "preflight_targets": [
+        "src/main.rs",
+        "src/lib.rs",
+        "benchmarks/workflows/README.md",
+        "Cli",
+        "north_star"
+      ]
+    },
+    {
+      "task_id": "code-bugfix-council-circuit-exit-gate",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-bugfix-council-circuit-exit-gate--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-council-circuit-exit-gate--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-council-circuit-exit-gate--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-council-circuit-exit-gate--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-council-circuit-exit-gate--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-council-circuit-exit-gate--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-council-circuit-exit-gate--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-bugfix-council-circuit-exit-gate--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q council::circuit_breaker -- --nocapture",
+        "cargo test -q council::topology -- --nocapture"
+      ],
+      "preflight_query": "Fix council circuit breaker exit gate edge case\n\nDiagnose and fix an edge case where the council circuit breaker exit gate could reopen too early or too late around threshold boundaries. Prove behavior with boundary tests.",
+      "preflight_targets": [
+        "src/council/circuit_breaker.rs",
+        "src/council/topology.rs",
+        "CircuitBreaker",
+        "exit_gate"
+      ]
+    },
+    {
+      "task_id": "code-feature-daemon-heartbeat-stale-detection",
+      "task_category": "feature",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q -p layers-daemon -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Add stale daemon heartbeat detection\n\nImplement stale heartbeat detection for the daemon lifecycle so health checks report stale but not dead processes correctly. Add tests for fresh, stale, and missing heartbeat files.",
+      "preflight_targets": [
+        "crates/layers-daemon/src/heartbeat.rs",
+        "crates/layers-daemon/src/lifecycle.rs",
+        "Heartbeat",
+        "Lifecycle"
+      ]
+    },
+    {
+      "task_id": "code-feature-mcp-preflight-stable-registry",
+      "task_category": "feature",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-feature-mcp-preflight-stable-registry--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-feature-mcp-preflight-stable-registry--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-feature-mcp-preflight-stable-registry--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-feature-mcp-preflight-stable-registry--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-feature-mcp-preflight-stable-registry--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-mcp-preflight-stable-registry--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-mcp-preflight-stable-registry--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-feature-mcp-preflight-stable-registry--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q -p layers-mcp -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Keep MCP preflight in stable registry\n\nAdd a regression guard that stable MCP preflight_context remains exposed in the stable registry and routes packet generation through the compiler-backed path.",
+      "preflight_targets": [
+        "crates/layers-mcp/src/stable.rs",
+        "crates/layers-mcp/src/server.rs",
+        "crates/layers-compiler/src/lib.rs",
+        "preflight_context",
+        "ContextCompiler"
+      ]
+    },
+    {
+      "task_id": "negative-control-simple-json-validity",
+      "task_category": "negative_control",
+      "negative_control": true,
+      "variant": "baseline",
+      "run_id": "negative-control-simple-json-validity--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/negative-control-simple-json-validity--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/negative-control-simple-json-validity--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/negative-control-simple-json-validity--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/negative-control-simple-json-validity--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-simple-json-validity--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/negative-control-simple-json-validity--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 5,
+      "expected_validation_commands": [
+        "python3 - <<'PY'\nimport json; json.loads('{\"ok\": true, \"count\": 3}'); print('yes')\nPY"
+      ],
+      "preflight_query": "Validate a tiny JSON object mentally\n\nIs {\"ok\": true, \"count\": 3} valid JSON? Answer yes or no without consulting repository context.",
+      "preflight_targets": []
+    },
+    {
+      "task_id": "code-bugfix-runtime-queue-starvation",
+      "task_category": "bugfix",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-bugfix-runtime-queue-starvation--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-bugfix-runtime-queue-starvation--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-bugfix-runtime-queue-starvation--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-bugfix-runtime-queue-starvation--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-bugfix-runtime-queue-starvation--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-runtime-queue-starvation--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-bugfix-runtime-queue-starvation--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-bugfix-runtime-queue-starvation--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 75,
+      "expected_validation_commands": [
+        "cargo test -q -p layers-runtime -- --nocapture",
+        "cargo test -q critical_path -- --nocapture"
+      ],
+      "preflight_query": "Preserve runtime queue fairness under critical load\n\nDiagnose and fix a runtime queue fairness regression where critical work can starve standard work beyond the configured ratio. Add a deterministic regression test.",
+      "preflight_targets": [
+        "crates/layers-runtime/src/queue.rs",
+        "crates/layers-runtime/src/agent_loop.rs",
+        "src/critical_path.rs",
+        "Queue",
+        "weighted_ratio"
+      ]
+    },
+    {
+      "task_id": "code-feature-packet-validate-warnings-json",
+      "task_category": "feature",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-feature-packet-validate-warnings-json--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-feature-packet-validate-warnings-json--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-feature-packet-validate-warnings-json--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-feature-packet-validate-warnings-json--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-feature-packet-validate-warnings-json--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-packet-validate-warnings-json--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-feature-packet-validate-warnings-json--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 45,
+      "expected_validation_commands": [
+        "cargo test -q cmd::packet -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Emit packet validation warnings in JSON\n\nAdd or fix JSON output for packet validation so warning codes are preserved without echoing packet body text or secret-like content. Prove the JSON contract with focused tests.",
+      "preflight_targets": [
+        "src/cmd/packet.rs",
+        "crates/layers-core/src/context_packet.rs",
+        "validate_packet",
+        "PacketValidationReport"
+      ]
+    },
+    {
+      "task_id": "code-refactor-context-compiler-packet-finalize",
+      "task_category": "refactor",
+      "negative_control": false,
+      "variant": "baseline",
+      "run_id": "code-refactor-context-compiler-packet-finalize--baseline",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-refactor-context-compiler-packet-finalize--baseline",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-refactor-context-compiler-packet-finalize--baseline.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-refactor-context-compiler-packet-finalize--baseline.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-refactor-context-compiler-packet-finalize--baseline.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-refactor-context-compiler-packet-finalize--baseline.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-refactor-context-compiler-packet-finalize--baseline.patch",
+      "requires_layers_preflight": false,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 75,
+      "expected_validation_commands": [
+        "cargo test -q context_packet_compiler -- --nocapture",
+        "cargo test -q cmd::query -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Centralize packet finalization in context compiler\n\nRefactor packet finalization paths so packet id, created_at, provenance, and stable metadata are set through ContextCompiler rather than duplicated ad hoc call sites. Preserve existing query and preflight behavior.",
+      "preflight_targets": [
+        "src/context_packet_compiler/mod.rs",
+        "src/cmd/query.rs",
+        "src/cmd/preflight.rs",
+        "ContextCompiler",
+        "compile_query_packet"
+      ]
+    },
+    {
+      "task_id": "code-refactor-context-compiler-packet-finalize",
+      "task_category": "refactor",
+      "negative_control": false,
+      "variant": "layers_targeted_preflight",
+      "run_id": "code-refactor-context-compiler-packet-finalize--layers_targeted_preflight",
+      "worktree_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/worktrees/code-refactor-context-compiler-packet-finalize--layers_targeted_preflight",
+      "prompt_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/prompts/code-refactor-context-compiler-packet-finalize--layers_targeted_preflight.md",
+      "transcript_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/transcripts/code-refactor-context-compiler-packet-finalize--layers_targeted_preflight.md",
+      "validation_log_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/validation/code-refactor-context-compiler-packet-finalize--layers_targeted_preflight.log",
+      "diff_stat_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-refactor-context-compiler-packet-finalize--layers_targeted_preflight.stat",
+      "diff_patch_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/diffs/code-refactor-context-compiler-packet-finalize--layers_targeted_preflight.patch",
+      "packet_artifact_path": "docs/dogfood/20260523T150926Z-v2-release-preregistered-benchmark/packets/code-refactor-context-compiler-packet-finalize--layers_targeted_preflight.md",
+      "requires_layers_preflight": true,
+      "agent_command": "docs/dogfood/20260518T214500Z-phase5-30paired-preregistered-benchmark/scripts/gemini-agent-wrapper.sh",
+      "model": "gemini-cli",
+      "time_budget_minutes": 75,
+      "expected_validation_commands": [
+        "cargo test -q context_packet_compiler -- --nocapture",
+        "cargo test -q cmd::query -- --nocapture",
+        "cargo check --workspace --all-targets"
+      ],
+      "preflight_query": "Centralize packet finalization in context compiler\n\nRefactor packet finalization paths so packet id, created_at, provenance, and stable metadata are set through ContextCompiler rather than duplicated ad hoc call sites. Preserve existing query and preflight behavior.",
+      "preflight_targets": [
+        "src/context_packet_compiler/mod.rs",
+        "src/cmd/query.rs",
+        "src/cmd/preflight.rs",
+        "ContextCompiler",
+        "compile_query_packet"
+      ]
+    }
+  ]
+}
