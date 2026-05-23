@@ -30,7 +30,7 @@ Paired net benefit vs. baseline: Layers targeted-preflight
 - Layers overhead: 0.6 ms / 4766.0 tokens
 
 Claim status: NotSupported
-Blocking metrics: token_reduction_ratio, paired_task_count, code_heavy_paired_task_count, negative_control_paired_task_count
+Blocking metrics: token_reduction_ratio, average_layers_overhead_tokens, paired_task_count, code_heavy_paired_task_count, negative_control_paired_task_count
 Uncertainty notes:
   - paired_task_count 5 is below minimum 30
   - code_heavy_paired_task_count 3 is below minimum 20

@@ -185,10 +185,12 @@
       "max_regression_rate": 0.0,
       "max_context_caused_regression_rate": 0.0,
       "min_negative_control_abstention_rate": 0.95,
-      "max_unnecessary_context_injection_rate": 0.05
+      "max_unnecessary_context_injection_rate": 0.05,
+      "max_average_layers_overhead_tokens": 1200.0
     },
     "blocking_metrics": [
       "token_reduction_ratio",
+      "average_layers_overhead_tokens",
       "paired_task_count",
       "code_heavy_paired_task_count",
       "negative_control_paired_task_count"
@@ -202,6 +204,7 @@
     "negative_control_paired_task_count": 2,
     "negative_control_abstention_rate": 1.0,
     "unnecessary_context_injection_rate": 0.0,
-    "context_caused_regression_rate": 0.0
+    "context_caused_regression_rate": 0.0,
+    "average_layers_overhead_tokens": 4766.0
   }
 }
