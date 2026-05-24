@@ -1,0 +1,1692 @@
+kill: -3908: Operation not permitted
+Error: shell command timed out after 45 minute(s): codex exec --skip-git-repo-check < '/Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/prompts/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.md'
+stderr:
+Reading prompt from stdin...
+OpenAI Codex v0.131.0
+--------
+workdir: /Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019e5772-9c8a-7ef3-8da6-ad62d0133cf7
+--------
+user
+# Workflow Benchmark Agent Prompt
+
+Task ID: code-stale-trap-prefer-current-task-spec
+Variant: layers_targeted_preflight
+Time budget minutes: 45
+
+## Task
+Stale-context trap: update code using the current TaskSpec validation rules, not older docs that allowed missing expected relevant files. The correct solution must inspect current schema and validator before editing.
+
+## Required validation commands
+- `cargo test -q workflow_benchmark -- --nocapture`
+- `cargo run -q -- workflow-benchmark validate-tasks benchmarks/workflows/tasks --json`
+
+## Targeted preflight setup
+The benchmark harness handles the Layers targeted-preflight step before agent execution; do not run additional `layers preflight` commands.
+The harness-generated targeted-preflight packet artifact for this run is `docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/packets/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.md`; inspect it if needed before editing files.
+Use only the harness-captured targeted-preflight context for this variant; do not mix broad-query or MCP-preflight artifacts.
+
+## Implementation guidance
+
+You have 45 minutes. Use them fully.
+
+1. Read the relevant source files before editing.
+2. Make the requested change and add regression tests.
+3. Run ALL validation commands listed above.
+4. If validation fails, diagnose the failure and retry. Do NOT stop after one failed command.
+5. Only declare success when all validation commands pass.
+
+Agents that make only 2-3 tool calls and stop are scored as failures.
+
+## Scoring reminder
+Full success: The requested repository change is implemented with focused regression coverage and all listed validation commands pass.
+Partial success: The main behavior is implemented but validation is incomplete, coverage is weak, or minor follow-up is required.
+Failure: The requested behavior remains missing, untested, or introduces regressions.
+
+codex
+I’ll first inspect the harness packet plus the current TaskSpec schema and validator, then patch the behavior with a regression test and run the two required validation commands. I’ll also check whether GitNexus tooling is available in this environment before touching symbols, since this repo’s instructions require impact analysis.
+exec
+/bin/zsh -lc "sed -n '1,220p' docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/packets/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.md" in /Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight
+ exited 1 in 0ms:
+sed: docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/packets/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.md: No such file or directory
+
+exec
+/bin/zsh -lc "rg --files | rg '("'^|/)(TaskSpec|task_spec|workflow|benchmark|validator|validate|schema|tasks|Cargo'"\\.toml|lib\\.rs|main\\.rs|mod\\.rs)"'$|benchmarks/workflows/tasks|docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/packets/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.md'"'" in /Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight
+ succeeded in 0ms:
+src/technician/detection/mod.rs
+src/technician/repair/mod.rs
+src/technician/data/mod.rs
+src/technician/escalation/mod.rs
+src/technician/mod.rs
+src/technician/learning/mod.rs
+src/context_packet_compiler/mod.rs
+src/main.rs
+src/proveit/mod.rs
+src/provider/mod.rs
+src/lib.rs
+src/plugins/rlef/mod.rs
+src/plugins/sentry/mod.rs
+src/plugins/telemetry/mod.rs
+src/plugins/mod.rs
+src/memory_index/mod.rs
+Cargo.toml
+src/cmd/mod.rs
+src/council/mod.rs
+crates/layers-mcp/src/lib.rs
+crates/layers-mcp/Cargo.toml
+crates/layers-core/src/lib.rs
+crates/layers-core/Cargo.toml
+crates/layers-channels/src/lib.rs
+crates/layers-channels/Cargo.toml
+benchmarks/workflows/tasks/code-feature-config-secret-redaction-nested.json
+benchmarks/workflows/tasks/code-feature-tools-registry-duplicate-names.json
+benchmarks/workflows/tasks/negative-control-iso-date-format.json
+benchmarks/workflows/tasks/code-bugfix-query-target-traversal.json
+benchmarks/workflows/tasks/code-docs-architecture-context-spine.json
+benchmarks/workflows/tasks/code-feature-workflow-benchmark-human-surfaces.json
+benchmarks/workflows/tasks/code-refactor-context-compiler-packet-finalize.json
+benchmarks/workflows/tasks/negative-control-basic-unit-conversion.json
+benchmarks/workflows/tasks/code-feature-session-monitor-threshold-env.json
+benchmarks/workflows/tasks/negative-control-count-letters.json
+benchmarks/workflows/tasks/negative-control-sort-three-words.json
+benchmarks/workflows/tasks/code-feature-quality-abstain-low-specificity.json
+benchmarks/workflows/tasks/code-bugfix-proveit-artifact-paths.json
+benchmarks/workflows/tasks/code-feature-daemon-heartbeat-stale-detection.json
+benchmarks/workflows/tasks/code-bugfix-telemetry-malformed-jsonl-skip.json
+benchmarks/workflows/tasks/code-bugfix-provider-budget-overflow.json
+benchmarks/workflows/tasks/code-bugfix-preflight-strict-low-relevance.json
+benchmarks/workflows/tasks/negative-control-simple-json-validity.json
+benchmarks/workflows/tasks/code-bugfix-workflow-benchmark-duplicate-pairing.json
+benchmarks/workflows/tasks/code-feature-mcp-preflight-stable-registry.json
+benchmarks/workflows/tasks/code-refactor-memory-index-fallback-tags.json
+benchmarks/workflows/tasks/code-feature-remember-reject-empty-records.json
+benchmarks/workflows/tasks/code-bugfix-router-historical-code-intent.json
+benchmarks/workflows/tasks/code-bugfix-context-routing.json
+benchmarks/workflows/tasks/code-bugfix-council-circuit-exit-gate.json
+benchmarks/workflows/tasks/code-stale-trap-prefer-current-task-spec.json
+benchmarks/workflows/tasks/negative-control-trivial-arithmetic.json
+benchmarks/workflows/tasks/code-bugfix-runtime-queue-starvation.json
+benchmarks/workflows/tasks/code-feature-packet-validate-warnings-json.json
+benchmarks/workflows/tasks/code-stale-trap-query-surface-not-general-proof.json
+benchmarks/workflows/tasks/code-bugfix-mcp-client-error-redaction.json
+crates/layers-daemon/src/lib.rs
+crates/layers-compiler/src/lib.rs
+crates/layers-compiler/Cargo.toml
+crates/layers-runtime/src/lib.rs
+crates/layers-tools/src/lib.rs
+crates/layers-tools/Cargo.toml
+crates/layers-runtime/Cargo.toml
+crates/layers-daemon/Cargo.toml
+crates/layers-store/Cargo.toml
+crates/layers-store/src/lib.rs
+crates/layers-providers/src/lib.rs
+crates/layers-providers/Cargo.toml
+
+exec
+/bin/zsh -lc "find .claude/skills/gitnexus -maxdepth 2 -type f -name 'SKILL.md' -print" in /Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight
+ succeeded in 0ms:
+.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md
+.claude/skills/gitnexus/gitnexus-debugging/SKILL.md
+.claude/skills/gitnexus/gitnexus-exploring/SKILL.md
+.claude/skills/gitnexus/gitnexus-guide/SKILL.md
+.claude/skills/gitnexus/gitnexus-cli/SKILL.md
+.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md
+
+exec
+/bin/zsh -lc 'npx gitnexus --help' in /Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight
+ succeeded in 123ms:
+Usage: gitnexus [options] [command]
+
+GitNexus local CLI and MCP server
+
+Options:
+  -V, --version                            output the version number
+  -h, --help                               display help for command
+
+Commands:
+  setup                                    One-time setup: configure MCP for Cursor, Claude Code, OpenCode, Codex
+  analyze [options] [path]                 Index a repository (full analysis)
+  index [options] [path...]                Register an existing .gitnexus/ folder into the global registry (no re-analysis needed)
+  serve [options]                          Start local HTTP server for web UI connection
+  mcp                                      Start MCP server (stdio) — serves all indexed repos
+  list                                     List all indexed repositories
+  status                                   Show index status for current repo
+  clean [options]                          Delete GitNexus index for current repo
+  remove [options] <target>                Delete the GitNexus index for a registered repo (by alias, name, or absolute path). Unlike `clean`, does not require being inside the repo. Idempotent on unknown targets.
+  wiki [options] [path]                    Generate repository wiki from knowledge graph
+  augment <pattern>                        Augment a search pattern with knowledge graph context (used by hooks)
+  query [options] <search_query>           Search the knowledge graph for execution flows related to a concept
+  context [options] [name]                 360-degree view of a code symbol: callers, callees, processes
+  impact [options] <target>                Blast radius analysis: what breaks if you change a symbol
+  cypher [options] <query>                 Execute raw Cypher query against the knowledge graph
+  detect-changes|detect_changes [options]  Map git diff hunks to indexed symbols and affected execution flows
+  eval-server [options]                    Start lightweight HTTP server for fast tool calls during evaluation
+  group                                    Manage repository groups for cross-index impact analysis
+  help [command]                           display help for command
+
+codex
+The packet path in the prompt is outside this worktree directory, so I’ll read it by absolute path. GitNexus CLI is installed, and I’m checking its repo status plus the local impact-analysis instructions before editing any Rust symbols.
+exec
+/bin/zsh -lc "sed -n '1,260p' /Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/packets/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.md" in /Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight
+exec
+/bin/zsh -lc "sed -n '1,260p' .claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md" in /Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight
+ succeeded in 0ms:
+---
+name: gitnexus-impact-analysis
+description: "Use when the user wants to know what will break if they change something, or needs safety analysis before editing code. Examples: \"Is it safe to change X?\", \"What depends on this?\", \"What will break?\""
+---
+
+# Impact Analysis with GitNexus
+
+## When to Use
+
+- "Is it safe to change this function?"
+- "What will break if I modify X?"
+- "Show me the blast radius"
+- "Who uses this code?"
+- Before making non-trivial code changes
+- Before committing — to understand what your changes affect
+
+## Workflow
+
+```
+1. gitnexus_impact({target: "X", direction: "upstream"})  → What depends on this
+2. READ gitnexus://repo/{name}/processes                   → Check affected execution flows
+3. gitnexus_detect_changes()                               → Map current git changes to affected flows
+4. Assess risk and report to user
+```
+
+> If "Index is stale" → run `npx gitnexus analyze` in terminal.
+
+## Checklist
+
+```
+- [ ] gitnexus_impact({target, direction: "upstream"}) to find dependents
+- [ ] Review d=1 items first (these WILL BREAK)
+- [ ] Check high-confidence (>0.8) dependencies
+- [ ] READ processes to check affected execution flows
+- [ ] gitnexus_detect_changes() for pre-commit check
+- [ ] Assess risk level and report to user
+```
+
+## Understanding Output
+
+| Depth | Risk Level       | Meaning                  |
+| ----- | ---------------- | ------------------------ |
+| d=1   | **WILL BREAK**   | Direct callers/importers |
+| d=2   | LIKELY AFFECTED  | Indirect dependencies    |
+| d=3   | MAY NEED TESTING | Transitive effects       |
+
+## Risk Assessment
+
+| Affected                       | Risk     |
+| ------------------------------ | -------- |
+| <5 symbols, few processes      | LOW      |
+| 5-15 symbols, 2-5 processes    | MEDIUM   |
+| >15 symbols or many processes  | HIGH     |
+| Critical path (auth, payments) | CRITICAL |
+
+## Tools
+
+**gitnexus_impact** — the primary tool for symbol blast radius:
+
+```
+gitnexus_impact({
+  target: "validateUser",
+  direction: "upstream",
+  minConfidence: 0.8,
+  maxDepth: 3
+})
+
+→ d=1 (WILL BREAK):
+  - loginHandler (src/auth/login.ts:42) [CALLS, 100%]
+  - apiMiddleware (src/api/middleware.ts:15) [CALLS, 100%]
+
+→ d=2 (LIKELY AFFECTED):
+  - authRouter (src/routes/auth.ts:22) [CALLS, 95%]
+```
+
+**gitnexus_detect_changes** — git-diff based impact analysis:
+
+```
+gitnexus_detect_changes({scope: "staged"})
+
+→ Changed: 5 symbols in 3 files
+→ Affected: LoginFlow, TokenRefresh, APIMiddlewarePipeline
+→ Risk: MEDIUM
+```
+
+## Example: "What breaks if I change validateUser?"
+
+```
+1. gitnexus_impact({target: "validateUser", direction: "upstream"})
+   → d=1: loginHandler, apiMiddleware (WILL BREAK)
+   → d=2: authRouter, sessionManager (LIKELY AFFECTED)
+
+2. READ gitnexus://repo/my-app/processes
+   → LoginFlow and TokenRefresh touch validateUser
+
+3. Risk: 2 direct callers, 2 processes = MEDIUM
+```
+
+ succeeded in 0ms:
+# Objective Brief
+
+## Objective
+
+Prefer current task_spec schema over stale docs
+
+Stale-context trap: update code using the current TaskSpec validation rules, not older docs that allowed missing expected relevant files. The correct solution must inspect current schema and validator before editing.
+
+## Context Constraints
+
+- packet: preflight-f7964bee-0a48-44d5-9b1c-495371231a99
+- workspace: code-stale-trap-prefer-current-task-spec--layers_targeted_preflight
+- route: preflight
+- confidence: high
+- budget: 249/700 words
+- git ref: 578572c
+
+## Warnings
+
+- [info] autoresearch_uncertainty: No persisted autoresearch finding matched this task.
+- [warning] impact_degraded: Impact analysis for src/cmd/workflow_benchmark.rs degraded; GitNexus context was unavailable or incomplete.
+- [info] injection_policy: Packet quality gate recommends InjectFull: packet has strong target coverage and low warning burden
+
+## Cited Context
+
+- Preflight Summary / Preflight classification
+  source: local-planner (preflight)
+  selected because: summarizes the local preflight plan before source collection
+  tags: planning
+- Workspace State / Git worktree state
+  source: git status --porcelain=v1 (workspace)
+  selected because: dirty or divergent workspace state changes how agents should interpret context
+  tags: workspace, git
+- Project Memory / Curated memory match
+  source: /Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight/memoryport/curated-memory.jsonl (memory)
+  selected because: curated memory shares terms with the preflight task
+  tags: memory
+- Project Memory / Curated memory match
+  source: /Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight/memoryport/curated-memory.jsonl (memory)
+  selected because: curated memory shares terms with the preflight task
+  tags: memory
+- Code and Impact Context / src/cmd/workflow_benchmark.rs
+  source: src/cmd/workflow_benchmark.rs (file) [src/cmd/workflow_benchmark.rs]
+  selected because: explicit or inferred target file should be inspected before editing
+  tags: code
+- Code and Impact Context / benchmarks/workflows/schemas/task-spec.schema.json
+  source: benchmarks/workflows/schemas/task-spec.schema.json (file) [benchmarks/workflows/schemas/task-spec.schema.json]
+  selected because: explicit or inferred target file should be inspected before editing
+  tags: code
+- Impact Context / src/cmd/workflow_benchmark.rs
+  source: impact:src/cmd/workflow_benchmark.rs (local) [src/cmd/workflow_benchmark.rs]
+  selected because: impact context identifies likely blast radius and validation before editing
+  tags: impact
+- Suggested Validation Commands / git diff --check
+  source: preflight-validation-policy (validation)
+  selected because: validation commands prevent context-only research from becoming unverified implementation
+  tags: validation
+- Suggested Validation Commands / cargo test --workspace --all-targets
+  source: preflight-validation-policy (validation)
+  selected because: validation commands prevent context-only research from becoming unverified implementation
+  tags: validation
+- Suggested Validation Commands / cargo clippy --workspace --all-targets -- -D warnings
+  source: preflight-validation-policy (validation)
+  selected because: validation commands prevent context-only research from becoming unverified implementation
+  tags: validation
+
+## Validation Plan
+
+No explicit validation commands were captured in this packet.
+
+## Handoff Expectations
+
+- Use the cited context above as the task boundary.
+- Do not assume uncited repository facts are current.
+- Preserve packet citations in review notes when they justify edits.
+- If the cited context is insufficient, stop and request an updated ContextPacket or explicit targets.
+
+
+exec
+/bin/zsh -lc "sed -n '1,240p' .claude/skills/gitnexus/gitnexus-exploring/SKILL.md" in /Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight
+ succeeded in 0ms:
+---
+name: gitnexus-exploring
+description: "Use when the user asks how code works, wants to understand architecture, trace execution flows, or explore unfamiliar parts of the codebase. Examples: \"How does X work?\", \"What calls this function?\", \"Show me the auth flow\""
+---
+
+# Exploring Codebases with GitNexus
+
+## When to Use
+
+- "How does authentication work?"
+- "What's the project structure?"
+- "Show me the main components"
+- "Where is the database logic?"
+- Understanding code you haven't seen before
+
+## Workflow
+
+```
+1. READ gitnexus://repos                          → Discover indexed repos
+2. READ gitnexus://repo/{name}/context             → Codebase overview, check staleness
+3. gitnexus_query({query: "<what you want to understand>"})  → Find related execution flows
+4. gitnexus_context({name: "<symbol>"})            → Deep dive on specific symbol
+5. READ gitnexus://repo/{name}/process/{name}      → Trace full execution flow
+```
+
+> If step 2 says "Index is stale" → run `npx gitnexus analyze` in terminal.
+
+## Checklist
+
+```
+- [ ] READ gitnexus://repo/{name}/context
+- [ ] gitnexus_query for the concept you want to understand
+- [ ] Review returned processes (execution flows)
+- [ ] gitnexus_context on key symbols for callers/callees
+- [ ] READ process resource for full execution traces
+- [ ] Read source files for implementation details
+```
+
+## Resources
+
+| Resource                                | What you get                                            |
+| --------------------------------------- | ------------------------------------------------------- |
+| `gitnexus://repo/{name}/context`        | Stats, staleness warning (~150 tokens)                  |
+| `gitnexus://repo/{name}/clusters`       | All functional areas with cohesion scores (~300 tokens) |
+| `gitnexus://repo/{name}/cluster/{name}` | Area members with file paths (~500 tokens)              |
+| `gitnexus://repo/{name}/process/{name}` | Step-by-step execution trace (~200 tokens)              |
+
+## Tools
+
+**gitnexus_query** — find execution flows related to a concept:
+
+```
+gitnexus_query({query: "payment processing"})
+→ Processes: CheckoutFlow, RefundFlow, WebhookHandler
+→ Symbols grouped by flow with file locations
+```
+
+**gitnexus_context** — 360-degree view of a symbol:
+
+```
+gitnexus_context({name: "validateUser"})
+→ Incoming calls: loginHandler, apiMiddleware
+→ Outgoing calls: checkToken, getUserById
+→ Processes: LoginFlow (step 2/5), TokenRefresh (step 1/3)
+```
+
+## Example: "How does payment processing work?"
+
+```
+1. READ gitnexus://repo/my-app/context       → 918 symbols, 45 processes
+2. gitnexus_query({query: "payment processing"})
+   → CheckoutFlow: processPayment → validateCard → chargeStripe
+   → RefundFlow: initiateRefund → calculateRefund → processRefund
+3. gitnexus_context({name: "processPayment"})
+   → Incoming: checkoutHandler, webhookHandler
+   → Outgoing: validateCard, chargeStripe, saveTransaction
+4. Read src/payments/processor.ts for implementation details
+```
+
+exec
+/bin/zsh -lc 'npx gitnexus status' in /Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight
+ succeeded in 136ms:
+Repository: /Users/xxx/layers
+Indexed: 5/23/2026, 1:03:28 PM
+Indexed commit: c93ab57
+Current commit: 578572c
+Status: ⚠️ stale (re-run gitnexus analyze)
+
+codex
+GitNexus reports the index is stale for this worktree’s current commit, so I’m refreshing the index before running the required impact checks. In parallel, I’m reading the cited source and schema so the change is based on the current validator rather than stale notes.
+exec
+/bin/zsh -lc "sed -n '1,260p' src/cmd/workflow_benchmark.rs" in /Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight
+ succeeded in 0ms:
+//! Workflow benchmark telemetry analysis for comparing Layers vs baseline runs.
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt::Write as _,
+    fs,
+    path::{Component, Path, PathBuf},
+    process::{Command, Stdio},
+    thread,
+    time::{Duration, Instant},
+};
+
+use anyhow::{Context as _, Result, bail};
+use clap::Subcommand;
+use serde::{Deserialize, Serialize};
+#[cfg(unix)]
+use std::os::unix::process::CommandExt;
+
+use crate::cmd::packet::parse_valid_packet_text;
+
+/// Workflow benchmark commands.
+#[derive(Debug, Subcommand)]
+pub(crate) enum WorkflowBenchmarkCommands {
+    /// Analyze Layers-vs-baseline workflow telemetry from JSONL.
+    Analyze {
+        /// Path to workflow run telemetry JSONL.
+        path: PathBuf,
+        /// Output a structured JSON report.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Validate preregistered workflow benchmark task specs.
+    ValidateTasks {
+        /// Task spec file or directory containing task spec JSON files.
+        path: PathBuf,
+        /// Output a structured JSON validation report.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Export task/file relevance data for retrieval evaluation.
+    RetrievalEvalCorpus {
+        /// Task spec file or directory containing task spec JSON files.
+        path: PathBuf,
+        /// Repository root containing expected relevant files.
+        #[arg(long, default_value = ".")]
+        repo_root: PathBuf,
+        /// Output a structured JSON retrieval corpus.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Score a retrieval eval corpus with the deterministic lexical baseline.
+    RetrievalEvalLexical {
+        /// Retrieval eval corpus JSON produced by `retrieval-eval-corpus`.
+        path: PathBuf,
+        /// Output a structured JSON retrieval report.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Evaluate whether a retrieval report proves benefit over no injected context.
+    RetrievalEvalClaim {
+        /// Retrieval report JSON produced by `retrieval-eval-lexical` or `retrieval-eval-embeddings`.
+        path: PathBuf,
+        /// Output a structured JSON proof claim.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Compare a candidate retrieval report against a lexical baseline before integration.
+    RetrievalEvalCompare {
+        /// Baseline lexical retrieval report JSON.
+        baseline: PathBuf,
+        /// Candidate semantic or hybrid retrieval report JSON.
+        candidate: PathBuf,
+        /// Output a structured JSON candidate claim.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Score a retrieval eval corpus with an OpenAI-compatible embeddings endpoint.
+    RetrievalEvalEmbeddings {
+        /// Retrieval eval corpus JSON produced by `retrieval-eval-corpus`.
+        path: PathBuf,
+        /// OpenAI-compatible embeddings endpoint, such as `TurboCALM` `/v1/embeddings`.
+        #[arg(long, default_value = "http://127.0.0.1:8000/v1/embeddings")]
+        endpoint: String,
+        /// Embedding model name to request.
+        #[arg(long, default_value = "turbocalm-local")]
+        model: String,
+        /// Number of texts to send per embedding request.
+        #[arg(long, default_value_t = 16)]
+        batch_size: usize,
+        /// Output a structured JSON retrieval report.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Plan isolated paired coding-agent benchmark runs without executing them.
+    PlanRun {
+        /// Task spec file or directory containing task spec JSON files.
+        path: PathBuf,
+        /// Output artifact directory for prompts, order, and runner plan JSON.
+        #[arg(long)]
+        output_dir: PathBuf,
+        /// Repository root to clone/reset from when executing the plan.
+        #[arg(long, default_value = ".")]
+        repo_root: PathBuf,
+        /// Agent command recorded in each run plan, e.g. `codex exec` or `claude -p`.
+        #[arg(long)]
+        agent_command: String,
+        /// Optional model name recorded in each run plan.
+        #[arg(long)]
+        model: Option<String>,
+        /// Deterministic seed for variant/task execution order.
+        #[arg(long, default_value_t = 0)]
+        seed: u64,
+        /// Output the structured runner plan JSON to stdout.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Execute a runner plan in isolated worktrees and emit benchmark run records.
+    RunPlan {
+        /// Path to runner-plan.json produced by `workflow-benchmark plan-run`.
+        path: PathBuf,
+        /// Targeted preflight command to run before targeted-preflight agent runs.
+        #[arg(
+            long,
+            default_value = "layers preflight --no-audit --agent-prompt --strict"
+        )]
+        preflight_command: String,
+        /// Keep worktrees after execution for manual inspection.
+        #[arg(long)]
+        keep_worktrees: bool,
+        /// Output the structured execution report JSON to stdout.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Recompute estimated token accounting for existing runner records from plan artifacts.
+    RefreshTokenAccounting {
+        /// Path to runner-plan.json produced by `workflow-benchmark plan-run`.
+        plan: PathBuf,
+        /// Path to workflow-runs.jsonl to rewrite with estimated token-accounting provenance.
+        run_records: PathBuf,
+        /// Output a structured refresh summary JSON to stdout.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Finalize a runner output directory into reproducible reports and audits.
+    FinalizeRun {
+        /// Runner output directory containing compare/workflow-runs.jsonl.
+        run_dir: PathBuf,
+        /// Output the structured finalization summary JSON to stdout.
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+/// Handle workflow benchmark commands.
+pub(crate) fn handle_workflow_benchmark(command: &WorkflowBenchmarkCommands) -> Result<()> {
+    match command {
+        WorkflowBenchmarkCommands::Analyze { path, json } => {
+            let runs = load_runs(path)?;
+            let report = analyze_runs_with_thresholds(&runs, ClaimThresholds::default())?;
+            println!("{}", format_report(&report, *json)?);
+            Ok(())
+        }
+        WorkflowBenchmarkCommands::ValidateTasks { path, json } => {
+            let report = validate_task_specs(path)?;
+            println!("{}", format_task_validation_report(&report, *json)?);
+            if report.invalid_count > 0 {
+                bail!(
+                    "{} workflow task spec(s) failed validation",
+                    report.invalid_count
+                );
+            }
+            Ok(())
+        }
+        WorkflowBenchmarkCommands::RetrievalEvalCorpus {
+            path,
+            repo_root,
+            json,
+        } => {
+            let corpus = build_retrieval_eval_corpus(&RetrievalEvalConfig {
+                task_path: path.clone(),
+                repo_root: repo_root.clone(),
+            })?;
+            if *json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&corpus)
+                        .context("failed to serialize retrieval eval corpus")?
+                );
+            } else {
+                println!("Workflow retrieval eval corpus");
+                println!("pairs: {}", corpus.pairs.len());
+                println!("documents: {}", corpus.documents.len());
+                println!("negative_controls: {}", corpus.negative_control_count);
+            }
+            Ok(())
+        }
+        WorkflowBenchmarkCommands::RetrievalEvalLexical { path, json } => {
+            let corpus = load_retrieval_eval_corpus(path)?;
+            let report = evaluate_lexical_retrieval(&corpus)?;
+            if *json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&report)
+                        .context("failed to serialize lexical retrieval report")?
+                );
+            } else {
+                println!("Workflow lexical retrieval eval");
+                println!("pairs: {}", report.pair_count);
+                println!("documents: {}", report.document_count);
+                println!("recall@5: {:.4}", report.recall_at_5);
+                println!("recall@10: {:.4}", report.recall_at_10);
+                println!("mrr: {:.4}", report.mrr);
+            }
+            Ok(())
+        }
+        WorkflowBenchmarkCommands::RetrievalEvalClaim { path, json } => {
+            let report = load_json_value(path, "retrieval report")?;
+            let claim =
+                evaluate_retrieval_proof_claim(&report, RetrievalProofThresholds::default())?;
+            println!("{}", format_retrieval_proof_claim(&claim, *json)?);
+            if claim.status != RetrievalProofStatus::Supported {
+                bail!("retrieval proof claim is not supported");
+            }
+            Ok(())
+        }
+        WorkflowBenchmarkCommands::RetrievalEvalCompare {
+            baseline,
+            candidate,
+            json,
+        } => {
+            let baseline_report = load_json_value(baseline, "baseline retrieval report")?;
+            let candidate_report = load_json_value(candidate, "candidate retrieval report")?;
+            let claim = evaluate_retrieval_candidate_claim(
+                &baseline_report,
+                &candidate_report,
+                RetrievalCandidateThresholds::default(),
+            )?;
+            println!("{}", format_retrieval_candidate_claim(&claim, *json)?);
+            if claim.status != RetrievalProofStatus::Supported {
+                bail!("retrieval candidate claim is not supported");
+            }
+            Ok(())
+        }
+        WorkflowBenchmarkCommands::RetrievalEvalEmbeddings {
+            path,
+            endpoint,
+            model,
+            batch_size,
+            json,
+        } => {
+            let corpus = load_retrieval_eval_corpus(path)?;
+            let report = evaluate_embedding_retrieval(
+                &corpus,
+                &OpenAiEmbeddingClient,
+                &EmbeddingRetrievalConfig {
+                    endpoint: endpoint.clone(),
+                    model: model.clone(),
+                    batch_size: *batch_size,
+                },
+            )?;
+            if *json {
+
+exec
+/bin/zsh -lc "sed -n '1,260p' benchmarks/workflows/schemas/task-spec.schema.json" in /Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight
+ succeeded in 0ms:
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://layers.local/benchmarks/workflows/task-spec.schema.json",
+  "title": "Layers workflow benchmark task spec",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "task_id",
+    "title",
+    "prompt",
+    "category",
+    "expected_validation_commands",
+    "success_rubric"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "not": { "required": ["negative_control"] }
+      },
+      "then": {
+        "required": ["target_files", "expected_relevant_files"],
+        "properties": {
+          "target_files": { "$ref": "#/$defs/non_empty_strings_required" },
+          "expected_relevant_files": { "$ref": "#/$defs/non_empty_strings_required" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "negative_control": { "const": false } },
+        "required": ["negative_control"]
+      },
+      "then": {
+        "required": ["target_files", "expected_relevant_files"],
+        "properties": {
+          "target_files": { "$ref": "#/$defs/non_empty_strings_required" },
+          "expected_relevant_files": { "$ref": "#/$defs/non_empty_strings_required" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "stale_context_trap": { "const": true } },
+        "required": ["stale_context_trap"]
+      },
+      "then": {
+        "required": ["expected_relevant_files"],
+        "properties": {
+          "expected_relevant_files": { "$ref": "#/$defs/non_empty_strings_required" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "negative_control": { "const": true } },
+        "required": ["negative_control"],
+        "anyOf": [
+          {
+            "properties": {
+              "target_files": {
+                "type": "array",
+                "minItems": 1
+              }
+            },
+            "required": ["target_files"]
+          },
+          {
+            "properties": {
+              "expected_relevant_files": {
+                "type": "array",
+                "minItems": 1
+              }
+            },
+            "required": ["expected_relevant_files"]
+          }
+        ]
+      },
+      "then": {
+        "required": ["abstention_rubric"]
+      }
+    }
+  ],
+  "properties": {
+    "task_id": { "type": "string", "minLength": 1, "pattern": "^[a-z0-9][a-z0-9_-]*$" },
+    "title": { "$ref": "#/$defs/non_blank_string" },
+    "prompt": { "$ref": "#/$defs/non_blank_string" },
+    "category": { "$ref": "#/$defs/non_blank_string" },
+    "difficulty": { "type": "string", "enum": ["trivial", "small", "medium", "large"] },
+    "surface_claim": {
+      "type": "string",
+      "enum": ["baseline", "layers_broad_query", "layers_targeted_preflight", "layers_mcp_preflight"]
+    },
+    "negative_control": { "type": "boolean" },
+    "stale_context_trap": { "type": "boolean" },
+    "repo_commit": { "$ref": "#/$defs/non_blank_string" },
+    "time_budget_minutes": { "type": "integer", "minimum": 1 },
+    "target_files": { "$ref": "#/$defs/non_empty_strings" },
+    "target_symbols": { "$ref": "#/$defs/non_empty_strings" },
+    "expected_relevant_files": { "$ref": "#/$defs/non_empty_strings" },
+    "expected_validation_commands": { "$ref": "#/$defs/non_empty_strings_required" },
+    "success_rubric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["full_success", "partial_success", "failure", "min_verification_quality"],
+      "properties": {
+        "full_success": { "$ref": "#/$defs/non_blank_string" },
+        "partial_success": { "$ref": "#/$defs/non_blank_string" },
+        "failure": { "$ref": "#/$defs/non_blank_string" },
+        "min_verification_quality": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "primary_endpoint": { "type": "string", "enum": ["verified_success"] }
+      }
+    },
+    "abstention_rubric": { "$ref": "#/$defs/non_blank_string" }
+  },
+  "$defs": {
+    "non_blank_string": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "non_empty_strings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/non_blank_string" }
+    },
+    "non_empty_strings_required": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/non_blank_string" }
+    }
+  }
+}
+
+exec
+/bin/zsh -lc "sed -n '260,620p' src/cmd/workflow_benchmark.rs" in /Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight
+ succeeded in 0ms:
+            if *json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&report)
+                        .context("failed to serialize embeddings retrieval report")?
+                );
+            } else {
+                println!("Workflow embeddings retrieval eval");
+                println!("endpoint: {}", report.endpoint);
+                println!("model: {}", report.model);
+                println!("pairs: {}", report.pair_count);
+                println!("documents: {}", report.document_count);
+                println!("recall@5: {:.4}", report.recall_at_5);
+                println!("recall@10: {:.4}", report.recall_at_10);
+                println!("mrr: {:.4}", report.mrr);
+            }
+            Ok(())
+        }
+        WorkflowBenchmarkCommands::PlanRun {
+            path,
+            output_dir,
+            repo_root,
+            agent_command,
+            model,
+            seed,
+            json,
+        } => {
+            let config = RunnerPlanConfig {
+                task_path: path.clone(),
+                output_dir: output_dir.clone(),
+                repo_root: repo_root.clone(),
+                agent_command: agent_command.clone(),
+                model: model.clone(),
+                seed: *seed,
+            };
+            let plan = plan_runner_artifacts(&config)?;
+            if *json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&plan)
+                        .context("failed to serialize runner plan")?
+                );
+            } else {
+                println!("Workflow benchmark runner plan");
+                println!("tasks: {}", plan.task_count);
+                println!("runs: {}", plan.runs.len());
+                println!("output_dir: {}", plan.output_dir.display());
+                println!("runner_plan: {}", plan.plan_path.display());
+                println!("execution_order: {}", plan.execution_order_path.display());
+            }
+            Ok(())
+        }
+        WorkflowBenchmarkCommands::RunPlan {
+            path,
+            preflight_command,
+            keep_worktrees,
+            json,
+        } => {
+            let report = execute_runner_plan(&RunnerExecutionConfig {
+                plan_path: path.clone(),
+                preflight_command: preflight_command.clone(),
+                keep_worktrees: *keep_worktrees,
+            })?;
+            if *json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&report)
+                        .context("failed to serialize runner execution report")?
+                );
+            } else {
+                println!("Workflow benchmark runner execution");
+                println!("runs: {}", report.total_runs);
+                println!("completed: {}", report.completed_runs);
+                println!("failed: {}", report.failed_runs);
+                println!("run_records: {}", report.run_records_path.display());
+                println!(
+                    "execution_report: {}",
+                    report.execution_report_path.display()
+                );
+            }
+            Ok(())
+        }
+        WorkflowBenchmarkCommands::RefreshTokenAccounting {
+            plan,
+            run_records,
+            json,
+        } => {
+            let summary = refresh_token_accounting_records(plan, run_records)?;
+            if *json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&summary)
+                        .context("failed to serialize token accounting refresh summary")?
+                );
+            } else {
+                println!("Workflow benchmark token accounting refreshed");
+                println!("records: {}", summary.records);
+                println!("refreshed_records: {}", summary.refreshed_records);
+                println!("run_records: {}", summary.run_records_path.display());
+            }
+            Ok(())
+        }
+        WorkflowBenchmarkCommands::FinalizeRun { run_dir, json } => {
+            let summary = finalize_workflow_benchmark_run(run_dir)?;
+            if *json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&summary)
+                        .context("failed to serialize workflow benchmark finalize-run summary")?
+                );
+            } else {
+                println!("Workflow benchmark finalized");
+                println!("artifact_root: {}", summary.artifact_root.display());
+                println!("workflow_records: {}", summary.workflow_records);
+                println!(
+                    "packet_validation_failures: {}",
+                    summary.packet_validation_failures
+                );
+                println!(
+                    "missing_required_artifacts: {}",
+                    summary.missing_required_artifacts.len()
+                );
+                println!("secret_scan_findings: {}", summary.secret_scan_findings);
+                println!("final_report: {}", summary.final_report_path.display());
+            }
+            if summary.has_blocking_findings() {
+                bail!("workflow benchmark finalization found blocking issues");
+            }
+            Ok(())
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Eq, PartialEq, Ord, PartialOrd, Serialize)]
+#[serde(rename_all = "snake_case")]
+enum WorkflowVariant {
+    Baseline,
+    #[serde(alias = "layers")]
+    LayersTargetedPreflight,
+    LayersBroadQuery,
+    LayersMcpPreflight,
+}
+
+impl WorkflowVariant {
+    fn is_layers(self) -> bool {
+        !matches!(self, Self::Baseline)
+    }
+
+    fn as_runner_variant(self) -> &'static str {
+        match self {
+            Self::Baseline => "baseline",
+            Self::LayersTargetedPreflight => "layers_targeted_preflight",
+            Self::LayersBroadQuery => "layers_broad_query",
+            Self::LayersMcpPreflight => "layers_mcp_preflight",
+        }
+    }
+
+    /// Human-friendly label for terminal reports.
+    fn display_name(self) -> &'static str {
+        match self {
+            Self::Baseline => "Baseline (no Layers)",
+            Self::LayersTargetedPreflight => "Layers targeted-preflight",
+            Self::LayersBroadQuery => "Layers broad-query",
+            Self::LayersMcpPreflight => "Layers MCP-preflight",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct RetrievalQuality {
+    relevance: u8,
+    completeness: u8,
+    specificity: u8,
+    freshness: u8,
+    grounding: u8,
+    concision: u8,
+    noise_absence: u8,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct WorkflowRun {
+    task_id: String,
+    variant: WorkflowVariant,
+    task_category: String,
+    success_score: f64,
+    wall_time_ms: u64,
+    orientation_ms: u64,
+    implementation_ms: u64,
+    debugging_ms: u64,
+    verification_ms: u64,
+    input_tokens: u64,
+    #[serde(default)]
+    input_tokens_provenance: TokenAccountingProvenance,
+    output_tokens: u64,
+    #[serde(default)]
+    output_tokens_provenance: TokenAccountingProvenance,
+    peak_context_tokens: u64,
+    #[serde(default)]
+    peak_context_tokens_provenance: TokenAccountingProvenance,
+    context_relevant_tokens: u64,
+    #[serde(default)]
+    context_relevant_tokens_provenance: TokenAccountingProvenance,
+    context_duplicate_tokens: u64,
+    #[serde(default)]
+    context_duplicate_tokens_provenance: TokenAccountingProvenance,
+    context_irrelevant_tokens: u64,
+    #[serde(default)]
+    context_irrelevant_tokens_provenance: TokenAccountingProvenance,
+    assistant_turns: u64,
+    tool_calls: u64,
+    failed_commands: u64,
+    patch_attempts: u64,
+    test_runs: u64,
+    human_interventions: u64,
+    failed_attempts: u64,
+    retrieval_quality: RetrievalQuality,
+    verification_quality: u8,
+    change_quality: u8,
+    planning_quality: u8,
+    reproducibility: u8,
+    confidence_calibration: u8,
+    user_usefulness: u8,
+    layers_overhead_ms: u64,
+    layers_overhead_tokens: u64,
+    #[serde(default)]
+    layers_overhead_tokens_provenance: TokenAccountingProvenance,
+    missed_critical_context: u64,
+    hallucinated_or_stale_context: u64,
+    regressions: u64,
+    #[serde(default)]
+    negative_control_abstained: bool,
+    #[serde(default)]
+    unnecessary_context_injections: u64,
+    #[serde(default)]
+    context_caused_regressions: u64,
+}
+
+#[derive(Debug, Clone, Copy, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+enum TokenAccountingProvenance {
+    Measured,
+    Estimated,
+    #[default]
+    Placeholder,
+}
+
+impl TokenAccountingProvenance {
+    fn blocks_effectiveness_claims(self) -> bool {
+        matches!(self, Self::Placeholder)
+    }
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum SurfaceClaim {
+    #[default]
+    LayersTargetedPreflight,
+    LayersBroadQuery,
+    LayersMcpPreflight,
+    Baseline,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct SuccessRubric {
+    pub(crate) full_success: String,
+    pub(crate) partial_success: String,
+    pub(crate) failure: String,
+    pub(crate) min_verification_quality: u8,
+    #[serde(default = "default_primary_endpoint")]
+    pub(crate) primary_endpoint: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct TaskSpec {
+    pub(crate) task_id: String,
+    pub(crate) title: String,
+    pub(crate) prompt: String,
+    pub(crate) category: String,
+    #[serde(default)]
+    pub(crate) difficulty: Option<String>,
+    #[serde(default)]
+    pub(crate) surface_claim: SurfaceClaim,
+    #[serde(default)]
+    pub(crate) negative_control: bool,
+    #[serde(default)]
+    pub(crate) stale_context_trap: bool,
+    #[serde(default)]
+    pub(crate) repo_commit: Option<String>,
+    #[serde(default)]
+    pub(crate) time_budget_minutes: Option<u64>,
+    #[serde(default)]
+    pub(crate) target_files: Vec<String>,
+    #[serde(default)]
+    pub(crate) target_symbols: Vec<String>,
+    #[serde(default)]
+    pub(crate) expected_relevant_files: Vec<String>,
+    pub(crate) expected_validation_commands: Vec<String>,
+    pub(crate) success_rubric: SuccessRubric,
+    #[serde(default)]
+    pub(crate) abstention_rubric: Option<String>,
+}
+
+fn default_primary_endpoint() -> String {
+    "verified_success".to_owned()
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct TaskValidationReport {
+    checked_count: usize,
+    valid_count: usize,
+    invalid_count: usize,
+    results: Vec<TaskValidationResult>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct TaskValidationResult {
+    path: PathBuf,
+    task_id: Option<String>,
+    valid: bool,
+    errors: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+struct RunnerPlanConfig {
+    task_path: PathBuf,
+    output_dir: PathBuf,
+    repo_root: PathBuf,
+    agent_command: String,
+    model: Option<String>,
+    seed: u64,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct RunnerPlan {
+    task_count: usize,
+    variants: Vec<String>,
+    repo_root: PathBuf,
+    output_dir: PathBuf,
+    worktree_root: PathBuf,
+    #[serde(rename = "runner_plan_path")]
+    plan_path: PathBuf,
+    execution_order_path: PathBuf,
+    seed: u64,
+    runs: Vec<RunnerRunPlan>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct RunnerRunPlan {
+    task_id: String,
+    task_category: String,
+    #[serde(default)]
+    negative_control: bool,
+    variant: String,
+    run_id: String,
+    worktree_path: PathBuf,
+    prompt_path: PathBuf,
+    transcript_path: PathBuf,
+    validation_log_path: PathBuf,
+    #[serde(default)]
+
+exec
+/bin/zsh -lc 'npx gitnexus analyze' in /Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight
+exec
+/bin/zsh -lc "sed -n '1,220p' benchmarks/workflows/tasks/code-stale-trap-prefer-current-task-spec.json" in /Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight
+exec
+/bin/zsh -lc "sed -n '1040,1480p' src/cmd/workflow_benchmark.rs" in /Users/xxx/layers/docs/dogfood/20260524T004619Z-v5-codex-pgrpfix-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight
+ succeeded in 0ms:
+{
+  "task_id": "code-stale-trap-prefer-current-task-spec",
+  "title": "Prefer current task_spec schema over stale docs",
+  "prompt": "Stale-context trap: update code using the current TaskSpec validation rules, not older docs that allowed missing expected relevant files. The correct solution must inspect current schema and validator before editing.",
+  "category": "bugfix",
+  "difficulty": "medium",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": false,
+  "stale_context_trap": true,
+  "time_budget_minutes": 45,
+  "target_files": [
+    "src/cmd/workflow_benchmark.rs",
+    "benchmarks/workflows/schemas/task-spec.schema.json"
+  ],
+  "target_symbols": [
+    "TaskSpec",
+    "validate_task_spec"
+  ],
+  "expected_relevant_files": [
+    "src/cmd/workflow_benchmark.rs",
+    "benchmarks/workflows/schemas/task-spec.schema.json"
+  ],
+  "expected_validation_commands": [
+    "cargo test -q workflow_benchmark -- --nocapture",
+    "cargo run -q -- workflow-benchmark validate-tasks benchmarks/workflows/tasks --json"
+  ],
+  "success_rubric": {
+    "full_success": "The requested repository change is implemented with focused regression coverage and all listed validation commands pass.",
+    "partial_success": "The main behavior is implemented but validation is incomplete, coverage is weak, or minor follow-up is required.",
+    "failure": "The requested behavior remains missing, untested, or introduces regressions.",
+    "min_verification_quality": 4,
+    "primary_endpoint": "verified_success"
+  }
+}
+
+ succeeded in 0ms:
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+struct ClaimThresholds {
+    min_paired_tasks: usize,
+    min_code_heavy_paired_tasks: usize,
+    min_negative_control_paired_tasks: usize,
+    min_success_delta: f64,
+    min_time_saved_ms: f64,
+    min_token_reduction_ratio: f64,
+    max_missed_critical_context_rate: f64,
+    max_hallucinated_or_stale_context_rate: f64,
+    max_regression_rate: f64,
+    max_context_caused_regression_rate: f64,
+    min_negative_control_abstention_rate: f64,
+    max_unnecessary_context_injection_rate: f64,
+    max_average_layers_overhead_tokens: f64,
+}
+
+impl Default for ClaimThresholds {
+    fn default() -> Self {
+        Self {
+            min_paired_tasks: 30,
+            min_code_heavy_paired_tasks: 20,
+            min_negative_control_paired_tasks: 5,
+            min_success_delta: 0.0,
+            min_time_saved_ms: 0.0,
+            min_token_reduction_ratio: 0.20,
+            max_missed_critical_context_rate: 0.05,
+            max_hallucinated_or_stale_context_rate: 0.0,
+            max_regression_rate: 0.0,
+            max_context_caused_regression_rate: 0.0,
+            min_negative_control_abstention_rate: 0.95,
+            max_unnecessary_context_injection_rate: 0.05,
+            max_average_layers_overhead_tokens: 1_200.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+enum ClaimStatus {
+    Supported,
+    NotSupported,
+    Inconclusive,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ClaimReport {
+    status: ClaimStatus,
+    thresholds: ClaimThresholds,
+    blocking_metrics: Vec<String>,
+    uncertainty_notes: Vec<String>,
+    code_heavy_paired_task_count: usize,
+    negative_control_paired_task_count: usize,
+    negative_control_abstention_rate: f64,
+    unnecessary_context_injection_rate: f64,
+    context_caused_regression_rate: f64,
+    average_layers_overhead_tokens: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct VariantAggregate {
+    variant: WorkflowVariant,
+    run_count: usize,
+    success_rate: f64,
+    median_wall_time_ms: f64,
+    average_wall_time_ms: f64,
+    average_orientation_ms: f64,
+    average_debugging_ms: f64,
+    average_verification_ms: f64,
+    average_input_tokens: f64,
+    average_output_tokens: f64,
+    average_total_tokens: f64,
+    average_tool_calls: f64,
+    average_human_interventions: f64,
+    average_failed_attempts: f64,
+    average_verification_quality: f64,
+    average_change_quality: f64,
+    average_planning_quality: f64,
+    average_user_usefulness: f64,
+    retrieval_quality_average: f64,
+    relevant_context_ratio: f64,
+    context_waste_ratio: f64,
+    missed_critical_context_rate: f64,
+    hallucinated_or_stale_context_rate: f64,
+    regression_rate: f64,
+    average_layers_overhead_ms: f64,
+    average_layers_overhead_tokens: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct PairedComparison {
+    variant: WorkflowVariant,
+    paired_task_count: usize,
+    net_time_saved_ms: f64,
+    net_tokens_saved: f64,
+    speedup: f64,
+    token_reduction_ratio: f64,
+    success_delta: f64,
+    success_delta_confidence_interval: ConfidenceInterval,
+    human_intervention_delta: f64,
+    tool_call_delta: f64,
+    failed_attempt_delta: f64,
+    verification_quality_delta: f64,
+    context_quality_delta: f64,
+    layers_overhead_ms: f64,
+    layers_overhead_tokens: f64,
+    missed_critical_context_rate: f64,
+    hallucinated_or_stale_context_rate: f64,
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
+struct ConfidenceInterval {
+    estimate: f64,
+    lower_bound: f64,
+    upper_bound: f64,
+    confidence_level: f64,
+}
+
+#[derive(Debug, Clone)]
+struct TaskRunAverage {
+    wall_time_ms: f64,
+    total_tokens: f64,
+    success_score: f64,
+    human_interventions: f64,
+    tool_calls: f64,
+    failed_attempts: f64,
+    verification_quality: f64,
+    retrieval_quality: f64,
+    layers_overhead_ms: f64,
+    layers_overhead_tokens: f64,
+    missed_critical_context: f64,
+    hallucinated_or_stale_context: f64,
+}
+
+fn validate_task_specs(path: &Path) -> Result<TaskValidationReport> {
+    let mut paths = collect_task_spec_paths(path)?;
+    paths.sort();
+
+    let mut results = Vec::with_capacity(paths.len());
+    for path in paths {
+        match load_task_spec_unchecked(&path) {
+            Ok(spec) => match validate_task_spec(&spec) {
+                Ok(()) => results.push(TaskValidationResult {
+                    path,
+                    task_id: Some(spec.task_id),
+                    valid: true,
+                    errors: Vec::new(),
+                }),
+                Err(error) => results.push(TaskValidationResult {
+                    path,
+                    task_id: Some(spec.task_id),
+                    valid: false,
+                    errors: vec![error.to_string()],
+                }),
+            },
+            Err(error) => results.push(TaskValidationResult {
+                path,
+                task_id: None,
+                valid: false,
+                errors: vec![format!("{error:?}")],
+            }),
+        }
+    }
+
+    let checked_count = results.len();
+    let invalid_count = results.iter().filter(|result| !result.valid).count();
+    let valid_count = checked_count.saturating_sub(invalid_count);
+
+    Ok(TaskValidationReport {
+        checked_count,
+        valid_count,
+        invalid_count,
+        results,
+    })
+}
+
+fn collect_task_spec_paths(path: &Path) -> Result<Vec<PathBuf>> {
+    if path.is_file() {
+        return Ok(vec![path.to_path_buf()]);
+    }
+    if !path.is_dir() {
+        bail!("task spec path does not exist: {}", path.display());
+    }
+
+    let mut paths = Vec::new();
+    collect_task_spec_paths_recursive(path, &mut paths)?;
+    if paths.is_empty() {
+        bail!("no task spec JSON files found under {}", path.display());
+    }
+    Ok(paths)
+}
+
+fn collect_task_spec_paths_recursive(dir: &Path, paths: &mut Vec<PathBuf>) -> Result<()> {
+    for entry in fs::read_dir(dir)
+        .with_context(|| format!("failed to read task spec directory: {}", dir.display()))?
+    {
+        let entry = entry.with_context(|| format!("failed to read entry in {}", dir.display()))?;
+        let path = entry.path();
+        if path.is_dir() {
+            collect_task_spec_paths_recursive(&path, paths)?;
+        } else if path
+            .extension()
+            .is_some_and(|extension| extension == "json")
+        {
+            paths.push(path);
+        }
+    }
+    Ok(())
+}
+
+fn build_retrieval_eval_corpus(config: &RetrievalEvalConfig) -> Result<RetrievalEvalCorpus> {
+    let mut task_paths = collect_task_spec_paths(&config.task_path)?;
+    task_paths.sort();
+
+    let mut pairs = Vec::new();
+    let mut documents_by_id = BTreeMap::<String, RetrievalEvalDocument>::new();
+    let mut negative_control_count = 0usize;
+
+    for task_path in task_paths {
+        let spec = load_task_spec_unchecked(&task_path)?;
+        validate_task_spec(&spec)
+            .with_context(|| format!("invalid task spec: {}", task_path.display()))?;
+        if spec.negative_control {
+            negative_control_count += 1;
+            continue;
+        }
+
+        let relevant_ids = spec
+            .expected_relevant_files
+            .iter()
+            .map(|path| file_document_id(path))
+            .collect::<Vec<_>>();
+        for path in &spec.expected_relevant_files {
+            add_file_document(&mut documents_by_id, &config.repo_root, path)?;
+        }
+        pairs.push(RetrievalEvalPair {
+            task_id: spec.task_id,
+            query: spec.prompt,
+            relevant_ids,
+            category: spec.category,
+            stale_context_trap: spec.stale_context_trap,
+        });
+    }
+
+    Ok(RetrievalEvalCorpus {
+        pairs,
+        documents: documents_by_id.into_values().collect(),
+        negative_control_count,
+    })
+}
+
+fn add_file_document(
+    documents_by_id: &mut BTreeMap<String, RetrievalEvalDocument>,
+    repo_root: &Path,
+    repo_path: &str,
+) -> Result<()> {
+    let id = file_document_id(repo_path);
+    if documents_by_id.contains_key(&id) {
+        return Ok(());
+    }
+    let absolute_path = repo_root.join(repo_path);
+    let text = fs::read_to_string(&absolute_path).with_context(|| {
+        format!(
+            "failed to read retrieval eval document: {}",
+            absolute_path.display()
+        )
+    })?;
+    documents_by_id.insert(
+        id.clone(),
+        RetrievalEvalDocument {
+            id,
+            source_kind: "file".to_string(),
+            path: Some(repo_path.to_string()),
+            text,
+        },
+    );
+    Ok(())
+}
+
+fn file_document_id(repo_path: &str) -> String {
+    format!("file:{repo_path}")
+}
+
+fn load_retrieval_eval_corpus(path: &Path) -> Result<RetrievalEvalCorpus> {
+    let content = fs::read_to_string(path)
+        .with_context(|| format!("failed to read retrieval eval corpus: {}", path.display()))?;
+    serde_json::from_str(&content).with_context(|| {
+        format!(
+            "retrieval eval corpus is not valid JSON: {}",
+            path.display()
+        )
+    })
+}
+
+fn load_json_value(path: &Path, label: &str) -> Result<serde_json::Value> {
+    let content = fs::read_to_string(path)
+        .with_context(|| format!("failed to read {label}: {}", path.display()))?;
+    serde_json::from_str(&content)
+        .with_context(|| format!("{label} is not valid JSON: {}", path.display()))
+}
+
+fn parse_retrieval_report_metrics(report: &serde_json::Value) -> Result<RetrievalReportMetrics> {
+    let metrics = RetrievalReportMetrics {
+        pair_count: required_usize_field(report, "pair_count")?,
+        document_count: required_usize_field(report, "document_count")?,
+        negative_control_count: required_usize_field(report, "negative_control_count")?,
+        recall_at_5: required_f64_field(report, "recall_at_5")?,
+        recall_at_10: required_f64_field(report, "recall_at_10")?,
+        mrr: required_f64_field(report, "mrr")?,
+        negative_control_injection_rate: required_f64_field(
+            report,
+            "negative_control_injection_rate",
+        )?,
+    };
+    for (name, value) in [
+        ("recall_at_5", metrics.recall_at_5),
+        ("recall_at_10", metrics.recall_at_10),
+        ("mrr", metrics.mrr),
+        (
+            "negative_control_injection_rate",
+            metrics.negative_control_injection_rate,
+        ),
+    ] {
+        if !(0.0..=1.0).contains(&value) {
+            bail!("retrieval report field {name} must be in [0, 1], got {value}");
+        }
+    }
+    Ok(metrics)
+}
+
+fn evaluate_retrieval_proof_claim(
+    report: &serde_json::Value,
+    thresholds: RetrievalProofThresholds,
+) -> Result<RetrievalProofClaim> {
+    let metrics = parse_retrieval_report_metrics(report)?;
+    let pair_count = metrics.pair_count;
+    let document_count = metrics.document_count;
+    let negative_control_count = metrics.negative_control_count;
+    let recall_at_5 = metrics.recall_at_5;
+    let recall_at_10 = metrics.recall_at_10;
+    let mrr = metrics.mrr;
+    let negative_control_injection_rate = metrics.negative_control_injection_rate;
+
+    let mut blocking_metrics = Vec::new();
+    let mut uncertainty_notes = Vec::new();
+    if pair_count < thresholds.min_pair_count {
+        uncertainty_notes.push(format!(
+            "pair_count {pair_count} is below required {}",
+            thresholds.min_pair_count
+        ));
+    }
+    if negative_control_count < thresholds.min_negative_control_count {
+        uncertainty_notes.push(format!(
+            "negative_control_count {negative_control_count} is below required {}",
+            thresholds.min_negative_control_count
+        ));
+    }
+    if recall_at_10 < thresholds.min_recall_at_10 {
+        blocking_metrics.push("recall_at_10".to_string());
+    }
+    if mrr < thresholds.min_mrr {
+        blocking_metrics.push("mrr".to_string());
+    }
+    if negative_control_injection_rate > thresholds.max_negative_control_injection_rate {
+        blocking_metrics.push("negative_control_injection_rate".to_string());
+    }
+
+    let status = if blocking_metrics.is_empty() && uncertainty_notes.is_empty() {
+        RetrievalProofStatus::Supported
+    } else if blocking_metrics.is_empty() {
+        RetrievalProofStatus::Inconclusive
+    } else {
+        RetrievalProofStatus::NotSupported
+    };
+
+    Ok(RetrievalProofClaim {
+        status,
+        baseline: "no_context".to_string(),
+        thresholds: thresholds.into(),
+        pair_count,
+        document_count,
+        negative_control_count,
+        recall_at_5,
+        recall_at_10,
+        mrr,
+        negative_control_injection_rate,
+        recall_at_5_delta: recall_at_5,
+        recall_at_10_delta: recall_at_10,
+        mrr_delta: mrr,
+        blocking_metrics,
+        uncertainty_notes,
+    })
+}
+
+fn evaluate_retrieval_candidate_claim(
+    baseline_report: &serde_json::Value,
+    candidate_report: &serde_json::Value,
+    thresholds: RetrievalCandidateThresholds,
+) -> Result<RetrievalCandidateClaim> {
+    let baseline = parse_retrieval_report_metrics(baseline_report)
+        .context("failed to parse baseline retrieval report")?;
+    let candidate = parse_retrieval_report_metrics(candidate_report)
+        .context("failed to parse candidate retrieval report")?;
+
+    let recall_at_10_delta = candidate.recall_at_10 - baseline.recall_at_10;
+    let recall_at_10_relative_lift = relative_lift(candidate.recall_at_10, baseline.recall_at_10);
+    let mrr_delta = candidate.mrr - baseline.mrr;
+    let mrr_relative_lift = relative_lift(candidate.mrr, baseline.mrr);
+    let negative_control_injection_rate_delta =
+        candidate.negative_control_injection_rate - baseline.negative_control_injection_rate;
+
+    let mut blocking_metrics = Vec::new();
+    let mut uncertainty_notes = Vec::new();
+    if candidate.pair_count != baseline.pair_count {
+        uncertainty_notes.push(format!(
+            "candidate pair_count {} differs from baseline pair_count {}",
+            candidate.pair_count, baseline.pair_count
+        ));
+    }
+    if candidate.document_count != baseline.document_count {
+        uncertainty_notes.push(format!(
+            "candidate document_count {} differs from baseline document_count {}",
+            candidate.document_count, baseline.document_count
+        ));
+    }
+    if candidate.negative_control_count != baseline.negative_control_count {
+        uncertainty_notes.push(format!(
+            "candidate negative_control_count {} differs from baseline negative_control_count {}",
+            candidate.negative_control_count, baseline.negative_control_count
+        ));
+    }
+    if recall_at_10_relative_lift < thresholds.min_relative_recall_at_10_lift {
+        blocking_metrics.push("recall_at_10_relative_lift".to_string());
+    }
+    i

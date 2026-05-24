@@ -2003,9 +2003,40 @@ fn execute_runner_plan(config: &RunnerExecutionConfig) -> Result<RunnerExecution
     let mut executions = Vec::with_capacity(plan.runs.len());
 
     for run in &plan.runs {
-        let execution = execute_runner_run(&plan, run, config)?;
-        records.push(build_execution_run_record(run, &execution)?);
-        executions.push(execution);
+        match execute_runner_run(&plan, run, config) {
+            Ok(execution) => {
+                match build_execution_run_record(run, &execution) {
+                    Ok(record) => records.push(record),
+                    Err(e) => {
+                        eprintln!("[run-plan] failed to build record for {}: {e}", run.run_id);
+                    }
+                }
+                executions.push(execution);
+            }
+            Err(e) => {
+                eprintln!("[run-plan] run {} failed: {e}", run.run_id);
+                // Record as failed/incomplete and continue to next task
+                let failed_execution = RunnerRunExecution {
+                    run_id: run.run_id.clone(),
+                    task_id: run.task_id.clone(),
+                    variant: run.variant.clone(),
+                    worktree_path: run.worktree_path.clone(),
+                    transcript_path: run.transcript_path.clone(),
+                    validation_log_path: run.validation_log_path.clone(),
+                    diff_stat_path: run.diff_stat_path.clone(),
+                    diff_patch_path: run.diff_patch_path.clone(),
+                    packet_artifact_path: run.packet_artifact_path.clone(),
+                    agent_exit_code: Some(-1),
+                    validation_exit_codes: vec![],
+                    wall_time_ms: run
+                        .time_budget_minutes
+                        .saturating_mul(60)
+                        .saturating_mul(1000),
+                    completed: false,
+                };
+                executions.push(failed_execution);
+            }
+        }
     }
 
     write_run_records(&run_records_path, &records)?;
@@ -2559,24 +2590,21 @@ fn run_shell_command(
                 .with_context(|| format!("failed to collect shell command output: {command}"));
         }
         if started.elapsed() >= timeout {
-            // Kill the entire process group (sh + agent + grandchildren)
-            // Use negative PID with `kill` to target the process group.
+            // Kill the child and all its descendants.
+            // process_group(0) makes the child a group leader; we signal it
+            // directly first (SIGKILL), then reap any stragglers via pkill.
             let pid = child.id();
+            let _ = child.kill();
             #[cfg(unix)]
             {
-                let _ = Command::new("kill")
-                    .arg("-TERM")
-                    .arg(format!("-{pid}"))
+                // Also kill all children of the child (agent grandchildren)
+                let _ = Command::new("pkill")
+                    .arg("-9")
+                    .arg("-P")
+                    .arg(pid.to_string())
                     .status();
-                thread::sleep(Duration::from_secs(2));
-                let _ = Command::new("kill")
-                    .arg("-KILL")
-                    .arg(format!("-{pid}"))
-                    .status();
-            }
-            #[cfg(not(unix))]
-            {
-                let _ = child.kill();
+                // Kill the group leader in case pkill missed it
+                let _ = Command::new("kill").arg("-9").arg(pid.to_string()).status();
             }
             let output = child.wait_with_output().with_context(|| {
                 format!("failed to collect timed-out shell command output: {command}")
