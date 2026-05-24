@@ -1,0 +1,1080 @@
+{
+  "total_runs": 62,
+  "completed_runs": 0,
+  "failed_runs": 62,
+  "run_records_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/compare/workflow-runs.jsonl",
+  "execution_report_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/compare/runner-execution-report.json",
+  "runs": [
+    {
+      "run_id": "code-stale-trap-prefer-current-task-spec--layers_targeted_preflight",
+      "task_id": "code-stale-trap-prefer-current-task-spec",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 24115,
+      "completed": false
+    },
+    {
+      "run_id": "code-feature-config-secret-redaction-nested--layers_targeted_preflight",
+      "task_id": "code-feature-config-secret-redaction-nested",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-feature-config-secret-redaction-nested--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-feature-config-secret-redaction-nested--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-feature-config-secret-redaction-nested--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-config-secret-redaction-nested--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-config-secret-redaction-nested--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-feature-config-secret-redaction-nested--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 31701,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-workflow-benchmark-duplicate-pairing--baseline",
+      "task_id": "code-bugfix-workflow-benchmark-duplicate-pairing",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-workflow-benchmark-duplicate-pairing--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-workflow-benchmark-duplicate-pairing--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-workflow-benchmark-duplicate-pairing--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-workflow-benchmark-duplicate-pairing--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-workflow-benchmark-duplicate-pairing--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 32833,
+      "completed": false
+    },
+    {
+      "run_id": "code-feature-config-secret-redaction-nested--baseline",
+      "task_id": "code-feature-config-secret-redaction-nested",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-feature-config-secret-redaction-nested--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-feature-config-secret-redaction-nested--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-feature-config-secret-redaction-nested--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-config-secret-redaction-nested--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-config-secret-redaction-nested--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 32512,
+      "completed": false
+    },
+    {
+      "run_id": "code-feature-daemon-heartbeat-stale-detection--baseline",
+      "task_id": "code-feature-daemon-heartbeat-stale-detection",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-feature-daemon-heartbeat-stale-detection--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-feature-daemon-heartbeat-stale-detection--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-feature-daemon-heartbeat-stale-detection--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-daemon-heartbeat-stale-detection--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-daemon-heartbeat-stale-detection--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 25834,
+      "completed": false
+    },
+    {
+      "run_id": "code-feature-session-monitor-threshold-env--layers_targeted_preflight",
+      "task_id": "code-feature-session-monitor-threshold-env",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-feature-session-monitor-threshold-env--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-feature-session-monitor-threshold-env--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-feature-session-monitor-threshold-env--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-session-monitor-threshold-env--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-session-monitor-threshold-env--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-feature-session-monitor-threshold-env--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        101,
+        0
+      ],
+      "wall_time_ms": 15978,
+      "completed": false
+    },
+    {
+      "run_id": "code-feature-quality-abstain-low-specificity--baseline",
+      "task_id": "code-feature-quality-abstain-low-specificity",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-feature-quality-abstain-low-specificity--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-feature-quality-abstain-low-specificity--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-feature-quality-abstain-low-specificity--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-quality-abstain-low-specificity--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-quality-abstain-low-specificity--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 24189,
+      "completed": false
+    },
+    {
+      "run_id": "code-refactor-memory-index-fallback-tags--layers_targeted_preflight",
+      "task_id": "code-refactor-memory-index-fallback-tags",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-refactor-memory-index-fallback-tags--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-refactor-memory-index-fallback-tags--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-refactor-memory-index-fallback-tags--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-refactor-memory-index-fallback-tags--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-refactor-memory-index-fallback-tags--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-refactor-memory-index-fallback-tags--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 22248,
+      "completed": false
+    },
+    {
+      "run_id": "code-refactor-memory-index-fallback-tags--baseline",
+      "task_id": "code-refactor-memory-index-fallback-tags",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-refactor-memory-index-fallback-tags--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-refactor-memory-index-fallback-tags--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-refactor-memory-index-fallback-tags--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-refactor-memory-index-fallback-tags--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-refactor-memory-index-fallback-tags--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 21519,
+      "completed": false
+    },
+    {
+      "run_id": "negative-control-trivial-arithmetic--layers_targeted_preflight",
+      "task_id": "negative-control-trivial-arithmetic",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/negative-control-trivial-arithmetic--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/negative-control-trivial-arithmetic--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/negative-control-trivial-arithmetic--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-trivial-arithmetic--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-trivial-arithmetic--layers_targeted_preflight.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0
+      ],
+      "wall_time_ms": 698,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-context-routing--layers_targeted_preflight",
+      "task_id": "code-bugfix-context-routing",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-context-routing--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-context-routing--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-context-routing--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-context-routing--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-context-routing--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-bugfix-context-routing--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "wall_time_ms": 42890,
+      "completed": false
+    },
+    {
+      "run_id": "negative-control-iso-date-format--baseline",
+      "task_id": "negative-control-iso-date-format",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/negative-control-iso-date-format--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/negative-control-iso-date-format--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/negative-control-iso-date-format--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-iso-date-format--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-iso-date-format--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0
+      ],
+      "wall_time_ms": 603,
+      "completed": false
+    },
+    {
+      "run_id": "negative-control-sort-three-words--baseline",
+      "task_id": "negative-control-sort-three-words",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/negative-control-sort-three-words--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/negative-control-sort-three-words--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/negative-control-sort-three-words--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-sort-three-words--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-sort-three-words--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0
+      ],
+      "wall_time_ms": 611,
+      "completed": false
+    },
+    {
+      "run_id": "negative-control-basic-unit-conversion--layers_targeted_preflight",
+      "task_id": "negative-control-basic-unit-conversion",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/negative-control-basic-unit-conversion--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/negative-control-basic-unit-conversion--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/negative-control-basic-unit-conversion--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-basic-unit-conversion--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-basic-unit-conversion--layers_targeted_preflight.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0
+      ],
+      "wall_time_ms": 620,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-mcp-client-error-redaction--layers_targeted_preflight",
+      "task_id": "code-bugfix-mcp-client-error-redaction",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 23315,
+      "completed": false
+    },
+    {
+      "run_id": "code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight",
+      "task_id": "code-feature-workflow-benchmark-human-surfaces",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 33538,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-preflight-strict-low-relevance--baseline",
+      "task_id": "code-bugfix-preflight-strict-low-relevance",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-preflight-strict-low-relevance--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-preflight-strict-low-relevance--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-preflight-strict-low-relevance--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-preflight-strict-low-relevance--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-preflight-strict-low-relevance--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 33208,
+      "completed": false
+    },
+    {
+      "run_id": "code-stale-trap-query-surface-not-general-proof--baseline",
+      "task_id": "code-stale-trap-query-surface-not-general-proof",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-stale-trap-query-surface-not-general-proof--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-stale-trap-query-surface-not-general-proof--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-stale-trap-query-surface-not-general-proof--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-stale-trap-query-surface-not-general-proof--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-stale-trap-query-surface-not-general-proof--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 32818,
+      "completed": false
+    },
+    {
+      "run_id": "code-feature-mcp-preflight-stable-registry--baseline",
+      "task_id": "code-feature-mcp-preflight-stable-registry",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-feature-mcp-preflight-stable-registry--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-feature-mcp-preflight-stable-registry--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-feature-mcp-preflight-stable-registry--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-mcp-preflight-stable-registry--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-mcp-preflight-stable-registry--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 22873,
+      "completed": false
+    },
+    {
+      "run_id": "negative-control-count-letters--baseline",
+      "task_id": "negative-control-count-letters",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/negative-control-count-letters--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/negative-control-count-letters--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/negative-control-count-letters--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-count-letters--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-count-letters--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0
+      ],
+      "wall_time_ms": 610,
+      "completed": false
+    },
+    {
+      "run_id": "code-stale-trap-prefer-current-task-spec--baseline",
+      "task_id": "code-stale-trap-prefer-current-task-spec",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-stale-trap-prefer-current-task-spec--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-stale-trap-prefer-current-task-spec--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-stale-trap-prefer-current-task-spec--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-stale-trap-prefer-current-task-spec--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-stale-trap-prefer-current-task-spec--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 23428,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-provider-budget-overflow--layers_targeted_preflight",
+      "task_id": "code-bugfix-provider-budget-overflow",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-provider-budget-overflow--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-provider-budget-overflow--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-provider-budget-overflow--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-provider-budget-overflow--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-provider-budget-overflow--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-bugfix-provider-budget-overflow--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 29530,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-runtime-queue-starvation--baseline",
+      "task_id": "code-bugfix-runtime-queue-starvation",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-runtime-queue-starvation--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-runtime-queue-starvation--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-runtime-queue-starvation--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-runtime-queue-starvation--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-runtime-queue-starvation--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 28872,
+      "completed": false
+    },
+    {
+      "run_id": "code-feature-tools-registry-duplicate-names--baseline",
+      "task_id": "code-feature-tools-registry-duplicate-names",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-feature-tools-registry-duplicate-names--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-feature-tools-registry-duplicate-names--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-feature-tools-registry-duplicate-names--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-tools-registry-duplicate-names--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-tools-registry-duplicate-names--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 23123,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight",
+      "task_id": "code-bugfix-preflight-strict-low-relevance",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 34034,
+      "completed": false
+    },
+    {
+      "run_id": "code-docs-architecture-context-spine--baseline",
+      "task_id": "code-docs-architecture-context-spine",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-docs-architecture-context-spine--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-docs-architecture-context-spine--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-docs-architecture-context-spine--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-docs-architecture-context-spine--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-docs-architecture-context-spine--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 31326,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-telemetry-malformed-jsonl-skip--baseline",
+      "task_id": "code-bugfix-telemetry-malformed-jsonl-skip",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-telemetry-malformed-jsonl-skip--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-telemetry-malformed-jsonl-skip--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-telemetry-malformed-jsonl-skip--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-telemetry-malformed-jsonl-skip--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-telemetry-malformed-jsonl-skip--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 32269,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-provider-budget-overflow--baseline",
+      "task_id": "code-bugfix-provider-budget-overflow",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-provider-budget-overflow--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-provider-budget-overflow--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-provider-budget-overflow--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-provider-budget-overflow--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-provider-budget-overflow--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 29196,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-query-target-traversal--layers_targeted_preflight",
+      "task_id": "code-bugfix-query-target-traversal",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-query-target-traversal--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-query-target-traversal--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-query-target-traversal--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-query-target-traversal--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-query-target-traversal--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-bugfix-query-target-traversal--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 23111,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-query-target-traversal--baseline",
+      "task_id": "code-bugfix-query-target-traversal",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-query-target-traversal--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-query-target-traversal--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-query-target-traversal--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-query-target-traversal--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-query-target-traversal--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 22560,
+      "completed": false
+    },
+    {
+      "run_id": "code-feature-remember-reject-empty-records--baseline",
+      "task_id": "code-feature-remember-reject-empty-records",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-feature-remember-reject-empty-records--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-feature-remember-reject-empty-records--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-feature-remember-reject-empty-records--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-remember-reject-empty-records--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-remember-reject-empty-records--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 31730,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-context-routing--baseline",
+      "task_id": "code-bugfix-context-routing",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-context-routing--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-context-routing--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-context-routing--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-context-routing--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-context-routing--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "wall_time_ms": 42489,
+      "completed": false
+    },
+    {
+      "run_id": "negative-control-basic-unit-conversion--baseline",
+      "task_id": "negative-control-basic-unit-conversion",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/negative-control-basic-unit-conversion--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/negative-control-basic-unit-conversion--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/negative-control-basic-unit-conversion--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-basic-unit-conversion--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-basic-unit-conversion--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0
+      ],
+      "wall_time_ms": 612,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-council-circuit-exit-gate--baseline",
+      "task_id": "code-bugfix-council-circuit-exit-gate",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-council-circuit-exit-gate--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-council-circuit-exit-gate--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-council-circuit-exit-gate--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-council-circuit-exit-gate--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-council-circuit-exit-gate--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 21335,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight",
+      "task_id": "code-bugfix-telemetry-malformed-jsonl-skip",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 32316,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight",
+      "task_id": "code-bugfix-workflow-benchmark-duplicate-pairing",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 33103,
+      "completed": false
+    },
+    {
+      "run_id": "code-feature-tools-registry-duplicate-names--layers_targeted_preflight",
+      "task_id": "code-feature-tools-registry-duplicate-names",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-feature-tools-registry-duplicate-names--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-feature-tools-registry-duplicate-names--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-feature-tools-registry-duplicate-names--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-tools-registry-duplicate-names--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-tools-registry-duplicate-names--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-feature-tools-registry-duplicate-names--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 22976,
+      "completed": false
+    },
+    {
+      "run_id": "code-feature-workflow-benchmark-human-surfaces--baseline",
+      "task_id": "code-feature-workflow-benchmark-human-surfaces",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-feature-workflow-benchmark-human-surfaces--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-feature-workflow-benchmark-human-surfaces--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-feature-workflow-benchmark-human-surfaces--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-workflow-benchmark-human-surfaces--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-workflow-benchmark-human-surfaces--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 32629,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-proveit-artifact-paths--baseline",
+      "task_id": "code-bugfix-proveit-artifact-paths",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-proveit-artifact-paths--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-proveit-artifact-paths--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-proveit-artifact-paths--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-proveit-artifact-paths--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-proveit-artifact-paths--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 32128,
+      "completed": false
+    },
+    {
+      "run_id": "code-feature-quality-abstain-low-specificity--layers_targeted_preflight",
+      "task_id": "code-feature-quality-abstain-low-specificity",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-feature-quality-abstain-low-specificity--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-feature-quality-abstain-low-specificity--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-feature-quality-abstain-low-specificity--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-quality-abstain-low-specificity--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-quality-abstain-low-specificity--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-feature-quality-abstain-low-specificity--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 23663,
+      "completed": false
+    },
+    {
+      "run_id": "negative-control-trivial-arithmetic--baseline",
+      "task_id": "negative-control-trivial-arithmetic",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/negative-control-trivial-arithmetic--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/negative-control-trivial-arithmetic--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/negative-control-trivial-arithmetic--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-trivial-arithmetic--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-trivial-arithmetic--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0
+      ],
+      "wall_time_ms": 615,
+      "completed": false
+    },
+    {
+      "run_id": "negative-control-simple-json-validity--layers_targeted_preflight",
+      "task_id": "negative-control-simple-json-validity",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/negative-control-simple-json-validity--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/negative-control-simple-json-validity--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/negative-control-simple-json-validity--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-simple-json-validity--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-simple-json-validity--layers_targeted_preflight.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0
+      ],
+      "wall_time_ms": 606,
+      "completed": false
+    },
+    {
+      "run_id": "negative-control-iso-date-format--layers_targeted_preflight",
+      "task_id": "negative-control-iso-date-format",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/negative-control-iso-date-format--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/negative-control-iso-date-format--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/negative-control-iso-date-format--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-iso-date-format--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-iso-date-format--layers_targeted_preflight.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0
+      ],
+      "wall_time_ms": 618,
+      "completed": false
+    },
+    {
+      "run_id": "negative-control-count-letters--layers_targeted_preflight",
+      "task_id": "negative-control-count-letters",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/negative-control-count-letters--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/negative-control-count-letters--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/negative-control-count-letters--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-count-letters--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-count-letters--layers_targeted_preflight.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0
+      ],
+      "wall_time_ms": 688,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-router-historical-code-intent--layers_targeted_preflight",
+      "task_id": "code-bugfix-router-historical-code-intent",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-router-historical-code-intent--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-router-historical-code-intent--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-router-historical-code-intent--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-router-historical-code-intent--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-router-historical-code-intent--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-bugfix-router-historical-code-intent--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 22703,
+      "completed": false
+    },
+    {
+      "run_id": "code-feature-remember-reject-empty-records--layers_targeted_preflight",
+      "task_id": "code-feature-remember-reject-empty-records",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-feature-remember-reject-empty-records--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-feature-remember-reject-empty-records--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-feature-remember-reject-empty-records--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-remember-reject-empty-records--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-remember-reject-empty-records--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-feature-remember-reject-empty-records--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 31916,
+      "completed": false
+    },
+    {
+      "run_id": "code-feature-session-monitor-threshold-env--baseline",
+      "task_id": "code-feature-session-monitor-threshold-env",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-feature-session-monitor-threshold-env--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-feature-session-monitor-threshold-env--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-feature-session-monitor-threshold-env--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-session-monitor-threshold-env--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-session-monitor-threshold-env--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        101,
+        0
+      ],
+      "wall_time_ms": 15052,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-proveit-artifact-paths--layers_targeted_preflight",
+      "task_id": "code-bugfix-proveit-artifact-paths",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-proveit-artifact-paths--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-proveit-artifact-paths--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-proveit-artifact-paths--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-proveit-artifact-paths--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-proveit-artifact-paths--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-bugfix-proveit-artifact-paths--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 32437,
+      "completed": false
+    },
+    {
+      "run_id": "code-feature-packet-validate-warnings-json--layers_targeted_preflight",
+      "task_id": "code-feature-packet-validate-warnings-json",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-feature-packet-validate-warnings-json--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-feature-packet-validate-warnings-json--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-feature-packet-validate-warnings-json--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-packet-validate-warnings-json--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-packet-validate-warnings-json--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-feature-packet-validate-warnings-json--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 32234,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-mcp-client-error-redaction--baseline",
+      "task_id": "code-bugfix-mcp-client-error-redaction",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-mcp-client-error-redaction--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-mcp-client-error-redaction--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-mcp-client-error-redaction--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-mcp-client-error-redaction--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-mcp-client-error-redaction--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 22885,
+      "completed": false
+    },
+    {
+      "run_id": "negative-control-sort-three-words--layers_targeted_preflight",
+      "task_id": "negative-control-sort-three-words",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/negative-control-sort-three-words--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/negative-control-sort-three-words--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/negative-control-sort-three-words--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-sort-three-words--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-sort-three-words--layers_targeted_preflight.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0
+      ],
+      "wall_time_ms": 613,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-router-historical-code-intent--baseline",
+      "task_id": "code-bugfix-router-historical-code-intent",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-router-historical-code-intent--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-router-historical-code-intent--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-router-historical-code-intent--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-router-historical-code-intent--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-router-historical-code-intent--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 22897,
+      "completed": false
+    },
+    {
+      "run_id": "code-docs-architecture-context-spine--layers_targeted_preflight",
+      "task_id": "code-docs-architecture-context-spine",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-docs-architecture-context-spine--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-docs-architecture-context-spine--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-docs-architecture-context-spine--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-docs-architecture-context-spine--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-docs-architecture-context-spine--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-docs-architecture-context-spine--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 32006,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-council-circuit-exit-gate--layers_targeted_preflight",
+      "task_id": "code-bugfix-council-circuit-exit-gate",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-council-circuit-exit-gate--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-council-circuit-exit-gate--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-council-circuit-exit-gate--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-council-circuit-exit-gate--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-council-circuit-exit-gate--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-bugfix-council-circuit-exit-gate--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 21838,
+      "completed": false
+    },
+    {
+      "run_id": "code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight",
+      "task_id": "code-feature-daemon-heartbeat-stale-detection",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 25634,
+      "completed": false
+    },
+    {
+      "run_id": "code-feature-mcp-preflight-stable-registry--layers_targeted_preflight",
+      "task_id": "code-feature-mcp-preflight-stable-registry",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-feature-mcp-preflight-stable-registry--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-feature-mcp-preflight-stable-registry--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-feature-mcp-preflight-stable-registry--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-mcp-preflight-stable-registry--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-mcp-preflight-stable-registry--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-feature-mcp-preflight-stable-registry--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 23558,
+      "completed": false
+    },
+    {
+      "run_id": "negative-control-simple-json-validity--baseline",
+      "task_id": "negative-control-simple-json-validity",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/negative-control-simple-json-validity--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/negative-control-simple-json-validity--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/negative-control-simple-json-validity--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-simple-json-validity--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/negative-control-simple-json-validity--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0
+      ],
+      "wall_time_ms": 618,
+      "completed": false
+    },
+    {
+      "run_id": "code-stale-trap-query-surface-not-general-proof--layers_targeted_preflight",
+      "task_id": "code-stale-trap-query-surface-not-general-proof",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-stale-trap-query-surface-not-general-proof--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-stale-trap-query-surface-not-general-proof--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-stale-trap-query-surface-not-general-proof--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-stale-trap-query-surface-not-general-proof--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-stale-trap-query-surface-not-general-proof--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-stale-trap-query-surface-not-general-proof--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 33034,
+      "completed": false
+    },
+    {
+      "run_id": "code-bugfix-runtime-queue-starvation--layers_targeted_preflight",
+      "task_id": "code-bugfix-runtime-queue-starvation",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-bugfix-runtime-queue-starvation--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-bugfix-runtime-queue-starvation--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-bugfix-runtime-queue-starvation--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-runtime-queue-starvation--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-runtime-queue-starvation--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-bugfix-runtime-queue-starvation--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 29083,
+      "completed": false
+    },
+    {
+      "run_id": "code-feature-packet-validate-warnings-json--baseline",
+      "task_id": "code-feature-packet-validate-warnings-json",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-feature-packet-validate-warnings-json--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-feature-packet-validate-warnings-json--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-feature-packet-validate-warnings-json--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-packet-validate-warnings-json--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-packet-validate-warnings-json--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0
+      ],
+      "wall_time_ms": 31773,
+      "completed": false
+    },
+    {
+      "run_id": "code-refactor-context-compiler-packet-finalize--baseline",
+      "task_id": "code-refactor-context-compiler-packet-finalize",
+      "variant": "baseline",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-refactor-context-compiler-packet-finalize--baseline",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-refactor-context-compiler-packet-finalize--baseline.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-refactor-context-compiler-packet-finalize--baseline.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-refactor-context-compiler-packet-finalize--baseline.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-refactor-context-compiler-packet-finalize--baseline.patch",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "wall_time_ms": 33117,
+      "completed": false
+    },
+    {
+      "run_id": "code-refactor-context-compiler-packet-finalize--layers_targeted_preflight",
+      "task_id": "code-refactor-context-compiler-packet-finalize",
+      "variant": "layers_targeted_preflight",
+      "worktree_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/worktrees/code-refactor-context-compiler-packet-finalize--layers_targeted_preflight",
+      "transcript_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/transcripts/code-refactor-context-compiler-packet-finalize--layers_targeted_preflight.md",
+      "validation_log_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/validation/code-refactor-context-compiler-packet-finalize--layers_targeted_preflight.log",
+      "diff_stat_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-refactor-context-compiler-packet-finalize--layers_targeted_preflight.stat",
+      "diff_patch_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-refactor-context-compiler-packet-finalize--layers_targeted_preflight.patch",
+      "packet_artifact_path": "/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/packets/code-refactor-context-compiler-packet-finalize--layers_targeted_preflight.md",
+      "agent_exit_code": 1,
+      "validation_exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "wall_time_ms": 33594,
+      "completed": false
+    }
+  ]
+}

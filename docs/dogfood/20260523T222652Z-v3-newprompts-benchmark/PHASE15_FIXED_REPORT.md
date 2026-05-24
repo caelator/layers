@@ -1,0 +1,249 @@
+# Phase 15 Fixed Workflow Benchmark Final Report
+
+- Artifact root: `/Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark`
+- Workflow records: 62
+- Expected/completed/failed runs: 62 / 0 / 62
+- Packet artifacts: 25
+- Packet validation failures: 0
+- Missing required artifacts: 228
+- Secret-shaped artifact findings: 0
+- Claim status: NotSupported
+- Blocking metrics: net_time_saved_ms, token_reduction_ratio
+
+## Paired comparison
+- Paired tasks: 31
+- Speedup: 0.989x
+- Net time saved per task: -262.4 ms
+- Token reduction ratio: -1.422
+- Success delta: 0.000
+- Context quality delta: 0.691
+
+## Blocking artifact findings
+- runner execution incomplete: total_runs=62 completed_runs=0 failed_runs=62
+- runner execution entry not completed for code-stale-trap-prefer-current-task-spec--layers_targeted_preflight
+- agent exit code was not successful for code-stale-trap-prefer-current-task-spec--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-stale-trap-prefer-current-task-spec--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-stale-trap-prefer-current-task-spec--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-stale-trap-prefer-current-task-spec--layers_targeted_preflight.patch
+- runner execution entry not completed for code-feature-config-secret-redaction-nested--layers_targeted_preflight
+- agent exit code was not successful for code-feature-config-secret-redaction-nested--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-feature-config-secret-redaction-nested--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-config-secret-redaction-nested--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-feature-config-secret-redaction-nested--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-config-secret-redaction-nested--layers_targeted_preflight.patch
+- runner execution entry not completed for code-bugfix-workflow-benchmark-duplicate-pairing--baseline
+- agent exit code was not successful for code-bugfix-workflow-benchmark-duplicate-pairing--baseline: Some(1)
+- diff_stat is empty placeholder for code-bugfix-workflow-benchmark-duplicate-pairing--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-workflow-benchmark-duplicate-pairing--baseline.stat
+- diff_patch is empty placeholder for code-bugfix-workflow-benchmark-duplicate-pairing--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-workflow-benchmark-duplicate-pairing--baseline.patch
+- runner execution entry not completed for code-feature-config-secret-redaction-nested--baseline
+- agent exit code was not successful for code-feature-config-secret-redaction-nested--baseline: Some(1)
+- diff_stat is empty placeholder for code-feature-config-secret-redaction-nested--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-config-secret-redaction-nested--baseline.stat
+- diff_patch is empty placeholder for code-feature-config-secret-redaction-nested--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-config-secret-redaction-nested--baseline.patch
+- runner execution entry not completed for code-feature-daemon-heartbeat-stale-detection--baseline
+- agent exit code was not successful for code-feature-daemon-heartbeat-stale-detection--baseline: Some(1)
+- diff_stat is empty placeholder for code-feature-daemon-heartbeat-stale-detection--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-daemon-heartbeat-stale-detection--baseline.stat
+- diff_patch is empty placeholder for code-feature-daemon-heartbeat-stale-detection--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-daemon-heartbeat-stale-detection--baseline.patch
+- runner execution entry not completed for code-feature-session-monitor-threshold-env--layers_targeted_preflight
+- agent exit code was not successful for code-feature-session-monitor-threshold-env--layers_targeted_preflight: Some(1)
+- validation exit code was not successful for code-feature-session-monitor-threshold-env--layers_targeted_preflight: Some(101)
+- diff_stat is empty placeholder for code-feature-session-monitor-threshold-env--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-session-monitor-threshold-env--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-feature-session-monitor-threshold-env--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-session-monitor-threshold-env--layers_targeted_preflight.patch
+- runner execution entry not completed for code-feature-quality-abstain-low-specificity--baseline
+- agent exit code was not successful for code-feature-quality-abstain-low-specificity--baseline: Some(1)
+- diff_stat is empty placeholder for code-feature-quality-abstain-low-specificity--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-quality-abstain-low-specificity--baseline.stat
+- diff_patch is empty placeholder for code-feature-quality-abstain-low-specificity--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-quality-abstain-low-specificity--baseline.patch
+- runner execution entry not completed for code-refactor-memory-index-fallback-tags--layers_targeted_preflight
+- agent exit code was not successful for code-refactor-memory-index-fallback-tags--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-refactor-memory-index-fallback-tags--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-refactor-memory-index-fallback-tags--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-refactor-memory-index-fallback-tags--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-refactor-memory-index-fallback-tags--layers_targeted_preflight.patch
+- runner execution entry not completed for code-refactor-memory-index-fallback-tags--baseline
+- agent exit code was not successful for code-refactor-memory-index-fallback-tags--baseline: Some(1)
+- diff_stat is empty placeholder for code-refactor-memory-index-fallback-tags--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-refactor-memory-index-fallback-tags--baseline.stat
+- diff_patch is empty placeholder for code-refactor-memory-index-fallback-tags--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-refactor-memory-index-fallback-tags--baseline.patch
+- runner execution entry not completed for negative-control-trivial-arithmetic--layers_targeted_preflight
+- agent exit code was not successful for negative-control-trivial-arithmetic--layers_targeted_preflight: Some(1)
+- runner execution entry not completed for code-bugfix-context-routing--layers_targeted_preflight
+- agent exit code was not successful for code-bugfix-context-routing--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-bugfix-context-routing--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-context-routing--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-bugfix-context-routing--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-context-routing--layers_targeted_preflight.patch
+- runner execution entry not completed for negative-control-iso-date-format--baseline
+- agent exit code was not successful for negative-control-iso-date-format--baseline: Some(1)
+- runner execution entry not completed for negative-control-sort-three-words--baseline
+- agent exit code was not successful for negative-control-sort-three-words--baseline: Some(1)
+- runner execution entry not completed for negative-control-basic-unit-conversion--layers_targeted_preflight
+- agent exit code was not successful for negative-control-basic-unit-conversion--layers_targeted_preflight: Some(1)
+- runner execution entry not completed for code-bugfix-mcp-client-error-redaction--layers_targeted_preflight
+- agent exit code was not successful for code-bugfix-mcp-client-error-redaction--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-bugfix-mcp-client-error-redaction--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-bugfix-mcp-client-error-redaction--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-mcp-client-error-redaction--layers_targeted_preflight.patch
+- runner execution entry not completed for code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight
+- agent exit code was not successful for code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-workflow-benchmark-human-surfaces--layers_targeted_preflight.patch
+- runner execution entry not completed for code-bugfix-preflight-strict-low-relevance--baseline
+- agent exit code was not successful for code-bugfix-preflight-strict-low-relevance--baseline: Some(1)
+- diff_stat is empty placeholder for code-bugfix-preflight-strict-low-relevance--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-preflight-strict-low-relevance--baseline.stat
+- diff_patch is empty placeholder for code-bugfix-preflight-strict-low-relevance--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-preflight-strict-low-relevance--baseline.patch
+- runner execution entry not completed for code-stale-trap-query-surface-not-general-proof--baseline
+- agent exit code was not successful for code-stale-trap-query-surface-not-general-proof--baseline: Some(1)
+- diff_stat is empty placeholder for code-stale-trap-query-surface-not-general-proof--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-stale-trap-query-surface-not-general-proof--baseline.stat
+- diff_patch is empty placeholder for code-stale-trap-query-surface-not-general-proof--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-stale-trap-query-surface-not-general-proof--baseline.patch
+- runner execution entry not completed for code-feature-mcp-preflight-stable-registry--baseline
+- agent exit code was not successful for code-feature-mcp-preflight-stable-registry--baseline: Some(1)
+- diff_stat is empty placeholder for code-feature-mcp-preflight-stable-registry--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-mcp-preflight-stable-registry--baseline.stat
+- diff_patch is empty placeholder for code-feature-mcp-preflight-stable-registry--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-mcp-preflight-stable-registry--baseline.patch
+- runner execution entry not completed for negative-control-count-letters--baseline
+- agent exit code was not successful for negative-control-count-letters--baseline: Some(1)
+- runner execution entry not completed for code-stale-trap-prefer-current-task-spec--baseline
+- agent exit code was not successful for code-stale-trap-prefer-current-task-spec--baseline: Some(1)
+- diff_stat is empty placeholder for code-stale-trap-prefer-current-task-spec--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-stale-trap-prefer-current-task-spec--baseline.stat
+- diff_patch is empty placeholder for code-stale-trap-prefer-current-task-spec--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-stale-trap-prefer-current-task-spec--baseline.patch
+- runner execution entry not completed for code-bugfix-provider-budget-overflow--layers_targeted_preflight
+- agent exit code was not successful for code-bugfix-provider-budget-overflow--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-bugfix-provider-budget-overflow--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-provider-budget-overflow--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-bugfix-provider-budget-overflow--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-provider-budget-overflow--layers_targeted_preflight.patch
+- runner execution entry not completed for code-bugfix-runtime-queue-starvation--baseline
+- agent exit code was not successful for code-bugfix-runtime-queue-starvation--baseline: Some(1)
+- diff_stat is empty placeholder for code-bugfix-runtime-queue-starvation--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-runtime-queue-starvation--baseline.stat
+- diff_patch is empty placeholder for code-bugfix-runtime-queue-starvation--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-runtime-queue-starvation--baseline.patch
+- runner execution entry not completed for code-feature-tools-registry-duplicate-names--baseline
+- agent exit code was not successful for code-feature-tools-registry-duplicate-names--baseline: Some(1)
+- diff_stat is empty placeholder for code-feature-tools-registry-duplicate-names--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-tools-registry-duplicate-names--baseline.stat
+- diff_patch is empty placeholder for code-feature-tools-registry-duplicate-names--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-tools-registry-duplicate-names--baseline.patch
+- runner execution entry not completed for code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight
+- agent exit code was not successful for code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-preflight-strict-low-relevance--layers_targeted_preflight.patch
+- runner execution entry not completed for code-docs-architecture-context-spine--baseline
+- agent exit code was not successful for code-docs-architecture-context-spine--baseline: Some(1)
+- diff_stat is empty placeholder for code-docs-architecture-context-spine--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-docs-architecture-context-spine--baseline.stat
+- diff_patch is empty placeholder for code-docs-architecture-context-spine--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-docs-architecture-context-spine--baseline.patch
+- runner execution entry not completed for code-bugfix-telemetry-malformed-jsonl-skip--baseline
+- agent exit code was not successful for code-bugfix-telemetry-malformed-jsonl-skip--baseline: Some(1)
+- diff_stat is empty placeholder for code-bugfix-telemetry-malformed-jsonl-skip--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-telemetry-malformed-jsonl-skip--baseline.stat
+- diff_patch is empty placeholder for code-bugfix-telemetry-malformed-jsonl-skip--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-telemetry-malformed-jsonl-skip--baseline.patch
+- runner execution entry not completed for code-bugfix-provider-budget-overflow--baseline
+- agent exit code was not successful for code-bugfix-provider-budget-overflow--baseline: Some(1)
+- diff_stat is empty placeholder for code-bugfix-provider-budget-overflow--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-provider-budget-overflow--baseline.stat
+- diff_patch is empty placeholder for code-bugfix-provider-budget-overflow--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-provider-budget-overflow--baseline.patch
+- runner execution entry not completed for code-bugfix-query-target-traversal--layers_targeted_preflight
+- agent exit code was not successful for code-bugfix-query-target-traversal--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-bugfix-query-target-traversal--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-query-target-traversal--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-bugfix-query-target-traversal--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-query-target-traversal--layers_targeted_preflight.patch
+- runner execution entry not completed for code-bugfix-query-target-traversal--baseline
+- agent exit code was not successful for code-bugfix-query-target-traversal--baseline: Some(1)
+- diff_stat is empty placeholder for code-bugfix-query-target-traversal--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-query-target-traversal--baseline.stat
+- diff_patch is empty placeholder for code-bugfix-query-target-traversal--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-query-target-traversal--baseline.patch
+- runner execution entry not completed for code-feature-remember-reject-empty-records--baseline
+- agent exit code was not successful for code-feature-remember-reject-empty-records--baseline: Some(1)
+- diff_stat is empty placeholder for code-feature-remember-reject-empty-records--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-remember-reject-empty-records--baseline.stat
+- diff_patch is empty placeholder for code-feature-remember-reject-empty-records--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-remember-reject-empty-records--baseline.patch
+- runner execution entry not completed for code-bugfix-context-routing--baseline
+- agent exit code was not successful for code-bugfix-context-routing--baseline: Some(1)
+- diff_stat is empty placeholder for code-bugfix-context-routing--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-context-routing--baseline.stat
+- diff_patch is empty placeholder for code-bugfix-context-routing--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-context-routing--baseline.patch
+- runner execution entry not completed for negative-control-basic-unit-conversion--baseline
+- agent exit code was not successful for negative-control-basic-unit-conversion--baseline: Some(1)
+- runner execution entry not completed for code-bugfix-council-circuit-exit-gate--baseline
+- agent exit code was not successful for code-bugfix-council-circuit-exit-gate--baseline: Some(1)
+- diff_stat is empty placeholder for code-bugfix-council-circuit-exit-gate--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-council-circuit-exit-gate--baseline.stat
+- diff_patch is empty placeholder for code-bugfix-council-circuit-exit-gate--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-council-circuit-exit-gate--baseline.patch
+- runner execution entry not completed for code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight
+- agent exit code was not successful for code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-telemetry-malformed-jsonl-skip--layers_targeted_preflight.patch
+- runner execution entry not completed for code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight
+- agent exit code was not successful for code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-workflow-benchmark-duplicate-pairing--layers_targeted_preflight.patch
+- runner execution entry not completed for code-feature-tools-registry-duplicate-names--layers_targeted_preflight
+- agent exit code was not successful for code-feature-tools-registry-duplicate-names--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-feature-tools-registry-duplicate-names--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-tools-registry-duplicate-names--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-feature-tools-registry-duplicate-names--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-tools-registry-duplicate-names--layers_targeted_preflight.patch
+- runner execution entry not completed for code-feature-workflow-benchmark-human-surfaces--baseline
+- agent exit code was not successful for code-feature-workflow-benchmark-human-surfaces--baseline: Some(1)
+- diff_stat is empty placeholder for code-feature-workflow-benchmark-human-surfaces--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-workflow-benchmark-human-surfaces--baseline.stat
+- diff_patch is empty placeholder for code-feature-workflow-benchmark-human-surfaces--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-workflow-benchmark-human-surfaces--baseline.patch
+- runner execution entry not completed for code-bugfix-proveit-artifact-paths--baseline
+- agent exit code was not successful for code-bugfix-proveit-artifact-paths--baseline: Some(1)
+- diff_stat is empty placeholder for code-bugfix-proveit-artifact-paths--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-proveit-artifact-paths--baseline.stat
+- diff_patch is empty placeholder for code-bugfix-proveit-artifact-paths--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-proveit-artifact-paths--baseline.patch
+- runner execution entry not completed for code-feature-quality-abstain-low-specificity--layers_targeted_preflight
+- agent exit code was not successful for code-feature-quality-abstain-low-specificity--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-feature-quality-abstain-low-specificity--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-quality-abstain-low-specificity--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-feature-quality-abstain-low-specificity--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-quality-abstain-low-specificity--layers_targeted_preflight.patch
+- runner execution entry not completed for negative-control-trivial-arithmetic--baseline
+- agent exit code was not successful for negative-control-trivial-arithmetic--baseline: Some(1)
+- runner execution entry not completed for negative-control-simple-json-validity--layers_targeted_preflight
+- agent exit code was not successful for negative-control-simple-json-validity--layers_targeted_preflight: Some(1)
+- runner execution entry not completed for negative-control-iso-date-format--layers_targeted_preflight
+- agent exit code was not successful for negative-control-iso-date-format--layers_targeted_preflight: Some(1)
+- runner execution entry not completed for negative-control-count-letters--layers_targeted_preflight
+- agent exit code was not successful for negative-control-count-letters--layers_targeted_preflight: Some(1)
+- runner execution entry not completed for code-bugfix-router-historical-code-intent--layers_targeted_preflight
+- agent exit code was not successful for code-bugfix-router-historical-code-intent--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-bugfix-router-historical-code-intent--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-router-historical-code-intent--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-bugfix-router-historical-code-intent--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-router-historical-code-intent--layers_targeted_preflight.patch
+- runner execution entry not completed for code-feature-remember-reject-empty-records--layers_targeted_preflight
+- agent exit code was not successful for code-feature-remember-reject-empty-records--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-feature-remember-reject-empty-records--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-remember-reject-empty-records--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-feature-remember-reject-empty-records--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-remember-reject-empty-records--layers_targeted_preflight.patch
+- runner execution entry not completed for code-feature-session-monitor-threshold-env--baseline
+- agent exit code was not successful for code-feature-session-monitor-threshold-env--baseline: Some(1)
+- validation exit code was not successful for code-feature-session-monitor-threshold-env--baseline: Some(101)
+- diff_stat is empty placeholder for code-feature-session-monitor-threshold-env--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-session-monitor-threshold-env--baseline.stat
+- diff_patch is empty placeholder for code-feature-session-monitor-threshold-env--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-session-monitor-threshold-env--baseline.patch
+- runner execution entry not completed for code-bugfix-proveit-artifact-paths--layers_targeted_preflight
+- agent exit code was not successful for code-bugfix-proveit-artifact-paths--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-bugfix-proveit-artifact-paths--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-proveit-artifact-paths--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-bugfix-proveit-artifact-paths--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-proveit-artifact-paths--layers_targeted_preflight.patch
+- runner execution entry not completed for code-feature-packet-validate-warnings-json--layers_targeted_preflight
+- agent exit code was not successful for code-feature-packet-validate-warnings-json--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-feature-packet-validate-warnings-json--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-packet-validate-warnings-json--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-feature-packet-validate-warnings-json--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-packet-validate-warnings-json--layers_targeted_preflight.patch
+- runner execution entry not completed for code-bugfix-mcp-client-error-redaction--baseline
+- agent exit code was not successful for code-bugfix-mcp-client-error-redaction--baseline: Some(1)
+- diff_stat is empty placeholder for code-bugfix-mcp-client-error-redaction--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-mcp-client-error-redaction--baseline.stat
+- diff_patch is empty placeholder for code-bugfix-mcp-client-error-redaction--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-mcp-client-error-redaction--baseline.patch
+- runner execution entry not completed for negative-control-sort-three-words--layers_targeted_preflight
+- agent exit code was not successful for negative-control-sort-three-words--layers_targeted_preflight: Some(1)
+- runner execution entry not completed for code-bugfix-router-historical-code-intent--baseline
+- agent exit code was not successful for code-bugfix-router-historical-code-intent--baseline: Some(1)
+- diff_stat is empty placeholder for code-bugfix-router-historical-code-intent--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-router-historical-code-intent--baseline.stat
+- diff_patch is empty placeholder for code-bugfix-router-historical-code-intent--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-router-historical-code-intent--baseline.patch
+- runner execution entry not completed for code-docs-architecture-context-spine--layers_targeted_preflight
+- agent exit code was not successful for code-docs-architecture-context-spine--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-docs-architecture-context-spine--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-docs-architecture-context-spine--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-docs-architecture-context-spine--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-docs-architecture-context-spine--layers_targeted_preflight.patch
+- runner execution entry not completed for code-bugfix-council-circuit-exit-gate--layers_targeted_preflight
+- agent exit code was not successful for code-bugfix-council-circuit-exit-gate--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-bugfix-council-circuit-exit-gate--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-council-circuit-exit-gate--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-bugfix-council-circuit-exit-gate--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-council-circuit-exit-gate--layers_targeted_preflight.patch
+- runner execution entry not completed for code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight
+- agent exit code was not successful for code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-daemon-heartbeat-stale-detection--layers_targeted_preflight.patch
+- runner execution entry not completed for code-feature-mcp-preflight-stable-registry--layers_targeted_preflight
+- agent exit code was not successful for code-feature-mcp-preflight-stable-registry--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-feature-mcp-preflight-stable-registry--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-mcp-preflight-stable-registry--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-feature-mcp-preflight-stable-registry--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-mcp-preflight-stable-registry--layers_targeted_preflight.patch
+- runner execution entry not completed for negative-control-simple-json-validity--baseline
+- agent exit code was not successful for negative-control-simple-json-validity--baseline: Some(1)
+- runner execution entry not completed for code-stale-trap-query-surface-not-general-proof--layers_targeted_preflight
+- agent exit code was not successful for code-stale-trap-query-surface-not-general-proof--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-stale-trap-query-surface-not-general-proof--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-stale-trap-query-surface-not-general-proof--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-stale-trap-query-surface-not-general-proof--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-stale-trap-query-surface-not-general-proof--layers_targeted_preflight.patch
+- runner execution entry not completed for code-bugfix-runtime-queue-starvation--layers_targeted_preflight
+- agent exit code was not successful for code-bugfix-runtime-queue-starvation--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-bugfix-runtime-queue-starvation--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-runtime-queue-starvation--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-bugfix-runtime-queue-starvation--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-bugfix-runtime-queue-starvation--layers_targeted_preflight.patch
+- runner execution entry not completed for code-feature-packet-validate-warnings-json--baseline
+- agent exit code was not successful for code-feature-packet-validate-warnings-json--baseline: Some(1)
+- diff_stat is empty placeholder for code-feature-packet-validate-warnings-json--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-packet-validate-warnings-json--baseline.stat
+- diff_patch is empty placeholder for code-feature-packet-validate-warnings-json--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-feature-packet-validate-warnings-json--baseline.patch
+- runner execution entry not completed for code-refactor-context-compiler-packet-finalize--baseline
+- agent exit code was not successful for code-refactor-context-compiler-packet-finalize--baseline: Some(1)
+- diff_stat is empty placeholder for code-refactor-context-compiler-packet-finalize--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-refactor-context-compiler-packet-finalize--baseline.stat
+- diff_patch is empty placeholder for code-refactor-context-compiler-packet-finalize--baseline: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-refactor-context-compiler-packet-finalize--baseline.patch
+- runner execution entry not completed for code-refactor-context-compiler-packet-finalize--layers_targeted_preflight
+- agent exit code was not successful for code-refactor-context-compiler-packet-finalize--layers_targeted_preflight: Some(1)
+- diff_stat is empty placeholder for code-refactor-context-compiler-packet-finalize--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-refactor-context-compiler-packet-finalize--layers_targeted_preflight.stat
+- diff_patch is empty placeholder for code-refactor-context-compiler-packet-finalize--layers_targeted_preflight: /Users/xxx/layers/docs/dogfood/20260523T222652Z-v3-newprompts-benchmark/diffs/code-refactor-context-compiler-packet-finalize--layers_targeted_preflight.patch
+- benchmark claim not supported: net_time_saved_ms, token_reduction_ratio

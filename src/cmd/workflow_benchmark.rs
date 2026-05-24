@@ -12,6 +12,8 @@ use std::{
 use anyhow::{Context as _, Result, bail};
 use clap::Subcommand;
 use serde::{Deserialize, Serialize};
+#[cfg(unix)]
+use std::os::unix::process::CommandExt;
 
 use crate::cmd::packet::parse_valid_packet_text;
 
@@ -2543,6 +2545,7 @@ fn run_shell_command(
         .current_dir(current_dir)
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
+        .process_group(0)
         .spawn()
         .with_context(|| format!("failed to spawn shell command: {command}"))?;
     loop {
@@ -2556,7 +2559,25 @@ fn run_shell_command(
                 .with_context(|| format!("failed to collect shell command output: {command}"));
         }
         if started.elapsed() >= timeout {
-            let _ = child.kill();
+            // Kill the entire process group (sh + agent + grandchildren)
+            // Use negative PID with `kill` to target the process group.
+            let pid = child.id();
+            #[cfg(unix)]
+            {
+                let _ = Command::new("kill")
+                    .arg("-TERM")
+                    .arg(format!("-{pid}"))
+                    .status();
+                thread::sleep(Duration::from_secs(2));
+                let _ = Command::new("kill")
+                    .arg("-KILL")
+                    .arg(format!("-{pid}"))
+                    .status();
+            }
+            #[cfg(not(unix))]
+            {
+                let _ = child.kill();
+            }
             let output = child.wait_with_output().with_context(|| {
                 format!("failed to collect timed-out shell command output: {command}")
             })?;
