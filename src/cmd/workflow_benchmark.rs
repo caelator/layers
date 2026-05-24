@@ -2034,6 +2034,15 @@ fn execute_runner_plan(config: &RunnerExecutionConfig) -> Result<RunnerExecution
                         .saturating_mul(1000),
                     completed: false,
                 };
+                match build_execution_run_record(run, &failed_execution) {
+                    Ok(record) => records.push(record),
+                    Err(record_error) => {
+                        eprintln!(
+                            "[run-plan] failed to build failed-run record for {}: {record_error}",
+                            run.run_id
+                        );
+                    }
+                }
                 executions.push(failed_execution);
             }
         }
@@ -2630,6 +2639,42 @@ fn estimate_runner_token_accounting(run: &RunnerRunPlan) -> Result<RunnerTokenAc
     let validation_tokens = estimate_text_tokens(&run.expected_validation_commands.join("\n"));
     let preflight_query_tokens = estimate_text_tokens(&run.preflight_query);
     let preflight_target_tokens = estimate_text_tokens(&run.preflight_targets.join("\n"));
+    Ok(runner_token_accounting_from_parts(
+        run,
+        prompt_tokens,
+        packet_tokens,
+        validation_tokens,
+        preflight_query_tokens,
+        preflight_target_tokens,
+        estimate_file_tokens(&run.transcript_path).unwrap_or(1),
+    ))
+}
+
+fn degraded_runner_token_accounting(run: &RunnerRunPlan) -> RunnerTokenAccounting {
+    let prompt_tokens = estimate_file_tokens(&run.prompt_path).unwrap_or(1);
+    let validation_tokens = estimate_text_tokens(&run.expected_validation_commands.join("\n"));
+    let preflight_query_tokens = estimate_text_tokens(&run.preflight_query);
+    let preflight_target_tokens = estimate_text_tokens(&run.preflight_targets.join("\n"));
+    runner_token_accounting_from_parts(
+        run,
+        prompt_tokens,
+        0,
+        validation_tokens,
+        preflight_query_tokens,
+        preflight_target_tokens,
+        estimate_file_tokens(&run.transcript_path).unwrap_or(1),
+    )
+}
+
+fn runner_token_accounting_from_parts(
+    run: &RunnerRunPlan,
+    prompt_tokens: u64,
+    packet_tokens: u64,
+    validation_tokens: u64,
+    preflight_query_tokens: u64,
+    preflight_target_tokens: u64,
+    transcript_tokens: u64,
+) -> RunnerTokenAccounting {
     let layers_overhead_tokens = if run.requires_layers_preflight {
         packet_tokens
             .saturating_add(preflight_query_tokens)
@@ -2641,9 +2686,7 @@ fn estimate_runner_token_accounting(run: &RunnerRunPlan) -> Result<RunnerTokenAc
         .saturating_add(validation_tokens)
         .saturating_add(layers_overhead_tokens)
         .max(1);
-    let output_tokens = estimate_file_tokens(&run.transcript_path)
-        .unwrap_or(1)
-        .max(1);
+    let output_tokens = transcript_tokens.max(1);
     let peak_context_tokens = if run.requires_layers_preflight {
         packet_tokens.max(layers_overhead_tokens)
     } else {
@@ -2655,13 +2698,13 @@ fn estimate_runner_token_accounting(run: &RunnerRunPlan) -> Result<RunnerTokenAc
         0
     };
 
-    Ok(RunnerTokenAccounting {
+    RunnerTokenAccounting {
         input: input_tokens,
         output: output_tokens,
         peak_context: peak_context_tokens,
         context_relevant: context_relevant_tokens,
         layers_overhead: layers_overhead_tokens,
-    })
+    }
 }
 
 fn estimate_file_tokens(path: &Path) -> Result<u64> {
@@ -2688,7 +2731,17 @@ fn build_execution_run_record(
     };
     let success_score = if execution.completed { 1.0 } else { 0.0 };
     let overhead_ms = u64::from(run.requires_layers_preflight);
-    let token_accounting = estimate_runner_token_accounting(run)?;
+    let token_accounting = match estimate_runner_token_accounting(run) {
+        Ok(accounting) => accounting,
+        Err(error) if !execution.completed => {
+            eprintln!(
+                "[run-plan] using degraded token accounting for incomplete run {}: {error}",
+                run.run_id
+            );
+            degraded_runner_token_accounting(run)
+        }
+        Err(error) => return Err(error),
+    };
     let failed_validation_commands = execution
         .validation_exit_codes
         .iter()
@@ -5707,6 +5760,73 @@ mod tests {
                 .expect("packet path")
                 .exists()
         );
+    }
+
+    #[test]
+    fn runner_run_failure_still_writes_incomplete_run_record() {
+        let output = tempfile::tempdir().expect("temp output dir");
+        let repo = tempfile::tempdir().expect("temp repo dir");
+        let task_path = output.path().join("phase15-failed-run-record-task.json");
+        fs::write(
+            &task_path,
+            r#"{
+  "task_id": "phase15-failed-run-record-test",
+  "title": "Phase 15 failed run record test",
+  "prompt": "This command intentionally fails before validation.",
+  "category": "bugfix",
+  "difficulty": "small",
+  "surface_claim": "layers_targeted_preflight",
+  "negative_control": false,
+  "stale_context_trap": false,
+  "repo_commit": "HEAD",
+  "time_budget_minutes": 1,
+  "target_files": ["agent-output.txt"],
+  "target_symbols": ["agent-output"],
+  "expected_relevant_files": ["agent-output.txt"],
+  "expected_validation_commands": ["test -f agent-output.txt"],
+  "success_rubric": {
+    "full_success": "agent-output.txt exists.",
+    "partial_success": "The runner records the failed agent attempt.",
+    "failure": "The failed run disappears from workflow-runs.jsonl.",
+    "min_verification_quality": 4,
+    "primary_endpoint": "verified_success"
+  }
+}
+"#,
+        )
+        .expect("task written");
+        let config = RunnerPlanConfig {
+            task_path,
+            output_dir: output.path().join("phase15-failed-run-record"),
+            repo_root: repo.path().to_path_buf(),
+            agent_command: "python3 -c \"raise SystemExit(7)\"".to_owned(),
+            model: Some("failed-record-model".to_owned()),
+            seed: 15,
+        };
+        let plan = plan_runner_artifacts(&config).expect("runner plan artifacts");
+        fs::remove_dir_all(repo.path()).expect("repo removed to force runner preparation failure");
+        let execution = execute_runner_plan(&RunnerExecutionConfig {
+            plan_path: plan.plan_path.clone(),
+            preflight_command: "python3 -c \"import json; print(json.dumps({'packet':'ok'}))\""
+                .to_owned(),
+            keep_worktrees: true,
+        })
+        .expect("runner execution continues after failed runs");
+
+        assert_eq!(execution.total_runs, 2);
+        assert_eq!(execution.completed_runs, 0);
+        assert_eq!(execution.failed_runs, 2);
+        let run_records = fs::read_to_string(&execution.run_records_path)
+            .expect("incomplete run records written");
+        assert_eq!(run_records.lines().count(), 2);
+        let parsed_runs = run_records
+            .lines()
+            .map(parse_run)
+            .collect::<Result<Vec<_>>>()
+            .expect("run records parse");
+        assert!(parsed_runs.iter().all(|run| run.success_score == 0.0));
+        assert!(parsed_runs.iter().all(|run| run.failed_commands >= 1));
+        assert!(parsed_runs.iter().all(|run| run.verification_quality <= 1));
     }
 
     #[test]
