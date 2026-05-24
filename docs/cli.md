@@ -260,6 +260,30 @@ Example:
 layers packet diff before.packet.json after.packet.json --json
 ```
 
+## `layers packet grade <packet.json>`
+
+Status: **Stable core**
+
+Grade a persisted `ContextPacket` artifact against a workflow task spec. This is artifact-only: it reads the existing packet and task spec from disk, evaluates quality signals such as target coverage, citation completeness, validation command presence, and warning state, then produces a structured quality report. It does not retrieve more context, compile a new packet, or call an agent.
+
+Arguments:
+
+- `<packet.json>` — path to a persisted `ContextPacket` JSON artifact.
+
+Options:
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--task <task>` | Required | Path to a workflow task spec JSON artifact |
+| `--json` | No | Emit the quality report as structured JSON |
+
+Example:
+
+```bash
+layers packet grade packet.json --task benchmarks/workflows/tasks/code-bugfix-context-routing.json
+layers packet grade packet.json --task task-spec.json --json
+```
+
 ## `layers memory ...`
 
 Status: **Stable core**

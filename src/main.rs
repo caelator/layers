@@ -929,6 +929,10 @@ mod tests {
         assert!(docs.contains("## `layers packet inspect <packet.json>`"));
         assert!(docs.contains("## `layers packet render <packet.json>`"));
         assert!(docs.contains("## `layers packet diff <old.json> <new.json>`"));
+        assert!(
+            docs.contains("## `layers packet grade <packet.json>`"),
+            "docs/cli.md must document the `packet grade` command"
+        );
         assert!(docs.contains("objective-brief"));
         assert!(docs.contains("artifact-only"));
     }
