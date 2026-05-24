@@ -73,7 +73,7 @@ The v2.0 stable core converges on:
 | `ContextPacket` schema/renderers | Stable core | Versioned context artifact and renderings |
 | `layers query` | Stable core | Compile task context from local memory/retrieval inputs |
 | `layers preflight` | Stable core | Compile pre-edit context for code-heavy work and explicit targets |
-| `layers packet validate/inspect/render/diff` | Stable core | Treat packets as durable artifacts |
+| `layers packet validate/inspect/render/diff/grade` | Stable core | Treat packets as durable artifacts |
 | `layers validate` / `layers doctor` | Stable core | Explain readiness and degraded modes |
 | `layers refresh` | Support | Refresh optional derived context such as GitNexus data |
 | `layers mcp serve` stable tools | Stable core | Expose context compilation and packet validation to agents |
@@ -137,7 +137,7 @@ Layers v2.0 is complete when:
 
 - `ContextPacket` v2 minimal schema is documented and tested
 - `query` and `preflight` compile packets through a shared compiler path
-- packet validate/inspect/render/diff commands exist
+- packet validate/inspect/render/diff/grade commands exist
 - stable MCP context tools call the shared compiler path
 - stable-core no-default-feature checks pass in CI
 - fresh clone bootstrap is truthful and reproducible for stable core

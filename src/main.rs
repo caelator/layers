@@ -976,6 +976,10 @@ mod tests {
         assert!(docs.contains("`layers packet inspect`"));
         assert!(docs.contains("`layers packet render`"));
         assert!(docs.contains("`layers packet diff`"));
+        assert!(
+            docs.contains("`layers packet grade`"),
+            "NORTH_STAR must list `packet grade` as a stable core packet command"
+        );
         assert!(!docs.contains("context/memory spine"));
 
         // NORTH_STAR must explicitly define what Layers is NOT (evidence-gated boundary).

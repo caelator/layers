@@ -76,6 +76,7 @@ The v2.0 stable surface is defined by [V2 Product Contract](V2_PRODUCT_CONTRACT.
 - `layers packet inspect` — summarize packet provenance, warnings, sections, and quality signals
 - `layers packet render` — render persisted packets for human review, agent prompts, JSON normalization, or objective briefs
 - `layers packet diff` — compare persisted packets as reviewable, body-safe artifacts
+- `layers packet grade` — grade a packet against a workflow task spec for quality signals
 - `layers remember` — write explicit project memory
 - `layers memory` — list/search/show/retire/audit project memory
 - `layers impact` — summarize blast radius for a file/symbol/task
