@@ -10,6 +10,9 @@ memoryport/council-traces.jsonl
 memoryport/council-runs/
 memoryport/*.sqlite
 
+# Autoresearch sweep log (local workspace state, not tracked)
+.layers/autoresearch/
+
 # Local caches / editor noise
 .DS_Store
 *.tmp

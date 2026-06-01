@@ -6,13 +6,17 @@
 use anyhow::{Context, Result, anyhow};
 use chrono::{DateTime, Utc};
 use clap::Subcommand;
-use layers_core::{ContextPacket, ContextSection, ContextWarning};
+use layers_core::{
+    ContextPacket, ContextSection, ContextWarning, PacketQualityReport, TaskCategory, TaskSpec,
+};
 use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use std::collections::HashSet;
+use std::io::Write as _;
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 use crate::config::workspace_root;
@@ -53,6 +57,12 @@ pub enum AutoresearchCommands {
         /// Emit JSON.
         #[arg(long)]
         json: bool,
+        /// Grade the assembled packet against a synthetic `TaskSpec` and
+        /// attach the average score to `scores["packet_grade"]`. Degrades
+        /// to a warning when grading is unavailable so the report is
+        /// still useful.
+        #[arg(long)]
+        grade_packet: bool,
     },
     /// Manage monitoring profiles.
     Profile {
@@ -66,6 +76,40 @@ pub enum AutoresearchCommands {
         #[arg(long)]
         profile_id: Option<String>,
         /// Emit JSON.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Run bounded `(scan, prepare)` iterations under a wall-clock budget
+    /// and append a per-iteration row to
+    /// `<workspace>/.layers/autoresearch/sweeps.tsv`. Optional grading
+    /// per iteration follows the same degrade-to-warning policy as
+    /// `prepare --grade-packet`.
+    Sweep {
+        /// Task to prepare context for on every iteration.
+        #[arg(short, long)]
+        task: String,
+        /// Optional targets forwarded to `prepare` on every iteration.
+        #[arg(short = 'T', long)]
+        target: Vec<String>,
+        /// Restrict scan to one profile.
+        #[arg(long)]
+        profile_id: Option<String>,
+        /// Wall-clock budget in seconds. Sweep stops once this is
+        /// exceeded or once `max_iterations` runs complete.
+        #[arg(long, default_value = "300")]
+        budget_seconds: u64,
+        /// Maximum number of `(scan, prepare)` iterations.
+        #[arg(long, default_value = "8")]
+        max_iterations: usize,
+        /// Grade each prepared packet and write `before_packet_grade`
+        /// / `after_packet_grade` to the sweep log.
+        #[arg(long)]
+        grade_packet: bool,
+        /// Findings-count delta required to mark a row `kept` rather
+        /// than `discarded`. Defaults to any non-negative delta.
+        #[arg(long, default_value_t = 0)]
+        keep_min_delta: i64,
+        /// Emit JSON summary at the end of the sweep.
         #[arg(long)]
         json: bool,
     },
@@ -161,8 +205,12 @@ pub fn handle_autoresearch(command: &AutoresearchCommands) -> Result<()> {
             target,
             limit,
             json,
+            grade_packet,
         } => {
-            let report = prepare_task_context(&store, task, target, *limit)?;
+            let mut report = prepare_task_context(&store, task, target, *limit)?;
+            if *grade_packet {
+                grade_prepare_report(&mut report, task);
+            }
             if *json {
                 println!("{}", serde_json::to_string_pretty(&report)?);
             } else {
@@ -186,6 +234,18 @@ pub fn handle_autoresearch(command: &AutoresearchCommands) -> Result<()> {
                         println!("  - {action}");
                     }
                 }
+                if *grade_packet {
+                    if let Some(grade) = report.scores.get("packet_grade") {
+                        println!("packet grade: {grade}");
+                    }
+                    for warning in report
+                        .warnings
+                        .iter()
+                        .filter(|w| w.code == "packet_grade_unavailable")
+                    {
+                        println!("grading warning: {}", warning.message);
+                    }
+                }
             }
             Ok(())
         }
@@ -200,6 +260,38 @@ pub fn handle_autoresearch(command: &AutoresearchCommands) -> Result<()> {
                 println!("  sources  : {}", run.sources_considered);
                 println!("  entries  : {}", run.entries_created);
                 println!("  matches  : {}", run.matches_created);
+            }
+            Ok(())
+        }
+        AutoresearchCommands::Sweep {
+            task,
+            target,
+            profile_id,
+            budget_seconds,
+            max_iterations,
+            grade_packet,
+            keep_min_delta,
+            json,
+        } => {
+            let opts = SweepOptions {
+                task,
+                target: target.clone(),
+                profile_id: profile_id.clone(),
+                budget: Duration::from_secs(*budget_seconds),
+                max_iterations: *max_iterations,
+                grade_packet: *grade_packet,
+                keep_min_delta: *keep_min_delta,
+            };
+            let summary = run_sweep(&store, opts)?;
+            if *json {
+                println!("{}", serde_json::to_string_pretty(&summary)?);
+            } else {
+                println!("autoresearch sweep: {}", summary.sweep_id);
+                println!("  iterations : {}", summary.iterations.len());
+                println!("  kept       : {}", summary.kept);
+                println!("  discarded  : {}", summary.discarded);
+                println!("  crashed    : {}", summary.crashed);
+                println!("  log        : {}", summary.log_path.display());
             }
             Ok(())
         }
@@ -484,6 +576,16 @@ pub(crate) struct PrepareReport {
     pub(crate) suggested_actions: Vec<String>,
     pub(crate) open_uncertainty: Vec<String>,
     pub(crate) confidence: f64,
+    /// Optional packet-quality grades attached when `--grade-packet` is set.
+    /// Keys today: `packet_grade` (f64 average). Kept as `serde_json::Value`
+    /// for forward-compat with future quality dimensions.
+    #[serde(default = "serde_json::Value::default")]
+    pub(crate) scores: serde_json::Value,
+    /// Optional warnings attached when `--grade-packet` is set. Today this
+    /// carries `packet_grade_unavailable` (severity `info`) when the grader
+    /// could not be reached.
+    #[serde(default)]
+    pub(crate) warnings: Vec<ContextWarning>,
 }
 
 pub(crate) struct AutoresearchStore {
@@ -866,6 +968,8 @@ pub(crate) fn prepare_findings(
         suggested_actions,
         open_uncertainty,
         confidence,
+        scores: serde_json::Value::Null,
+        warnings: Vec::new(),
     })
 }
 
@@ -1114,6 +1218,370 @@ fn row_to_match(row: &rusqlite::Row<'_>) -> rusqlite::Result<ResearchMatch> {
     })
 }
 
+// ---------------------------------------------------------------------------
+// Sweep + grade packet plumbing (Karpathy autoresearch mapping)
+// ---------------------------------------------------------------------------
+
+/// Per-iteration TSV row appended to `.layers/autoresearch/sweeps.tsv`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct SweepIterationRecord {
+    pub(crate) sweep_id: String,
+    pub(crate) iteration: usize,
+    pub(crate) started_at: DateTime<Utc>,
+    pub(crate) finished_at: DateTime<Utc>,
+    pub(crate) profile_id: Option<String>,
+    pub(crate) selected_findings: usize,
+    pub(crate) missing_context: usize,
+    pub(crate) suggested_actions: usize,
+    pub(crate) before_packet_grade: Option<f64>,
+    pub(crate) after_packet_grade: Option<f64>,
+    pub(crate) findings_delta: i64,
+    pub(crate) kept_or_discarded: SweepDecision,
+    pub(crate) short_reason: String,
+}
+
+/// One-cell decision for a sweep iteration.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum SweepDecision {
+    Kept,
+    Discarded,
+    Crashed,
+    Skipped,
+}
+
+/// Options bundle for `run_sweep`.
+pub(crate) struct SweepOptions<'a> {
+    pub(crate) task: &'a str,
+    pub(crate) target: Vec<String>,
+    pub(crate) profile_id: Option<String>,
+    pub(crate) budget: Duration,
+    pub(crate) max_iterations: usize,
+    pub(crate) grade_packet: bool,
+    pub(crate) keep_min_delta: i64,
+}
+
+/// Final summary returned by `run_sweep`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct SweepSummary {
+    pub(crate) sweep_id: String,
+    pub(crate) started_at: DateTime<Utc>,
+    pub(crate) finished_at: DateTime<Utc>,
+    pub(crate) log_path: PathBuf,
+    pub(crate) iterations: Vec<SweepIterationRecord>,
+    pub(crate) kept: usize,
+    pub(crate) discarded: usize,
+    pub(crate) crashed: usize,
+}
+
+/// Resolve the sweep log path under the active Layers workspace root.
+pub(crate) fn sweep_log_path() -> PathBuf {
+    workspace_root().join(".layers").join("autoresearch")
+}
+
+/// Append a sweep iteration row to `.layers/autoresearch/sweeps.tsv`.
+fn append_sweep_row(row: &SweepIterationRecord) -> Result<PathBuf> {
+    let dir = sweep_log_path();
+    std::fs::create_dir_all(&dir)
+        .with_context(|| format!("create sweep log directory {}", dir.display()))?;
+    let path = dir.join("sweeps.tsv");
+    let needs_header = !path.exists();
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .with_context(|| format!("open sweep log {}", path.display()))?;
+    if needs_header {
+        writeln!(
+            file,
+            "sweep_id\titeration\tstarted_at\tfinished_at\tprofile_id\t\
+             selected_findings\tmissing_context\tsuggested_actions\t\
+             before_packet_grade\tafter_packet_grade\tfindings_delta\t\
+             kept_or_discarded\tshort_reason"
+        )?;
+    }
+    let kept = match row.kept_or_discarded {
+        SweepDecision::Kept => "kept",
+        SweepDecision::Discarded => "discarded",
+        SweepDecision::Crashed => "crashed",
+        SweepDecision::Skipped => "skipped",
+    };
+    let profile_id = row.profile_id.as_deref().unwrap_or("");
+    let before = row
+        .before_packet_grade
+        .map_or_else(String::new, |v| format!("{v:.3}"));
+    let after = row
+        .after_packet_grade
+        .map_or_else(String::new, |v| format!("{v:.3}"));
+    writeln!(
+        file,
+        "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+        row.sweep_id,
+        row.iteration,
+        row.started_at.to_rfc3339(),
+        row.finished_at.to_rfc3339(),
+        profile_id,
+        row.selected_findings,
+        row.missing_context,
+        row.suggested_actions,
+        before,
+        after,
+        row.findings_delta,
+        kept,
+        row.short_reason.replace(['\t', '\n'], " "),
+    )?;
+    Ok(path)
+}
+
+/// Build a minimal `ContextPacket` containing the selected findings from a
+/// `PrepareReport` so it can be passed to `PacketQualityReport::grade`.
+/// This is intentionally a *synthetic* packet for grading purposes only;
+/// it is not a substitute for a real `preflight` packet.
+fn synthetic_packet_for_grading(report: &PrepareReport) -> ContextPacket {
+    let now = Utc::now();
+    let id = format!("autoresearch-grade-{}", Uuid::new_v4());
+    let mut packet = ContextPacket::new(
+        id,
+        workspace_root().display().to_string(),
+        report.task.clone(),
+        now,
+    );
+    if let Some(section) = findings_to_context_section(&report.selected_findings) {
+        packet.sections.push(section);
+    }
+    packet
+}
+
+/// Build a synthetic `TaskSpec` for grading a `PrepareReport`. Used only
+/// when `--grade-packet` is requested; degrades gracefully if the task
+/// string is too thin for the grader to be meaningful.
+fn synthetic_task_spec_for_grading(task: &str, targets: &[String]) -> TaskSpec {
+    let prompt = if targets.is_empty() {
+        task.to_string()
+    } else {
+        format!("{task}\n\nTargets:\n- {}", targets.join("\n- "))
+    };
+    let mut spec = TaskSpec {
+        task_id: format!("autoresearch-synthetic-{task}"),
+        title: format!("autoresearch synthetic task: {task}"),
+        prompt,
+        category: TaskCategory::Other,
+        repo_root: None,
+        target_files: Vec::new(),
+        target_symbols: Vec::new(),
+        expected_relevant_files: Vec::new(),
+        expected_validation_commands: Vec::new(),
+        negative_control: false,
+        success_rubric: layers_core::SuccessRubric::default(),
+    };
+    // Cap task_id length so very long task strings don't blow up the
+    // assertion in `TaskSpec::validate`.
+    if spec.task_id.len() > 200 {
+        spec.task_id.truncate(200);
+    }
+    if spec.title.len() > 200 {
+        spec.title.truncate(200);
+    }
+    spec
+}
+
+/// Attach a packet-quality average score to a `PrepareReport` and record
+/// a warning if grading is unavailable. This is the "degrade to warning"
+/// path called out in the autoresearch plan: the report stays useful even
+/// when grading infra is missing.
+pub(crate) fn grade_prepare_report(report: &mut PrepareReport, task: &str) {
+    let packet = synthetic_packet_for_grading(report);
+    let spec = synthetic_task_spec_for_grading(task, &report.targets);
+    if let Err(errors) = spec.validate() {
+        report.warnings.push(ContextWarning {
+            severity: "info".to_string(),
+            code: "packet_grade_unavailable".to_string(),
+            message: format!(
+                "packet grade skipped: synthetic TaskSpec failed validation ({}).",
+                errors.join("; ")
+            ),
+        });
+        return;
+    }
+    let quality = PacketQualityReport::grade(&packet, &spec);
+    if !report.scores.is_object() {
+        report.scores = json!({});
+    }
+    let map = report
+        .scores
+        .as_object_mut()
+        .expect("scores object just initialized");
+    map.insert("packet_grade".to_string(), json!(quality.scores.average()));
+    map.insert(
+        "packet_recommendation".to_string(),
+        json!(quality.recommendation),
+    );
+}
+
+/// Execute a bounded sweep of `(scan, prepare)` iterations under a wall-
+/// clock budget. Each iteration appends a row to
+/// `.layers/autoresearch/sweeps.tsv`. Returns a `SweepSummary` describing
+/// what ran.
+pub(crate) fn run_sweep(store: &AutoresearchStore, opts: SweepOptions<'_>) -> Result<SweepSummary> {
+    let started_at = Utc::now();
+    let sweep_id = format!("sweep-{}", Uuid::new_v4());
+    let deadline = Instant::now() + opts.budget;
+    let mut iterations = Vec::new();
+    let mut kept = 0;
+    let mut discarded = 0;
+    let mut crashed = 0;
+    let mut previous_findings: Option<usize> = None;
+    let mut previous_grade: Option<f64> = None;
+    let limit = 8usize;
+
+    for iteration in 0..opts.max_iterations {
+        if Instant::now() >= deadline {
+            break;
+        }
+        let iter_started = Utc::now();
+        let result: Result<(PrepareReport, Option<f64>)> = (|| {
+            run_scan_once(store, opts.profile_id.as_deref())?;
+            let mut report = prepare_task_context(store, opts.task, &opts.target, limit)?;
+            let after_grade = if opts.grade_packet {
+                let before = previous_grade;
+                grade_prepare_report(&mut report, opts.task);
+                after_grade_from_scores(&report.scores).or(before)
+            } else {
+                None
+            };
+            Ok((report, after_grade))
+        })();
+
+        let iter_finished = Utc::now();
+        match result {
+            Ok((report, after_grade)) => {
+                let findings_count = report.selected_findings.len();
+                let findings_delta = match previous_findings {
+                    Some(prev) => findings_count as i64 - prev as i64,
+                    None => 0,
+                };
+                let before_grade = previous_grade;
+                let (decision, reason) = decide_iteration(
+                    findings_count,
+                    findings_delta,
+                    after_grade,
+                    before_grade,
+                    opts.keep_min_delta,
+                );
+                match decision {
+                    SweepDecision::Kept => kept += 1,
+                    SweepDecision::Discarded => discarded += 1,
+                    SweepDecision::Crashed => crashed += 1,
+                    SweepDecision::Skipped => {}
+                }
+                let row = SweepIterationRecord {
+                    sweep_id: sweep_id.clone(),
+                    iteration,
+                    started_at: iter_started,
+                    finished_at: iter_finished,
+                    profile_id: opts.profile_id.clone(),
+                    selected_findings: findings_count,
+                    missing_context: report.missing_context.len(),
+                    suggested_actions: report.suggested_actions.len(),
+                    before_packet_grade: before_grade,
+                    after_packet_grade: after_grade,
+                    findings_delta,
+                    kept_or_discarded: decision,
+                    short_reason: reason.to_string(),
+                };
+                append_sweep_row(&row)?;
+                iterations.push(row);
+                previous_findings = Some(findings_count);
+                previous_grade = after_grade;
+            }
+            Err(err) => {
+                let row = SweepIterationRecord {
+                    sweep_id: sweep_id.clone(),
+                    iteration,
+                    started_at: iter_started,
+                    finished_at: iter_finished,
+                    profile_id: opts.profile_id.clone(),
+                    selected_findings: 0,
+                    missing_context: 0,
+                    suggested_actions: 0,
+                    before_packet_grade: previous_grade,
+                    after_packet_grade: None,
+                    findings_delta: 0,
+                    kept_or_discarded: SweepDecision::Crashed,
+                    short_reason: truncate(&format!("{err:#}"), 200),
+                };
+                append_sweep_row(&row)?;
+                iterations.push(row);
+                crashed += 1;
+                // A crash is terminal for this sweep: do not advance
+                // "previous" counters off an unobserved state.
+                break;
+            }
+        }
+
+        if Instant::now() >= deadline {
+            break;
+        }
+    }
+
+    let log_path = sweep_log_path().join("sweeps.tsv");
+    Ok(SweepSummary {
+        sweep_id,
+        started_at,
+        finished_at: Utc::now(),
+        log_path,
+        iterations,
+        kept,
+        discarded,
+        crashed,
+    })
+}
+
+/// Pick the keep/discard decision for a single sweep iteration. The rule
+/// today is intentionally simple: keep when findings count met the
+/// configured delta, and (if grading is enabled) the average packet grade
+/// is non-decreasing. Anything else is `discarded`.
+fn decide_iteration(
+    findings_count: usize,
+    findings_delta: i64,
+    after_grade: Option<f64>,
+    before_grade: Option<f64>,
+    keep_min_delta: i64,
+) -> (SweepDecision, &'static str) {
+    let meets_findings = findings_delta >= keep_min_delta;
+    let grade_ok = match (after_grade, before_grade) {
+        (Some(after), Some(before)) => after + f64::EPSILON >= before,
+        _ => true,
+    };
+    if meets_findings && grade_ok {
+        if findings_count == 0 {
+            (
+                SweepDecision::Discarded,
+                "no findings selected and no grade signal; nothing to keep",
+            )
+        } else {
+            (SweepDecision::Kept, "findings delta met keep threshold")
+        }
+    } else if !grade_ok {
+        (
+            SweepDecision::Discarded,
+            "average packet grade regressed vs previous iteration",
+        )
+    } else {
+        (
+            SweepDecision::Discarded,
+            "findings delta below keep threshold",
+        )
+    }
+}
+
+fn after_grade_from_scores(scores: &serde_json::Value) -> Option<f64> {
+    scores
+        .as_object()
+        .and_then(|obj| obj.get("packet_grade"))
+        .and_then(serde_json::Value::as_f64)
+}
+
 fn collect_rows<T, I>(rows: I) -> Result<Vec<T>>
 where
     I: Iterator<Item = rusqlite::Result<T>>,
@@ -1341,6 +1809,118 @@ mod tests {
                 .unwrap()
                 .len(),
             1
+        );
+    }
+
+    // -- Sweep + grade_packet ------------------------------------------------
+
+    use crate::test_support::TestWorkspace;
+    use std::io::Read as _;
+    use std::time::Duration;
+
+    fn seeded_store_with_profile(task_keyword: &str) -> (TestWorkspace, AutoresearchStore) {
+        let workspace = TestWorkspace::new("autoresearch-sweep");
+        let store = AutoresearchStore::open_default().unwrap();
+        let source = ResearchSource::new(
+            format!("https://example.com/{task_keyword}"),
+            format!("{task_keyword} notes"),
+            SourceType::Article,
+        );
+        store.insert_source(&source).unwrap();
+        let profile = ResearchProfile::new(
+            format!("{task_keyword} profile"),
+            vec![task_keyword.to_string()],
+        );
+        store.insert_profile(&profile).unwrap();
+        (workspace, store)
+    }
+
+    #[test]
+    fn sweep_writes_tsv_log_with_iteration_rows() {
+        let (_workspace, store) = seeded_store_with_profile("context");
+
+        let opts = SweepOptions {
+            task: "context packets",
+            target: vec!["src/cmd/autoresearch.rs".to_string()],
+            profile_id: None,
+            budget: Duration::from_secs(5),
+            max_iterations: 2,
+            grade_packet: false,
+            keep_min_delta: 0,
+        };
+        let summary = run_sweep(&store, opts).unwrap();
+
+        assert!(!summary.iterations.is_empty(), "at least one iteration ran");
+        assert!(summary.crashed == 0, "no crash expected in seeded sweep");
+
+        let log_path = sweep_log_path().join("sweeps.tsv");
+        assert!(log_path.exists(), "sweep log was not created");
+        let mut contents = String::new();
+        std::fs::File::open(&log_path)
+            .unwrap()
+            .read_to_string(&mut contents)
+            .unwrap();
+        let mut lines = contents.lines();
+        let header = lines.next().expect("header row present");
+        assert!(header.starts_with("sweep_id\titeration\tstarted_at\t"));
+        let row_count = lines.count();
+        assert_eq!(
+            row_count,
+            summary.iterations.len(),
+            "TSV rows must match iterations"
+        );
+    }
+
+    #[test]
+    fn sweep_marks_first_iteration_kept_when_findings_present() {
+        let (_workspace, store) = seeded_store_with_profile("autoresearch");
+        let opts = SweepOptions {
+            task: "autoresearch",
+            target: Vec::new(),
+            profile_id: None,
+            budget: Duration::from_secs(5),
+            max_iterations: 1,
+            grade_packet: false,
+            keep_min_delta: 0,
+        };
+        let summary = run_sweep(&store, opts).unwrap();
+        assert_eq!(summary.iterations.len(), 1);
+        let row = &summary.iterations[0];
+        // First iteration always records previous_findings as None, so
+        // delta is 0 and grade (disabled) is None. Findings are
+        // present, so the rule resolves to Kept.
+        assert_eq!(row.kept_or_discarded, SweepDecision::Kept);
+        assert!(
+            row.short_reason.contains("keep threshold"),
+            "unexpected reason: {}",
+            row.short_reason
+        );
+    }
+
+    #[test]
+    fn prepare_with_grade_packet_attaches_score_and_handles_degradation() {
+        // Empty store: there are no findings, so the synthetic packet
+        // has no section, but the grader still runs and produces a
+        // score. No `packet_grade_unavailable` warning should fire
+        // because the synthetic TaskSpec is well-formed.
+        let _workspace = TestWorkspace::new("autoresearch-grade-empty");
+        let store = AutoresearchStore::open_default().unwrap();
+        let mut report = prepare_task_context(&store, "anything", &[], 8).unwrap();
+        grade_prepare_report(&mut report, "anything");
+        let grade = report
+            .scores
+            .as_object()
+            .and_then(|m| m.get("packet_grade"))
+            .and_then(serde_json::Value::as_f64);
+        assert!(grade.is_some(), "packet_grade must be populated");
+        // No grading-infrastructure failure was synthesized, so no
+        // `packet_grade_unavailable` warning is expected.
+        assert!(
+            report
+                .warnings
+                .iter()
+                .all(|w| w.code != "packet_grade_unavailable"),
+            "no degradation warning expected for a well-formed TaskSpec"
         );
     }
 }
