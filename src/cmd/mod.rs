@@ -17,6 +17,7 @@ pub mod preflight;
 pub mod query;
 pub mod refresh;
 pub mod remember;
+pub mod research;
 #[cfg(feature = "substrate-storage")]
 pub mod technician;
 pub mod telemetry;

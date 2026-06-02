@@ -88,6 +88,7 @@ use cmd::preflight::{PreflightArgs, handle_preflight};
 use cmd::query::handle_query;
 use cmd::refresh::handle_refresh;
 use cmd::remember::handle_remember;
+use cmd::research::{ResearchCommands, handle_research};
 #[cfg(feature = "substrate-storage")]
 use cmd::technician::handle_technician;
 use cmd::telemetry::{TelemetryCommands, handle_telemetry};
@@ -201,6 +202,12 @@ enum Commands {
         /// Autoresearch subcommand.
         #[command(subcommand)]
         command: AutoresearchCommands,
+    },
+    /// [stable core, v2 job 6] Bounded overnight-researcher runtime.
+    Research {
+        /// Research subcommand.
+        #[command(subcommand)]
+        command: ResearchCommands,
     },
     /// [stable core] Append explicit memory to the JSONL spine.
     Remember {
@@ -619,6 +626,7 @@ fn main() -> anyhow::Result<()> {
             strict,
         }),
         Commands::Autoresearch { command } => handle_autoresearch(&command),
+        Commands::Research { command } => handle_research(&command),
         Commands::Remember {
             kind,
             task,
