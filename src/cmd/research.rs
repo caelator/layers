@@ -1,9 +1,12 @@
-//! `layers research` — bounded overnight-researcher runtime (v2 stable-core job 6).
+//! `layers research` — autospawned, continuously-chained research-and-implementation runtime (v2 stable-core job 6).
 //!
 //! This command family is the v2.1+ entrypoint named in `docs/NORTH_STAR.md`
-//! and `docs/V2_PRODUCT_CONTRACT.md`. It is the only sanctioned way to run
-//! Layers autonomously for a bounded wall-clock window on a dedicated
-//! branch, with the user absent.
+//! and `docs/V2_PRODUCT_CONTRACT.md`. It is the sanctioned way to run
+//! Layers autonomously on a dedicated branch, with the user absent.
+//! The runtime supports two postures: bounded-cron (v2.1, hard wall-clock
+//! cap, cronjob-only launch) and autospawned continuously-chained (v2.2,
+//! soft wall-clock cap, configurable cooldown, autospawn trigger). Both
+//! postures share the same hard rules below.
 //!
 //! ## Subcommands
 //!

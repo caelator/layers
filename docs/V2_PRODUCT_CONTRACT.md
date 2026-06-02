@@ -2,7 +2,7 @@
 
 ## Binding Product Definition
 
-Layers v2 is the local-first `ContextPacket` compiler for coding agents **and**, on dedicated branches, a bounded overnight-researcher runtime that drives the same compile/implement/verify cycle autonomously under a hard wall-clock cap.
+Layers v2 is the local-first `ContextPacket` compiler for coding agents **and**, on dedicated branches, an autospawned, continuously-chained research-and-implementation runtime that drives the same compile/implement/verify cycle autonomously under a configurable cooldown and a soft wall-clock cap.
 
 Its stable jobs are to answer:
 
@@ -10,11 +10,11 @@ Its stable jobs are to answer:
 
 and, when the user is away from the keyboard,
 
-> What useful, evidence-gated work can a bounded research runtime do to this codebase overnight, and what is the audit trail?
+> What useful, evidence-gated work can an autospawned, continuously-chained research runtime do to this codebase, and what is the audit trail?
 
-The first answer is a bounded, cited, reproducible `ContextPacket` that can be consumed by humans, CLI workflows, MCP clients, and coding agents before they edit a repository. The second answer is a reviewable TSV at `.layers/autoresearch/sweeps.tsv`, a `git log` of `[verified]` commits, a cost ledger, and a dogfood report — produced under the same TDD + verification gate as a human in the loop.
+The first answer is a bounded, cited, reproducible `ContextPacket` that can be consumed by humans, CLI workflows, MCP clients, and coding agents before they edit a repository. The second answer is a reviewable TSV at `.layers/autoresearch/sweeps.tsv`, a `git log` of `[verified]` commits, a cost ledger, and a dogfood report — produced under the same TDD + verification gate as a human in the loop, on a dedicated branch only.
 
-The 2026-06-01 research-runtime pivot (`.hermes/plans/2026-06-01_layers-research-runtime-pivot.md`) is the binding record of how and why this second job entered the v2 contract.
+The 2026-06-01 research-runtime pivot (`.hermes/plans/2026-06-01_layers-research-runtime-pivot.md`) is the binding record of how and why this second job entered the v2 contract. The 2026-06-02 autospawn pivot (`.hermes/plans/2026-06-02_autospawn-continuous-runtime-pivot.md`) is the binding record of how and why the second job's posture widened from "bounded, cronjob-only" to "autospawned, continuously-chained on dedicated branches."
 
 ## Core Artifact
 
@@ -60,12 +60,13 @@ If a feature does not satisfy one of these jobs, it must be beta, deprecated com
 Job 6 is bounded by the following invariants, all of which are stable-core contract:
 
 - The runtime runs on a dedicated branch (`autoresearch/<tag>` or equivalent), never on a protected branch.
-- The runtime is launched either synchronously (`layers research run` in the foreground) or via `cronjob` with `notify_on_complete: true`. It is never auto-spawned by another process.
-- Wall-clock cap is configurable per run; default cap is 12 hours. The runtime aborts on cap.
-- Every iteration that proposes a code change must pass the v2 verification gate (`cargo fmt --all -- --check`, `cargo check --workspace --all-targets`, `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings`, `git diff --check`) before commit.
+- The runtime is launched either synchronously (`layers research run` in the foreground) or via `cronjob` with `notify_on_complete: true`, or **autospawned** by a configured trigger (heartbeat, file-watch, or daemon pulse). Auto-spawn is permitted in the v2.2 autospawn posture; it is not permitted to recursively schedule additional cronjobs that themselves schedule more cronjobs.
+- Wall-clock cap is configurable per run; default cap is 12 hours. The cap is **soft** in the autospawn posture — the runtime is expected to chain back-to-back across runs, gated by a configurable cooldown (default 5 minutes), and to abort on `SIGINT`/`SIGTERM` or unrecoverable error rather than at the cap.
+- Every iteration that proposes a code change must pass the v2 verification gate (`cargo fmt --all -- --check`, `cargo check --workspace --all-targets`, `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings`, `git diff --check`) before commit. The verification gate is unconditional across all postures.
 - Commits use the existing `[verified]` tag.
 - The runtime writes a sweep row per iteration to `.layers/autoresearch/sweeps.tsv`. No silent omissions.
-- The runtime has cooperative cancellation (`layers research stop <run-id>`).
+- The runtime has cooperative cancellation (`layers research stop <run-id>`). In the autospawn posture, cancellation drains the in-flight iteration and exits the autospawn loop cleanly without firing the next iteration.
+- The autospawn runtime's blast radius is restricted to dedicated branches: it never holds the user's primary session, never auto-commits to `main`/`master`/release branches, and never edits memory outside `.layers/autoresearch/` and the dedicated branch's working tree.
 
 ## Non-Goals
 
@@ -74,7 +75,7 @@ Layers v2.0 is not:
 - a personal assistant
 - a chat-first product
 - a hosted service
-- a general agent runtime (the v2.0 contract adds a *bounded* research runtime as job 6; general/unbounded agent execution remains a non-goal)
+- a general agent runtime (the v2.0 contract adds a *bounded* research runtime as job 6; the v2.2 autospawn pivot widens that job to autospawned, continuously-chained runs on dedicated branches, gated by a configurable cooldown and a soft wall-clock cap, and **not** permitted on the user's primary session or on protected branches; general/unbounded agent execution on the primary session remains a non-goal)
 - a messaging gateway
 - a provider abstraction platform
 - a generic subagent orchestrator
@@ -82,7 +83,7 @@ Layers v2.0 is not:
 - a generic vector database
 - a replacement for Hermes, OpenClaw, DeerFlow, Letta, mem0, Graphiti, Cognee, or MemoryPort
 
-Those systems are execution layers, memory backends, or integration peers. Layers should make them better by compiling local coding context, and — under job 6 — by running bounded overnight cycles that produce `[verified]` commits and a reviewable TSV.
+Those systems are execution layers, memory backends, or integration peers. Layers should make them better by compiling local coding context, and — under job 6 — by running autospawned, continuously-chained cycles on dedicated branches that produce `[verified]` commits and a reviewable TSV.
 
 ## Removed Surfaces
 
@@ -106,7 +107,7 @@ The v2.0 stable core converges on:
 | `layers memory list/search/show` | Stable core | Inspect existing curated/remembered memory without a new backend |
 | `layers impact <target>` | Stable core | Summarize GitNexus-backed or degraded blast-radius context |
 | `layers autoresearch sweep` | Stable core | Synchronous bounded research sweep with TSV log; the foundation for job 6 |
-| `layers research run` / `status` / `stop` | Stable core (job 6) | Bounded overnight research-and-implementation cycle on a dedicated branch |
+| `layers research run` / `status` / `stop` | Stable core (job 6) | Autospawned, continuously-chained research-and-implementation cycle on a dedicated branch, with `--autospawn-cooldown` and `--autospawn-trigger` flags for the v2.2 posture; the bounded-cron posture from v2.1 remains a valid subset |
 
 ## Beta / v2.x Expansion Surface
 
@@ -174,3 +175,5 @@ Layers v2.0 is complete when:
 - (added in the 2026-06-01 pivot) the v2 evidence gate for the overnight research runtime is documented and preregistered, even though job 6 itself is a v2.1+ delivery
 
 Memory ledger v2, session distillation, impact engine v2, packet quality benchmarks, autoresearch network fetchers, and the `layers research run` overnight command are v2.1+ expansion, not v2.0 blockers. The synchronous `layers autoresearch sweep` slice at `6de7932` and the v2 sweep-row schema above are the v2.0 deliverable from the pivot direction.
+
+The v2.1 deliverable was the bounded overnight-researcher runtime (`layers research run` with hard wall-clock cap, cronjob-only launch, default 12h cap, abort-on-cap) at commit `5624542`. The v2.2 deliverable is the autospawned, continuously-chained runtime on dedicated branches (`layers research run` with `--autospawn-cooldown` and `--autospawn-trigger`, soft wall-clock cap, configurable cooldown default 5m, abort on `SIGINT`/`SIGTERM` or unrecoverable error) at the commit produced by the implementation slice on `feature/layers-autospawn`.

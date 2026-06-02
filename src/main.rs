@@ -203,7 +203,7 @@ enum Commands {
         #[command(subcommand)]
         command: AutoresearchCommands,
     },
-    /// [stable core, v2 job 6] Bounded overnight-researcher runtime.
+    /// [stable core, v2 job 6] Autospawned, continuously-chained research-and-implementation runtime on a dedicated branch.
     Research {
         /// Research subcommand.
         #[command(subcommand)]
@@ -993,9 +993,20 @@ mod tests {
         // NORTH_STAR must explicitly define what Layers is NOT (evidence-gated boundary).
         // Updated 2026-06-01 product pivot: the non-goal is now an *unbounded* agent runtime;
         // bounded overnight research is permitted under v2 stable-core job 6.
+        // Updated 2026-06-02 autospawn pivot: the non-goal is now an *always-on agent runtime
+        // on the primary session or on protected branches*; autospawned, continuously-chained
+        // research is permitted under v2 stable-core job 6 on dedicated branches.
         assert!(
-            docs.contains("unbounded agent runtime"),
-            "NORTH_STAR must list 'unbounded agent runtime' under 'What Layers Is Not'"
+            docs.contains("always-on agent runtime"),
+            "NORTH_STAR must list 'always-on agent runtime' (the new non-goal) under 'What Layers Is Not'"
+        );
+        assert!(
+            docs.contains("primary session or on protected branches"),
+            "NORTH_STAR must carve out the autospawned runtime's dedicated-branch blast radius"
+        );
+        assert!(
+            !docs.contains("unbounded agent runtime"),
+            "NORTH_STAR must not regress to the v2.1 'unbounded agent runtime' framing"
         );
         assert!(
             !docs.contains("context/memory spine"),
@@ -1006,8 +1017,12 @@ mod tests {
             "NORTH_STAR must describe Layers as context compiler"
         );
         assert!(
-            docs.contains("bounded overnight-researcher runtime"),
-            "NORTH_STAR must mention the v2 pivot's bounded overnight-researcher runtime"
+            docs.contains("autospawned, continuously-chained research-and-implementation"),
+            "NORTH_STAR must describe the v2.2 autospawn posture for stable-core job 6"
+        );
+        assert!(
+            docs.contains("autoresearch/<tag>"),
+            "NORTH_STAR must name the dedicated-branch prefix that bounds the autospawn runtime"
         );
     }
 
