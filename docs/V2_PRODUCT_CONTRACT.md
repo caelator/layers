@@ -2,23 +2,29 @@
 
 ## Binding Product Definition
 
-Layers v2 is the local-first `ContextPacket` compiler for coding agents.
+Layers v2 is the local-first `ContextPacket` compiler for coding agents **and**, on dedicated branches, a bounded overnight-researcher runtime that drives the same compile/implement/verify cycle autonomously under a hard wall-clock cap.
 
-Its stable job is to answer:
+Its stable jobs are to answer:
 
 > What does this agent need to know before touching this code?
 
-The answer must be a bounded, cited, reproducible `ContextPacket` that can be consumed by humans, CLI workflows, MCP clients, and coding agents before they edit a repository.
+and, when the user is away from the keyboard,
+
+> What useful, evidence-gated work can a bounded research runtime do to this codebase overnight, and what is the audit trail?
+
+The first answer is a bounded, cited, reproducible `ContextPacket` that can be consumed by humans, CLI workflows, MCP clients, and coding agents before they edit a repository. The second answer is a reviewable TSV at `.layers/autoresearch/sweeps.tsv`, a `git log` of `[verified]` commits, a cost ledger, and a dogfood report — produced under the same TDD + verification gate as a human in the loop.
+
+The 2026-06-01 research-runtime pivot (`.hermes/plans/2026-06-01_layers-research-runtime-pivot.md`) is the binding record of how and why this second job entered the v2 contract.
 
 ## Core Artifact
 
-`ContextPacket` is the only core product artifact.
+`ContextPacket` is the primary core product artifact. The per-iteration TSV produced by the research runtime (`.layers/autoresearch/sweeps.tsv`) is a secondary core artifact: every overnight iteration must produce one, with `sweep_id`, `iteration`, `before_packet_grade`, `after_packet_grade`, `findings_delta`, and a `kept|discarded|crashed|skipped` decision.
 
 A stable v2 packet must preserve:
 
 - task/query text
 - workspace identity
-- git/worktree state when available
+- git/worktree state when known
 - ordered context sections
 - source citations
 - selection reasons
@@ -27,7 +33,16 @@ A stable v2 packet must preserve:
 - machine-readable JSON rendering
 - human-readable Markdown or agent-prompt rendering
 
-Commands, stores, adapters, and MCP tools are stable only insofar as they feed, compile, validate, render, or expose this artifact.
+A stable v2 sweep row must preserve:
+
+- sweep and iteration identifiers
+- started/finished timestamps (RFC 3339)
+- the active profile identifier when one is set
+- the count of selected findings, missing-context items, and suggested actions
+- before/after packet grade when grading is enabled
+- a keep/discard/crash/skip decision with a one-line reason
+
+Commands, stores, adapters, and MCP tools are stable only insofar as they feed, compile, validate, render, or expose these artifacts. The research runtime's `program.md`-style instruction file (human-editable) is a stable input, not a hidden parameter.
 
 ## Allowed Stable-Core Feature Jobs
 
@@ -38,8 +53,19 @@ A v2 feature belongs in stable core only if it does at least one of these jobs:
 3. render, validate, inspect, or diff a `ContextPacket`
 4. store minimal durable local context needed by future packets
 5. expose stable context tools to agents through CLI or MCP
+6. run a bounded research-and-implementation cycle on a dedicated branch, producing a sweep TSV row and `[verified]` commits under a hard wall-clock cap, and reporting keep/discard/crash per iteration
 
 If a feature does not satisfy one of these jobs, it must be beta, deprecated compatibility, or out of scope.
+
+Job 6 is bounded by the following invariants, all of which are stable-core contract:
+
+- The runtime runs on a dedicated branch (`autoresearch/<tag>` or equivalent), never on a protected branch.
+- The runtime is launched either synchronously (`layers research run` in the foreground) or via `cronjob` with `notify_on_complete: true`. It is never auto-spawned by another process.
+- Wall-clock cap is configurable per run; default cap is 12 hours. The runtime aborts on cap.
+- Every iteration that proposes a code change must pass the v2 verification gate (`cargo fmt --all -- --check`, `cargo check --workspace --all-targets`, `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings`, `git diff --check`) before commit.
+- Commits use the existing `[verified]` tag.
+- The runtime writes a sweep row per iteration to `.layers/autoresearch/sweeps.tsv`. No silent omissions.
+- The runtime has cooperative cancellation (`layers research stop <run-id>`).
 
 ## Non-Goals
 
@@ -48,15 +74,15 @@ Layers v2.0 is not:
 - a personal assistant
 - a chat-first product
 - a hosted service
-- a general agent runtime
+- a general agent runtime (the v2.0 contract adds a *bounded* research runtime as job 6; general/unbounded agent execution remains a non-goal)
 - a messaging gateway
 - a provider abstraction platform
-- a subagent orchestrator
+- a generic subagent orchestrator
 - a generic tool execution server
 - a generic vector database
 - a replacement for Hermes, OpenClaw, DeerFlow, Letta, mem0, Graphiti, Cognee, or MemoryPort
 
-Those systems are execution layers, memory backends, or integration peers. Layers should make them better by compiling local coding context.
+Those systems are execution layers, memory backends, or integration peers. Layers should make them better by compiling local coding context, and — under job 6 — by running bounded overnight cycles that produce `[verified]` commits and a reviewable TSV.
 
 ## Removed Surfaces
 
@@ -79,6 +105,8 @@ The v2.0 stable core converges on:
 | `layers mcp serve` stable tools | Stable core | Expose context compilation and packet validation to agents |
 | `layers memory list/search/show` | Stable core | Inspect existing curated/remembered memory without a new backend |
 | `layers impact <target>` | Stable core | Summarize GitNexus-backed or degraded blast-radius context |
+| `layers autoresearch sweep` | Stable core | Synchronous bounded research sweep with TSV log; the foundation for job 6 |
+| `layers research run` / `status` / `stop` | Stable core (job 6) | Bounded overnight research-and-implementation cycle on a dedicated branch |
 
 ## Beta / v2.x Expansion Surface
 
@@ -142,5 +170,7 @@ Layers v2.0 is complete when:
 - stable-core no-default-feature checks pass in CI
 - fresh clone bootstrap is truthful and reproducible for stable core
 - at least one dogfood proof demonstrates packet-guided agent work
+- (added in the 2026-06-01 pivot) `layers autoresearch sweep` writes a TSV row per iteration with the v2 column schema, and the synchronous sweep slice is on the stable core path
+- (added in the 2026-06-01 pivot) the v2 evidence gate for the overnight research runtime is documented and preregistered, even though job 6 itself is a v2.1+ delivery
 
-Memory ledger v2, session distillation, impact engine v2, packet quality benchmarks, and autoresearch network fetchers are v2.x expansion, not v2.0 blockers.
+Memory ledger v2, session distillation, impact engine v2, packet quality benchmarks, autoresearch network fetchers, and the `layers research run` overnight command are v2.1+ expansion, not v2.0 blockers. The synchronous `layers autoresearch sweep` slice at `6de7932` and the v2 sweep-row schema above are the v2.0 deliverable from the pivot direction.

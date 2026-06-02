@@ -983,13 +983,23 @@ mod tests {
         assert!(!docs.contains("context/memory spine"));
 
         // NORTH_STAR must explicitly define what Layers is NOT (evidence-gated boundary).
+        // Updated 2026-06-01 product pivot: the non-goal is now an *unbounded* agent runtime;
+        // bounded overnight research is permitted under v2 stable-core job 6.
         assert!(
-            docs.contains("full agent runtime"),
-            "NORTH_STAR must list 'full agent runtime' under 'What Layers Is Not'"
+            docs.contains("unbounded agent runtime"),
+            "NORTH_STAR must list 'unbounded agent runtime' under 'What Layers Is Not'"
         );
         assert!(
-            docs.contains("context compiler") || docs.contains("context spine"),
-            "NORTH_STAR must describe Layers as context compiler or context spine"
+            !docs.contains("context/memory spine"),
+            "NORTH_STAR must not regress to the v1 'context/memory spine' framing"
+        );
+        assert!(
+            docs.contains("context compiler"),
+            "NORTH_STAR must describe Layers as context compiler"
+        );
+        assert!(
+            docs.contains("bounded overnight-researcher runtime"),
+            "NORTH_STAR must mention the v2 pivot's bounded overnight-researcher runtime"
         );
     }
 

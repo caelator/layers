@@ -2,13 +2,17 @@
 
 ## North Star
 
-Layers is the local-first context compiler for coding agents.
+Layers is the local-first context compiler for coding agents **and** a bounded overnight-researcher runtime on top of that compiler.
 
-It turns repository structure, Git history, code graph intelligence, project memory, previous agent sessions, decisions, constraints, failures, and plans into bounded, cited, reproducible context packets that any agent can consume before it edits.
+It turns repository structure, Git history, code graph intelligence, project memory, previous agent sessions, decisions, constraints, failures, and plans into bounded, cited, reproducible context packets that any agent can consume before it edits. It also runs autonomous research-and-implementation cycles on dedicated branches, with a hard wall-clock cap and the same TDD + verification gate + `[verified]` commit discipline as a human in the loop.
 
 Layers should make this question easy to answer:
 
 > What does this agent need to know before touching this code?
+
+And, when the user is away from the keyboard:
+
+> What useful, evidence-gated work can a bounded research runtime do to this codebase overnight, and what is the audit trail?
 
 ## Product Promise
 
@@ -44,18 +48,18 @@ Layers is not:
 - a personal assistant
 - a chat product
 - a hosted service
-- a full agent runtime
+- an unbounded agent runtime (Layers runs overnight only under a hard wall-clock cap, on a dedicated branch, with the same verification gate as a human edit)
 - a messaging gateway
 - a generic tool-execution framework
 - a generic vector database
 - a generic temporal knowledge graph
 - a replacement for Hermes, OpenClaw, DeerFlow, Letta, mem0, Graphiti, Cognee, or MemoryPort
 
-Those systems should be treated as execution layers, memory backends, or integration peers. Layers should make them better by giving them reliable coding context.
+Those systems should be treated as execution layers, memory backends, or integration peers. Layers should make them better by giving them reliable coding context, and — under the new research-runtime job — by running bounded overnight cycles that produce `[verified]` commits and a reviewable TSV.
 
 ## Strategic Boundary
 
-Layers owns context assembly, not task execution. The v2 stable-core contract is defined in [V2 Product Contract](V2_PRODUCT_CONTRACT.md).
+Layers owns context assembly and, on dedicated branches, bounded research execution. The v2 stable-core contract is defined in [V2 Product Contract](V2_PRODUCT_CONTRACT.md) and updated in the 2026-06-01 research-runtime pivot to permit a bounded overnight runtime as a first-class job.
 
 Stable Layers work should serve one of these jobs:
 
@@ -64,6 +68,7 @@ Stable Layers work should serve one of these jobs:
 3. import/distill agent sessions into explicit memory
 4. expose memory and impact context to other agents
 5. verify that local context dependencies are healthy
+6. run a bounded research-and-implementation cycle on a dedicated branch, producing a reviewable TSV and `[verified]` commits under a hard wall-clock cap
 
 Work outside those jobs is non-essential and should be experimental, deprecated, or moved out of the core path.
 
@@ -86,6 +91,8 @@ The v2.0 stable surface is defined by [V2 Product Contract](V2_PRODUCT_CONTRACT.
 - `layers validate` / `layers doctor` — explain local readiness and degraded modes
 - `layers refresh` — update GitNexus/MemoryPort derived context
 - `layers mcp serve` — expose the stable core to other agents
+- `layers research run` — bounded overnight research-and-implementation cycle on a dedicated branch, with `--duration`, `--branch`, and `--mode` flags; the only sanctioned overnight entrypoint
+- `layers research status` / `layers research stop` — cooperative introspection and cancellation for an in-flight research run
 
 ## Beta Surface
 
@@ -105,11 +112,11 @@ These features are deprecated as core product direction. They may remain for exp
 - web portal as primary UX
 - daemon as primary runtime
 - model provider abstraction as a platform
-- subagent execution framework
+- subagent execution framework outside the research-runtime job
 - messaging channels
 - generic tool runtime
 - infrastructure credential management
-- autonomous monitor/fixer workflows
+- autonomous monitor/fixer workflows outside the research-runtime job
 
 ## Design Principles
 
@@ -138,4 +145,4 @@ Layers is succeeding when:
 
 ## One-Line Positioning
 
-Layers is the local-first context spine for coding agents: it compiles project memory, Git/code intelligence, and prior sessions into auditable context packets before agents act.
+Layers is the local-first context compiler **and** bounded overnight-researcher runtime for coding agents: it compiles project memory, Git/code intelligence, and prior sessions into auditable context packets before agents act, and it can run the same compile/implement/verify cycle on a dedicated branch while the user is away.
