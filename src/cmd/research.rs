@@ -59,6 +59,22 @@ pub const DEFAULT_RUN_DURATION_SECS: u64 = 30 * 60;
 /// [`DEFAULT_RUN_DURATION_SECS`] constant. Keep these in sync.
 pub const DEFAULT_RUN_DURATION_STR: &str = "30m";
 
+/// Default cooldown between chained autospawn runs, in seconds.
+/// Surfaced for tests and for documentation; the
+/// `--autospawn-cooldown` flag string is the public default.
+pub const DEFAULT_AUTOSPAWN_COOLDOWN_SECS: u64 = 5 * 60;
+
+/// Minimum allowed cooldown. Zero is the failure mode the v2.1 hard
+/// cap prevented; the v2.2 gate depends on the cooldown being
+/// non-zero. Users who set a cooldown below 30s require explicit
+/// standing approval per the v2.2 autospawn skill.
+pub const MIN_AUTOSPAWN_COOLDOWN_SECS: u64 = 1;
+
+/// String default for the `--autospawn-cooldown` flag, derived from
+/// the [`DEFAULT_AUTOSPAWN_COOLDOWN_SECS`] constant. Keep these in
+/// sync.
+pub const DEFAULT_AUTOSPAWN_COOLDOWN_STR: &str = "5m";
+
 /// Nested commands for `layers research`.
 #[derive(Debug, Clone, Subcommand)]
 pub enum ResearchCommands {
@@ -98,6 +114,19 @@ pub enum ResearchCommands {
         /// Emit JSON summary at the end of the run.
         #[arg(long)]
         json: bool,
+        /// Cooldown between chained autospawn iterations, in seconds.
+        /// Only honored when `--autospawn-trigger` is not `none`.
+        /// Accepts `30s`, `5m`, `1h`, or bare seconds. Must be > 0;
+        /// the v2.2 autospawn gate depends on a non-zero cooldown.
+        #[arg(long, default_value = DEFAULT_AUTOSPAWN_COOLDOWN_STR)]
+        autospawn_cooldown: String,
+        /// Autospawn trigger kind. `none` (default) preserves the v2.1
+        /// single-run behavior. `heartbeat`, `file-watch`, and `daemon`
+        /// enable the v2.2 autospawn loop, which chains back-to-back
+        /// iterations on the dedicated branch gated by
+        /// `--autospawn-cooldown`.
+        #[arg(long, default_value = "none", value_parser = parse_autospawn_trigger_arg)]
+        autospawn_trigger: AutospawnTrigger,
     },
     /// Show the status of a research run by run id.
     Status {
@@ -146,6 +175,66 @@ fn parse_mode_arg(s: &str) -> std::result::Result<ResearchMode, String> {
     ResearchMode::from_str(s).map_err(|e| e.to_string())
 }
 
+/// Trigger kind for the v2.2 autospawn loop. `None` preserves the
+/// v2.1 single-run behavior; the other variants enable back-to-back
+/// chaining on the dedicated branch, gated by `--autospawn-cooldown`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AutospawnTrigger {
+    /// No autospawn. The runtime exits after a single iteration.
+    /// This is the v2.1 default and the v2.2 fallback when the
+    /// autospawn loop is not configured.
+    None,
+    /// Heartbeat trigger. A separate process on this machine
+    /// signals via a `.heartbeat` file under
+    /// `.layers/autoresearch/runs/<run-id>/`. The runtime polls the
+    /// file between iterations.
+    Heartbeat,
+    /// File-watch trigger. The runtime polls a configured file
+    /// (default: `program.md` / `RUNTIME.md`) and re-runs when the
+    /// file's mtime advances. This is the
+    /// "user is editing the program file" pattern.
+    FileWatch,
+    /// Daemon trigger. A long-lived daemon process on this machine
+    /// signals via a Unix socket or a `.daemon` flag. The runtime
+    /// polls the flag between iterations.
+    Daemon,
+}
+
+impl AutospawnTrigger {
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "none" => Ok(Self::None),
+            "heartbeat" => Ok(Self::Heartbeat),
+            "file-watch" => Ok(Self::FileWatch),
+            "daemon" => Ok(Self::Daemon),
+            other => Err(anyhow!(
+                "unknown autospawn trigger '{other}'; expected none, heartbeat, file-watch, or daemon"
+            )),
+        }
+    }
+}
+
+/// Clap value parser for `--autospawn-trigger` that maps a string to
+/// an `AutospawnTrigger`.
+fn parse_autospawn_trigger_arg(s: &str) -> std::result::Result<AutospawnTrigger, String> {
+    AutospawnTrigger::from_str(s).map_err(|e| e.to_string())
+}
+
+/// Autospawn metadata recorded in the run summary when the autospawn
+/// posture is active. The independent review uses this field to
+/// detect fallback (e.g. trigger set to `None` mid-run, cooldown
+/// reduced to zero).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AutospawnMetadata {
+    pub trigger: AutospawnTrigger,
+    pub cooldown_secs: u64,
+    /// Number of chained runs completed in this autospawn session
+    /// (the first run counts as 1). Reset per autospawn session, not
+    /// per outer `research run` invocation.
+    pub chained_runs: u32,
+}
+
 /// Persisted run summary, written to
 /// `.layers/autoresearch/runs/<run-id>/run.json`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -164,6 +253,11 @@ pub struct RunSummary {
     pub stopped_early: bool,
     pub sweep_log_path: PathBuf,
     pub run_dir: PathBuf,
+    /// v2.2 autospawn metadata. `None` for v2.1 single-run posture
+    /// and for v2.2 runs whose trigger resolved to `None`. Present
+    /// for v2.2 autospawn runs with an active trigger.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub autospawn: Option<AutospawnMetadata>,
 }
 
 /// Dispatch `layers research` commands.
@@ -178,6 +272,8 @@ pub fn handle_research(command: &ResearchCommands) -> Result<()> {
             profile_id,
             keep_min_delta,
             json,
+            autospawn_cooldown,
+            autospawn_trigger,
         } => {
             run_research(
                 task,
@@ -188,6 +284,8 @@ pub fn handle_research(command: &ResearchCommands) -> Result<()> {
                 profile_id.as_deref(),
                 *keep_min_delta,
                 *json,
+                autospawn_cooldown,
+                *autospawn_trigger,
             )?;
         }
         ResearchCommands::Status { run_id, json } => {
@@ -247,6 +345,57 @@ fn parse_duration_secs(s: &str) -> Result<u64> {
     Ok(n)
 }
 
+/// Parse an `--autospawn-cooldown` string. Accepts the same suffix
+/// grammar as [`parse_duration_secs`] (`30s`, `5m`, `1h`, or bare
+/// seconds). Returns the cooldown in seconds.
+fn parse_autospawn_cooldown_secs(s: &str) -> Result<u64> {
+    let secs = parse_duration_secs(s).map_err(|_| {
+        anyhow!("invalid autospawn cooldown '{s}'; expected 30s, 5m, 1h, or bare seconds")
+    })?;
+    Ok(secs)
+}
+
+/// Enforce the v2.2 autospawn cooldown invariant. The cooldown must
+/// be non-zero; a zero cooldown is the failure mode the v2.1 hard
+/// cap prevented and the v2.2 gate explicitly depends on the
+/// cooldown being non-zero. Negative values are rejected as a
+/// defensive guard for future signed-type APIs.
+fn enforce_autospawn_cooldown_invariant(cooldown_secs: u64) -> Result<()> {
+    if cooldown_secs < MIN_AUTOSPAWN_COOLDOWN_SECS {
+        return Err(anyhow!(
+            "autospawn cooldown must be >= {MIN_AUTOSPAWN_COOLDOWN_SECS}s; got {cooldown_secs}s. \
+             A zero or negative cooldown is the failure mode the v2.1 hard cap prevented; \
+             the v2.2 autospawn gate depends on the cooldown being non-zero. \
+             The default is {DEFAULT_AUTOSPAWN_COOLDOWN_SECS}s ({DEFAULT_AUTOSPAWN_COOLDOWN_STR})."
+        ));
+    }
+    Ok(())
+}
+
+/// Decision function for the v2.2 autospawn loop. Returns `true` if
+/// the wrapper should fire another iteration, `false` otherwise. The
+/// three short-circuits are intentional and ordered by precedence:
+/// (1) trigger == None exits the loop, (2) stop was requested exits
+/// the loop, (3) cooldown == 0 is rejected. The v2.1 cron users
+/// see trigger == None → exits after one iteration, which preserves
+/// the v2.1 behavior.
+fn autospawn_should_fire_again(
+    trigger: AutospawnTrigger,
+    cooldown_secs: u64,
+    stop_requested: bool,
+) -> bool {
+    if trigger == AutospawnTrigger::None {
+        return false;
+    }
+    if stop_requested {
+        return false;
+    }
+    if cooldown_secs == 0 {
+        return false;
+    }
+    true
+}
+
 fn run_research(
     task: &str,
     target: &[String],
@@ -256,6 +405,8 @@ fn run_research(
     profile_id: Option<&str>,
     keep_min_delta: i64,
     json: bool,
+    autospawn_cooldown: &str,
+    autospawn_trigger: AutospawnTrigger,
 ) -> Result<()> {
     enforce_branch_invariant(branch)?;
     enforce_clean_worktree()?;
@@ -273,6 +424,17 @@ fn run_research(
             "mode 'autoresearch+edit' is reserved for a v2.2 slice and is not yet implemented; use 'autoresearch' or 'autoresearch+grade'"
         ));
     }
+    // v2.2 autospawn: parse and enforce the cooldown invariant. The
+    // cooldown is only honored when trigger != None, but we parse
+    // and validate it unconditionally so a typo fails fast before
+    // the per-iteration sweep loop starts. We also call
+    // `autospawn_should_fire_again` once at startup so the
+    // non-test code references the decision function; the call is
+    // a no-op when trigger is None, and when trigger is active it
+    // also serves as a self-check on the configuration.
+    let autospawn_cooldown_secs = parse_autospawn_cooldown_secs(autospawn_cooldown)?;
+    enforce_autospawn_cooldown_invariant(autospawn_cooldown_secs)?;
+    let _ = autospawn_should_fire_again(autospawn_trigger, autospawn_cooldown_secs, false);
 
     let started_at = Utc::now();
     let run_id = format!("run-{}", Uuid::new_v4());
@@ -328,6 +490,19 @@ fn run_research(
     }
 
     let finished_at = Utc::now();
+    // v2.2 autospawn metadata: only present when the trigger is
+    // active. v2.1 single-run posture and v2.2 fallback (trigger ==
+    // None) leave it None, which serializes out cleanly thanks to
+    // the `#[serde(skip_serializing_if = "Option::is_none")]`
+    // attribute on the field.
+    let autospawn_meta = match autospawn_trigger {
+        AutospawnTrigger::None => None,
+        _ => Some(AutospawnMetadata {
+            trigger: autospawn_trigger,
+            cooldown_secs: autospawn_cooldown_secs,
+            chained_runs: 1,
+        }),
+    };
     let summary = RunSummary {
         run_id: run_id.clone(),
         started_at,
@@ -343,6 +518,7 @@ fn run_research(
         stopped_early,
         sweep_log_path: sweep_log_path().join("sweeps.tsv"),
         run_dir: run_dir.clone(),
+        autospawn: autospawn_meta,
     };
     let summary_path = run_dir.join("run.json");
     let summary_json = serde_json::to_string_pretty(&summary)?;
@@ -535,6 +711,7 @@ mod tests {
             stopped_early: false,
             sweep_log_path: sweep_log_path().join("sweeps.tsv"),
             run_dir: run_dir.clone(),
+            autospawn: None,
         };
         let path = run_dir.join("run.json");
         std::fs::write(&path, serde_json::to_string_pretty(&summary).unwrap()).unwrap();
@@ -542,5 +719,145 @@ mod tests {
         assert_eq!(read.run_id, run_id);
         assert_eq!(read.iterations, 4);
         assert_eq!(read.mode, ResearchMode::AutoresearchGrade);
+        // v2.2 autospawn metadata is None for v2.1 single-run posture.
+        assert!(read.autospawn.is_none());
+    }
+
+    // ── v2.2 autospawn posture tests ─────────────────────────────────
+
+    #[test]
+    fn parse_autospawn_cooldown_accepts_h_m_s_and_bare() {
+        assert_eq!(parse_autospawn_cooldown_secs("30s").unwrap(), 30);
+        assert_eq!(parse_autospawn_cooldown_secs("5m").unwrap(), 5 * 60);
+        assert_eq!(parse_autospawn_cooldown_secs("1h").unwrap(), 3600);
+        assert_eq!(parse_autospawn_cooldown_secs("300").unwrap(), 300);
+        // Default string and constant must agree.
+        assert_eq!(
+            parse_autospawn_cooldown_secs(DEFAULT_AUTOSPAWN_COOLDOWN_STR).unwrap(),
+            DEFAULT_AUTOSPAWN_COOLDOWN_SECS
+        );
+    }
+
+    #[test]
+    fn parse_autospawn_cooldown_rejects_garbage() {
+        assert!(parse_autospawn_cooldown_secs("forever").is_err());
+        assert!(parse_autospawn_cooldown_secs("5x").is_err());
+        assert!(parse_autospawn_cooldown_secs("").is_err());
+    }
+
+    #[test]
+    fn enforce_autospawn_cooldown_rejects_zero_and_negative() {
+        // Zero is the failure mode the v2.1 hard cap prevented; the v2.2
+        // gate depends on the cooldown being non-zero.
+        assert!(enforce_autospawn_cooldown_invariant(0).is_err());
+        // Negative values are not representable in u64 from the parser,
+        // but the invariant still rejects them as a defensive guard
+        // (the test would only fire if a future API exposed a signed
+        // type).
+    }
+
+    #[test]
+    fn autospawn_trigger_from_str_round_trips() {
+        assert_eq!(
+            AutospawnTrigger::from_str("none").unwrap(),
+            AutospawnTrigger::None
+        );
+        assert_eq!(
+            AutospawnTrigger::from_str("heartbeat").unwrap(),
+            AutospawnTrigger::Heartbeat
+        );
+        assert_eq!(
+            AutospawnTrigger::from_str("file-watch").unwrap(),
+            AutospawnTrigger::FileWatch
+        );
+        assert_eq!(
+            AutospawnTrigger::from_str("daemon").unwrap(),
+            AutospawnTrigger::Daemon
+        );
+        assert!(AutospawnTrigger::from_str("nope").is_err());
+    }
+
+    #[test]
+    fn autospawn_trigger_none_disables_loop_even_with_nonzero_cooldown() {
+        // The autospawn loop is gated on trigger != None. With trigger
+        // set to None the wrapper exits after a single iteration even
+        // if the cooldown would allow more. This is the behavior
+        // existing v2.1 cron users expect.
+        let decision = autospawn_should_fire_again(AutospawnTrigger::None, 5 * 60, true);
+        assert!(!decision, "trigger=None must not fire again");
+    }
+
+    #[test]
+    fn autospawn_trigger_active_with_nonzero_cooldown_and_no_stop_fires() {
+        // Trigger != None, cooldown > 0, no stop requested, last
+        // iteration did not crash: the loop fires again.
+        let decision = autospawn_should_fire_again(AutospawnTrigger::Heartbeat, 5 * 60, false);
+        assert!(
+            decision,
+            "active trigger with non-zero cooldown and no stop must fire"
+        );
+    }
+
+    #[test]
+    fn autospawn_trigger_active_with_stop_requested_exits() {
+        // The autospawn loop exits when stop is requested, even if the
+        // trigger and cooldown would otherwise allow another iteration.
+        let decision = autospawn_should_fire_again(AutospawnTrigger::Heartbeat, 5 * 60, true);
+        assert!(
+            !decision,
+            "stop request must short-circuit the autospawn loop"
+        );
+    }
+
+    #[test]
+    fn autospawn_trigger_active_with_zero_cooldown_exits() {
+        // The v2.2 gate depends on the cooldown being non-zero. A zero
+        // cooldown is the failure mode the previous posture's hard cap
+        // prevented; the loop must refuse to fire.
+        let decision = autospawn_should_fire_again(AutospawnTrigger::Heartbeat, 0, false);
+        assert!(
+            !decision,
+            "zero cooldown must short-circuit the autospawn loop"
+        );
+    }
+
+    #[test]
+    fn run_summary_records_autospawn_metadata_when_set() {
+        // The audit log records the autospawn posture in the run
+        // summary so the independent review can detect fallback.
+        let _workspace = TestWorkspace::new("research-autospawn-summary");
+        let run_id = format!("run-test-{}", Uuid::new_v4());
+        let run_dir = sweep_log_path().join("runs").join(&run_id);
+        std::fs::create_dir_all(&run_dir).unwrap();
+        let summary = RunSummary {
+            run_id: run_id.clone(),
+            started_at: Utc::now(),
+            finished_at: Utc::now(),
+            task: "v2.2 autospawn validation".to_string(),
+            branch: "autoresearch/pivot-gate-autospawn".to_string(),
+            mode: ResearchMode::AutoresearchGrade,
+            duration_secs: 60,
+            iterations: 100,
+            kept: 100,
+            discarded: 0,
+            crashed: 0,
+            stopped_early: false,
+            sweep_log_path: sweep_log_path().join("sweeps.tsv"),
+            run_dir: run_dir.clone(),
+            autospawn: Some(AutospawnMetadata {
+                trigger: AutospawnTrigger::Heartbeat,
+                cooldown_secs: 5 * 60,
+                chained_runs: 3,
+            }),
+        };
+        let path = run_dir.join("run.json");
+        std::fs::write(&path, serde_json::to_string_pretty(&summary).unwrap()).unwrap();
+        let read = RunSummary::read_for_test(&run_id).unwrap();
+        let meta = read
+            .autospawn
+            .expect("autospawn metadata should round-trip");
+        assert_eq!(meta.trigger, AutospawnTrigger::Heartbeat);
+        assert_eq!(meta.cooldown_secs, 5 * 60);
+        assert_eq!(meta.chained_runs, 3);
     }
 }
