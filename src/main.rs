@@ -1477,6 +1477,7 @@ mod tests {
         assert_eq!(model, "turbocalm-local");
         assert_eq!(batch_size, 8);
         assert!(json);
+    }
 
     #[test]
     fn chat_cli_accepts_named_tool_profiles() {
