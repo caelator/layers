@@ -6,8 +6,9 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  RUSTFLAGS: "-D warnings"
+# NOTE: Do NOT set RUSTFLAGS="-D warnings" globally — it denies warnings from
+# dependency crates too, causing CI failures unrelated to our code.
+# Each job uses `-- -D warnings` on the clippy/cargo invocation instead.
 
 jobs:
   stable-core:
