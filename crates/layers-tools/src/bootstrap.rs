@@ -89,15 +89,15 @@ mod tests {
 
     #[test]
     fn runtime_policy_from_cli_supports_named_profiles() {
-        let named_profiles = HashMap::from([(
-            "fs-readonly".to_string(),
-            vec!["read".to_string()],
-        )]);
+        let named_profiles = HashMap::from([("fs-readonly".to_string(), vec!["read".to_string()])]);
 
         let policy = runtime_policy_from_cli("fs-readonly", &named_profiles, &[], &[])
             .expect("named profile should resolve");
 
-        assert_eq!(policy.profile, ToolProfile::Custom(vec!["read".to_string()]));
+        assert_eq!(
+            policy.profile,
+            ToolProfile::Custom(vec!["read".to_string()])
+        );
     }
 
     #[test]
