@@ -63,7 +63,7 @@ impl RouteCorrection {
                 error_kind: error_kind.as_str().to_string(),
                 query: failure.query_text.clone(),
             }),
-            FailureKind::Correction { human_chose: _, .. } => {
+            FailureKind::Correction { .. } => {
                 // correction value: −0.3 for the wrong route, +0.4 for the human's choice
                 // We represent the correction on the route that was chosen (and was wrong).
                 Some(RouteCorrection::Correction {

@@ -392,7 +392,7 @@ mod tests {
 
         assert_eq!(failure.schema_version, "1.0");
         assert!(!failure.id.is_empty());
-        assert!(failure.query_fingerprint.len() == 64); // SHA-256 hex = 64 chars
+        assert_eq!(failure.query_fingerprint.len(), 64); // SHA-256 hex = 64 chars
     }
 
     #[test]

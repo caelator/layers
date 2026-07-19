@@ -675,12 +675,12 @@ mod tests {
         assert_eq!(run.stages[1].model, "Claude");
         assert_eq!(run.stages[2].model, "Codex");
         assert_eq!(run.stages[2].status, "succeeded");
-        assert!(
+        assert_eq!(
             run.convergence
                 .as_ref()
                 .map(|item| item.status.as_str())
-                .unwrap_or_default()
-                == "converged"
+                .unwrap_or_default(),
+            "converged"
         );
         assert!(run.artifact_errors.is_empty());
     }

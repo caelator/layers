@@ -1136,7 +1136,7 @@ mod tests {
                 .evidence
                 .contains("Context compiler autoresearch gap")
         );
-        assert!(packet.scores["autoresearch_findings"].as_u64() == Some(1));
+        assert_eq!(packet.scores["autoresearch_findings"].as_u64(), Some(1));
         assert!(section.items[0].body.contains("Provenance:"));
         assert!(
             packet
